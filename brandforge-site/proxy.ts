@@ -82,6 +82,15 @@ export default async function proxy(request: NextRequest) {
   const rawCookie = request.headers.get('cookie') ?? '';
   const forwardedCookie = applyCookieUpdates(rawCookie, safeCookieUpdates);
   const modifiedHeaders = new Headers(request.headers);
+
+  // Never trust identity that arrived with the request. Route handlers read these headers as the
+  // authenticated user (lib/supabase-server.ts), so anything the client sent must be removed before
+  // this middleware sets the values it verified itself. H6.
+  modifiedHeaders.delete('x-user-id');
+  modifiedHeaders.delete('x-user-email');
+  modifiedHeaders.delete('x-user-name');
+  modifiedHeaders.delete('x-forwarded-cookie');
+
   if (forwardedCookie) {
     modifiedHeaders.set('x-forwarded-cookie', forwardedCookie);
   }
