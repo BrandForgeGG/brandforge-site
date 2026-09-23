@@ -3,8 +3,8 @@
 :root {
   --background: #14171a;
   --foreground: #ece7de;
-  --font-sans: "Inter", sans-serif;
-  --font-serif: "Fraunces", serif;
+  --font-sans: var(--font-inter), "Inter", sans-serif;
+  --font-serif: var(--font-fraunces), "Fraunces", serif;
   --panel: #1c2024;
   --panel-2: #20262b;
   --line: rgba(236, 231, 222, 0.1);
