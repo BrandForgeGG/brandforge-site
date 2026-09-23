@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://brandforge.gg/sitemap.xml
+
+# Allow key assets
+Allow: /*.png$
+Allow: /*.jpg$
+Allow: /*.js$
+Allow: /*.css$
+
+# Block administrative or private paths
+Disallow: /admin/
+Disallow: /private/

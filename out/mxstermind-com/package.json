@@ -1,0 +1,9 @@
+{
+  "name": "mxstermind-com",
+  "private": true,
+  "description": "Mxstermind personal project oversight site",
+  "version": "1.0.0",
+  "engines": {
+    "node": "24.x"
+  }
+}

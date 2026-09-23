@@ -1,0 +1,470 @@
+@import "tailwindcss";
+
+:root {
+  --background: #14171a;
+  --foreground: #ece7de;
+  --font-sans: "Inter", sans-serif;
+  --font-serif: "Fraunces", serif;
+  --panel: #1c2024;
+  --panel-2: #20262b;
+  --line: rgba(236, 231, 222, 0.1);
+  --muted: #9aa0a6;
+  --ember: #e8571e;
+  --ember-soft: rgba(232, 87, 30, 0.14);
+  --copper: #b8763b;
+  --trust: #5aa578;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.brandforge-page {
+  min-height: 100vh;
+}
+
+.brandforge-wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 28px;
+}
+
+.brandforge-rule {
+  height: 1px;
+  background: var(--line);
+  border: none;
+  margin: 0;
+}
+
+.brandforge-nav {
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.brandforge-nav .brandforge-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brandforge-logo {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+
+.brandforge-logo span {
+  color: var(--ember);
+}
+
+.brandforge-nav-cta {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  transition: border-color 0.15s ease;
+}
+
+.brandforge-nav-cta:hover {
+  border-color: var(--ember);
+}
+
+.brandforge-hero {
+  position: relative;
+  padding: 88px 0 64px;
+  overflow: hidden;
+}
+
+.brandforge-hero::before {
+  content: "";
+  position: absolute;
+  top: -120px;
+  right: -160px;
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(circle, var(--ember-soft) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.brandforge-kicker {
+  color: var(--copper);
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 18px;
+}
+
+.brandforge-hero h1 {
+  font-size: 44px;
+  line-height: 1.12;
+  max-width: 14ch;
+}
+
+.brandforge-hero h1 em {
+  font-style: normal;
+  color: var(--ember);
+}
+
+.brandforge-lede {
+  margin-top: 22px;
+  font-size: 18px;
+  color: var(--muted);
+  max-width: 46ch;
+}
+
+.brandforge-cta-row {
+  margin-top: 34px;
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.brandforge-btn {
+  display: inline-block;
+  padding: 14px 26px;
+  border-radius: 7px;
+  font-weight: 600;
+  font-size: 15px;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.brandforge-btn:hover {
+  transform: translateY(-1px);
+}
+
+.brandforge-btn-primary {
+  background: var(--ember);
+  color: #14171a;
+}
+
+.brandforge-btn-secondary {
+  border: 1px solid var(--line);
+  color: var(--foreground);
+}
+
+.brandforge-btn-secondary:hover {
+  border-color: var(--copper);
+}
+
+section {
+  padding: 60px 0;
+}
+
+.brandforge-section-title {
+  font-size: 28px;
+  max-width: 20ch;
+}
+
+.brandforge-problem-grid {
+  margin-top: 32px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 40px;
+}
+
+.brandforge-problem-col p {
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.brandforge-problem-col h3 {
+  font-size: 17px;
+  margin-bottom: 8px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+
+.brandforge-process-list {
+  margin-top: 36px;
+}
+
+.brandforge-process-item {
+  display: flex;
+  gap: 22px;
+  padding: 26px 0;
+  border-top: 1px solid var(--line);
+}
+
+.brandforge-process-item:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.brandforge-process-num {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  color: var(--ember);
+  min-width: 32px;
+}
+
+.brandforge-process-item h3 {
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+
+.brandforge-process-item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  max-width: 52ch;
+}
+
+.brandforge-services {
+  margin-top: 32px;
+}
+
+.brandforge-service-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 20px;
+  padding: 20px 0;
+  border-top: 1px solid var(--line);
+}
+
+.brandforge-service-row:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.brandforge-service-name {
+  font-family: var(--font-serif);
+  font-size: 19px;
+  font-weight: 600;
+  min-width: 120px;
+}
+
+.brandforge-service-desc {
+  color: var(--muted);
+  font-size: 15px;
+  text-align: right;
+  max-width: 60%;
+}
+
+.brandforge-trust-panel {
+  margin-top: 32px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 32px;
+}
+
+.brandforge-trust-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.brandforge-trust-row:last-child {
+  margin-bottom: 0;
+}
+
+.brandforge-trust-dot {
+  min-width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--trust);
+  margin-top: 8px;
+}
+
+.brandforge-trust-row p {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 15px;
+}
+
+.brandforge-trust-row strong {
+  display: block;
+  margin-bottom: 3px;
+  font-family: var(--font-serif);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.brandforge-testimonial-row {
+  display: flex;
+  gap: 16px;
+  padding: 20px 0;
+  border-top: 1px solid var(--line);
+}
+
+.brandforge-testimonial-row:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.brandforge-testimonial-mark {
+  font-family: var(--font-serif);
+  font-size: 32px;
+  color: var(--ember);
+  line-height: 1;
+}
+
+.brandforge-testimonial-row p {
+  margin: 0 0 4px 0;
+  font-size: 15px;
+  color: var(--foreground);
+}
+
+.brandforge-testimonial-row span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.brandforge-portfolio-note {
+  margin-top: 28px;
+  padding: 22px 24px;
+  border-left: 2px solid var(--ember);
+  background: var(--panel-2);
+  border-radius: 0 8px 8px 0;
+}
+
+.brandforge-portfolio-note p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.brandforge-portfolio-list {
+  margin-top: 28px;
+}
+
+.brandforge-portfolio-item {
+  display: flex;
+  gap: 18px;
+  padding: 20px 0;
+  border-top: 1px solid var(--line);
+}
+
+.brandforge-portfolio-item:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.brandforge-portfolio-tag {
+  min-width: 88px;
+  font-size: 13px;
+  color: var(--copper);
+  font-weight: 500;
+  padding-top: 2px;
+}
+
+.brandforge-portfolio-item h3 {
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.brandforge-portfolio-item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  max-width: 50ch;
+}
+
+.brandforge-final-cta {
+  padding: 80px 0 90px;
+  text-align: left;
+}
+
+.brandforge-final-cta h2 {
+  font-size: 32px;
+  max-width: 16ch;
+  margin-bottom: 16px;
+}
+
+.brandforge-final-cta p {
+  color: var(--muted);
+  font-size: 16px;
+  max-width: 48ch;
+  margin-bottom: 30px;
+}
+
+.brandforge-talent-strip {
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 40px 0;
+}
+
+.brandforge-talent-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.brandforge-talent-strip h3 {
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+
+.brandforge-talent-strip p {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0;
+  max-width: 44ch;
+}
+
+footer {
+  padding: 36px 0;
+}
+
+footer p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .brandforge-hero h1 {
+    font-size: 32px;
+  }
+
+  .brandforge-problem-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .brandforge-service-row {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .brandforge-service-desc {
+    text-align: left;
+    max-width: 100%;
+  }
+
+  .brandforge-talent-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

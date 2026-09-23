@@ -1,0 +1,13 @@
+# Never upload local secrets or build artifacts with `vercel deploy`.
+.env*
+.env*.local
+.env.production.tmp
+node_modules
+.next
+.vercel
+out
+*.log
+vercel-logs.txt
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+*.tmp
