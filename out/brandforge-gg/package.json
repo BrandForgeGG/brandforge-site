@@ -1,9 +1,0 @@
-{
-  "name": "brandforge-gg",
-  "private": true,
-  "description": "BrandForge static landing pages",
-  "version": "1.0.0",
-  "engines": {
-    "node": "24.x"
-  }
-}
