@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { ClientProjectState } from '@/lib/conversation-state';
 import { DISCOVERY_THRESHOLD } from '@/lib/discovery';
 
@@ -29,6 +30,8 @@ export interface PaymentSummary {
   amount: number;
   currency: string;
   status: string;
+  tx_hash?: string | null;
+  network?: string | null;
 }
 
 export const STATUS_LABELS: Record<string, string> = {
@@ -42,6 +45,20 @@ export const STATUS_LABELS: Record<string, string> = {
   CANCELLED: 'Cancelled',
 };
 
+// What the client sees for each raw payment status. 'pending' means the client submitted a
+// transaction hash and BrandForge is verifying it on-chain; 'paid' means verified and held.
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  scheduled: 'scheduled',
+  pending: 'verifying',
+  paid: 'held by BrandForge',
+  released: 'released',
+  failed: 'failed',
+};
+
+function paymentStatusLabel(status: string): string {
+  return PAYMENT_STATUS_LABELS[status] ?? status;
+}
+
 function money(amount: number | null | undefined, currency: string): string {
   if (amount === null || amount === undefined) {
     return '—';
@@ -50,16 +67,22 @@ function money(amount: number | null | undefined, currency: string): string {
   return `${currency} ${Number(amount).toLocaleString()}`;
 }
 
+function shortHash(hash: string): string {
+  return hash.length > 18 ? `${hash.slice(0, 10)}…${hash.slice(-6)}` : hash;
+}
+
 export function ProjectContextPanel({
   state,
   proposal,
   agreement,
   payments,
   busyAction,
+  isStaff,
   onClose,
   onRequestReview,
   onProposalAction,
-  onFundProject,
+  onSubmitPayment,
+  onPaymentAction,
   onTaskAction,
 }: {
   state: ClientProjectState | null;
@@ -67,15 +90,35 @@ export function ProjectContextPanel({
   agreement: AgreementSummary | null;
   payments: PaymentSummary[];
   busyAction: string | null;
+  isStaff: boolean;
   onClose: () => void;
   onRequestReview: () => void;
   onProposalAction: (action: 'accept' | 'decline' | 'request_changes') => void;
-  onFundProject: () => void;
+  onSubmitPayment: (txHash: string) => void;
+  onPaymentAction: (payload: {
+    action: 'verify' | 'reject' | 'release';
+    paymentId?: string;
+    note?: string;
+  }) => void;
   onTaskAction: (taskId: string, payload: { action?: string; status?: string }) => void;
 }) {
   const discovery = state?.discovery;
   const canRequestReview =
     state?.status === 'DISCOVERY' && (discovery?.completeness ?? 0) >= DISCOVERY_THRESHOLD;
+
+  const [txInput, setTxInput] = useState('');
+  const [rejectNote, setRejectNote] = useState('');
+
+  // The deposit wallet is configured per deployment. When it is missing the client is told to
+  // take deposit details from the chat instead of seeing a fabricated address.
+  const depositWallet = process.env.NEXT_PUBLIC_DEPOSIT_WALLET_ADDRESS ?? '';
+  const depositNetwork = process.env.NEXT_PUBLIC_DEPOSIT_NETWORK ?? '';
+
+  // Funding covers the full agreement total, so every scheduled payment moves together.
+  const fundingSubmitted =
+    payments.length > 0 && payments.every((payment) => payment.status !== 'scheduled');
+  const submittedTx = payments.find((payment) => payment.tx_hash)?.tx_hash ?? null;
+  const submittedNetwork = payments.find((payment) => payment.network)?.network ?? null;
 
   return (
     <aside className="fixed inset-y-0 right-0 z-40 flex w-80 max-w-[85vw] shrink-0 flex-col border-l border-white/10 bg-[#111417] shadow-2xl xl:sticky xl:top-0 xl:z-auto xl:h-screen xl:max-w-none xl:shadow-none">
@@ -330,27 +373,138 @@ export function ProjectContextPanel({
             {payments.length > 0 ? (
               <ul className="mt-3 space-y-1">
                 {payments.map((payment) => (
-                  <li key={payment.id} className="flex items-center justify-between text-xs text-[#9aa0a6]">
-                    <span className="truncate">
-                      {payment.sequence}. {payment.title}
-                    </span>
-                    <span className="ml-2 whitespace-nowrap text-[#ece7de]">
-                      {money(payment.amount, payment.currency)} · {payment.status}
-                    </span>
+                  <li key={payment.id} className="text-xs text-[#9aa0a6]">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate">
+                        {payment.sequence}. {payment.title}
+                      </span>
+                      <span className="ml-2 whitespace-nowrap text-[#ece7de]">
+                        {money(payment.amount, payment.currency)} · {paymentStatusLabel(payment.status)}
+                      </span>
+                    </div>
+                    {payment.tx_hash ? (
+                      <p className="mt-0.5 truncate text-[10px] text-[#6f757b]">
+                        tx {shortHash(payment.tx_hash)}
+                        {payment.network ? ` · ${payment.network}` : ''}
+                      </p>
+                    ) : null}
+                    {isStaff && payment.status === 'paid' ? (
+                      <button
+                        type="button"
+                        onClick={() => onPaymentAction({ action: 'release', paymentId: payment.id })}
+                        disabled={busyAction !== null}
+                        className="mt-1 rounded-md border border-[#5aa578]/40 px-2 py-1 text-[10px] font-semibold text-[#5aa578] transition hover:bg-[#5aa578]/10 disabled:opacity-60"
+                      >
+                        {busyAction === `release-${payment.id}` ? 'Releasing…' : 'Release to operator'}
+                      </button>
+                    ) : null}
                   </li>
                 ))}
               </ul>
             ) : null}
 
-            {agreement.status === 'pending_funding' ? (
-              <button
-                type="button"
-                onClick={onFundProject}
-                disabled={busyAction !== null}
-                className="mt-3 w-full rounded-lg bg-[#e8571e] px-3 py-2 text-xs font-semibold text-[#14171a] transition hover:opacity-95 disabled:opacity-60"
-              >
-                {busyAction === 'fund' ? 'Starting escrow…' : 'Fund project'}
-              </button>
+            {agreement.status === 'pending_funding' && fundingSubmitted ? (
+              <div className="mt-3 rounded-lg border border-[#b8763b]/30 bg-[#b8763b]/5 p-3">
+                <p className="text-xs font-semibold text-[#ece7de]">
+                  Payment submitted — verification in progress
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-[#9aa0a6]">
+                  BrandForge is confirming your transfer
+                  {submittedNetwork ? ` on ${submittedNetwork}` : ''} on-chain. The project moves to
+                  delivery as soon as it is verified.
+                </p>
+                {submittedTx ? (
+                  <p className="mt-1 break-all font-mono text-[10px] text-[#6f757b]">{submittedTx}</p>
+                ) : null}
+                {isStaff ? (
+                  <div className="mt-3 space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => onPaymentAction({ action: 'verify' })}
+                      disabled={busyAction !== null}
+                      className="w-full rounded-lg bg-[#5aa578] px-3 py-2 text-xs font-semibold text-[#14171a] transition hover:opacity-95 disabled:opacity-60"
+                    >
+                      {busyAction === 'verify' ? 'Verifying…' : 'Verify on-chain and mark funded'}
+                    </button>
+                    <input
+                      type="text"
+                      value={rejectNote}
+                      onChange={(event) => setRejectNote(event.target.value)}
+                      placeholder="Reason if the transfer does not check out"
+                      className="w-full rounded-md border border-white/10 bg-[#14171a] px-2 py-1.5 text-[11px] text-[#ece7de] outline-none transition placeholder:text-[#6f757b] focus:border-red-500/50"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onPaymentAction({ action: 'reject', note: rejectNote.trim() || undefined })
+                      }
+                      disabled={busyAction !== null}
+                      className="w-full rounded-lg border border-red-500/40 px-3 py-2 text-xs text-red-200 transition hover:bg-red-500/10 disabled:opacity-60"
+                    >
+                      {busyAction === 'reject' ? 'Rejecting…' : 'Reject submission'}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {agreement.status === 'pending_funding' && !fundingSubmitted ? (
+              <div className="mt-3 rounded-lg border border-[#e8571e]/30 bg-[#e8571e]/5 p-3">
+                <p className="text-xs font-semibold text-[#ece7de]">Fund in crypto</p>
+                <p className="mt-1 text-xs leading-relaxed text-[#9aa0a6]">
+                  Send {money(agreement.total_amount, agreement.currency)} in crypto to the
+                  BrandForge deposit wallet. The funds are held until you approve each milestone.
+                </p>
+                {depositWallet ? (
+                  <div className="mt-2 rounded-md bg-[#14171a] px-2 py-1.5">
+                    {depositNetwork ? (
+                      <p className="text-[10px] uppercase tracking-[0.15em] text-[#b8763b]">
+                        {depositNetwork}
+                      </p>
+                    ) : null}
+                    <p className="break-all font-mono text-[11px] text-[#ece7de]">{depositWallet}</p>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-[#9aa0a6]">
+                    Deposit details are shared by the BrandForge team in this chat.
+                  </p>
+                )}
+                <form
+                  className="mt-3"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const trimmed = txInput.trim();
+                    if (trimmed) {
+                      onSubmitPayment(trimmed);
+                    }
+                  }}
+                >
+                  <label
+                    htmlFor="tx-hash-input"
+                    className="text-[10px] uppercase tracking-[0.15em] text-[#9aa0a6]"
+                  >
+                    Transaction hash after sending
+                  </label>
+                  <input
+                    id="tx-hash-input"
+                    type="text"
+                    value={txInput}
+                    onChange={(event) => setTxInput(event.target.value)}
+                    placeholder="Paste the transaction hash"
+                    className="mt-1 w-full rounded-md border border-white/10 bg-[#14171a] px-2 py-1.5 font-mono text-[11px] text-[#ece7de] outline-none transition placeholder:text-[#6f757b] focus:border-[#e8571e]"
+                  />
+                  <button
+                    type="submit"
+                    disabled={busyAction !== null || !txInput.trim()}
+                    className="mt-2 w-full rounded-lg bg-[#e8571e] px-3 py-2 text-xs font-semibold text-[#14171a] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {busyAction === 'fund' ? 'Submitting…' : 'Submit payment for verification'}
+                  </button>
+                  <p className="mt-1.5 text-[10px] leading-relaxed text-[#6f757b]">
+                    BrandForge verifies the transfer on-chain before marking the project funded.
+                  </p>
+                </form>
+              </div>
             ) : null}
           </div>
         ) : null}

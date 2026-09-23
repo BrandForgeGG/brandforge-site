@@ -550,34 +550,75 @@ export function ChatWorkspace() {
     [conversationId, refreshMessages, refreshState]
   );
 
-  const handleFundProject = useCallback(async () => {
-    if (!conversationId || !agreement) return;
+  // Funding is real now: the founder pastes the crypto transaction hash after sending to the
+  // BrandForge deposit wallet; staff verify it on-chain before the agreement turns funded.
+  const handleSubmitPayment = useCallback(
+    async (txHash: string) => {
+      if (!conversationId || !agreement) return;
 
-    setBusyAction('fund');
-    setError(null);
+      setBusyAction('fund');
+      setError(null);
 
-    try {
-      const response = await fetch('/api/agreements', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agreementId: agreement.id, status: 'funded' }),
-      });
+      try {
+        const response = await fetch('/api/payments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ agreementId: agreement.id, txHash }),
+        });
+        const data = await response.json().catch(() => ({}));
 
-      if (!response.ok) {
-        throw new Error('The agreement could not be funded');
+        if (!response.ok) {
+          throw new Error(data.error || 'The payment could not be submitted');
+        }
+
+        await Promise.all([
+          refreshArtifacts(conversationId),
+          refreshState(conversationId),
+          refreshMessages(conversationId),
+        ]);
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : 'The payment could not be submitted');
+      } finally {
+        setBusyAction(null);
       }
+    },
+    [agreement, conversationId, refreshArtifacts, refreshMessages, refreshState]
+  );
 
-      await Promise.all([
-        refreshArtifacts(conversationId),
-        refreshState(conversationId),
-        refreshMessages(conversationId),
-      ]);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'The agreement could not be funded');
-    } finally {
-      setBusyAction(null);
-    }
-  }, [agreement, conversationId, refreshArtifacts, refreshMessages, refreshState]);
+  // Staff money actions: verify the transfer on-chain, reject it, or release a milestone
+  // payment to the operator after founder approval.
+  const handlePaymentAction = useCallback(
+    async (payload: { action: 'verify' | 'reject' | 'release'; paymentId?: string; note?: string }) => {
+      if (!conversationId || !agreement) return;
+
+      setBusyAction(payload.action === 'release' ? `release-${payload.paymentId}` : payload.action);
+      setError(null);
+
+      try {
+        const response = await fetch('/api/payments', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ agreementId: agreement.id, ...payload }),
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.error || 'The payment action failed');
+        }
+
+        await Promise.all([
+          refreshArtifacts(conversationId),
+          refreshState(conversationId),
+          refreshMessages(conversationId),
+        ]);
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : 'The payment action failed');
+      } finally {
+        setBusyAction(null);
+      }
+    },
+    [agreement, conversationId, refreshArtifacts, refreshMessages, refreshState]
+  );
 
   const projectLabel = state?.project.name || state?.title || 'New project';
   const isBusy = isStreaming || isCreatingConversation;
@@ -727,6 +768,7 @@ export function ChatWorkspace() {
           agreement={agreement}
           payments={payments}
           busyAction={busyAction}
+          isStaff={railMeta.isStaff}
           onClose={() => setIsContextOpen(false)}
           onRequestReview={() => {
             void handleRequestReview();
@@ -734,8 +776,11 @@ export function ChatWorkspace() {
           onProposalAction={(action) => {
             void handleProposalAction(action);
           }}
-          onFundProject={() => {
-            void handleFundProject();
+          onSubmitPayment={(txHash) => {
+            void handleSubmitPayment(txHash);
+          }}
+          onPaymentAction={(payload) => {
+            void handlePaymentAction(payload);
           }}
           onTaskAction={(taskId, payload) => {
             void handleTaskAction(taskId, payload);
