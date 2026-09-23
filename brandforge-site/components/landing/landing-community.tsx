@@ -16,10 +16,10 @@ export function LandingCommunity() {
         <div className="mx-auto max-w-6xl">
           <p className="text-xs uppercase tracking-[0.2em] text-[#b8763b]">Get in early</p>
           <h2 className="mt-2 font-serif text-3xl text-[#ece7de] sm:text-4xl">
-            The app opens soon. The community is open now.
+            The app is live. The community is where builds land first.
           </h2>
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-[#9aa0a6]">
-            Request early access, watch builds land, or bring your project today — a human answers.
+            Watch builds land, talk to the crew, or bring your project today — a human answers.
           </p>
 
           <div className="mt-10 grid gap-4 md:grid-cols-2">
@@ -34,7 +34,7 @@ export function LandingCommunity() {
                 {COMMUNITY_LINKS.discord.description}
               </p>
               <p className="mt-4 text-sm font-semibold text-[#e8571e]">
-                discord.gg/GSKHXkUY85{' '}
+                {COMMUNITY_LINKS.discord.href.replace('https://', '')}{' '}
                 <span className="inline-block transition group-hover:translate-x-1">→</span>
               </p>
             </a>

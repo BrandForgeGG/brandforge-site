@@ -3,7 +3,7 @@ const COMMUNITY_LINKS = {
   discord: {
     label: 'Discord',
     href: 'https://discord.gg/GSKHXkUY85',
-    description: 'The main hub: announcements, early-access requests and project questions.',
+    description: 'The main hub: announcements, founder chat and project questions.',
   },
   telegramChannel: {
     label: 'Telegram channel',

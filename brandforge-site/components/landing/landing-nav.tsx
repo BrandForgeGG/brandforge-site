@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { getSessionUser } from '@/lib/browser-auth';
+import { COMMUNITY_LINKS } from '@/lib/community';
 
 export function LandingNav() {
   const [signedIn, setSignedIn] = useState(false);
@@ -51,7 +52,7 @@ export function LandingNav() {
           ) : (
             <>
               <a
-                href="https://discord.gg/GSKHXkUY85"
+                href={COMMUNITY_LINKS.discord.href}
                 target="_blank"
                 rel="noreferrer"
                 className="hidden rounded-xl border border-white/10 px-4 py-2 text-sm text-[#ece7de] transition hover:border-[#e8571e] sm:inline-block"
