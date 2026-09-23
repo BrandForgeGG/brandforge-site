@@ -13,7 +13,7 @@ const STEPS = [
   },
   {
     title: 'Fund it, then approve it',
-    body: 'Your money sits in escrow and is released only when you approve the delivered work.',
+    body: 'You fund the project in crypto to the BrandForge escrow wallet. Our team verifies the transfer on-chain, holds the funds, and releases each milestone payment only when you approve the delivered work.',
   },
 ];
 
@@ -83,8 +83,10 @@ export function LandingSections() {
 
           <div className="mt-6 rounded-2xl border border-[#5aa578]/30 bg-[#5aa578]/10 p-6">
             <p className="text-sm leading-relaxed text-[#d9f7ea]">
-              <span className="font-semibold">Protected by escrow.</span> Funds are released only
-              after you approve the delivered work — you never pay upfront for promises.
+              <span className="font-semibold">Admin-verified crypto escrow.</span> You pay in crypto
+              to a wallet held by BrandForge. Our team confirms your transfer on-chain and releases
+              funds to the specialist only after you approve the delivered work — you never pay
+              upfront for promises.
             </p>
           </div>
         </div>

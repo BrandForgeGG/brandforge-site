@@ -77,7 +77,8 @@ export function LandingHero() {
         </h1>
         <p className="mt-5 max-w-xl text-lg leading-relaxed text-[#9aa0a6]">
           Type what you want to build. BrandForge structures it into requirements, and designers,
-          developers, reverse engineers and marketers ship it — with your money protected in escrow.
+          developers, reverse engineers and marketers ship it — with your crypto payment verified
+          on-chain and held in escrow until you approve the work.
         </p>
 
         <div className="mt-8 flex flex-wrap gap-2">
