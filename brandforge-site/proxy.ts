@@ -14,7 +14,6 @@ type AuthCookieUpdate = {
 
 const protectedRoutes = [
   '/chat',
-  '/projects',
   '/settings',
   '/apply',
   '/admin',
@@ -142,7 +141,6 @@ export default async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     '/chat/:path*',
-    '/projects/:path*',
     '/settings/:path*',
     '/apply',
     '/admin/:path*',
