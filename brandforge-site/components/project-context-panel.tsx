@@ -320,7 +320,7 @@ export function ProjectContextPanel({
           </div>
         </div>
 
-        {proposal && proposal.status === 'pending' ? (
+        {proposal && proposal.status === 'pending' && !isStaff ? (
           <div className="mb-6 rounded-xl border border-[#e8571e]/30 bg-[#1c2024] p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-[#b8763b]">BrandForge proposal</p>
             <h3 className="mt-1 font-serif text-base text-[#ece7de]">{proposal.title}</h3>
