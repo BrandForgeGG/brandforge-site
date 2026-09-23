@@ -1,13 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { getUserRoleFromEmail, getVisibleProjects } = require('./user-roles.js');
-
-test('getUserRoleFromEmail maps founder and client accounts correctly', () => {
-  assert.equal(getUserRoleFromEmail('demo@brandforge.gg'), 'founder');
-  assert.equal(getUserRoleFromEmail('client@brandforge.gg'), 'client');
-  assert.equal(getUserRoleFromEmail('nora@brandforge.gg'), 'user');
-});
+const { getUserRoleFromEmail, isFounderEmail } = require('./user-roles.js');
 
 test('getUserRoleFromEmail maps privileged Google accounts and open signups', () => {
   assert.equal(getUserRoleFromEmail('brandforge.gg@gmail.com'), 'founder');
@@ -17,25 +11,13 @@ test('getUserRoleFromEmail maps privileged Google accounts and open signups', ()
   assert.equal(getUserRoleFromEmail(''), 'guest');
 });
 
-test('getVisibleProjects limits client views to the right project set', () => {
-  const projects = [
-    { id: 'a', status: 'IN_PROGRESS' },
-    { id: 'b', status: 'REVIEW' },
-    { id: 'c', status: 'AWAITING_APPROVAL' },
-    { id: 'd', status: 'COMPLETED' },
-  ];
-
-  const visible = getVisibleProjects(projects, 'client@brandforge.gg');
-  assert.deepEqual(visible.map((project) => project.id), ['a', 'b', 'c']);
+test('the removed demo account no longer maps to a privileged role', () => {
+  assert.equal(getUserRoleFromEmail('demo@brandforge.gg'), 'user');
+  assert.equal(isFounderEmail('demo@brandforge.gg'), false);
 });
 
-test('getVisibleProjects shows every project to founder, operator, and regular users', () => {
-  const projects = [
-    { id: 'a', status: 'IN_PROGRESS' },
-    { id: 'b', status: 'COMPLETED' },
-  ];
-
-  assert.equal(getVisibleProjects(projects, 'brandforge.gg@gmail.com').length, 2);
-  assert.equal(getVisibleProjects(projects, 'mxstermind.com@gmail.com').length, 2);
-  assert.equal(getVisibleProjects(projects, 'someone.new@gmail.com').length, 2);
+test('isFounderEmail only matches the founder account', () => {
+  assert.equal(isFounderEmail('brandforge.gg@gmail.com'), true);
+  assert.equal(isFounderEmail('mxstermind.com@gmail.com'), false);
+  assert.equal(isFounderEmail('someone.new@gmail.com'), false);
 });

@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/app-shell';
 import { supabase } from '@/lib/supabase';
-import { clearDemoSession, getDemoSessionEmail } from '@/lib/auth-utils';
 import { getSessionUser } from '@/lib/browser-auth';
 import { getUserRoleFromEmail } from '@/lib/user-roles';
 
@@ -36,15 +35,6 @@ export default function SettingsPage() {
     let cancelled = false;
 
     async function loadProfile() {
-      const demoEmail = getDemoSessionEmail();
-      if (demoEmail) {
-        if (!cancelled) {
-          setProfile(profileFromEmail(demoEmail));
-          setLoading(false);
-        }
-        return;
-      }
-
       let sessionUser = await getSessionUser();
       if (!sessionUser?.email) {
         await new Promise((resolve) => setTimeout(resolve, 150));
@@ -76,7 +66,6 @@ export default function SettingsPage() {
   }, [router]);
 
   async function handleSignOut() {
-    clearDemoSession();
     await supabase.auth.signOut();
     router.push('/login');
   }

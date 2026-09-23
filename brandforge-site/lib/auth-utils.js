@@ -7,11 +7,6 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
 }
 
-const DEMO_EMAIL = 'demo@brandforge.gg';
-const CLIENT_EMAIL = 'client@brandforge.gg';
-const DEMO_PASSWORD = 'BrandForge2025!';
-const DEMO_COOKIE_NAME = 'brandforge-demo-user';
-
 function getAuthErrorMessage(code) {
   const messages = {
     invalid_credentials: 'The email or password is incorrect.',
@@ -30,67 +25,6 @@ function getAuthErrorMessage(code) {
   };
 
   return messages[code] || messages.generic;
-}
-
-function isDemoCredentials(email, password) {
-  const normalizedEmail = String(email ?? '').trim().toLowerCase();
-  const normalizedPassword = String(password ?? '');
-
-  return (
-    normalizedEmail === DEMO_EMAIL &&
-    normalizedPassword === DEMO_PASSWORD
-  );
-}
-
-function saveDemoSession(email) {
-  if (typeof document === 'undefined') {
-    return false;
-  }
-
-  const normalizedEmail = String(email ?? '').trim().toLowerCase();
-  const cookieValue = encodeURIComponent(normalizedEmail);
-
-  document.cookie = `${DEMO_COOKIE_NAME}=${cookieValue}; path=/; max-age=604800; SameSite=Lax`;
-
-  if (typeof window !== 'undefined' && window.localStorage) {
-    window.localStorage.setItem(DEMO_COOKIE_NAME, normalizedEmail);
-  }
-
-  return true;
-}
-
-function clearDemoSession() {
-  if (typeof document !== 'undefined') {
-    document.cookie = `${DEMO_COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`;
-  }
-
-  if (typeof window !== 'undefined' && window.localStorage) {
-    window.localStorage.removeItem(DEMO_COOKIE_NAME);
-  }
-}
-
-function getDemoSessionEmail() {
-  if (typeof document === 'undefined') {
-    return null;
-  }
-
-  const cookieMatch = document.cookie
-    .split(';')
-    .map((entry) => entry.trim())
-    .find((entry) => entry.startsWith(`${DEMO_COOKIE_NAME}=`));
-
-  if (cookieMatch) {
-    return decodeURIComponent(cookieMatch.split('=').slice(1).join('=')).trim().toLowerCase();
-  }
-
-  if (typeof window !== 'undefined' && window.localStorage) {
-    const stored = window.localStorage.getItem(DEMO_COOKIE_NAME);
-    if (stored) {
-      return String(stored).trim().toLowerCase();
-    }
-  }
-
-  return null;
 }
 
 function resolveSiteUrl(customSiteUrl) {
@@ -114,16 +48,8 @@ function buildOAuthRedirectUrl(nextPath = '/chat', customSiteUrl) {
 }
 
 module.exports = {
-  DEMO_EMAIL,
-  CLIENT_EMAIL,
-  DEMO_PASSWORD,
-  DEMO_COOKIE_NAME,
   isValidEmail,
   getAuthErrorMessage,
-  isDemoCredentials,
-  saveDemoSession,
-  clearDemoSession,
-  getDemoSessionEmail,
   resolveSiteUrl,
   buildOAuthRedirectUrl,
 };

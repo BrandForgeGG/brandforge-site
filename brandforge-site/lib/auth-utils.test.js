@@ -33,8 +33,10 @@ test('buildOAuthRedirectUrl creates the correct callback route with the next par
   assert.equal(redirectUrl, 'https://brandforge.gg/auth/callback?next=%2Fchat');
 });
 
-test('supports the demo founder login fallback', () => {
-  const { isDemoCredentials } = require('./auth-utils.js');
-  assert.equal(isDemoCredentials('demo@brandforge.gg', 'BrandForge2025!'), true);
-  assert.equal(isDemoCredentials('someone@example.com', 'wrong-password'), false);
+test('the legacy demo-session helpers are gone', () => {
+  const utils = require('./auth-utils.js');
+  assert.equal(utils.isDemoCredentials, undefined);
+  assert.equal(utils.getDemoSessionEmail, undefined);
+  assert.equal(utils.saveDemoSession, undefined);
+  assert.equal(utils.clearDemoSession, undefined);
 });
