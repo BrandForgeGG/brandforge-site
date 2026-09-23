@@ -35,6 +35,8 @@ export default function ApplyPage() {
   const [signedIn, setSignedIn] = useState(false);
   const [application, setApplication] = useState<ApplicationStatus>(null);
   const [message, setMessage] = useState('');
+  // Honeypot: humans never see this field; bots that fill it get rejected server-side.
+  const [website, setWebsite] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -92,7 +94,7 @@ export default function ApplyPage() {
       const response = await fetch('/api/applications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: message.trim() }),
+        body: JSON.stringify({ message: message.trim(), website }),
       });
 
       const data = await response.json().catch(() => ({}));
@@ -210,6 +212,19 @@ export default function ApplyPage() {
               maxLength={4000}
               placeholder="What you build, how you deliver, links to work…"
               className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-[#14171a] px-4 py-3 text-sm text-[#ece7de] placeholder-[#6f757b] outline-none transition focus:border-[#e8571e]"
+            />
+          </div>
+
+          {/* Honeypot: off-screen and unreachable by keyboard; only bots fill it. */}
+          <div aria-hidden="true" className="absolute -left-[9999px] top-0 h-0 w-0 overflow-hidden">
+            <label htmlFor="apply-website">Website</label>
+            <input
+              id="apply-website"
+              type="text"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              tabIndex={-1}
+              autoComplete="off"
             />
           </div>
 
