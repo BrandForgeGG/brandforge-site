@@ -7,10 +7,10 @@ import {
   getPayments,
   getMilestones,
   getProposal,
+  getConversationOwnerId,
   canAccessConversation,
   addMessage,
   isStaffAccount,
-  updateConversationStatus,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 
@@ -32,10 +32,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const hasAccess = await canAccessConversation(user.id, conversationId);
+    // Accepting a proposal creates a binding agreement with a payment schedule, so only the
+    // founder who owns the conversation can do it - not other participants.
+    const isStaff = await isStaffAccount(user.id);
+    const ownerId = await getConversationOwnerId(conversationId);
 
-    if (!hasAccess) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    if (ownerId !== user.id && !isStaff) {
+      return NextResponse.json(
+        { error: 'Only the founder can accept an agreement' },
+        { status: 403 }
+      );
     }
 
     // The agreement must belong to this conversation and the proposal must have been accepted.
@@ -102,27 +108,28 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const allowed = ['pending_funding', 'funded', 'active', 'completed', 'cancelled'];
+    // Agreement lifecycle is staff work. 'funded' is never set here: funding only happens
+    // through /api/payments after the client's crypto transfer is verified on-chain.
+    const isStaff = await isStaffAccount(user.id);
+    if (!isStaff) {
+      return NextResponse.json(
+        { error: 'Only BrandForge staff can update an agreement' },
+        { status: 403 }
+      );
+    }
+
+    const allowed = ['active', 'completed', 'cancelled'];
     if (!allowed.includes(status)) {
-      return NextResponse.json({ error: 'Invalid agreement status' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid agreement status (funding goes through payment verification)' },
+        { status: 400 }
+      );
     }
 
     const agreement = await updateAgreementStatus(agreementId, status);
 
     if (!agreement) {
       return NextResponse.json({ error: 'Failed to update agreement' }, { status: 500 });
-    }
-
-    // Funding moves the project to ACTIVE and leaves a trace in the same chat.
-    if (status === 'funded' && agreement.conversation_id) {
-      await addMessage({
-        conversation_id: agreement.conversation_id,
-        sender_type: 'ai',
-        sender_name: 'BrandForge',
-        content: 'Project funded. BrandForge is starting delivery. Milestones and tasks will be tracked in this conversation.',
-        content_type: 'system',
-      });
-      await updateConversationStatus(agreement.conversation_id, 'ACTIVE');
     }
 
     return NextResponse.json({ success: true, agreement });

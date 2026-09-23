@@ -3,6 +3,8 @@ import {
   createProposal,
   updateProposalStatus,
   getProposal,
+  getProposalById,
+  getConversationOwnerId,
   canAccessConversation,
   addMessage,
   isStaffAccount,
@@ -33,6 +35,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
+    // A proposal is a priced offer from BrandForge; only staff may issue one. The founder's
+    // job is to accept, decline or request changes via PATCH.
+    const isStaff = await isStaffAccount(user.id);
+    if (!isStaff) {
+      return NextResponse.json(
+        { error: 'Only BrandForge staff can issue proposals' },
+        { status: 403 }
+      );
+    }
+
     const proposal = await createProposal({
       conversation_id: conversationId,
       title,
@@ -48,6 +60,15 @@ export async function POST(request: NextRequest) {
     if (!proposal) {
       return NextResponse.json({ error: 'Failed to create proposal' }, { status: 500 });
     }
+
+    await updateConversationStatus(conversationId, 'PROPOSED');
+    await addMessage({
+      conversation_id: conversationId,
+      sender_type: 'ai',
+      sender_name: 'BrandForge',
+      content: `BrandForge sent a proposal: ${title}. Review it on the right and accept, decline or request changes here in the chat.`,
+      content_type: 'system',
+    });
 
     return NextResponse.json({ success: true, proposal });
   } catch (error) {
@@ -77,6 +98,27 @@ export async function PATCH(request: NextRequest) {
     const allowed = ['pending', 'changes_requested', 'accepted', 'declined', 'expired'];
     if (!allowed.includes(status)) {
       return NextResponse.json({ error: 'Invalid proposal status' }, { status: 400 });
+    }
+
+    // Only the founder who owns the conversation (or BrandForge staff) may change a proposal,
+    // and founders may only answer it - lifecycle housekeeping is staff work.
+    const existing = await getProposalById(proposalId);
+    if (!existing) {
+      return NextResponse.json({ error: 'Proposal not found' }, { status: 404 });
+    }
+
+    const isStaff = await isStaffAccount(user.id);
+    const ownerId = await getConversationOwnerId(existing.conversation_id);
+    if (ownerId !== user.id && !isStaff) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
+
+    const founderStatuses = ['accepted', 'declined', 'changes_requested'];
+    if (!isStaff && !founderStatuses.includes(status)) {
+      return NextResponse.json(
+        { error: 'Only BrandForge staff can set this proposal status' },
+        { status: 403 }
+      );
     }
 
     const proposal = await updateProposalStatus(proposalId, status);

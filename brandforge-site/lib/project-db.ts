@@ -894,6 +894,29 @@ export async function canAccessConversation(
   return Boolean(participant);
 }
 
+// Identity lookup for route-level authorization on the money path. Runs as the service role so
+// the answer does not depend on the caller's own RLS visibility.
+export async function getConversationOwnerId(conversationId: string): Promise<string | null> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) {
+    console.error('Error loading conversation owner: service role client not configured');
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from('conversations')
+    .select('user_id')
+    .eq('id', conversationId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error loading conversation owner:', error.message);
+    return null;
+  }
+
+  return data?.user_id ?? null;
+}
+
 // ---------- Proposals ----------
 
 export async function createProposal(proposal: {
@@ -907,7 +930,13 @@ export async function createProposal(proposal: {
   estimated_weeks_max?: number;
   created_by?: string;
 }) {
-  const supabase = await db();
+  // Proposals are issued by staff only; the route authorizes the caller and this write runs as
+  // the service role, because RLS on the money tables is read-only for authenticated users.
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) {
+    console.error('Error creating proposal: service role client not configured');
+    return null;
+  }
 
   const { data, error } = await supabase
     .from('proposals')
@@ -923,11 +952,39 @@ export async function createProposal(proposal: {
   return data ?? null;
 }
 
+// Route-level authorization needs the row before it is written, so this reads as the service
+// role regardless of caller visibility.
+export async function getProposalById(proposalId: string) {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) {
+    console.error('Error fetching proposal: service role client not configured');
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from('proposals')
+    .select('*')
+    .eq('id', proposalId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching proposal:', error.message);
+    return null;
+  }
+
+  return data ?? null;
+}
+
 export async function updateProposalStatus(
   proposalId: string,
   status: 'pending' | 'changes_requested' | 'accepted' | 'declined' | 'expired'
 ) {
-  const supabase = await db();
+  // Runs as the service role after the route has authorized the caller (founder or staff).
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) {
+    console.error('Error updating proposal status: service role client not configured');
+    return null;
+  }
 
   const { data, error } = await supabase
     .from('proposals')
@@ -1114,7 +1171,12 @@ export async function createAgreement(agreement: {
   total_amount: number;
   currency?: string;
 }) {
-  const supabase = await db();
+  // Runs as the service role after the route has authorized the caller (the founder).
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) {
+    console.error('Error creating agreement: service role client not configured');
+    return null;
+  }
 
   const { data, error } = await supabase
     .from('agreements')
@@ -1134,7 +1196,12 @@ export async function updateAgreementStatus(
   agreementId: string,
   status: 'pending_funding' | 'funded' | 'active' | 'completed' | 'cancelled'
 ) {
-  const supabase = await db();
+  // Runs as the service role after the route has authorized the caller (staff only).
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) {
+    console.error('Error updating agreement status: service role client not configured');
+    return null;
+  }
 
   const { data, error } = await supabase
     .from('agreements')
@@ -1148,6 +1215,29 @@ export async function updateAgreementStatus(
 
   if (error) {
     console.error('Error updating agreement status:', error.message);
+    return null;
+  }
+
+  return data ?? null;
+}
+
+// Route-level authorization needs the row before it is written, so this reads as the service
+// role regardless of caller visibility.
+export async function getAgreementById(agreementId: string) {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) {
+    console.error('Error fetching agreement: service role client not configured');
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from('agreements')
+    .select('*')
+    .eq('id', agreementId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching agreement:', error.message);
     return null;
   }
 
@@ -1180,7 +1270,13 @@ export async function createPayments(agreementId: string, milestones: Milestone[
     return [];
   }
 
-  const supabase = await db();
+  // Runs as the service role: payment rows are created by the agreement-accept route after it
+  // has authorized the founder.
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) {
+    console.error('Error creating payments: service role client not configured');
+    return [];
+  }
 
   const payments = milestones.map((milestone, index) => ({
     agreement_id: agreementId,
@@ -1218,6 +1314,160 @@ export async function getPayments(conversationId: string, asStaff?: boolean) {
   }
 
   return data ?? [];
+}
+
+// ---------- Admin-verified crypto escrow ----------
+//
+// Money moves in crypto, verified by hand: the client sends the full agreement total to the
+// BrandForge deposit wallet and pastes the transaction hash; staff confirm the transfer
+// on-chain, which marks the agreement funded; staff release each milestone payment after the
+// founder approves the delivered work. Every write here runs as the service role after the
+// route has authorized the caller.
+
+// Founder submitted a transaction hash for the full agreement total. Every still-scheduled
+// payment moves to 'pending' with the evidence attached. Returns false when nothing was
+// updated (already submitted, or no payment rows exist for the agreement).
+export async function submitAgreementFunding(
+  agreementId: string,
+  txHash: string,
+  network: string | null
+): Promise<boolean> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) {
+    console.error('Error recording funding submission: service role client not configured');
+    return false;
+  }
+
+  const { data, error } = await supabase
+    .from('payments')
+    .update({
+      status: 'pending',
+      tx_hash: txHash,
+      network,
+      submitted_at: new Date().toISOString(),
+    })
+    .eq('agreement_id', agreementId)
+    .eq('status', 'scheduled')
+    .select('id');
+
+  if (error) {
+    console.error('Error recording funding submission:', error.message);
+    return false;
+  }
+
+  return (data?.length ?? 0) > 0;
+}
+
+// Staff confirmed the transfer on-chain: pending payments become 'paid' (held), the agreement
+// becomes 'funded' and the conversation moves to ACTIVE delivery. Returns the context the
+// route needs for the system message, or null on failure.
+export async function verifyAgreementFunding(agreementId: string): Promise<{
+  conversationId: string;
+  totalAmount: number;
+  currency: string;
+} | null> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) {
+    console.error('Error verifying funding: service role client not configured');
+    return null;
+  }
+
+  const { data: agreement, error: agreementError } = await supabase
+    .from('agreements')
+    .select('conversation_id, total_amount, currency')
+    .eq('id', agreementId)
+    .maybeSingle();
+
+  if (agreementError || !agreement) {
+    console.error('Error verifying funding:', agreementError?.message ?? 'agreement not found');
+    return null;
+  }
+
+  const { error: paymentsError } = await supabase
+    .from('payments')
+    .update({ status: 'paid' })
+    .eq('agreement_id', agreementId)
+    .eq('status', 'pending');
+
+  if (paymentsError) {
+    console.error('Error marking payments paid:', paymentsError.message);
+    return null;
+  }
+
+  const funded = await updateAgreementStatus(agreementId, 'funded');
+  if (!funded) {
+    return null;
+  }
+
+  const { error: conversationError } = await supabase
+    .from('conversations')
+    .update({ status: 'ACTIVE' })
+    .eq('id', agreement.conversation_id);
+
+  if (conversationError) {
+    console.error('Error activating conversation:', conversationError.message);
+    return null;
+  }
+
+  return {
+    conversationId: agreement.conversation_id,
+    totalAmount: agreement.total_amount,
+    currency: agreement.currency,
+  };
+}
+
+// Staff could not confirm the transfer: payments return to 'scheduled' and the submitted
+// evidence is cleared so the founder can send the correct amount and resubmit.
+export async function rejectAgreementFunding(agreementId: string): Promise<boolean> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) {
+    console.error('Error rejecting funding: service role client not configured');
+    return false;
+  }
+
+  const { error } = await supabase
+    .from('payments')
+    .update({ status: 'scheduled', tx_hash: null, network: null, submitted_at: null })
+    .eq('agreement_id', agreementId)
+    .eq('status', 'pending');
+
+  if (error) {
+    console.error('Error rejecting funding:', error.message);
+    return false;
+  }
+
+  return true;
+}
+
+// Staff releases one milestone payment to the operator after the founder approved the
+// delivered work. Only payments currently held ('paid') can be released.
+export async function releasePaymentToOperator(paymentId: string): Promise<{
+  id: string;
+  conversation_id: string;
+  title: string;
+  amount: number;
+  currency: string;
+} | null> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) {
+    console.error('Error releasing payment: service role client not configured');
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from('payments')
+    .update({ status: 'released', released_at: new Date().toISOString() })
+    .eq('id', paymentId)
+    .eq('status', 'paid')
+    .select('id, conversation_id, title, amount, currency')
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error releasing payment:', error.message);
+    return null;
+  }
+
+  return data ?? null;
 }
 
 // ---------- Tasks ----------
