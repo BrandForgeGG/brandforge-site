@@ -158,7 +158,8 @@ Weighted, deterministic (`lib/discovery.js`): project name 10, problem statement
   conversation ACTIVE) and release each milestone payment to the operator after the founder
   approves the delivered work (`paid → released`). All money mutations run as the service role
   after route-level authorization; RLS on proposals, agreements and payments is read-only for
-  authenticated users (migration 0007).
+  authenticated users (migration 0007). Staff verify and release from the project panel —
+  the operator runbook is `ESCROW.md`.
 - `/settings` is the only remaining non-chat account surface. The legacy demo routes
   (`/dashboard`, `/tasks`, `/files`, `/team`, `/payments`, `/portal`, `/signup`) and their dead
   libs were removed on 2026-09-23; the chat-first flow never depended on them. The legacy
