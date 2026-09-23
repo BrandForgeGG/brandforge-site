@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getProfileRole } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
 const MAX_MESSAGE = 4000;
+
+// H8: a signed-in account may only submit a handful of applications per hour
+// (per instance — see lib/rate-limit.js for the serverless caveat).
+const APPLY_RATE_LIMIT = { limit: 3, windowMs: 60 * 60 * 1000 };
 
 // POST /api/applications — submit a specialist application (own row only, via RLS).
 export async function POST(request: NextRequest) {
@@ -22,12 +27,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'You already have staff access' }, { status: 400 });
     }
 
-    let body: { message?: unknown } = {};
+    const rate = checkRateLimit(`apply:${user.id}`, APPLY_RATE_LIMIT);
+
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: 'Too many submissions — please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } }
+      );
+    }
+
+    let body: { message?: unknown; website?: unknown } = {};
 
     try {
       body = await request.json();
     } catch {
       body = {};
+    }
+
+    // Honeypot: the form renders a `website` field humans never see or fill.
+    // A filled value means a bot — reject before anything touches the database.
+    if (typeof body.website === 'string' && body.website.trim().length > 0) {
+      return NextResponse.json({ error: 'Submission rejected' }, { status: 400 });
     }
 
     const message = String(body.message ?? '').trim();

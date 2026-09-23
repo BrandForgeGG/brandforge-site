@@ -14,12 +14,17 @@ import {
   syncDiscoveryCompleteness,
 } from '@/lib/conversation-state';
 import { executeTool } from '@/lib/ai-tools';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 const MAX_HISTORY = 40;
+
+// H8: each turn burns paid LLM tokens. Cap per signed-in user (per instance —
+// see lib/rate-limit.js for the serverless caveat).
+const CHAT_RATE_LIMIT = { limit: 30, windowMs: 10 * 60 * 1000 };
 
 // POST /api/chat - run one BrandForge turn.
 //
@@ -34,6 +39,15 @@ export async function POST(request: NextRequest) {
 
   if (!user) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  }
+
+  const rate = checkRateLimit(`chat:${user.id}`, CHAT_RATE_LIMIT);
+
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: 'Too many messages — give BrandForge a moment and try again.' },
+      { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } }
+    );
   }
 
   let body: { conversationId?: string; message?: string } = {};
