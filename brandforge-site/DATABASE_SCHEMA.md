@@ -233,6 +233,9 @@ CREATE TABLE payments (
   scheduled_for TIMESTAMPTZ,
   paid_at TIMESTAMPTZ,
   released_at TIMESTAMPTZ,
+  submitted_at TIMESTAMPTZ,  -- 0007: when the client submitted the funding tx hash
+  tx_hash TEXT,              -- 0007: client-submitted funding transaction hash
+  network TEXT,              -- 0007: human-readable label, e.g. "USDT (TRC-20)"
   
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
