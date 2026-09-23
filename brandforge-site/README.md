@@ -100,7 +100,7 @@ Key modules:
 | `lib/conversation-state.ts` | Snapshot composition, discovery sync, client state payload. |
 | `lib/discovery.js` | Deterministic discovery scoring, shared by the API and the AI tool (unit tested). |
 | `lib/project-db.ts` | All chat-table access through the request-scoped Supabase session (RLS enforced). |
-| `proxy.ts` | Next 16 `proxy` (formerly middleware): auth gate for `/chat`, `/projects`, `/settings`, `/staff`, `/apply`, `/admin`; legacy `/signup` → `/login`. |
+| `proxy.ts` | Next 16 `proxy` (formerly middleware): auth gate for `/chat`, `/settings`, `/apply`, `/admin`; strips client-supplied `x-user-*` headers (H6); legacy `/signup` → `/login`. |
 
 ### State model (never blurred)
 
