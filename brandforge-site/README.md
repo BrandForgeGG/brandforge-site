@@ -213,13 +213,13 @@ Closed testing runs two accounts:
 
 **Live:** https://brandforge.gg (Vercel, `brandforge-site` production).
 
-- `/` is a public teaser landing: hero CTA, how-it-works, services, community (Discord +
-  Telegram). Visitors without access are funneled to the community; only early-access Google
-  accounts can enter the app.
-- Auth is **Google-only and allowlisted**: `lib/auth-allowlist.js` holds
-  `brandforge.gg@gmail.com` (founder) and `mxstermind.com@gmail.com` (operator). The allowlist is
-  enforced in `proxy.ts` (protected routes) and `app/auth/callback/route.ts` (new sessions);
-  everyone else lands on `/login?error=…`.
+- `/` is a public landing: hero CTA, how-it-works, services, community (Discord +
+  Telegram). Any Google account can sign in and start a project chat; the community
+  channels are the top-of-funnel for founders who want to talk to a human first.
+- Auth is **Google-only and open**: any Google account can sign in and use the app. Staff
+  access comes from `profiles.role` (`admin` / `operator`), not an email list — known staff
+  accounts are `brandforge.gg@gmail.com` (founder/admin) and `mxstermind.com@gmail.com`
+  (operator); `/staff` and `/admin/*` check the role server-side.
 - Community links live in one place: `lib/community.js`.
 - Vercel env for production: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
   `NEXT_PUBLIC_SITE_URL`, `OPENROUTER_API_KEY` (stored as secret).
