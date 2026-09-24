@@ -3,6 +3,7 @@ import { addMessage, canAccessConversation, updateConversationStatus } from '@/l
 import { syncDiscoveryCompleteness } from '@/lib/conversation-state';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { isDiscoveryComplete } from '@/lib/discovery';
+import { notify } from '@/lib/notify';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,6 +53,8 @@ export async function POST(request: NextRequest) {
         : `Requirements sent to BrandForge at ${discovery.percent}% discovery. The team will review them and may ask follow-up questions in this conversation.`,
       content_type: 'system',
     });
+
+    await notify('review_requested', { percent: discovery.percent });
 
     return NextResponse.json({
       success: true,

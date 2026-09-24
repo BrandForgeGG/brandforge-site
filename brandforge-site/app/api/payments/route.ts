@@ -17,6 +17,7 @@ import {
   normalizeNetwork,
   normalizeTxHash,
 } from '@/lib/crypto-payments';
+import { notify } from '@/lib/notify';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,6 +97,11 @@ export async function POST(request: NextRequest) {
       `Payment submitted for verification. BrandForge is confirming the transfer on-chain (tx ${txHash}). The project moves to delivery as soon as it checks out.`
     );
 
+    await notify('payment_submitted', {
+      txHash,
+      network: network || process.env.NEXT_PUBLIC_DEPOSIT_NETWORK || null,
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Submit payment API error:', error);
@@ -156,6 +162,8 @@ export async function PATCH(request: NextRequest) {
           'Payment verified on-chain. The project is funded and delivery starts now. BrandForge holds the funds and releases each milestone payment after the founder approves the delivered work.'
         );
 
+        await notify('payment_verified', {});
+
         return NextResponse.json({ success: true });
       }
 
@@ -168,6 +176,8 @@ export async function PATCH(request: NextRequest) {
         agreement.conversation_id,
         `The submitted payment could not be verified${note ? `: ${note}` : ''}. Please check the amount and network, then resubmit the transaction hash.`
       );
+
+      await notify('payment_rejected', { note });
 
       return NextResponse.json({ success: true });
     }
@@ -189,6 +199,12 @@ export async function PATCH(request: NextRequest) {
         released.conversation_id,
         `Milestone payment "${released.title}" (${released.currency} ${Number(released.amount).toLocaleString()}) released to the operator.`
       );
+
+      await notify('payment_released', {
+        title: released.title,
+        amount: released.amount,
+        currency: released.currency,
+      });
 
       return NextResponse.json({ success: true });
     }

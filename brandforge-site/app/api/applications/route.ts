@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getProfileRole } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { notify } from '@/lib/notify';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,6 +83,8 @@ export async function POST(request: NextRequest) {
       console.error('Application submit error:', error.message);
       return NextResponse.json({ error: 'Could not submit application' }, { status: 500 });
     }
+
+    await notify('application_submitted', { email: user.email });
 
     return NextResponse.json({ application: data }, { status: 201 });
   } catch (error) {

@@ -11,6 +11,7 @@ import {
   updateConversationStatus,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
+import { notify } from '@/lib/notify';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,6 +69,16 @@ export async function POST(request: NextRequest) {
       sender_name: 'BrandForge',
       content: `BrandForge sent a proposal: ${title}. Review it on the right and accept, decline or request changes here in the chat.`,
       content_type: 'system',
+    });
+
+    await notify('proposal_sent', {
+      title,
+      totalAmount,
+      currency: 'EUR',
+      weeks:
+        estimatedWeeksMin && estimatedWeeksMax
+          ? `${estimatedWeeksMin}–${estimatedWeeksMax} weeks`
+          : null,
     });
 
     return NextResponse.json({ success: true, proposal });
@@ -151,6 +162,8 @@ export async function PATCH(request: NextRequest) {
       } else if (status === 'changes_requested' || status === 'declined') {
         await updateConversationStatus(proposal.conversation_id, 'READY_FOR_REVIEW');
       }
+
+      await notify('proposal_answered', { title: existing.title, status });
     }
 
     return NextResponse.json({ success: true, proposal });

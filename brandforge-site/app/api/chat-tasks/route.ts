@@ -12,6 +12,7 @@ import {
   updateTaskStatus,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
+import { notify } from '@/lib/notify';
 
 export const dynamic = 'force-dynamic';
 
@@ -123,6 +124,14 @@ export async function PATCH(request: NextRequest) {
       content: line,
       content_type: 'system',
     });
+
+    // Delivered work is the one transition the founder must not miss — they hold the approval.
+    if (updatedTask.status === 'REVIEW') {
+      await notify('task_review', {
+        title: updatedTask.title,
+        assigneeName: updatedTask.assignee_name,
+      });
+    }
 
     return NextResponse.json({ success: true, task: updatedTask });
   } catch (error) {

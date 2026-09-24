@@ -63,6 +63,8 @@ SUPABASE_SERVICE_ROLE_KEY=…              # server-only: platform counters, del
 # SUPABASE_SECRET_KEY=…                  # optional sb_secret_… fallback for the service role
 NEXT_PUBLIC_DEPOSIT_WALLET_ADDRESS=…     # client-visible: crypto escrow deposit target
 NEXT_PUBLIC_DEPOSIT_NETWORK=…            # client-visible: e.g. "USDT (TRC-20)"
+# TELEGRAM_BOT_TOKEN=…                   # optional: @BotFather token for team notifications
+# TELEGRAM_CHAT_ID=…                     # optional: team group chat id (lib/notify.js is a no-op without both)
 ```
 
 Commands:
