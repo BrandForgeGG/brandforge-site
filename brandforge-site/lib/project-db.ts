@@ -86,6 +86,8 @@ export interface ConversationSummary {
   messageCount: number;
   lastActivity: string | null;
   preview: string | null;
+  /** Conversation owner - lets staff clients tell "my chat" apart from "a founder's chat". */
+  ownerId: string;
   /** First BrandForge staff member in the chat - the founder sees that the team has arrived. */
   staffViewedAt: string | null;
   staffViewedBy: string | null;
@@ -583,7 +585,7 @@ async function buildConversationSummaries(userId?: string): Promise<Conversation
 
   const orderedQuery = supabase
     .from('conversations')
-    .select('id, title, status, created_at')
+    .select('id, title, status, created_at, user_id')
     .order('created_at', { ascending: false });
 
   const { data: conversations, error } = await (userId
@@ -683,6 +685,7 @@ async function buildConversationSummaries(userId?: string): Promise<Conversation
       messageCount: messages.length,
       lastActivity: lastMessage?.created_at ?? null,
       preview: truncate(lastMessage?.content ?? '', 90) || null,
+      ownerId: String(conversation.user_id ?? ''),
       staffViewedAt: staffView?.at || null,
       staffViewedBy: staffView?.name ?? null,
       isUnseen: staffView === null,

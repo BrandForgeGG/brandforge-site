@@ -189,7 +189,10 @@ Weighted, deterministic (`lib/discovery.js`): project name 10, problem statement
   and the founder-scoped tables (requirements, milestones, proposals, agreements, payments,
   participants) are read with the service role (`readClient(asStaff)`), because RLS only grants staff
   `conversations`, `messages`, `project_context` and `tasks`. Founder-only actions stay gated: running
-  the AI turn (`/api/chat`), the review handoff, creating the agreement, and deleting a chat.
+  the AI turn (`/api/chat`), the review handoff, creating the agreement, and deleting a chat —
+  but inside a chat a staff member owns they are the founder, so the AI answers, they can delete
+  their own chat, and a first message creates one (no sidebar pick needed). Ownership travels as
+  `ownerId` on each summary plus `userId` on `/api/conversations-list`.
 - `brandforge-web/`, the root HTML mockups and `out/` were removed on 2026-09-23 (preserved in
   git history, commit `4039167`).
 - Rate limiting is per-instance in-memory (`lib/rate-limit.js`): `/api/chat` is capped at

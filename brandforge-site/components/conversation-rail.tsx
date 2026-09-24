@@ -15,6 +15,8 @@ export interface RecentConversation {
   messageCount: number;
   lastActivity: string | null;
   preview: string | null;
+  /** Conversation owner - staff use it to tell their own chats apart from founders' chats. */
+  ownerId?: string;
   /** First BrandForge staff member in the chat (founder view). */
   staffViewedAt?: string | null;
   staffViewedBy?: string | null;

@@ -48,9 +48,10 @@ export function ChatWorkspace() {
   const [state, setState] = useState<ClientProjectState | null>(null);
   const [recents, setRecents] = useState<RecentConversation[]>([]);
   // Staff accounts see every conversation plus how many nobody has picked up yet.
-  const [railMeta, setRailMeta] = useState<{ isStaff: boolean; unseenCount: number }>({
+  const [railMeta, setRailMeta] = useState<{ isStaff: boolean; unseenCount: number; userId: string | null }>({
     isStaff: false,
     unseenCount: 0,
+    userId: null,
   });
   const [proposal, setProposal] = useState<ProposalSummary | null>(null);
   const [agreement, setAgreement] = useState<AgreementSummary | null>(null);
@@ -94,18 +95,22 @@ export function ChatWorkspace() {
   const loadRecents = useCallback(async () => {
     try {
       const response = await fetch('/api/conversations-list');
-      if (!response.ok) return { isStaff: false, unseenCount: 0 };
+      if (!response.ok) return { isStaff: false, unseenCount: 0, userId: null, conversations: [] as RecentConversation[] };
       const data = await response.json();
-      setRecents(Array.isArray(data.conversations) ? data.conversations : []);
+      const conversations: RecentConversation[] = Array.isArray(data.conversations)
+        ? data.conversations
+        : [];
+      setRecents(conversations);
       const meta = {
         isStaff: Boolean(data.isStaff),
         unseenCount: Number(data.unseenCount ?? 0),
+        userId: typeof data.userId === 'string' ? data.userId : null,
       };
       setRailMeta(meta);
-      return meta;
+      return { ...meta, conversations };
     } catch {
       // Recents are a convenience feed; a failure must not break the conversation.
-      return { isStaff: false, unseenCount: 0 };
+      return { isStaff: false, unseenCount: 0, userId: null, conversations: [] as RecentConversation[] };
     }
   }, []);
 
@@ -286,9 +291,17 @@ export function ChatWorkspace() {
 
       const lastMessage = loadedMessages[loadedMessages.length - 1];
 
-      // Staff observe the history: the AI never answers a founder's message on their behalf.
+      // Staff observe founders' histories: the AI never answers on a founder's behalf. In a
+      // chat the staff member owns, they get the founder experience and the AI answers.
+      const isOwn = Boolean(
+        meta.userId &&
+          meta.conversations.some(
+            (conversation) => conversation.id === conversationId && conversation.ownerId === meta.userId
+          )
+      );
+
       if (
-        !meta.isStaff &&
+        (!meta.isStaff || isOwn) &&
         lastMessage &&
         lastMessage.sender === 'user' &&
         !autoAnsweredRef.current.has(conversationId)
@@ -338,6 +351,16 @@ export function ChatWorkspace() {
     [conversationId, router]
   );
 
+  // Staff act as the team only inside chats owned by somebody else. A chat a staff member owns
+  // is their own project: it behaves like any founder's chat (AI answers, founder actions).
+  const isOwnConversation = Boolean(
+    conversationId &&
+      railMeta.userId &&
+      recents.some(
+        (conversation) => conversation.id === conversationId && conversation.ownerId === railMeta.userId
+      )
+  );
+
   const handleSend = useCallback(
     async (suggestion?: string) => {
       const text = (suggestion ?? input).trim();
@@ -348,15 +371,10 @@ export function ChatWorkspace() {
 
       setInput('');
 
-      // BrandForge staff reply as the team (human_operator) instead of triggering the AI, so the
-      // founder always sees a human voice in the same chat.
-      if (railMeta.isStaff) {
-        if (!conversationId) {
-          setInput(text);
-          setError('Open a chat from the sidebar first - the team replies inside a conversation.');
-          return;
-        }
-
+      // BrandForge staff reply as the team (human_operator) inside a founder chat instead of
+      // triggering the AI, so the founder always sees a human voice in the same chat. Sending
+      // without an open chat falls through to the creation path below - staff can start one too.
+      if (railMeta.isStaff && conversationId && !isOwnConversation) {
         setIsStreaming(true);
 
         try {
@@ -413,7 +431,7 @@ export function ChatWorkspace() {
 
       await runTurn(conversationId, text);
     },
-    [conversationId, input, isStreaming, loadRecents, railMeta.isStaff, refreshMessages, router, runTurn, scrollToBottom]
+    [conversationId, input, isOwnConversation, isStreaming, loadRecents, railMeta.isStaff, refreshMessages, router, runTurn, scrollToBottom]
   );
 
   // BrandForge staff: opening a chat IS picking it up. The join call registers the participant row
@@ -422,7 +440,7 @@ export function ChatWorkspace() {
   const pickedUpRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!conversationId || !railMeta.isStaff || pickedUpRef.current.has(conversationId)) {
+    if (!conversationId || !railMeta.isStaff || isOwnConversation || pickedUpRef.current.has(conversationId)) {
       return;
     }
 
@@ -440,7 +458,7 @@ export function ChatWorkspace() {
         // Best effort: the chat still renders if the join call fails.
       }
     })();
-  }, [conversationId, loadRecents, railMeta.isStaff]);
+  }, [conversationId, isOwnConversation, loadRecents, railMeta.isStaff]);
 
   const handleRequestReview = useCallback(async () => {
     if (!conversationId) return;
@@ -625,7 +643,7 @@ export function ChatWorkspace() {
   // The active row from Recents carries the staff marker; staff never delete founder chats here.
   const activeConversation =
     recents.find((conversation) => conversation.id === conversationId) ?? null;
-  const canDeleteConversation = Boolean(conversationId) && !railMeta.isStaff;
+  const canDeleteConversation = Boolean(conversationId) && (!railMeta.isStaff || isOwnConversation);
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#14171a] text-[#ece7de]">
@@ -768,7 +786,7 @@ export function ChatWorkspace() {
           agreement={agreement}
           payments={payments}
           busyAction={busyAction}
-          isStaff={railMeta.isStaff}
+          isStaff={railMeta.isStaff && !isOwnConversation}
           onClose={() => setIsContextOpen(false)}
           onRequestReview={() => {
             void handleRequestReview();

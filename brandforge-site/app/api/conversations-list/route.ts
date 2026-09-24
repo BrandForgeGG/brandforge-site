@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       ? conversations.filter((conversation) => conversation.isUnseen).length
       : 0;
 
-    return NextResponse.json({ conversations, isStaff, unseenCount });
+    return NextResponse.json({ conversations, isStaff, unseenCount, userId: user.id });
   } catch (error) {
     console.error('Conversations list API error:', error);
     return NextResponse.json({ error: 'Failed to fetch conversations' }, { status: 500 });

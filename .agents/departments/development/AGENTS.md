@@ -48,9 +48,13 @@ npx eslint <changed files>       # lint only what you touched
 - `brandforge-web/` is an unused scaffold.
 - Sidebar (2026-09-23): `+ New Chat` + Recents only. New Chat does not create a row — the
   conversation is created by the first message (`POST /api/conversations` from `handleSend`).
-- Staff model (2026-09-23): there is no staff inbox. Staff (`profiles.role` operator/admin) see
-  every chat in Recents, get an `N new chats` badge, and opening a chat calls `/api/staff/join`,
-  which is what the founder sees as "BrandForge team in chat". `/api/staff/post` stays for replies.
+- Staff model (2026-09-24): there is no staff inbox. Staff (`profiles.role` operator/admin) see
+  every chat in Recents, get an `N new chats` badge, and opening a founder's chat calls
+  `/api/staff/join`, which is what the founder sees as "BrandForge team in chat". `/api/staff/post`
+  stays for team replies inside a founder's chat. A chat the staff member owns is their own project:
+  ownership comes from `ConversationSummary.ownerId` + `userId` on `/api/conversations-list`, so the
+  workspace answers with the AI, lets them delete their own chat, and lets them send a first message
+  to create one (no more "open a chat from the sidebar first").
 - Owner deletes: `DELETE /api/conversations` (cascades through the project state) and
   `DELETE /api/projects` (cleans members, approvals, tasks). Ownership is checked with the caller's
   session; the delete runs with `SUPABASE_SERVICE_ROLE_KEY`, which must exist in `.env.local` and in
