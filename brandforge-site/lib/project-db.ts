@@ -935,7 +935,7 @@ async function buildConversationSummaries(userId?: string): Promise<Conversation
     }
 
     staffByConversation.set(participant.conversation_id, {
-      name: String(participant.display_name ?? '').trim() || 'BrandForge team',
+      name: String(participant.display_name ?? '').trim() || 'Specialist',
       at: String(participant.joined_at ?? ''),
     });
   }

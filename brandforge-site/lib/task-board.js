@@ -33,7 +33,7 @@ export function shapeTaskRoster(rows) {
       userId: String(participant?.user_id ?? ''),
       displayName:
         String(participant?.display_name ?? '').trim() ||
-        (participant?.role === 'founder' ? 'Founder' : 'BrandForge team'),
+        (participant?.role === 'founder' ? 'Founder' : String(participant?.user_id ?? '').slice(0, 8) || 'Specialist'),
       role: String(participant?.role ?? ''),
     }))
     .filter((participant) => participant.userId);
