@@ -33,7 +33,7 @@ create policy "Participants can remove own reactions" on public.message_reaction
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('conversation-attachments', 'conversation-attachments', false, 10485760,
-  array['image/png','image/jpeg','image/webp','application/pdf','text/plain','application/json','application/zip','text/csv'])
+  array['image/png','image/jpeg','image/webp','application/pdf','text/plain','application/json','application/zip','text/csv','audio/webm','audio/ogg','audio/mpeg','audio/mp4'])
 on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
 
 drop policy if exists "Conversation participants upload attachments" on storage.objects;

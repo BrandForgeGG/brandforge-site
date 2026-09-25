@@ -259,6 +259,11 @@ export function ChatTranscript({
               >
                 {message.artifactData ? (
                   <div className="mb-2">
+                     {message.artifactData.contentType.startsWith('audio/') ? (
+                       <audio controls preload="none" className="mb-2 w-full max-w-sm" aria-label={`Audio attachment ${message.artifactData.name}`}>
+                         <source src={`/api/attachments?path=${encodeURIComponent(message.artifactData.path)}`} type={message.artifactData.contentType} />
+                       </audio>
+                     ) : null}
                     {message.artifactData.contentType.startsWith('image/') ? (
                       <img
                         src={`/api/attachments?path=${encodeURIComponent(message.artifactData.path)}`}

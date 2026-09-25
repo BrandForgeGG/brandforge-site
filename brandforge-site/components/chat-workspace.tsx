@@ -1026,7 +1026,7 @@ export function ChatWorkspace() {
              ) : null}
              <input
                type="file"
-               accept="image/png,image/jpeg,image/webp,application/pdf,text/plain,application/json,application/zip,text/csv"
+               accept="image/png,image/jpeg,image/webp,application/pdf,text/plain,application/json,application/zip,text/csv,audio/webm,audio/ogg,audio/mpeg,audio/mp4"
                disabled={isBusy || !conversationId}
                onChange={(event) => setAttachment(event.target.files?.[0] ?? null)}
                className="mb-2 max-w-full text-xs text-[#9aa0a6] file:mr-2 file:rounded file:border-0 file:bg-[#2b3238] file:px-2 file:py-1 file:text-[#ece7de]"

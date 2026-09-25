@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_TYPES = new Set([
   'image/png', 'image/jpeg', 'image/webp', 'application/pdf', 'text/plain',
-  'application/json', 'application/zip', 'text/csv',
+  'application/json', 'application/zip', 'text/csv', 'audio/webm', 'audio/ogg', 'audio/mpeg', 'audio/mp4',
 ]);
 
 export async function GET(request: NextRequest) {
@@ -29,6 +29,10 @@ export async function GET(request: NextRequest) {
     : extension === 'csv' ? 'text/csv'
     : extension === 'json' ? 'application/json'
     : extension === 'txt' ? 'text/plain'
+    : extension === 'webm' ? 'audio/webm'
+    : extension === 'ogg' ? 'audio/ogg'
+    : extension === 'mp3' ? 'audio/mpeg'
+    : extension === 'm4a' ? 'audio/mp4'
     : 'application/octet-stream';
   return new NextResponse(data as BodyInit, {
     headers: {
