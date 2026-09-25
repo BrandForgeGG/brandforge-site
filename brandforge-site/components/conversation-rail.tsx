@@ -322,7 +322,7 @@ export function ConversationRail({
                               <span>{relativeTime(conversation.lastActivity)}</span>
                               <span>
                                 {conversation.staffViewedBy
-                                  ? 'team in chat'
+                                  ? 'specialist in chat'
                                   : conversation.messageCount + ' msg'}
                               </span>
                             </p>

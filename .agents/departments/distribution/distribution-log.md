@@ -5,6 +5,8 @@ entries at the top. If a change had no marketing angle, say so explicitly.
 
 | Date | Development change | Distribution move | Channel / asset |
 | --- | --- | --- | --- |
+| 2026-09-25 | **Named staff marker in conversation rail** — the recents marker now says `specialist in chat` instead of the shared `team in chat` identity. 90/90 tests, ESLint, TypeScript, and build remain green. | No public copy; continues the named-human identity cleanup. | In-app changelog; two-session demo |
+
 | 2026-09-25 | **Voice note attachments** — the private attachment pipeline now accepts WebM, OGG, MP3, and M4A audio; the composer accepts those formats and the transcript renders an accessible native audio player. Storage authorization and 10 MB size limits remain unchanged. 90/90 tests, ESLint, TypeScript, and build green. | No public copy yet; voice notes now join the existing project conversation record. | In-app changelog; voice-note demo |
 
 | 2026-09-25 | **Participant profile cards** — named human avatars now open an accessible hover/focus card with the participant's display name, stable numeric ID, username, and role; the endpoint verifies conversation access and strips email/Telegram IDs from the response. 90/90 tests, ESLint, TypeScript, and build green. | No public copy; supports the named-human identity requirement. | In-app changelog; two-session demo |
