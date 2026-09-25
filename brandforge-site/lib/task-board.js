@@ -52,3 +52,11 @@ export function summarizeTaskProgress(tasks) {
   counts.percent = counts.total === 0 ? 0 : Math.round((counts.done / counts.total) * 100);
   return counts;
 }
+
+export function getNextDeliveryTask(tasks) {
+  if (!Array.isArray(tasks)) return null;
+  const priority = { REVIEW: 0, IN_PROGRESS: 1, TODO: 2 };
+  return tasks
+    .filter((task) => priority[task?.status] !== undefined)
+    .sort((a, b) => priority[a.status] - priority[b.status])[0] ?? null;
+}

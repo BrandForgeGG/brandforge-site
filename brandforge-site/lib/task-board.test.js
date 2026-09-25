@@ -3,7 +3,17 @@
 // unit-tested; the route imports normalizeTaskDueDate from lib/task-board.js.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeTaskDueDate, shapeTaskRoster, summarizeTaskProgress } from './task-board.js';
+import { getNextDeliveryTask, normalizeTaskDueDate, shapeTaskRoster, summarizeTaskProgress } from './task-board.js';
+
+describe('getNextDeliveryTask', () => {
+  it('prioritizes review, then active work, then queued work', () => {
+    const queued = { id: 'queued', status: 'TODO' };
+    const review = { id: 'review', status: 'REVIEW' };
+    assert.equal(getNextDeliveryTask([queued, review])?.id, 'review');
+    assert.equal(getNextDeliveryTask([queued, { id: 'done', status: 'DONE' }])?.id, 'queued');
+    assert.equal(getNextDeliveryTask([{ id: 'done', status: 'DONE' }]), null);
+  });
+});
 
 
 describe('summarizeTaskProgress', () => {

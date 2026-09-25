@@ -5,6 +5,8 @@ entries at the top. If a change had no marketing angle, say so explicitly.
 
 | Date | Development change | Distribution move | Channel / asset |
 | --- | --- | --- | --- |
+| 2026-09-25 | **Next delivery action surfaced** — the insights panel now identifies the highest-priority persisted task: items awaiting review first, then active work, then queued work; completed plans show a clear all-complete state. Added ordering tests; 88/88 tests, ESLint, TypeScript, and build green. | Changelog line: "Open the project to see not only how far delivery has moved, but what happens next and who owns it." | In-app changelog; relaunch screenshot |
+
 | 2026-09-25 | **Delivery progress surfaced in the chat header** — conversations with tasks now show a compact completion percentage beside the project status, so progress is visible before opening the insights panel. 87/87 tests, ESLint, TypeScript, and build green. | Changelog line: "See delivery progress the moment you open the project — the header shows how far the work has moved." | In-app changelog; relaunch screenshot |
 
 | 2026-09-25 | **Delivery progress made visible** — the project insights panel now shows completed-task percentage plus in-progress, awaiting-review, and queued counts, making the project state more useful than chat history alone. Added pure progress-summary tests; 87/87 tests, ESLint, TypeScript, and build green. | Changelog line: "You can always see what is done, what is moving, and what needs your approval — the chat is where the project happens; the progress panel is where you know where it stands." | In-app changelog; relaunch screenshot |

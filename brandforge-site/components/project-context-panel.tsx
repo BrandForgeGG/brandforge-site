@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { summarizeTaskProgress } from '@/lib/task-board';
+import { getNextDeliveryTask, summarizeTaskProgress } from '@/lib/task-board';
 import type { ClientProjectState } from '@/lib/conversation-state';
 import { DISCOVERY_THRESHOLD } from '@/lib/discovery';
 
@@ -299,6 +299,7 @@ export function ProjectContextPanel({
           <p className="mb-2 text-xs uppercase tracking-[0.2em] text-[#9aa0a6]">Tasks</p>
           {state ? (() => {
             const progress = summarizeTaskProgress(state.tasks);
+            const nextTask = getNextDeliveryTask(state.tasks);
             return (
               <div className="mb-3 rounded-xl border border-[#5aa578]/25 bg-[#1c2024] px-3 py-2">
                 <div className="flex items-center justify-between text-xs">
@@ -309,6 +310,7 @@ export function ProjectContextPanel({
                   <div className="h-full rounded-full bg-[#5aa578] transition-all" style={{ width: `${progress.percent}%` }} />
                 </div>
                 <p className="mt-1 text-[10px] text-[#9aa0a6]">{progress.inProgress} in progress · {progress.review} awaiting review · {progress.queued} queued</p>
+                {nextTask ? <p className="mt-2 border-t border-white/10 pt-2 text-[10px] text-[#b8763b]">Next: {nextTask.title}{nextTask.assigneeName ? ` · ${nextTask.assigneeName}` : ''}</p> : <p className="mt-2 border-t border-white/10 pt-2 text-[10px] text-[#5aa578]">All planned delivery tasks are complete.</p>}
               </div>
             );
           })() : null}
