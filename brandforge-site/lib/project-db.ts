@@ -1071,6 +1071,13 @@ export async function uploadConversationAttachment(
   return { path, name: file.name.slice(0, 120), size: file.size, contentType: file.type || 'application/octet-stream' };
 }
 
+export async function removeConversationAttachment(path: string): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const { error } = await admin.storage.from('conversation-attachments').remove([path]);
+  return !error;
+}
+
 export async function downloadConversationAttachment(path: string) {
   const admin = createSupabaseAdminClient();
   if (!admin) return null;

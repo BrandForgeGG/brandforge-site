@@ -140,6 +140,7 @@ export function ChatWorkspace() {
   });
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [attachment, setAttachment] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Desktop-style layout: the left rail is shown by default, the right insights panel is hidden
@@ -466,6 +467,7 @@ export function ChatWorkspace() {
     async (suggestion?: string) => {
       const text = (suggestion ?? input).trim();
 
+        setIsUploading(true);
       if (attachment) {
         if (!conversationId) {
           setError('Start a conversation before adding a file.');
@@ -801,7 +803,7 @@ export function ChatWorkspace() {
   );
 
   const projectLabel = state?.project.name || state?.title || 'New project';
-  const isBusy = isStreaming || isCreatingConversation;
+  const isBusy = isStreaming || isCreatingConversation || isUploading;
   // The active row from Recents carries the staff marker; staff never delete founder chats here.
   const activeConversation =
     recents.find((conversation) => conversation.id === conversationId) ?? null;
@@ -985,7 +987,7 @@ export function ChatWorkspace() {
               />
               <button
                 type="submit"
-                disabled={isBusy || !input.trim()}
+                disabled={isBusy || !input.trim() || !attachment}
                 className="absolute bottom-3 right-3 rounded-lg bg-[#e8571e] px-3 py-1.5 text-sm font-semibold text-[#14171a] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isStreaming ? '···' : '↑'}

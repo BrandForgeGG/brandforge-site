@@ -8,11 +8,18 @@ export async function GET(request: NextRequest) {
   }
   const data = await downloadConversationAttachment(path);
   if (!data) return NextResponse.json({ error: 'Attachment not found' }, { status: 404 });
-  return new NextResponse(data as BodyInit, { headers: { 'Content-Type': 'application/octet-stream', 'Content-Disposition': 'attachment' } });
+  const name = decodeURIComponent(path.split('/').pop() ?? 'attachment');
+  return new NextResponse(data as BodyInit, {
+    headers: {
+      'Content-Type': 'application/octet-stream',
+      'Content-Disposition': `attachment; filename="${name.replace(/[^a-zA-Z0-9._-]/g, '_')}"`,
+      'Cache-Control': 'private, no-store',
+    },
+  });
 }
 
 import { NextRequest, NextResponse } from 'next/server';
-import { canAccessConversation, downloadConversationAttachment, uploadConversationAttachment, addMessage } from '@/lib/project-db';
+import { canAccessConversation, downloadConversationAttachment, removeConversationAttachment, uploadConversationAttachment, addMessage } from '@/lib/project-db';
 import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
@@ -51,6 +58,9 @@ export async function POST(request: NextRequest) {
     content_type: 'attachment',
     artifact_data: attachment,
   });
-  if (!messageId) return NextResponse.json({ error: 'Attachment message could not be stored' }, { status: 500 });
+  if (!messageId) {
+    await removeConversationAttachment(attachment.path);
+    return NextResponse.json({ error: 'Attachment message could not be stored' }, { status: 500 });
+  }
   return NextResponse.json({ attachment, messageId });
 }
