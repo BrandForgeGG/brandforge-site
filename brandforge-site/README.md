@@ -259,5 +259,10 @@ Closed testing runs two accounts:
    payments. **Not yet applied to production** — run it together with the escrow deploy.
 8. `supabase/migrations/0008_task_due_dates_and_assignees.sql` — idempotent `tasks.due_date`
    (`timestamptz`) + `tasks.assignee_id` for the task-board due dates and assignee picker.
-   **Not yet applied to production** — run it before deploying task-board depth.
+9. `supabase/migrations/0009_identity_display_ids_and_usernames.sql` — per-person display IDs,
+   unique usernames, profile editing, and Telegram account linking.
+10. `supabase/migrations/0010_realtime_live_chat.sql` — publishes `messages` and `participants`
+    to Supabase Realtime for live message delivery, presence, typing signals, and the staff-joined
+    marker. **Not yet applied to production** — run it before relying on the Realtime fast path;
+    the existing polling fallback remains available until then.
 
