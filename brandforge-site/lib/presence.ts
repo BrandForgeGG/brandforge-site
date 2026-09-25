@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
 import * as PresenceUtils from '@/lib/presence-utils';
@@ -41,13 +41,20 @@ const EMPTY: ConversationPresence = { viewers: [], typing: [], live: false };
 // existing polling path, so nothing breaks when Realtime is unavailable.
 export function useConversationPresence(
   conversationId: string,
-  self: { userId: string; name: string; staff: boolean } | null
+  self: { userId: string; name: string; staff: boolean } | null,
+  typing: boolean
 ): ConversationPresence {
   const [presence, setPresence] = useState<ConversationPresence>(EMPTY);
 
   const userId = self?.userId ?? '';
   const name = self?.name ?? '';
   const staff = self?.staff ?? false;
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const identityRef = useRef({ name, staff });
+
+  useEffect(() => {
+    identityRef.current = { name, staff };
+  }, [name, staff]);
 
   useEffect(() => {
     if (!conversationId || !userId) {
@@ -55,11 +62,13 @@ export function useConversationPresence(
     }
 
     const channel = supabase.channel(`conversation:${conversationId}`);
+    channelRef.current = channel;
 
     function publish() {
       const raw = channel.presenceState();
+      const current = identityRef.current;
       setPresence({
-        viewers: shapePresenceState(raw, { userId, name, staff }),
+        viewers: shapePresenceState(raw, { userId, name: current.name, staff: current.staff }),
         typing: shapeTypingState(raw, userId),
         live: true,
       });
@@ -71,46 +80,23 @@ export function useConversationPresence(
       .on('presence', { event: 'leave' }, publish)
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          void channel.track({ name, staff, typing: false });
+          const current = identityRef.current;
+          void channel.track({ ...current, typing: false });
         }
       });
 
     return () => {
+      if (channelRef.current === channel) channelRef.current = null;
       void supabase.removeChannel(channel);
     };
-  }, [conversationId, userId, name, staff]);
-
-  return presence;
-}
-
-// Publishes "this user is typing" to the conversation channel. Realtime throttles track()
-// calls, so the flag is only re-sent when it actually changes.
-export function useTypingSignal(
-  conversationId: string,
-  self: { userId: string; name: string; staff: boolean } | null,
-  typing: boolean
-): void {
-  const userId = self?.userId ?? '';
-  const name = self?.name ?? '';
-  const staff = self?.staff ?? false;
+  }, [conversationId, userId]);
 
   useEffect(() => {
-    if (!conversationId || !userId) {
-      return;
-    }
+    if (!channelRef.current) return;
+    void channelRef.current.track({ ...identityRef.current, typing });
+  }, [typing]);
 
-    const channel = supabase.channel(`conversation:${conversationId}`);
-
-    channel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        void channel.track({ name, staff, typing });
-      }
-    });
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [conversationId, userId, name, staff, typing]);
+  return presence;
 }
 
 // Re-exported so the rail and the header share one count implementation.

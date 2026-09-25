@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRealtimeMessages } from '@/lib/realtime-messages';
-import { useConversationPresence, useTypingSignal } from '@/lib/presence';
+import { useConversationPresence } from '@/lib/presence';
 import { formatTypingLabel } from '@/lib/presence-utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { ClientProjectState } from '@/lib/conversation-state';
@@ -81,11 +81,10 @@ export function ChatWorkspace() {
       }
     : null;
 
-  const livePresence = useConversationPresence(conversationId, selfPresence);
-
   // Typing is derived from the composer: non-empty input, and reset as soon as it is sent.
+  // Presence and typing share one Realtime channel so a topic is never subscribed twice.
   const [isTyping, setIsTyping] = useState(false);
-  useTypingSignal(conversationId, selfPresence, isTyping);
+  const livePresence = useConversationPresence(conversationId, selfPresence, isTyping);
   const typingLabel = formatTypingLabel(livePresence.typing);
 
   // Rows already rendered, so a pushed row can never duplicate one the poll just delivered.
