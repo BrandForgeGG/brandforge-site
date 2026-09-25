@@ -189,21 +189,21 @@ create trigger profiles_assign_identity
   execute function public.assign_profile_identity();
 
 -- ---------- 5. self-service profile updates ----------
--- A user may set their own username and Telegram link, and nothing else.
--- `role`, `display_id` and `email` are not covered by any policy, so the
--- column-level grants from 0006 continue to protect them. The username check
--- re-verifies uniqueness here so RLS -- not just the UI -- is what stands
--- between a user and someone else's handle.
+-- A user may set their own username and nothing else. `role`, `display_id`
+-- and `email` are not writable here, and the column-level grants from 0006
+-- continue to protect them.
+--
+-- Uniqueness is NOT re-checked in this policy. RLS expressions cannot
+-- reference the row being written (`new` exists only inside a trigger
+-- function), and a bare `username` here would resolve to the correlated
+-- subquery's column instead of the row being updated. The partial unique
+-- index `profiles_username_key` on `lower(username)` is what actually
+-- guarantees one holder per name, case-insensitively - it is enforced by
+-- the engine, so it holds for the admin client and the trigger too, not
+-- just for RLS-mediated writes.
 
 drop policy if exists "Users can update own identity" on public.profiles;
 create policy "Users can update own identity" on public.profiles
   for update to authenticated
   using (id = auth.uid())
-  with check (
-    id = auth.uid()
-    and not exists (
-      select 1 from public.profiles other
-      where lower(other.username) = lower(new.username)
-        and other.id <> auth.uid()
-    )
-  );
+  with check (id = auth.uid());
