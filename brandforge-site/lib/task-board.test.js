@@ -3,7 +3,16 @@
 // unit-tested; the route imports normalizeTaskDueDate from lib/task-board.js.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { getNextDeliveryTask, normalizeTaskDueDate, shapeTaskRoster, summarizeTaskProgress } from './task-board.js';
+import { getNextDeliveryTask, isTaskOverdue, normalizeTaskDueDate, shapeTaskRoster, summarizeTaskProgress } from './task-board.js';
+
+describe('isTaskOverdue', () => {
+  it('marks unfinished past-due tasks but never completed tasks', () => {
+    const now = new Date('2026-09-25T12:00:00Z');
+    assert.equal(isTaskOverdue({ status: 'IN_PROGRESS', dueDate: '2026-09-24T00:00:00.000Z' }, now), true);
+    assert.equal(isTaskOverdue({ status: 'DONE', dueDate: '2026-09-24T00:00:00.000Z' }, now), false);
+    assert.equal(isTaskOverdue({ status: 'TODO', dueDate: '2026-09-25T00:00:00.000Z' }, now), false);
+  });
+});
 
 describe('getNextDeliveryTask', () => {
   it('prioritizes review, then active work, then queued work', () => {
@@ -18,10 +27,10 @@ describe('getNextDeliveryTask', () => {
 
 describe('summarizeTaskProgress', () => {
   it('reports delivery state and completion percentage', () => {
-    assert.deepEqual(summarizeTaskProgress([]), { total: 0, done: 0, inProgress: 0, review: 0, queued: 0, percent: 0 });
+    assert.deepEqual(summarizeTaskProgress([]), { total: 0, done: 0, inProgress: 0, review: 0, queued: 0, overdue: 0, percent: 0 });
     assert.deepEqual(summarizeTaskProgress([
       { status: 'DONE' }, { status: 'DONE' }, { status: 'IN_PROGRESS' }, { status: 'REVIEW' }, {}
-    ]), { total: 5, done: 2, inProgress: 1, review: 1, queued: 1, percent: 40 });
+    ]), { total: 5, done: 2, inProgress: 1, review: 1, queued: 1, overdue: 0, percent: 40 });
   });
 });
 

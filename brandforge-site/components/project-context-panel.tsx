@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { getNextDeliveryTask, summarizeTaskProgress } from '@/lib/task-board';
+import { getNextDeliveryTask, isTaskOverdue, summarizeTaskProgress } from '@/lib/task-board';
 import type { ClientProjectState } from '@/lib/conversation-state';
 import { DISCOVERY_THRESHOLD } from '@/lib/discovery';
 
@@ -309,7 +309,7 @@ export function ProjectContextPanel({
                 <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
                   <div className="h-full rounded-full bg-[#5aa578] transition-all" style={{ width: `${progress.percent}%` }} />
                 </div>
-                <p className="mt-1 text-[10px] text-[#9aa0a6]">{progress.inProgress} in progress · {progress.review} awaiting review · {progress.queued} queued</p>
+                <p className="mt-1 text-[10px] text-[#9aa0a6]">{progress.inProgress} in progress · {progress.review} awaiting review · {progress.queued} queued{progress.overdue ? ` · ${progress.overdue} overdue` : ''}</p>
                 {nextTask ? <p className="mt-2 border-t border-white/10 pt-2 text-[10px] text-[#b8763b]">Next: {nextTask.title}{nextTask.assigneeName ? ` · ${nextTask.assigneeName}` : ''}</p> : <p className="mt-2 border-t border-white/10 pt-2 text-[10px] text-[#5aa578]">All planned delivery tasks are complete.</p>}
               </div>
             );
@@ -334,6 +334,7 @@ export function ProjectContextPanel({
                         {statusLabel}
                         {task.assigneeName ? ` · ${task.assigneeName}` : ' · unassigned'}
                         {shortDate(task.dueDate) ? ` · due ${shortDate(task.dueDate)}` : ''}
+                        {isTaskOverdue(task) ? ' · OVERDUE' : ''}
                       </p>
                       {isStaff ? (
                         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">

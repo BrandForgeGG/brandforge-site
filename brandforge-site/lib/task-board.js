@@ -39,15 +39,24 @@ export function shapeTaskRoster(rows) {
     .filter((participant) => participant.userId);
 }
 
-/** @returns {{ total: number; done: number; inProgress: number; review: number; queued: number; percent: number }} */
-export function summarizeTaskProgress(tasks) {
+export function isTaskOverdue(task, today = new Date()) {
+  if (!task || task.status === 'DONE' || !task.dueDate) return false;
+  const due = new Date(task.dueDate);
+  if (Number.isNaN(due.getTime())) return false;
+  const endOfDueDay = Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate(), 23, 59, 59, 999);
+  return endOfDueDay < today.getTime();
+}
+
+/** @returns {{ total: number; done: number; inProgress: number; review: number; queued: number; overdue: number; percent: number }} */
+export function summarizeTaskProgress(tasks, today = new Date()) {
   const rows = Array.isArray(tasks) ? tasks : [];
-  const counts = { total: rows.length, done: 0, inProgress: 0, review: 0, queued: 0, percent: 0 };
+  const counts = { total: rows.length, done: 0, inProgress: 0, review: 0, queued: 0, overdue: 0, percent: 0 };
   for (const task of rows) {
     if (task?.status === 'DONE') counts.done += 1;
     else if (task?.status === 'REVIEW') counts.review += 1;
     else if (task?.status === 'IN_PROGRESS') counts.inProgress += 1;
     else counts.queued += 1;
+    if (isTaskOverdue(task, today)) counts.overdue += 1;
   }
   counts.percent = counts.total === 0 ? 0 : Math.round((counts.done / counts.total) * 100);
   return counts;
