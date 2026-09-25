@@ -75,6 +75,7 @@ export function ChatWorkspace() {
   const [payments, setPayments] = useState<PaymentSummary[]>([]);
   // Roster for the task assignee picker: people already in this chat (staff + founder).
   const [taskParticipants, setTaskParticipants] = useState<TaskParticipant[]>([]);
+  const [aiDrafts, setAiDrafts] = useState<{ id: string; content: string; created_at: string | null }[]>([]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [isBooting, setIsBooting] = useState(false);
@@ -615,6 +616,42 @@ export function ChatWorkspace() {
     [conversationId, refreshMessages]
   );
 
+  const refreshAiDrafts = useCallback(async (id: string) => {
+    if (!id || !railMeta.isStaff) { setAiDrafts([]); return; }
+    try {
+      const response = await fetch(`/api/staff/ai-drafts?conversationId=${id}`);
+      if (!response.ok) return;
+      const data = await response.json().catch(() => ({}));
+      setAiDrafts(Array.isArray(data.drafts) ? data.drafts : []);
+    } catch { setAiDrafts([]); }
+  }, [railMeta.isStaff]);
+
+  useEffect(() => {
+    if (!conversationId || !railMeta.isStaff) {
+      queueMicrotask(() => setAiDrafts([]));
+      return;
+    }
+    let cancelled = false;
+    void fetch(`/api/staff/ai-drafts?conversationId=${conversationId}`)
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => { if (!cancelled) setAiDrafts(Array.isArray(data?.drafts) ? data.drafts : []); })
+      .catch(() => { if (!cancelled) setAiDrafts([]); });
+    return () => { cancelled = true; };
+  }, [conversationId, railMeta.isStaff]);
+
+  const resolveDraft = useCallback(async (id: string, action: 'approve' | 'reject') => {
+    if (!conversationId) return;
+    setBusyAction(`draft-${id}`);
+    try {
+      const response = await fetch('/api/staff/ai-drafts', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messageId: id, action }) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'The AI draft could not be resolved');
+      await refreshAiDrafts(conversationId);
+      await refreshMessages(conversationId);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'The AI draft could not be resolved'); }
+    finally { setBusyAction(null); }
+  }, [conversationId, refreshAiDrafts, refreshMessages]);
+
   const handleRequestReview = useCallback(async () => {
     if (!conversationId) return;
 
@@ -1033,6 +1070,8 @@ export function ChatWorkspace() {
           onTaskAction={(taskId, payload) => {
             void handleTaskAction(taskId, payload);
           }}
+          aiDrafts={aiDrafts}
+          onResolveDraft={(id, action) => { void resolveDraft(id, action); }}
         />
       ) : null}
     </div>

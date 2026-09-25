@@ -102,6 +102,8 @@ export function ProjectContextPanel({
   onSubmitPayment,
   onPaymentAction,
   onTaskAction,
+  aiDrafts,
+  onResolveDraft,
 }: {
   state: ClientProjectState | null;
   proposal: ProposalSummary | null;
@@ -123,6 +125,8 @@ export function ProjectContextPanel({
     taskId: string,
     payload: { action?: string; status?: string; assigneeId?: string; dueDate?: string | null }
   ) => void;
+  aiDrafts: { id: string; content: string; created_at: string | null }[];
+  onResolveDraft: (id: string, action: 'approve' | 'reject') => void;
 }) {
   const discovery = state?.discovery;
   const canRequestReview =
@@ -292,6 +296,21 @@ export function ProjectContextPanel({
             ) : (
               <p className="text-sm text-[#9aa0a6]">Not drafted yet.</p>
             )}
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <p className="mb-2 text-xs uppercase tracking-[0.2em] text-[#9aa0a6]">AI drafts</p>
+          <div className="rounded-xl border border-[#e8571e]/30 bg-[#1c2024] px-3 py-2">
+            {aiDrafts.length > 0 ? aiDrafts.map((draft) => (
+              <div key={draft.id} className="border-b border-white/10 py-2 last:border-0">
+                <p className="whitespace-pre-wrap text-xs leading-relaxed text-[#ece7de]">{draft.content}</p>
+                <div className="mt-2 flex gap-1.5">
+                  <button type="button" onClick={() => onResolveDraft(draft.id, 'approve')} disabled={busyAction !== null} className="rounded-lg bg-[#5aa578] px-2 py-1 text-[10px] font-semibold text-[#14171a] disabled:opacity-60">Approve</button>
+                  <button type="button" onClick={() => onResolveDraft(draft.id, 'reject')} disabled={busyAction !== null} className="rounded-lg border border-white/10 px-2 py-1 text-[10px] text-[#9aa0a6] disabled:opacity-60">Reject</button>
+                </div>
+              </div>
+            )) : <p className="text-xs text-[#9aa0a6]">No AI drafts waiting for review.</p>}
           </div>
         </div>
 
