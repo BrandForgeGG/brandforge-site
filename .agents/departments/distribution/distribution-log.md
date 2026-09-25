@@ -5,6 +5,8 @@ entries at the top. If a change had no marketing angle, say so explicitly.
 
 | Date | Development change | Distribution move | Channel / asset |
 | --- | --- | --- | --- |
+| 2026-09-25 | **Delivery progress made visible** — the project insights panel now shows completed-task percentage plus in-progress, awaiting-review, and queued counts, making the project state more useful than chat history alone. Added pure progress-summary tests; 87/87 tests, ESLint, TypeScript, and build green. | Changelog line: "You can always see what is done, what is moving, and what needs your approval — the chat is where the project happens; the progress panel is where you know where it stands." | In-app changelog; relaunch screenshot |
+
 | 2026-09-25 | **Image previews render inline** — authenticated image attachments now return `Content-Disposition: inline` so the transcript preview is not forced into a download; PDFs, archives, and text files remain downloads. Added regression coverage; 86/86 tests, ESLint, TypeScript, and build green. | No public copy needed; improves the shipped attachment experience. | In-app changelog; product demo |
 
 | 2026-09-25 | **Attachment download naming** — downloads now hide the internal storage UUID and preserve the original safe filename, with a new focused unit test; 85/85 tests, ESLint, TypeScript, and production build green. | No public copy needed; improves the user experience of the already-shipped attachment feature. | In-app changelog; product demo |

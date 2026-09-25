@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { summarizeTaskProgress } from '@/lib/task-board';
 import type { ClientProjectState } from '@/lib/conversation-state';
 import { DISCOVERY_THRESHOLD } from '@/lib/discovery';
 
@@ -296,6 +297,21 @@ export function ProjectContextPanel({
 
         <div className="mb-6">
           <p className="mb-2 text-xs uppercase tracking-[0.2em] text-[#9aa0a6]">Tasks</p>
+          {state ? (() => {
+            const progress = summarizeTaskProgress(state.tasks);
+            return (
+              <div className="mb-3 rounded-xl border border-[#5aa578]/25 bg-[#1c2024] px-3 py-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-[#ece7de]">Delivery progress</span>
+                  <span className="text-[#5aa578]">{progress.done}/{progress.total} complete</span>
+                </div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full rounded-full bg-[#5aa578] transition-all" style={{ width: `${progress.percent}%` }} />
+                </div>
+                <p className="mt-1 text-[10px] text-[#9aa0a6]">{progress.inProgress} in progress · {progress.review} awaiting review · {progress.queued} queued</p>
+              </div>
+            );
+          })() : null}
           <div className="rounded-xl border border-white/10 bg-[#1c2024] px-3 py-2">
             {state && state.tasks.length > 0 ? (
               <ul className="space-y-2">

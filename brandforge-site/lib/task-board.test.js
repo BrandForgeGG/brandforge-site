@@ -3,7 +3,17 @@
 // unit-tested; the route imports normalizeTaskDueDate from lib/task-board.js.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeTaskDueDate, shapeTaskRoster } from './task-board.js';
+import { normalizeTaskDueDate, shapeTaskRoster, summarizeTaskProgress } from './task-board.js';
+
+
+describe('summarizeTaskProgress', () => {
+  it('reports delivery state and completion percentage', () => {
+    assert.deepEqual(summarizeTaskProgress([]), { total: 0, done: 0, inProgress: 0, review: 0, queued: 0, percent: 0 });
+    assert.deepEqual(summarizeTaskProgress([
+      { status: 'DONE' }, { status: 'DONE' }, { status: 'IN_PROGRESS' }, { status: 'REVIEW' }, {}
+    ]), { total: 5, done: 2, inProgress: 1, review: 1, queued: 1, percent: 40 });
+  });
+});
 
 describe('normalizeTaskDueDate', () => {
   it('clears the date on null/undefined/empty', () => {

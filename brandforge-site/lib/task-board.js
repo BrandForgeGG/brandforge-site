@@ -38,3 +38,17 @@ export function shapeTaskRoster(rows) {
     }))
     .filter((participant) => participant.userId);
 }
+
+/** @returns {{ total: number; done: number; inProgress: number; review: number; queued: number; percent: number }} */
+export function summarizeTaskProgress(tasks) {
+  const rows = Array.isArray(tasks) ? tasks : [];
+  const counts = { total: rows.length, done: 0, inProgress: 0, review: 0, queued: 0, percent: 0 };
+  for (const task of rows) {
+    if (task?.status === 'DONE') counts.done += 1;
+    else if (task?.status === 'REVIEW') counts.review += 1;
+    else if (task?.status === 'IN_PROGRESS') counts.inProgress += 1;
+    else counts.queued += 1;
+  }
+  counts.percent = counts.total === 0 ? 0 : Math.round((counts.done / counts.total) * 100);
+  return counts;
+}
