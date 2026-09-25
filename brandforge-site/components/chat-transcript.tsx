@@ -10,6 +10,7 @@ export interface ChatMessage {
   editedAt?: string | null;
   streaming?: boolean;
   reactions?: { emoji: string; count: number; reactedByMe: boolean }[];
+  artifactData?: { path: string; name: string; size: number; contentType: string } | null;
   /**
    * The person behind a non-AI message. Pillar A of the overhaul: no shared "BrandForge Team"
    * author anywhere - every human message is attributed to a named individual who actually
@@ -229,6 +230,16 @@ export function ChatTranscript({
                     : 'border border-white/10 bg-[#1c2024] text-[#ece7de]'
                 }`}
               >
+                {message.artifactData ? (
+                  <a
+                    href={`/api/attachments?path=${encodeURIComponent(message.artifactData.path)}`}
+                    className="mt-2 flex items-center gap-2 rounded-xl border border-[#e8571e]/30 bg-[#14171a]/50 px-3 py-2 text-xs text-[#ece7de] hover:border-[#e8571e]"
+                  >
+                    <span aria-hidden="true">↗</span>
+                    <span className="min-w-0 flex-1 truncate">{message.artifactData.name}</span>
+                    <span className="text-[10px] text-[#9aa0a6]">{Math.ceil(message.artifactData.size / 1024)} KB</span>
+                  </a>
+                ) : null}
                 {message.content}
                 {message.editedAt ? <span className={isUser ? 'ml-2 text-[10px] opacity-60' : 'ml-2 text-[10px] text-[#9aa0a6]'}>edited</span> : null}
                 {message.streaming && !message.content ? (

@@ -30,6 +30,14 @@ create policy "Participants can add reactions" on public.message_reactions for i
 drop policy if exists "Participants can remove own reactions" on public.message_reactions;
 create policy "Participants can remove own reactions" on public.message_reactions for delete to authenticated using (user_id = auth.uid());
 
--- Removed messages disappear from ordinary reads while their ordering and audit context remain.
-comment on column public.messages.edited_at is 'Set when a human corrects their own message.';
-comment on column public.messages.deleted_at is 'Tombstone timestamp; deleted messages are omitted from transcript reads.';
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('conversation-attachments', 'conversation-attachments', false, 10485760,
+  array['image/png','image/jpeg','image/webp','application/pdf','text/plain','application/json','application/zip','text/csv'])
+on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "Conversation participants upload attachments" on storage.objects;
+create policy "Conversation participants upload attachments" on storage.objects for insert to authenticated with check (
+  bucket_id = 'conversation-attachments'
+  and exists (select 1 from public.conversations c where c.id::text = (storage.foldername(name))[1] and public.is_conversation_participant(c.id))
+);

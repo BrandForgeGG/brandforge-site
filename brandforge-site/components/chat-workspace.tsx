@@ -24,6 +24,7 @@ interface PersistedMessage {
   sender_name?: string | null;
   content: string;
   content_type: string | null;
+  artifact_data?: { path: string; name: string; size: number; contentType: string } | null;
   sender_id?: string | null;
   edited_at?: string | null;
   deleted_at?: string | null;
@@ -50,6 +51,7 @@ function toChatMessage(message: PersistedMessage): ChatMessage {
     senderId: message.sender_id ?? null,
     editedAt: message.edited_at ?? null,
     reactions: message.reactions ?? [],
+    artifactData: message.artifact_data ?? null,
   };
 }
 
@@ -137,6 +139,7 @@ export function ChatWorkspace() {
       : message));
   });
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
+  const [attachment, setAttachment] = useState<File | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Desktop-style layout: the left rail is shown by default, the right insights panel is hidden
@@ -463,6 +466,32 @@ export function ChatWorkspace() {
     async (suggestion?: string) => {
       const text = (suggestion ?? input).trim();
 
+      if (attachment) {
+        if (!conversationId) {
+          setError('Start a conversation before adding a file.');
+          return;
+        }
+
+        try {
+          const form = new FormData();
+          form.set('conversationId', conversationId);
+          form.set('file', attachment);
+          form.set('caption', text);
+          const response = await fetch('/api/attachments', { method: 'POST', body: form });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data.error || 'The file could not be uploaded');
+          setAttachment(null);
+          setInput('');
+          await refreshMessages(conversationId);
+          await loadRecents();
+        } catch (cause) {
+          setError(cause instanceof Error ? cause.message : 'The file could not be uploaded');
+        } finally {
+
+        }
+        return;
+      }
+
       if (!text || isStreaming) {
         return;
       }
@@ -529,7 +558,7 @@ export function ChatWorkspace() {
 
       await runTurn(conversationId, text);
     },
-    [conversationId, input, isOwnConversation, isStreaming, loadRecents, railMeta.isStaff, refreshMessages, router, runTurn, scrollToBottom]
+    [attachment, conversationId, input, isOwnConversation, isStreaming, loadRecents, railMeta.isStaff, refreshMessages, router, runTurn, scrollToBottom]
   );
 
   // BrandForge staff: opening a chat IS picking it up. The join call registers the participant row
@@ -923,6 +952,19 @@ export function ChatWorkspace() {
             }}
             className="mx-auto max-w-3xl"
           >
+             {attachment ? (
+               <div className="mb-2 flex items-center justify-between rounded-xl border border-[#e8571e]/30 bg-[#1c2024] px-3 py-2 text-xs text-[#ece7de]">
+                 <span className="truncate">📎 {attachment.name}</span>
+                 <button type="button" onClick={() => setAttachment(null)} aria-label="Remove file">×</button>
+               </div>
+             ) : null}
+             <input
+               type="file"
+               accept="image/png,image/jpeg,image/webp,application/pdf,text/plain,application/json,application/zip,text/csv"
+               disabled={isBusy || !conversationId}
+               onChange={(event) => setAttachment(event.target.files?.[0] ?? null)}
+               className="mb-2 max-w-full text-xs text-[#9aa0a6] file:mr-2 file:rounded file:border-0 file:bg-[#2b3238] file:px-2 file:py-1 file:text-[#ece7de]"
+             />
             <div className="relative">
               <textarea
                 value={input}

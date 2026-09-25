@@ -1054,6 +1054,31 @@ export async function getPlatformCounts(): Promise<PlatformCounts> {
 
 // ---------- Messages ----------
 
+export async function uploadConversationAttachment(
+  conversationId: string,
+  userId: string,
+  file: File
+): Promise<{ path: string; name: string; size: number; contentType: string } | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120) || 'attachment';
+  const path = `conversation-${conversationId}/${userId}/${crypto.randomUUID()}-${safeName}`;
+  const { error } = await admin.storage.from('conversation-attachments').upload(path, file, {
+    contentType: file.type || 'application/octet-stream',
+    upsert: false,
+  });
+  if (error) { console.error('Error uploading conversation attachment:', error.message); return null; }
+  return { path, name: file.name.slice(0, 120), size: file.size, contentType: file.type || 'application/octet-stream' };
+}
+
+export async function downloadConversationAttachment(path: string) {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data, error } = await admin.storage.from('conversation-attachments').download(path);
+  if (error) return null;
+  return data;
+}
+
 export async function addMessage(message: {
   conversation_id: string;
   sender_type: 'user' | 'ai' | 'human_operator' | 'human_builder';
