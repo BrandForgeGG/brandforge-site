@@ -162,7 +162,7 @@ Weighted, deterministic (`lib/discovery.js`): project name 10, problem statement
   to someone in the chat (`action=assign`, assignee must be a participant) and set or clear a due
   date (`action=schedule`, `YYYY-MM-DD`, stored as midnight UTC); both post a system line into the
   chat. Needs migration `0008_task_due_dates_and_assignees.sql` for `tasks.due_date`/`assignee_id`
-  (**not yet applied to production**). Remaining task gap: file attachments.
+  (**not yet applied to production**). File attachments are now available in chat: private, conversation-scoped uploads up to 10 MB with image/PDF/text/JSON/CSV/ZIP support; downloads require conversation access.
 - Funding is admin-verified crypto escrow, not a payment provider: the founder sends the
   agreement total in crypto to the BrandForge deposit wallet and pastes the transaction hash in
   the project panel (`POST /api/payments`); staff verify the transfer on-chain

@@ -9,9 +9,18 @@ export async function GET(request: NextRequest) {
   const data = await downloadConversationAttachment(path);
   if (!data) return NextResponse.json({ error: 'Attachment not found' }, { status: 404 });
   const name = decodeURIComponent(path.split('/').pop() ?? 'attachment');
+  const extension = name.toLowerCase().split('.').pop();
+  const contentType = extension === 'png' ? 'image/png'
+    : extension === 'jpg' || extension === 'jpeg' ? 'image/jpeg'
+    : extension === 'webp' ? 'image/webp'
+    : extension === 'pdf' ? 'application/pdf'
+    : extension === 'csv' ? 'text/csv'
+    : extension === 'json' ? 'application/json'
+    : extension === 'txt' ? 'text/plain'
+    : 'application/octet-stream';
   return new NextResponse(data as BodyInit, {
     headers: {
-      'Content-Type': 'application/octet-stream',
+      'Content-Type': contentType,
       'Content-Disposition': `attachment; filename="${name.replace(/[^a-zA-Z0-9._-]/g, '_')}"`,
       'Cache-Control': 'private, no-store',
     },
