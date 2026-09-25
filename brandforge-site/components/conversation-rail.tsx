@@ -89,6 +89,7 @@ export function ConversationRail({
   const [account, setAccount] = useState<{ name: string; email: string; role: string } | null>(null);
   const [accountId, setAccountId] = useState('');
   const [isSelfStaff, setIsSelfStaff] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [unseenCount, setUnseenCount] = useState(0);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -154,6 +155,8 @@ export function ConversationRail({
       const data = await response.json();
       setCounts(data.stats ?? null);
       setIsSelfStaff((current) => current || Boolean(data.isStaff));
+      // Admin links follow profiles.role, not the email allowlist: a promoted admin must see them.
+      if (data.isAdmin) setIsAdmin(true);
     } catch {
       // Counters are informational only; they must never break the rail.
     }
@@ -282,6 +285,28 @@ export function ConversationRail({
 
 
 
+
+            {isAdmin ? (
+              <section>
+                <p className="bf-rail-section-label">Admin</p>
+                <div className="flex flex-col gap-1">
+                  <Link
+                    href="/admin/applications"
+                    onClick={onMobileClose}
+                    className="rounded-lg px-3 py-2 text-sm text-[#9aa0a6] transition hover:bg-white/5 hover:text-[#ece7de]"
+                  >
+                    Applications
+                  </Link>
+                  <Link
+                    href="/admin/funnel"
+                    onClick={onMobileClose}
+                    className="rounded-lg px-3 py-2 text-sm text-[#9aa0a6] transition hover:bg-white/5 hover:text-[#ece7de]"
+                  >
+                    Funnel
+                  </Link>
+                </div>
+              </section>
+            ) : null}
 
             <section className="min-h-0 flex-1">
               <p className="bf-rail-section-label">Recents</p>

@@ -63,9 +63,16 @@ export type ProjectDbClient = Awaited<ReturnType<typeof createSupabaseServerClie
 // account id: a funnel can be read without joining events back to a person. The visitor id is an
 // opaque, client-generated first-party id, not the user id and not the email.
 //
-// Fire-and-forget by design: a metrics write must never delay or fail a product request. When the
-// table is missing (migration 0012 not applied yet) this logs once and no-ops, so wiring call sites
-// before the migration is safe.
+// Failure behaviour: this function never throws and never changes the caller's status code, so a
+// broken metrics write can never fail a product action. It is *not* fire-and-forget, though — call
+// sites await it, which means the write is on the request's critical path. That is deliberate: on
+// serverless an un-awaited promise can be frozen when the response is sent, which would silently
+// drop the event. The cost is one indexed insert per event on the routes that call it, on the
+// payment path included. If that latency ever matters, the fix is to buffer events and flush them
+// from a cron or queue — not to drop the await.
+//
+// When the table is missing (migration 0012 not applied yet) this warns once and no-ops, so wiring
+// call sites before the migration is safe.
 let funnelUnavailableLogged = false;
 
 export async function recordFunnelEvent(
