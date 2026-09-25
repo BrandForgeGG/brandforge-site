@@ -953,6 +953,7 @@ export function ChatWorkspace() {
           ) : (
             <ChatTranscript
               messages={messages}
+               conversationId={conversationId}
               isStreaming={isStreaming}
               onSuggestion={(prompt) => {
                 void handleSend(prompt);

@@ -179,6 +179,7 @@ export function ChatTranscript({
   onEditMessage,
   onDeleteMessage,
   onReact,
+  conversationId,
 }: {
   messages: ChatMessage[];
   isStreaming: boolean;
@@ -187,6 +188,7 @@ export function ChatTranscript({
   onEditMessage: (id: string, content: string) => Promise<void>;
   onDeleteMessage: (id: string) => Promise<void>;
   onReact: (id: string, emoji: string) => Promise<void>;
+  conversationId: string;
 }) {
   if (messages.length === 0) {
     return (
@@ -300,7 +302,7 @@ export function ChatTranscript({
               />
             </div>
 
-            {isUser ? <Avatar label="You" tone="trust" /> : null}
+            {isUser ? <Avatar label="You" tone="trust" userId={message.senderId} conversationId={conversationId} /> : null}
           </div>
         );
       })}
