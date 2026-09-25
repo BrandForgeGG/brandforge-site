@@ -1,8 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ClientProjectState } from '@/lib/conversation-state';
 import { DISCOVERY_THRESHOLD } from '@/lib/discovery';
+
+export interface TaskParticipant {
+  userId: string;
+  displayName: string;
+  role: string;
+}
 
 export interface ProposalSummary {
   id: string;
@@ -71,6 +77,16 @@ function shortHash(hash: string): string {
   return hash.length > 18 ? `${hash.slice(0, 10)}…${hash.slice(-6)}` : hash;
 }
 
+function shortDate(value: string | null): string | null {
+  if (!value) return null;
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) return null;
+
+  return parsed.toISOString().slice(0, 10);
+}
+
 export function ProjectContextPanel({
   state,
   proposal,
@@ -78,6 +94,7 @@ export function ProjectContextPanel({
   payments,
   busyAction,
   isStaff,
+  participants,
   onClose,
   onRequestReview,
   onProposalAction,
@@ -91,6 +108,7 @@ export function ProjectContextPanel({
   payments: PaymentSummary[];
   busyAction: string | null;
   isStaff: boolean;
+  participants: TaskParticipant[];
   onClose: () => void;
   onRequestReview: () => void;
   onProposalAction: (action: 'accept' | 'decline' | 'request_changes') => void;
@@ -100,7 +118,10 @@ export function ProjectContextPanel({
     paymentId?: string;
     note?: string;
   }) => void;
-  onTaskAction: (taskId: string, payload: { action?: string; status?: string }) => void;
+  onTaskAction: (
+    taskId: string,
+    payload: { action?: string; status?: string; assigneeId?: string; dueDate?: string | null }
+  ) => void;
 }) {
   const discovery = state?.discovery;
   const canRequestReview =
@@ -108,6 +129,30 @@ export function ProjectContextPanel({
 
   const [txInput, setTxInput] = useState('');
   const [rejectNote, setRejectNote] = useState('');
+  // Task actions are independent: each row locks only itself, so assigning one task never
+  // freezes the rest of the panel. The row unlocks when fresh state arrives after the action.
+  const [taskBusyId, setTaskBusyId] = useState<string | null>(null);
+  const lastTaskSignatureRef = useRef('');
+  const taskSignature = state
+    ? state.tasks.map((task) => `${task.id}:${task.status}:${task.assigneeName ?? ''}:${task.dueDate ?? ''}`).join('|')
+    : '';
+
+  useEffect(() => {
+    if (taskSignature !== lastTaskSignatureRef.current) {
+      lastTaskSignatureRef.current = taskSignature;
+      setTaskBusyId(null);
+    }
+  }, [taskSignature]);
+
+  const taskControlsDisabled = (taskId: string) =>
+    busyAction !== null || (taskBusyId !== null && taskBusyId !== `task-${taskId}`);
+  const runTaskAction = (
+    taskId: string,
+    payload: { action?: string; status?: string; assigneeId?: string; dueDate?: string | null }
+  ) => {
+    setTaskBusyId(`task-${taskId}`);
+    onTaskAction(taskId, payload);
+  };
 
   // The deposit wallet is configured per deployment. When it is missing the client is told to
   // take deposit details from the chat instead of seeing a fabricated address.
@@ -270,21 +315,61 @@ export function ProjectContextPanel({
                       <p className="mt-0.5 text-[#9aa0a6]">
                         {statusLabel}
                         {task.assigneeName ? ` · ${task.assigneeName}` : ' · unassigned'}
+                        {shortDate(task.dueDate) ? ` · due ${shortDate(task.dueDate)}` : ''}
                       </p>
+                      {isStaff ? (
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                          <select
+                            aria-label={`Assign ${task.title}`}
+                            value=""
+                            disabled={taskControlsDisabled(task.id) || participants.length === 0}
+                            onChange={(event) => {
+                              if (event.target.value) {
+                                runTaskAction(task.id, {
+                                  action: 'assign',
+                                  assigneeId: event.target.value,
+                                });
+                              }
+                            }}
+                            className="max-w-full rounded-lg border border-white/10 bg-[#14171a] px-2 py-1 text-[10px] text-[#ece7de] outline-none disabled:opacity-60"
+                          >
+                            <option value="">{task.assigneeName ? 'Reassign…' : 'Assign…'}</option>
+                            {participants.map((participant) => (
+                              <option key={participant.userId} value={participant.userId}>
+                                {participant.displayName}
+                                {participant.role === 'founder' ? ' (founder)' : ''}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            type="date"
+                            aria-label={`Due date for ${task.title}`}
+                            defaultValue={shortDate(task.dueDate) ?? ''}
+                            disabled={taskControlsDisabled(task.id)}
+                            onChange={(event) => {
+                              runTaskAction(task.id, {
+                                action: 'schedule',
+                                dueDate: event.target.value ? event.target.value : null,
+                              });
+                            }}
+                            className="rounded-lg border border-white/10 bg-[#14171a] px-2 py-1 text-[10px] text-[#ece7de] outline-none disabled:opacity-60"
+                          />
+                        </div>
+                      ) : null}
                       {task.status === 'REVIEW' ? (
                         <div className="mt-1.5 flex gap-1.5">
                           <button
                             type="button"
-                            onClick={() => onTaskAction(task.id, { status: 'DONE' })}
-                            disabled={busyAction !== null}
+                            onClick={() => runTaskAction(task.id, { status: 'DONE' })}
+                            disabled={taskControlsDisabled(task.id)}
                             className="rounded-lg bg-[#5aa578] px-2 py-1 text-[10px] font-semibold text-[#14171a] transition hover:opacity-95 disabled:opacity-60"
                           >
                             Approve
                           </button>
                           <button
                             type="button"
-                            onClick={() => onTaskAction(task.id, { status: 'IN_PROGRESS' })}
-                            disabled={busyAction !== null}
+                            onClick={() => runTaskAction(task.id, { status: 'IN_PROGRESS' })}
+                            disabled={taskControlsDisabled(task.id)}
                             className="rounded-lg border border-white/10 px-2 py-1 text-[10px] text-[#9aa0a6] transition hover:border-[#e8571e] disabled:opacity-60"
                           >
                             Send back

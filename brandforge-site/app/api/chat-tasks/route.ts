@@ -9,10 +9,12 @@ import {
   getTask,
   isStaffAccount,
   nextTaskStatusFor,
+  updateTaskDueDate,
   updateTaskStatus,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { notify } from '@/lib/notify';
+import { normalizeTaskDueDate } from '@/lib/task-board';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +45,8 @@ export async function PATCH(request: NextRequest) {
     const status = String(body.status ?? '').trim();
     const action = String(body.action ?? '').trim();
     const assigneeName = String(body.assigneeName ?? '').trim();
+    const assigneeId = String(body.assigneeId ?? '').trim();
+    const dueDateInput = body.dueDate === null ? null : String(body.dueDate ?? '').trim();
 
     if (!taskId) {
       return NextResponse.json({ error: 'taskId is required' }, { status: 400 });
@@ -68,7 +72,54 @@ export async function PATCH(request: NextRequest) {
 
     let updatedTask = task;
 
-    if (action === 'claim') {
+    if (action === 'schedule') {
+      // Staff set (or clear) the delivery target. Founders may watch the date move, not set it.
+      if (!staff) {
+        return NextResponse.json({ error: 'Only BrandForge staff can set due dates' }, { status: 403 });
+      }
+
+      const normalized = normalizeTaskDueDate(dueDateInput);
+
+      if (!normalized.ok) {
+        return NextResponse.json({ error: 'dueDate must be YYYY-MM-DD' }, { status: 400 });
+      }
+
+      const scheduled = await updateTaskDueDate(taskId, normalized.iso ?? null);
+
+      if (!scheduled) {
+        return NextResponse.json({ error: 'Task due date could not be updated' }, { status: 500 });
+      }
+
+      updatedTask = scheduled;
+    } else if (action === 'assign') {
+      if (!staff) {
+        return NextResponse.json({ error: 'Only BrandForge staff can assign tasks' }, { status: 403 });
+      }
+
+      const participants = await getParticipants(conversationId);
+      const assignee = participants.find((participant) => participant.user_id === assigneeId);
+
+      if (!assignee) {
+        return NextResponse.json(
+          { error: 'Assignee must be one of this chat\u2019s participants' },
+          { status: 400 }
+        );
+      }
+
+      const assigned = await assignTask(taskId, {
+        assignee_id: assignee.user_id,
+        assignee_name:
+          String(assignee.display_name ?? '').trim() ||
+          assigneeName ||
+          'BrandForge staff',
+      });
+
+      if (!assigned) {
+        return NextResponse.json({ error: 'Task could not be assigned' }, { status: 500 });
+      }
+
+      updatedTask = assigned;
+    } else if (action === 'claim') {
       if (!staff) {
         return NextResponse.json({ error: 'Only BrandForge staff can claim tasks' }, { status: 403 });
       }
@@ -112,9 +163,14 @@ export async function PATCH(request: NextRequest) {
       updatedTask = moved;
     }
 
-    const line = `${updatedTask.status} · ${updatedTask.title}${
-      updatedTask.assignee_name ? ` (${updatedTask.assignee_name})` : ''
-    }`;
+    const line =
+      action === 'schedule'
+        ? `${updatedTask.status} · ${updatedTask.title} · due ${updatedTask.due_date ? new Date(updatedTask.due_date).toISOString().slice(0, 10) : 'no date'}`
+        : action === 'assign'
+          ? `${updatedTask.status} · ${updatedTask.title} (${updatedTask.assignee_name ?? 'BrandForge staff'})`
+          : `${updatedTask.status} · ${updatedTask.title}${
+              updatedTask.assignee_name ? ` (${updatedTask.assignee_name})` : ''
+            }`;
 
     await addMessage({
       conversation_id: conversationId,

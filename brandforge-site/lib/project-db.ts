@@ -1691,6 +1691,24 @@ export async function updateTaskStatus(taskId: string, status: ChatTaskStatus) {
   return data ?? null;
 }
 
+export async function updateTaskDueDate(taskId: string, dueDate: string | null) {
+  const supabase = await db();
+
+  const { data, error } = await supabase
+    .from('tasks')
+    .update({ due_date: dueDate, updated_at: new Date().toISOString() })
+    .eq('id', taskId)
+    .select()
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error updating task due date:', error.message);
+    return null;
+  }
+
+  return data ?? null;
+}
+
 export async function assignTask(
   taskId: string,
   assignee: { assignee_id?: string | null; assignee_name?: string | null }

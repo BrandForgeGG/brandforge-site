@@ -158,8 +158,11 @@ Weighted, deterministic (`lib/discovery.js`): project name 10, problem statement
   never touched. The project panel renders the board with live statuses; staff move work forward
   (`TODO → IN_PROGRESS → REVIEW`) and the founder approves delivered tasks (`REVIEW → DONE`)
   from the panel via `PATCH /api/chat-tasks` (founder approval only once the project is
-  ACCEPTED/ACTIVE/COMPLETED). Every transition also posts into the chat. Remaining task gap:
-  no per-task due dates, file attachments or notifications yet.
+  ACCEPTED/ACTIVE/COMPLETED). Every transition also posts into the chat. Staff can assign any task
+  to someone in the chat (`action=assign`, assignee must be a participant) and set or clear a due
+  date (`action=schedule`, `YYYY-MM-DD`, stored as midnight UTC); both post a system line into the
+  chat. Needs migration `0008_task_due_dates_and_assignees.sql` for `tasks.due_date`/`assignee_id`
+  (**not yet applied to production**). Remaining task gap: file attachments.
 - Funding is admin-verified crypto escrow, not a payment provider: the founder sends the
   agreement total in crypto to the BrandForge deposit wallet and pastes the transaction hash in
   the project panel (`POST /api/payments`); staff verify the transfer on-chain
@@ -254,4 +257,7 @@ Closed testing runs two accounts:
 7. `supabase/migrations/0007_admin_crypto_escrow.sql` — funding evidence columns on `payments`
    (`tx_hash`, `network`, `submitted_at`) and read-only RLS on proposals, agreements and
    payments. **Not yet applied to production** — run it together with the escrow deploy.
+8. `supabase/migrations/0008_task_due_dates_and_assignees.sql` — idempotent `tasks.due_date`
+   (`timestamptz`) + `tasks.assignee_id` for the task-board due dates and assignee picker.
+   **Not yet applied to production** — run it before deploying task-board depth.
 

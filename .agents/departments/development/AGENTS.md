@@ -59,6 +59,9 @@ npx eslint <changed files>       # lint only what you touched
   `DELETE /api/projects` (cleans members, approvals, tasks). Ownership is checked with the caller's
   session; the delete runs with `SUPABASE_SERVICE_ROLE_KEY`, which must exist in `.env.local` and in
   Vercel Production — without it both routes answer `503` on purpose.
+- Task board (2026-09-25): staff assign tasks to chat participants and set/clear due dates
+  from the panel (`PATCH /api/chat-tasks` `action=assign` / `action=schedule`); every change posts
+  into the chat. Needs migration `0008_task_due_dates_and_assignees.sql` in prod.
 - "Online" counters are Realtime presence (`lib/presence.ts`), never a stored `last_seen` column, so
   they need no migration and show `—` when Realtime is unreachable.
 - Staff read every chat's history (2026-09-23): `canAccessConversation(userId, id, { allowStaff: true })`

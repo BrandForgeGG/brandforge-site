@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { ClientProjectState } from '@/lib/conversation-state';
+import { shapeTaskRoster } from '@/lib/task-board';
 import { ChatTranscript, type ChatMessage } from '@/components/chat-transcript';
 import { ConversationRail, relativeTime, type RecentConversation } from '@/components/conversation-rail';
 import {
@@ -11,6 +12,7 @@ import {
   type AgreementSummary,
   type PaymentSummary,
   type ProposalSummary,
+  type TaskParticipant,
 } from '@/components/project-context-panel';
 
 interface PersistedMessage {
@@ -56,6 +58,8 @@ export function ChatWorkspace() {
   const [proposal, setProposal] = useState<ProposalSummary | null>(null);
   const [agreement, setAgreement] = useState<AgreementSummary | null>(null);
   const [payments, setPayments] = useState<PaymentSummary[]>([]);
+  // Roster for the task assignee picker: people already in this chat (staff + founder).
+  const [taskParticipants, setTaskParticipants] = useState<TaskParticipant[]>([]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [isBooting, setIsBooting] = useState(false);
@@ -80,6 +84,7 @@ export function ChatWorkspace() {
     setProposal(null);
     setAgreement(null);
     setPayments([]);
+    setTaskParticipants([]);
     setError(null);
   }
 
@@ -136,9 +141,10 @@ export function ChatWorkspace() {
   }, []);
 
   const refreshArtifacts = useCallback(async (id: string) => {
-    const [proposalResult, agreementResult] = await Promise.all([
+    const [proposalResult, agreementResult, participantsResult] = await Promise.all([
       fetch(`/api/proposals?conversationId=${id}`),
       fetch(`/api/agreements?conversationId=${id}`),
+      fetch(`/api/participants?conversationId=${id}`),
     ]);
 
     if (proposalResult.ok) {
@@ -150,6 +156,14 @@ export function ChatWorkspace() {
       const data = await agreementResult.json();
       setAgreement(data.agreement ?? null);
       setPayments(Array.isArray(data.payments) ? data.payments : []);
+    }
+
+    // Roster for the task assignee picker. A failure only empties the picker, never the panel.
+    if (participantsResult.ok) {
+      const data = await participantsResult.json().catch(() => ({}));
+      setTaskParticipants(shapeTaskRoster(data.participants));
+    } else {
+      setTaskParticipants([]);
     }
   }, []);
 
@@ -543,9 +557,13 @@ export function ChatWorkspace() {
   // Task status transitions from inside the chat. Founder sees accept/send-back on delivered
   // work; the endpoint enforces staff rules server-side.
   const handleTaskAction = useCallback(
-    async (taskId: string, payload: { action?: string; status?: string }) => {
+    async (
+      taskId: string,
+      payload: { action?: string; status?: string; assigneeId?: string; dueDate?: string | null }
+    ) => {
       if (!conversationId) return;
 
+      setBusyAction(`task-${taskId}`);
       setError(null);
 
       try {
@@ -560,12 +578,18 @@ export function ChatWorkspace() {
           throw new Error(data.error || 'Could not update the task');
         }
 
-        await Promise.all([refreshState(conversationId), refreshMessages(conversationId)]);
+        await Promise.all([
+          refreshState(conversationId),
+          refreshMessages(conversationId),
+          refreshArtifacts(conversationId),
+        ]);
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'Could not update the task');
+      } finally {
+        setBusyAction(null);
       }
     },
-    [conversationId, refreshMessages, refreshState]
+    [conversationId, refreshArtifacts, refreshMessages, refreshState]
   );
 
   // Funding is real now: the founder pastes the crypto transaction hash after sending to the
@@ -787,6 +811,7 @@ export function ChatWorkspace() {
           payments={payments}
           busyAction={busyAction}
           isStaff={railMeta.isStaff && !isOwnConversation}
+          participants={taskParticipants}
           onClose={() => setIsContextOpen(false)}
           onRequestReview={() => {
             void handleRequestReview();
