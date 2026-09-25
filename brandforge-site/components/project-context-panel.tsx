@@ -157,9 +157,18 @@ export function ProjectContextPanel({
     payments.length > 0 && payments.every((payment) => payment.status !== 'scheduled');
   const submittedTx = payments.find((payment) => payment.tx_hash)?.tx_hash ?? null;
   const detailsRef = useRef<HTMLDetailsElement | null>(null);
+  // Tracked as state so the "Open project details" button can advertise what it will do
+  // (aria-expanded / aria-controls) instead of mutating the DOM attribute behind React's back.
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const openDetails = () => {
-    detailsRef.current?.setAttribute('open', '');
-    detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setDetailsOpen(true);
+    const node = detailsRef.current;
+    if (!node) return;
+    // The <details> element may already be open (the user can toggle it themselves), so only
+    // force the attribute when it is actually closed.
+    if (!node.open) node.setAttribute('open', '');
+    node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    node.focus?.();
   };
 
   const projectPulse = buildProjectPulse({ state, proposal, agreement, tasks: state?.tasks ?? [] });
@@ -198,13 +207,24 @@ export function ProjectContextPanel({
               ))}
               {projectPulse.length === 0 ? <p className="text-xs text-[#9aa0a6]">Start the conversation to shape the project.</p> : null}
             </div>
-            <button type="button" onClick={openDetails} className="mt-3 text-xs font-semibold text-[#b8763b] hover:text-[#ece7de]">
-              Open project details →
+            <button
+              type="button"
+              onClick={openDetails}
+              aria-expanded={detailsOpen}
+              aria-controls="bf-project-details"
+              className="mt-3 text-xs font-semibold text-[#b8763b] hover:text-[#ece7de]"
+            >
+              {detailsOpen ? 'Project details expanded' : 'Open project details →'}
             </button>
           </div>
         </div>
 
-        <details ref={detailsRef} className="bf-panel-section group">
+        <details
+          ref={detailsRef}
+          id="bf-project-details"
+          className="bf-panel-section group"
+          onToggle={(event) => setDetailsOpen((event.currentTarget as HTMLDetailsElement).open)}
+        >
           <summary className="bf-section-label cursor-pointer list-none">Project details</summary>
           <div className="mt-4">
         <div className="bf-panel-section">

@@ -12,6 +12,7 @@ import {
   updateConversationStatus,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
+import { canSetProposalStatus } from '@/lib/money-authz.js';
 import { notify } from '@/lib/notify';
 
 export const dynamic = 'force-dynamic';
@@ -128,16 +129,17 @@ export async function PATCH(request: NextRequest) {
 
     const isStaff = await isStaffAccount(user.id);
     const ownerId = await getConversationOwnerId(existing.conversation_id);
-    if (ownerId !== user.id && !isStaff) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
 
-    const founderStatuses = ['accepted', 'declined', 'changes_requested'];
-    if (!isStaff && !founderStatuses.includes(status)) {
-      return NextResponse.json(
-        { error: 'Only BrandForge staff can set this proposal status' },
-        { status: 403 }
-      );
+    // Shared, unit-tested decision (lib/money-authz.js): the owner may answer a proposal, staff may
+    // do anything, and a different founder is refused. The test suite covers that cross-user case.
+    const decision = canSetProposalStatus({
+      actor: { userId: user.id, isStaff },
+      ownerId,
+      status,
+    });
+
+    if (!decision.allowed) {
+      return NextResponse.json({ error: decision.reason }, { status: decision.status });
     }
 
     const proposal = await updateProposalStatus(proposalId, status);

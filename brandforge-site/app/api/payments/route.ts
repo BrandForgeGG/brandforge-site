@@ -19,6 +19,7 @@ import {
   normalizeTxHash,
 } from '@/lib/crypto-payments';
 import { notify } from '@/lib/notify';
+import { canSubmitFunding } from '@/lib/money-authz.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,13 +66,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Agreement not found' }, { status: 404 });
     }
 
-    // Funding evidence can only come from the founder who owns the conversation.
+    // Funding evidence can only come from the founder who owns the conversation — staff included,
+    // because they verify on-chain but never submit the transfer.
+    // Shared, unit-tested decision (lib/money-authz.js).
     const ownerId = await getConversationOwnerId(agreement.conversation_id);
-    if (ownerId !== user.id) {
-      return NextResponse.json(
-        { error: 'Only the founder can submit funding for this agreement' },
-        { status: 403 }
-      );
+    const isStaff = await isStaffAccount(user.id);
+    const decision = canSubmitFunding({ actor: { userId: user.id, isStaff }, ownerId });
+
+    if (!decision.allowed) {
+      return NextResponse.json({ error: decision.reason }, { status: decision.status });
     }
 
     if (agreement.status !== 'pending_funding') {

@@ -13,6 +13,7 @@ import {
   isStaffAccount,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
+import { canCreateAgreement, canUpdateAgreement } from '@/lib/money-authz.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,11 +38,11 @@ export async function POST(request: NextRequest) {
     const isStaff = await isStaffAccount(user.id);
     const ownerId = await getConversationOwnerId(conversationId);
 
-    if (ownerId !== user.id && !isStaff) {
-      return NextResponse.json(
-        { error: 'Only the founder can accept an agreement' },
-        { status: 403 }
-      );
+    // Shared, unit-tested decision (lib/money-authz.js).
+    const decision = canCreateAgreement({ actor: { userId: user.id, isStaff }, ownerId });
+
+    if (!decision.allowed) {
+      return NextResponse.json({ error: decision.reason }, { status: decision.status });
     }
 
     // The agreement must belong to this conversation and the proposal must have been accepted.
@@ -111,20 +112,12 @@ export async function PATCH(request: NextRequest) {
 
     // Agreement lifecycle is staff work. 'funded' is never set here: funding only happens
     // through /api/payments after the client's crypto transfer is verified on-chain.
+    // Shared, unit-tested decision (lib/money-authz.js).
     const isStaff = await isStaffAccount(user.id);
-    if (!isStaff) {
-      return NextResponse.json(
-        { error: 'Only BrandForge staff can update an agreement' },
-        { status: 403 }
-      );
-    }
+    const decision = canUpdateAgreement({ actor: { userId: user.id, isStaff }, status });
 
-    const allowed = ['active', 'completed', 'cancelled'];
-    if (!allowed.includes(status)) {
-      return NextResponse.json(
-        { error: 'Invalid agreement status (funding goes through payment verification)' },
-        { status: 400 }
-      );
+    if (!decision.allowed) {
+      return NextResponse.json({ error: decision.reason }, { status: decision.status });
     }
 
     const agreement = await updateAgreementStatus(agreementId, status);
