@@ -18,7 +18,6 @@ export interface ChatMessage {
    */
   senderName?: string | null;
   senderId?: string | null;
-  attachmentContentType?: string;
 }
 
 export const SUGGESTED_PROMPTS = [
