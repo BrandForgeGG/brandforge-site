@@ -24,6 +24,10 @@ interface PersistedMessage {
   sender_name?: string | null;
   content: string;
   content_type: string | null;
+  sender_id?: string | null;
+  edited_at?: string | null;
+  deleted_at?: string | null;
+  reactions?: { emoji: string; count: number; reactedByMe: boolean }[];
   created_at: string | null;
 }
 
@@ -43,6 +47,9 @@ function toChatMessage(message: PersistedMessage): ChatMessage {
     content: message.content,
     createdAt: message.created_at,
     senderName: message.sender_name ?? null,
+    senderId: message.sender_id ?? null,
+    editedAt: message.edited_at ?? null,
+    reactions: message.reactions ?? [],
   };
 }
 
@@ -119,7 +126,16 @@ export function ChatWorkspace() {
     [isStreaming]
   );
 
-  useRealtimeMessages(conversationId, handleLiveMessage);
+  useRealtimeMessages(conversationId, handleLiveMessage, (event, row) => {
+    if (event === 'deleted') {
+      seenMessageIdsRef.current.delete(row.id);
+      setMessages((current) => current.filter((message) => message.id !== row.id));
+      return;
+    }
+    setMessages((current) => current.map((message) => message.id === row.id
+      ? { ...message, content: row.content, editedAt: row.edited_at ?? message.editedAt }
+      : message));
+  });
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -542,6 +558,21 @@ export function ChatWorkspace() {
     })();
   }, [conversationId, isOwnConversation, loadRecents, railMeta.isStaff]);
 
+  const handleMessageAction = useCallback(
+    async (messageId: string, action: 'edit' | 'delete' | 'react', content?: string) => {
+      if (!conversationId) return;
+      const response = await fetch('/api/messages', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId, action, content, conversationId }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Message action failed');
+      await refreshMessages(conversationId);
+    },
+    [conversationId, refreshMessages]
+  );
+
   const handleRequestReview = useCallback(async () => {
     if (!conversationId) return;
 
@@ -820,6 +851,20 @@ export function ChatWorkspace() {
               isStreaming={isStreaming}
               onSuggestion={(prompt) => {
                 void handleSend(prompt);
+              }}
+              currentUserId={railMeta.userId}
+              onEditMessage={async (id, content) => {
+                try { await handleMessageAction(id, 'edit', content); }
+                catch (cause) { setError(cause instanceof Error ? cause.message : 'Message could not be edited'); }
+              }}
+              onDeleteMessage={async (id) => {
+                if (!window.confirm('Delete this message? The conversation will keep its place.')) return;
+                try { await handleMessageAction(id, 'delete'); }
+                catch (cause) { setError(cause instanceof Error ? cause.message : 'Message could not be deleted'); }
+              }}
+              onReact={async (id, emoji) => {
+                try { await handleMessageAction(id, 'react', emoji); }
+                catch (cause) { setError(cause instanceof Error ? cause.message : 'Reaction could not be saved'); }
               }}
             />
           )}

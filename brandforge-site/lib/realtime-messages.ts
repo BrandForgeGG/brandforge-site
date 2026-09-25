@@ -15,20 +15,22 @@ export interface LiveMessageRow {
   content: string;
   content_type: string | null;
   created_at: string | null;
+  edited_at?: string | null;
 }
 
 // Returns nothing: the caller passes an `onMessage` that decides whether an arriving row is new.
 // Re-subscription on conversation change is deliberate — the channel name is per-conversation.
 export function useRealtimeMessages(
   conversationId: string,
-  onMessage: (row: LiveMessageRow) => void
+  onMessage: (row: LiveMessageRow) => void,
+  onChange?: (event: 'updated' | 'deleted', row: LiveMessageRow) => void
 ): void {
   // Keep the latest callback without tearing the channel down on every render.
   const latest = useRef(onMessage);
+  const latestChange = useRef(onChange);
 
-  useEffect(() => {
-    latest.current = onMessage;
-  }, [onMessage]);
+  useEffect(() => { latest.current = onMessage; }, [onMessage]);
+  useEffect(() => { latestChange.current = onChange; }, [onChange]);
 
   useEffect(() => {
     if (!conversationId) {
@@ -60,6 +62,20 @@ export function useRealtimeMessages(
           });
         }
       )
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'messages',
+        filter: `conversation_id=eq.${conversationId}`,
+      }, (payload) => {
+        const record = payload.new as Partial<LiveMessageRow>;
+        if (record?.id) latestChange.current?.('updated', record as LiveMessageRow);
+      })
+      .on('postgres_changes', {
+        event: 'DELETE', schema: 'public', table: 'messages',
+        filter: `conversation_id=eq.${conversationId}`,
+      }, (payload) => {
+        const record = payload.old as Partial<LiveMessageRow>;
+        if (record?.id) latestChange.current?.('deleted', record as LiveMessageRow);
+      })
       .subscribe();
 
     return () => {

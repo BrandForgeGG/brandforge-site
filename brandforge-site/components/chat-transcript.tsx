@@ -1,17 +1,22 @@
 'use client';
 
+import { useState } from 'react';
+
 export interface ChatMessage {
   id: string;
   sender: 'user' | 'ai' | 'human' | 'system';
   content: string;
   createdAt: string | null;
+  editedAt?: string | null;
   streaming?: boolean;
+  reactions?: { emoji: string; count: number; reactedByMe: boolean }[];
   /**
    * The person behind a non-AI message. Pillar A of the overhaul: no shared "BrandForge Team"
    * author anywhere - every human message is attributed to a named individual who actually
    * wrote it. `null` only for rows written before sender_name was stored.
    */
   senderName?: string | null;
+  senderId?: string | null;
 }
 
 export const SUGGESTED_PROMPTS = [
@@ -74,14 +79,86 @@ function Avatar({
   );
 }
 
+const REACTION_EMOJI = ['👍', '❤️', '🎉', '👀'] as const;
+
+function MessageActions({
+  message,
+  canManage,
+  onEdit,
+  onDelete,
+  onReact,
+}: {
+  message: ChatMessage;
+  canManage: boolean;
+  onEdit: (content: string) => Promise<void>;
+  onDelete: () => Promise<void>;
+  onReact: (emoji: string) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(message.content);
+  const [busy, setBusy] = useState(false);
+
+  async function run(action: () => Promise<void>) {
+    setBusy(true);
+    try {
+      await action();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+      {REACTION_EMOJI.map((emoji) => {
+        const reaction = message.reactions?.find((entry) => entry.emoji === emoji);
+        if (!reaction) return null;
+        return (
+          <button key={emoji} type="button" disabled={busy} onClick={() => void run(() => onReact(emoji))}
+            className="rounded-full border border-white/10 px-2 py-0.5 text-xs hover:border-[#e8571e]">
+            {emoji} {reaction.count}
+          </button>
+        );
+      })}
+      <button type="button" disabled={busy} aria-label="React with thumbs up"
+        onClick={() => void run(() => onReact('👍'))} className="rounded px-1.5 py-0.5 text-xs text-[#9aa0a6] hover:bg-white/5">
+        +👍
+      </button>
+      {canManage ? (
+        <>
+          <button type="button" disabled={busy} onClick={() => setEditing((value) => !value)}
+            className="rounded px-1.5 py-0.5 text-xs text-[#9aa0a6] hover:bg-white/5">Edit</button>
+          <button type="button" disabled={busy} onClick={() => void run(onDelete)}
+            className="rounded px-1.5 py-0.5 text-xs text-[#9aa0a6] hover:bg-white/5">Delete</button>
+        </>
+      ) : null}
+      {editing ? (
+        <div className="mt-1 flex w-full gap-2">
+          <input value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={8000}
+            className="min-w-0 flex-1 rounded-lg border border-white/15 bg-[#14171a] px-2 py-1.5 text-sm text-[#ece7de]" />
+          <button type="button" disabled={busy || !draft.trim()} onClick={() => void run(async () => { await onEdit(draft); setEditing(false); })}
+            className="rounded-lg bg-[#e8571e] px-3 py-1.5 text-xs font-semibold text-[#14171a]">Save</button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function ChatTranscript({
   messages,
   isStreaming,
   onSuggestion,
+  currentUserId,
+  onEditMessage,
+  onDeleteMessage,
+  onReact,
 }: {
   messages: ChatMessage[];
   isStreaming: boolean;
   onSuggestion: (prompt: string) => void;
+  currentUserId: string | null;
+  onEditMessage: (id: string, content: string) => Promise<void>;
+  onDeleteMessage: (id: string) => Promise<void>;
+  onReact: (id: string, emoji: string) => Promise<void>;
 }) {
   if (messages.length === 0) {
     return (
@@ -153,6 +230,7 @@ export function ChatTranscript({
                 }`}
               >
                 {message.content}
+                {message.editedAt ? <span className={isUser ? 'ml-2 text-[10px] opacity-60' : 'ml-2 text-[10px] text-[#9aa0a6]'}>edited</span> : null}
                 {message.streaming && !message.content ? (
                   <span className="inline-flex gap-1">
                     <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#9aa0a6]" />
@@ -161,6 +239,13 @@ export function ChatTranscript({
                   </span>
                 ) : null}
               </div>
+              <MessageActions
+                message={message}
+                canManage={Boolean(currentUserId && message.senderId === currentUserId)}
+                onEdit={(content) => onEditMessage(message.id, content)}
+                onDelete={() => onDeleteMessage(message.id)}
+                onReact={(emoji) => onReact(message.id, emoji)}
+              />
             </div>
 
             {isUser ? <Avatar label="You" tone="trust" /> : null}

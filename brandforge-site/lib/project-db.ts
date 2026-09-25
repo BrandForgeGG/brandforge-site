@@ -105,7 +105,17 @@ export interface ConversationMessage {
   content: string;
   content_type: string | null;
   artifact_data?: Record<string, unknown> | null;
+  sender_id?: string | null;
+  edited_at?: string | null;
+  deleted_at?: string | null;
+  reactions?: MessageReaction[];
   created_at: string;
+}
+
+export interface MessageReaction {
+  emoji: string;
+  count: number;
+  reactedByMe: boolean;
 }
 
 // ---------- Profile roles ----------
@@ -1096,6 +1106,7 @@ export async function getMessages(
     .from('messages')
     .select('*')
     .eq('conversation_id', conversationId)
+    .is('deleted_at', null)
     .order('created_at', { ascending: true });
 
   if (error) {
@@ -1103,7 +1114,111 @@ export async function getMessages(
     return [];
   }
 
-  return data ?? [];
+  const messages = (data ?? []) as ConversationMessage[];
+  if (messages.length === 0) return messages;
+
+  const messageIds = messages.map((message) => message.id);
+  const { data: reactionRows, error: reactionError } = await supabase
+    .from('message_reactions')
+    .select('message_id,user_id,emoji')
+    .in('message_id', messageIds);
+
+  if (reactionError) {
+    console.error('Error fetching message reactions:', reactionError.message);
+    return messages;
+  }
+
+  const grouped = new Map<string, Map<string, { count: number; userIds: Set<string> }>>();
+  for (const row of (reactionRows ?? []) as { message_id: string; user_id: string; emoji: string }[]) {
+    const emojis = grouped.get(row.message_id) ?? new Map();
+    const reaction = emojis.get(row.emoji) ?? { count: 0, userIds: new Set<string>() };
+    reaction.count += 1;
+    reaction.userIds.add(row.user_id);
+    emojis.set(row.emoji, reaction);
+    grouped.set(row.message_id, emojis);
+  }
+
+  // The viewer's own reaction state is not exposed by the current auth path to this DB helper.
+  // Counts are accurate; the UI toggles with an optimistic local marker until the next fetch.
+  return messages.map((message) => ({
+    ...message,
+    reactions: [...(grouped.get(message.id) ?? new Map())].map(([emoji, reaction]) => ({
+      emoji,
+      count: reaction.count,
+      reactedByMe: false,
+    })),
+  }));
+}
+
+// Rich-message mutations run with the service role only after the route verifies that the
+// authenticated user is the original sender. Keeping every privileged write in this allow-listed
+// module prevents the browser client from ever receiving a service-role key.
+export async function mutateOwnedMessage(
+  messageId: string,
+  userId: string,
+  action: 'edit' | 'delete',
+  value?: string
+): Promise<'updated' | 'deleted' | 'not_found' | 'forbidden'> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return 'not_found';
+
+  const { data: message, error: readError } = await admin
+    .from('messages')
+    .select('id,sender_id,sender_type,content_type,deleted_at')
+    .eq('id', messageId)
+    .maybeSingle();
+  if (readError || !message) return 'not_found';
+  if (message.sender_id !== userId || message.sender_type === 'ai' || message.content_type === 'system' || message.deleted_at) {
+    return 'forbidden';
+  }
+
+  if (action === 'delete') {
+    const { error } = await admin
+      .from('messages')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', messageId)
+      .eq('sender_id', userId);
+    return error ? 'not_found' : 'deleted';
+  }
+
+  const { error } = await admin
+    .from('messages')
+    .update({ content: value ?? '', edited_at: new Date().toISOString() })
+    .eq('id', messageId)
+    .eq('sender_id', userId);
+  return error ? 'not_found' : 'updated';
+}
+
+export async function toggleMessageReaction(
+  messageId: string,
+  conversationId: string,
+  userId: string,
+  emoji: string
+): Promise<'added' | 'removed' | 'not_found' | 'forbidden'> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return 'not_found';
+  const { data: message } = await admin
+    .from('messages')
+    .select('id,conversation_id,deleted_at')
+    .eq('id', messageId)
+    .eq('conversation_id', conversationId)
+    .maybeSingle();
+  if (!message || message.deleted_at) return 'not_found';
+
+  const { data: existing, error: readError } = await admin
+    .from('message_reactions')
+    .select('id')
+    .eq('message_id', messageId)
+    .eq('user_id', userId)
+    .eq('emoji', emoji)
+    .maybeSingle();
+  if (readError) return 'not_found';
+  if (existing) {
+    const { error } = await admin.from('message_reactions').delete().eq('id', existing.id);
+    return error ? 'not_found' : 'removed';
+  }
+  const { error } = await admin.from('message_reactions').insert({ message_id: messageId, user_id: userId, emoji });
+  return error ? 'not_found' : 'added';
 }
 
 export async function getAllConversations() {
