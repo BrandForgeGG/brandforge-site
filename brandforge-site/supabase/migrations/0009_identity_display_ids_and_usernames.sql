@@ -106,9 +106,12 @@ begin
     order by created_at asc nulls last, id asc
   loop
     seed := lower(split_part(coalesce(row_record.email, 'member'), '@', 1));
-    seed := regexp_replace(coerce(seed, text), '[^a-z0-9_.]', '', 'g');
+    seed := regexp_replace(seed, '[^a-z0-9_.]', '', 'g');
 
-    if seed is null or seed = '' then
+    -- Match the app's own validator (lib/identity.js USERNAME_PATTERN): 3-24 chars,
+    -- first and last alphanumeric. A short or oddly-shaped email local-part (ab@, .a, a.)
+    -- would otherwise seed a handle the UI can never accept back.
+    if seed !~ '^[a-z0-9][a-z0-9._]{1,22}[a-z0-9]$' then
       seed := 'member';
     end if;
 
@@ -154,9 +157,9 @@ begin
 
   if new.username is null then
     seed := lower(split_part(coalesce(new.email, 'member'), '@', 1));
-    seed := regexp_replace(coerce(seed, text), '[^a-z0-9_.]', '', 'g');
+    seed := regexp_replace(seed, '[^a-z0-9_.]', '', 'g');
 
-    if seed is null or seed = '' then
+    if seed !~ '^[a-z0-9][a-z0-9._]{1,22}[a-z0-9]$' then
       seed := 'member';
     end if;
 
