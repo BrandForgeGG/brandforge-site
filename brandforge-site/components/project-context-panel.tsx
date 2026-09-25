@@ -570,7 +570,7 @@ export function ProjectContextPanel({
                   </div>
                 ) : (
                   <p className="mt-2 text-xs text-[#9aa0a6]">
-                    Deposit details are shared by the BrandForge team in this chat.
+                    Deposit details are shared in this chat.
                   </p>
                 )}
                 <form

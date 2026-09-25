@@ -22,7 +22,7 @@ export function shapePresenceState(state, self) {
       const userId = String(entry?.userId ?? self.userId);
       if (userId === self.userId || byUser.has(userId)) continue;
       byUser.set(userId, {
-        name: cleanName(entry?.name, entry?.staff ? 'BrandForge team' : 'Teammate'),
+        name: cleanName(entry?.name, entry?.staff ? 'BrandForge specialist' : 'Teammate'),
         staff: Boolean(entry?.staff),
       });
     }

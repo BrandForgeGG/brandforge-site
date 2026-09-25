@@ -86,7 +86,7 @@ export function ChatWorkspace() {
     ? {
         userId: railMeta.userId,
         name: state?.title?.trim() ||
-          (railMeta.isStaff ? 'BrandForge team' : 'You'),
+          (railMeta.isStaff ? 'BrandForge specialist' : 'You'),
         staff: railMeta.isStaff,
       }
     : null;
@@ -842,7 +842,7 @@ export function ChatWorkspace() {
               <h1 className="truncate font-serif text-xl text-[#ece7de]">{projectLabel}</h1>
               {activeConversation?.staffViewedBy ? (
                 <p className="mt-1 truncate text-xs text-[#5aa578]">
-                  BrandForge team in chat · {activeConversation.staffViewedBy}
+                  {activeConversation.staffViewedBy} joined the chat
                   {activeConversation.staffViewedAt
                     ? ' · ' + relativeTime(activeConversation.staffViewedAt)
                     : ''}

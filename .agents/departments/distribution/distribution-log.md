@@ -5,6 +5,8 @@ entries at the top. If a change had no marketing angle, say so explicitly.
 
 | Date | Development change | Distribution move | Channel / asset |
 | --- | --- | --- | --- |
+| 2026-09-25 | **Named staff presence and join copy** — removed remaining shared staff-author fallbacks from chat presence, join notices, and funding copy; unnamed staff now render as `BrandForge specialist` or a stable fallback instead of pretending to be one shared person. 89/89 tests, ESLint, TypeScript, and build green. | No public announcement; supports the named-human product promise. | In-app changelog; demo note |
+
 | 2026-09-25 | **Overdue delivery work is unmistakable** — persisted due dates now drive an OVERDUE marker on unfinished tasks and an overdue count in the delivery summary; completed tasks are never marked late. Added deterministic date-boundary tests; 89/89 tests, ESLint, TypeScript, and build green. | Changelog line: "BrandForge now makes delivery risk visible: overdue work is called out instead of quietly disappearing among queued tasks." | In-app changelog; relaunch screenshot |
 
 | 2026-09-25 | **Next delivery action surfaced** — the insights panel now identifies the highest-priority persisted task: items awaiting review first, then active work, then queued work; completed plans show a clear all-complete state. Added ordering tests; 88/88 tests, ESLint, TypeScript, and build green. | Changelog line: "Open the project to see not only how far delivery has moved, but what happens next and who owns it." | In-app changelog; relaunch screenshot |

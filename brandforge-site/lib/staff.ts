@@ -108,7 +108,7 @@ export async function ensureStaffParticipant(context: StaffContext): Promise<boo
     conversation_id: context.conversationId,
     sender_type: 'ai',
     sender_name: 'BrandForge',
-    content: `${context.displayName} from the BrandForge team joined this conversation.`,
+    content: `${context.displayName} joined this conversation.`,
     content_type: 'system',
   });
 
