@@ -263,6 +263,6 @@ Closed testing runs two accounts:
    unique usernames, profile editing, and Telegram account linking.
 10. `supabase/migrations/0010_realtime_live_chat.sql` — publishes `messages` and `participants`
     to Supabase Realtime for live message delivery, presence, typing signals, and the staff-joined
-    marker. **Not yet applied to production** — run it before relying on the Realtime fast path;
-    the existing polling fallback remains available until then.
+    marker. **Applied to production on 2026-09-25.** Polling remains the fallback when Realtime is
+    unavailable.
 
