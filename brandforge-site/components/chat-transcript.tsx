@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { embedActions, showsFundingForm } from '@/lib/embed-actions.js';
 
-export type ChatEmbedAction = 'accept' | 'details' | 'review' | 'submit_funding';
+export type ChatEmbedAction = 'accept' | 'details' | 'submit_funding';
 
 export type ChatEmbed =
   | { type: 'proposal'; proposalId: string; status: string; title?: string }
@@ -29,7 +30,7 @@ export interface ChatMessage {
   senderId?: string | null;
 }
 
-function FundingForm({ messageId, disabled, onSubmit }: { messageId: string; disabled?: boolean; onSubmit: (txHash: string) => void }) {
+export function FundingForm({ messageId, disabled, onSubmit }: { messageId: string; disabled?: boolean; onSubmit: (txHash: string) => void }) {
   const [txHash, setTxHash] = useState('');
   return (
     <form
@@ -323,11 +324,46 @@ export function ChatTranscript({
                     {embed.type === 'proposal' ? embed.title || 'Proposal ready' : embed.type === 'agreement' ? 'Agreement ready' : embed.type === 'funding' ? 'Funding action' : 'Review request'}
                   </p>
                   <p className="mt-1 text-xs text-[#9aa0a6]">{message.content}</p>
+
+                  {showsFundingForm(embed, canDecide) ? (
+                    <FundingForm
+                      messageId={message.id}
+                      disabled={embedBusy}
+                      onSubmit={(txHash) => onEmbedAction?.(embed, 'submit_funding', txHash)}
+                    />
+                  ) : null}
+
+                  {/* A review_request is written after the handoff succeeds, so it is a receipt. */}
+                  {embed.type === 'review_request' ? (
+                    <p className="mt-3 text-xs text-[#9aa0a6]">
+                      Sent to the team — they will reply in this chat.
+                    </p>
+                  ) : null}
+
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {canDecide && embed.type === 'proposal' && embed.status === 'pending' ? <button type="button" disabled={embedBusy} onClick={() => onEmbedAction?.(embed, 'accept')} className="rounded-lg bg-[#e8571e] px-3 py-1.5 text-xs font-semibold text-[#14171a] disabled:opacity-60">Accept proposal</button> : null}
-                    {embed.type === 'review_request' ? <button type="button" disabled={embedBusy} onClick={() => onEmbedAction?.(embed, 'review')} className="rounded-lg bg-[#e8571e] px-3 py-1.5 text-xs font-semibold text-[#14171a] disabled:opacity-60">Send to review</button> : null}
-                    {canDecide && embed.type === 'funding' && (embed.status === 'failed' || embed.status === 'pending_funding' || !embed.status) ? <FundingForm messageId={message.id} disabled={embedBusy} onSubmit={(txHash) => onEmbedAction?.(embed, 'submit_funding', txHash)} /> : null}
-                    <button type="button" onClick={() => onEmbedAction?.(embed, 'details')} className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[#ece7de]">View details</button>
+                    {/* Which controls appear is decided by the tested embed-actions module. */}
+                    {embedActions({ embed, canDecide }).map((item) =>
+                      item.action === 'details' ? (
+                        <button
+                          key={item.action}
+                          type="button"
+                          onClick={() => onEmbedAction?.(embed, 'details')}
+                          className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[#ece7de]"
+                        >
+                          {item.label}
+                        </button>
+                      ) : (
+                        <button
+                          key={item.action}
+                          type="button"
+                          disabled={embedBusy}
+                          onClick={() => onEmbedAction?.(embed, item.action)}
+                          className="rounded-lg bg-[#e8571e] px-3 py-1.5 text-xs font-semibold text-[#14171a] disabled:opacity-60"
+                        >
+                          {item.label}
+                        </button>
+                      )
+                    )}
                   </div>
                 </div>
               </div>

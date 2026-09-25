@@ -994,9 +994,8 @@ export function ChatWorkspace() {
               }}
                 onEmbedAction={(embed, action, value) => {
                   if (action === 'details') { setIsContextOpen(true); return; }
-                  if (action === 'review') { void handleRequestReview(); return; }
                   if (action === 'submit_funding') { void handleSubmitPayment(value ?? ''); return; }
-                  if (embed.type === 'proposal') void handleProposalAction('accept');
+                  if (action === 'accept') void handleProposalAction('accept');
                 }}
                embedBusy={busyAction !== null}
                canDecide={isOwnConversation}
