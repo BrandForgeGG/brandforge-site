@@ -18,6 +18,7 @@ export interface ChatMessage {
    */
   senderName?: string | null;
   senderId?: string | null;
+  attachmentContentType?: string;
 }
 
 export const SUGGESTED_PROMPTS = [
@@ -231,14 +232,23 @@ export function ChatTranscript({
                 }`}
               >
                 {message.artifactData ? (
-                  <a
-                    href={`/api/attachments?path=${encodeURIComponent(message.artifactData.path)}`}
-                    className="mt-2 flex items-center gap-2 rounded-xl border border-[#e8571e]/30 bg-[#14171a]/50 px-3 py-2 text-xs text-[#ece7de] hover:border-[#e8571e]"
-                  >
+                  <div className="mb-2">
+                    {message.artifactData.contentType.startsWith('image/') ? (
+                      <img
+                        src={`/api/attachments?path=${encodeURIComponent(message.artifactData.path)}`}
+                        alt={message.artifactData.name}
+                        className="mb-2 max-h-64 max-w-full rounded-xl border border-white/10 object-contain"
+                      />
+                    ) : null}
+                    <a
+                      href={`/api/attachments?path=${encodeURIComponent(message.artifactData.path)}`}
+                      className="flex items-center gap-2 rounded-xl border border-[#e8571e]/30 bg-[#14171a]/50 px-3 py-2 text-xs text-[#ece7de] hover:border-[#e8571e]"
+                    >
                     <span aria-hidden="true">↗</span>
                     <span className="min-w-0 flex-1 truncate">{message.artifactData.name}</span>
-                    <span className="text-[10px] text-[#9aa0a6]">{Math.ceil(message.artifactData.size / 1024)} KB</span>
-                  </a>
+                      <span className="text-[10px] text-[#9aa0a6]">{Math.ceil(message.artifactData.size / 1024)} KB</span>
+                    </a>
+                  </div>
                 ) : null}
                 {message.content}
                 {message.editedAt ? <span className={isUser ? 'ml-2 text-[10px] opacity-60' : 'ml-2 text-[10px] text-[#9aa0a6]'}>edited</span> : null}

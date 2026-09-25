@@ -987,7 +987,7 @@ export function ChatWorkspace() {
               />
               <button
                 type="submit"
-                disabled={isBusy || !input.trim() || !attachment}
+                disabled={isBusy || (!input.trim() && !attachment)}
                 className="absolute bottom-3 right-3 rounded-lg bg-[#e8571e] px-3 py-1.5 text-sm font-semibold text-[#14171a] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isStreaming ? '···' : '↑'}
