@@ -1,6 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRealtimeMessages } from '@/lib/realtime-messages';
+import { useConversationPresence, useTypingSignal } from '@/lib/presence';
+import { formatTypingLabel } from '@/lib/presence-utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { ClientProjectState } from '@/lib/conversation-state';
 import { shapeTaskRoster } from '@/lib/task-board';
@@ -65,6 +68,59 @@ export function ChatWorkspace() {
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [isBooting, setIsBooting] = useState(false);
+
+  // --- Live layer (Realtime) -------------------------------------------------------
+  // Self identity for presence/typing. Deliberately the *display* name, never the email, and
+  // never anything a client can set: it only shapes what other viewers see on this channel.
+  const selfPresence = railMeta.userId
+    ? {
+        userId: railMeta.userId,
+        name: state?.title?.trim() ||
+          (railMeta.isStaff ? 'BrandForge team' : 'You'),
+        staff: railMeta.isStaff,
+      }
+    : null;
+
+  const livePresence = useConversationPresence(conversationId, selfPresence);
+
+  // Typing is derived from the composer: non-empty input, and reset as soon as it is sent.
+  const [isTyping, setIsTyping] = useState(false);
+  useTypingSignal(conversationId, selfPresence, isTyping);
+  const typingLabel = formatTypingLabel(livePresence.typing);
+
+  // Rows already rendered, so a pushed row can never duplicate one the poll just delivered.
+  const seenMessageIdsRef = useRef<Set<string>>(new Set());
+
+  const handleLiveMessage = useCallback(
+    (row: { id: string; sender_type: string; content: string; content_type: string | null; created_at: string | null }) => {
+      if (seenMessageIdsRef.current.has(row.id)) {
+        return;
+      }
+      seenMessageIdsRef.current.add(row.id);
+
+      const incoming = toChatMessage({
+        id: row.id,
+        sender_type: row.sender_type,
+        content: row.content,
+        content_type: row.content_type,
+        created_at: row.created_at,
+      });
+
+      // While our own turn is streaming, the assistant bubble is already on screen. The real
+      // row arrives over this same channel once the AI finishes, so accepting it now would show
+      // the answer twice. The post-turn refreshMessages() picks it up instead.
+      if (isStreaming && incoming.sender === 'ai') {
+        return;
+      }
+
+      setMessages((current) =>
+        current.some((entry) => entry.id === incoming.id) ? current : [...current, incoming]
+      );
+    },
+    [isStreaming]
+  );
+
+  useRealtimeMessages(conversationId, handleLiveMessage);
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -128,6 +184,17 @@ export function ChatWorkspace() {
     const data = await response.json();
     const mapped: ChatMessage[] = (Array.isArray(data.messages) ? data.messages : []).map(toChatMessage);
     setMessages(mapped);
+
+    // Seed the realtime dedupe set from the authoritative fetch. Without this, a row delivered
+    // by polling and then pushed over the channel in the same tick would render twice.
+    const seen = new Set<string>();
+    for (const entry of Array.isArray(data.messages) ? data.messages : []) {
+      const id = (entry as { id?: unknown })?.id;
+      if (id) {
+        seen.add(String(id));
+      }
+    }
+    seenMessageIdsRef.current = seen;
 
     return mapped;
   }, []);
@@ -767,6 +834,33 @@ export function ChatWorkspace() {
           </div>
         ) : null}
 
+        {/* Typing + who-else-is-here. One polite live region so a screen reader announces the
+            change without interrupting; the animated dot is decorative. */}
+        <div className="px-4 sm:px-6">
+          <div
+            className="mx-auto flex h-6 max-w-3xl items-center gap-2 text-xs text-[#9aa0a6]"
+            role="status"
+            aria-live="polite"
+          >
+            {typingLabel ? (
+              <>
+                <span aria-hidden="true" className="flex gap-1">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#e8571e]" />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#e8571e] [animation-delay:150ms]" />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#e8571e] [animation-delay:300ms]" />
+                </span>
+                <span>{typingLabel}</span>
+              </>
+            ) : livePresence.viewers.length > 0 ? (
+              <span>
+                {livePresence.viewers.length === 1
+                  ? `${livePresence.viewers[0].name} is also here`
+                  : `${livePresence.viewers.length} others are also here`}
+              </span>
+            ) : null}
+          </div>
+        </div>
+
         <div className="sticky bottom-0 shrink-0 border-t border-white/10 bg-[#14171a] px-4 py-4 sm:px-6">
           <form
             onSubmit={(event) => {
@@ -778,7 +872,10 @@ export function ChatWorkspace() {
             <div className="relative">
               <textarea
                 value={input}
-                onChange={(event) => setInput(event.target.value)}
+                onChange={(event) => {
+                  setInput(event.target.value);
+                  setIsTyping(Boolean(event.target.value.trim()));
+                }}
                 placeholder={conversationId ? 'Ask anything…' : 'Describe what you want to build…'}
                 rows={2}
                 disabled={isBusy}
