@@ -6,6 +6,12 @@ export interface ChatMessage {
   content: string;
   createdAt: string | null;
   streaming?: boolean;
+  /**
+   * The person behind a non-AI message. Pillar A of the overhaul: no shared "BrandForge Team"
+   * author anywhere - every human message is attributed to a named individual who actually
+   * wrote it. `null` only for rows written before sender_name was stored.
+   */
+  senderName?: string | null;
 }
 
 export const SUGGESTED_PROMPTS = [
@@ -18,7 +24,38 @@ export const SUGGESTED_PROMPTS = [
   'I have an idea',
 ];
 
-function Avatar({ label, tone }: { label: string; tone: 'ember' | 'trust' | 'human' }) {
+/**
+ * Two-letter initials for a person's name, so each staff member gets their own avatar
+ * instead of a shared "BF". Handles single names and multi-part names ("Ada Lovelace"
+ * -> "AL", "cher" -> "CH"); falls back to "?" when there is nothing to derive from.
+ */
+function initialsFor(name: string): string {
+  const parts = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (parts.length === 0) {
+    return '?';
+  }
+
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function Avatar({
+  label,
+  tone,
+  author,
+}: {
+  label: string;
+  tone: 'ember' | 'trust' | 'human';
+  /** Screen-reader label: initials alone ("AL") are meaningless when read aloud. */
+  author?: string;
+}) {
   const toneClass =
     tone === 'ember'
       ? 'bg-[#e8571e] text-[#14171a]'
@@ -29,8 +66,10 @@ function Avatar({ label, tone }: { label: string; tone: 'ember' | 'trust' | 'hum
   return (
     <div
       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${toneClass}`}
+      aria-hidden={author ? true : undefined}
     >
       {label}
+      {author ? <span className="sr-only">{author}</span> : null}
     </div>
   );
 }
@@ -86,19 +125,24 @@ export function ChatTranscript({
         const isUser = message.sender === 'user';
         const isHuman = message.sender === 'human';
 
+        // Pillar A: a human message is always a named person. Older rows stored before
+        // sender_name existed fall back to a neutral word rather than inventing a team identity.
+        const authorName = message.senderName?.trim() || (isHuman ? 'BrandForge' : '');
+        const authorInitials = initialsFor(authorName);
+
         return (
           <div key={message.id} className={`flex gap-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
             {!isUser ? (
               <Avatar
-                label={isHuman ? 'BF' : 'AI'}
+                label={isHuman ? authorInitials : 'AI'}
                 tone={isHuman ? 'human' : 'ember'}
               />
             ) : null}
 
             <div className={`max-w-2xl ${isUser ? 'order-first' : ''}`}>
               {isHuman ? (
-                <p className="mb-1 text-[10px] uppercase tracking-[0.2em] text-[#b8763b]">
-                  BrandForge team
+                <p className="mb-1 text-xs font-medium tracking-wide text-[#b8763b]">
+                  {authorName}
                 </p>
               ) : null}
               <div

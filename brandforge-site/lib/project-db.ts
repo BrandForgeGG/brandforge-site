@@ -11,6 +11,8 @@ import { createSupabaseServerClient } from './supabase/server';
 import { createSupabaseAdminClient } from './supabase/admin';
 import { headers } from 'next/headers';
 
+import { validateUsername } from '@/lib/identity';
+
 export type ProjectDbClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 async function db(): Promise<ProjectDbClient> {
@@ -137,6 +139,275 @@ export async function isStaffAccount(userId: string): Promise<boolean> {
 export async function isAdminAccount(userId: string): Promise<boolean> {
   const role = await getProfileRole(userId);
   return role === 'admin';
+}
+
+// ---------- Identity (Pillar A) ----------
+//
+// Every person is a person: a public sequential number, a chosen handle, and an
+// optional Telegram delivery target. These reads use the caller's own client so
+// RLS decides visibility -- a user sees their own row and nothing else, except
+// for participants in a conversation they can already access, which is what
+// the hover profile card needs.
+
+export interface ProfileIdentity {
+  userId: string;
+  displayId: number | null;
+  username: string | null;
+  displayName: string | null;
+  email: string | null;
+  role: ProfileRole | null;
+  telegramChatId: string | null;
+  telegramUsername: string | null;
+  createdAt: string | null;
+}
+
+// display_id is assigned by the 0009 trigger, but a profile row created before
+// that migration (or by an older insert path) can still be null, so we always
+// treat it as optional rather than letting a null break a render.
+export function shapeProfileIdentity(row: Record<string, unknown> | null): ProfileIdentity | null {
+  if (!row || !row.id) {
+    return null;
+  }
+
+  return {
+    userId: String(row.id),
+    displayId: typeof row.display_id === 'number' ? row.display_id : null,
+    username: row.username ? String(row.username) : null,
+    displayName: row.display_name ? String(row.display_name) : null,
+    email: row.email ? String(row.email) : null,
+    role: (row.role as ProfileRole | undefined) ?? null,
+    telegramChatId:
+      row.telegram_chat_id === null || row.telegram_chat_id === undefined
+        ? null
+        : String(row.telegram_chat_id),
+    telegramUsername: row.telegram_username ? String(row.telegram_username) : null,
+    createdAt: row.created_at ? String(row.created_at) : null,
+  };
+}
+
+const IDENTITY_COLUMNS =
+  'id, display_id, username, display_name, email, role, telegram_chat_id, telegram_username, created_at';
+
+// The signed-in user's own identity. Backfills a missing display_id/username
+// through the 0009 trigger by writing the row once; a no-op update is harmless
+// because the trigger only fills nulls.
+export async function getMyIdentity(userId: string): Promise<ProfileIdentity | null> {
+  const supabase = await db();
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(IDENTITY_COLUMNS)
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching own identity:', error.message);
+    return null;
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  if (data.display_id === null || data.username === null) {
+    const patched = await ensureProfileIdentity(userId);
+    if (patched) {
+      return patched;
+    }
+  }
+
+  return shapeProfileIdentity(data);
+}
+
+// Forces the 0009 before-insert trigger to run for an existing row. `role` is
+// deliberately absent from the write: this path must never be able to touch it,
+// and the column-level grant from 0006 would reject it anyway.
+export async function ensureProfileIdentity(userId: string): Promise<ProfileIdentity | null> {
+  const supabase = await db();
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ updated_at: new Date().toISOString() })
+    .eq('id', userId)
+    .select(IDENTITY_COLUMNS)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error backfilling profile identity:', error.message);
+    return null;
+  }
+
+  return shapeProfileIdentity(data);
+}
+
+// Sets the caller's own username. The RLS policy added in 0009 re-checks
+// uniqueness, so a taken handle fails here rather than silently colliding.
+export async function updateMyUsername(
+  userId: string,
+  username: string,
+): Promise<{ ok: true; identity: ProfileIdentity } | { ok: false; reason: string }> {
+  const supabase = await db();
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ username, updated_at: new Date().toISOString() })
+    .eq('id', userId)
+    .select(IDENTITY_COLUMNS)
+    .maybeSingle();
+
+  if (error) {
+    // 23505 = unique violation, i.e. the handle is taken.
+    const taken = error.code === '23505' || /duplicate key|already exists/i.test(error.message);
+    return {
+      ok: false,
+      reason: taken ? 'That username is taken.' : 'Could not update your username.',
+    };
+  }
+
+  const identity = shapeProfileIdentity(data);
+
+  if (!identity) {
+    return { ok: false, reason: 'Could not update your username.' };
+  }
+
+  return { ok: true, identity };
+}
+
+// Links a Telegram chat to an account. Only ever called from the bot deep-link
+// verifier, after the bot has confirmed the chat id belongs to the person who
+// clicked the link -- never from a client-supplied chat id.
+export async function linkTelegramToProfile(
+  userId: string,
+  chatId: string,
+  telegramUsername: string | null,
+): Promise<{ ok: true; identity: ProfileIdentity } | { ok: false; reason: string }> {
+  const supabase = await db();
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({
+      telegram_chat_id: chatId,
+      telegram_username: telegramUsername,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId)
+    .select(IDENTITY_COLUMNS)
+    .maybeSingle();
+
+  if (error) {
+    const taken = error.code === '23505' || /duplicate key|already exists/i.test(error.message);
+    return {
+      ok: false,
+      reason: taken
+        ? 'That Telegram account is already linked elsewhere.'
+        : 'Could not link Telegram.',
+    };
+  }
+
+  const identity = shapeProfileIdentity(data);
+
+  if (!identity) {
+    return { ok: false, reason: 'Could not link Telegram.' };
+  }
+
+  return { ok: true, identity };
+}
+
+// Service-role variant of linkTelegramToProfile, for the bot deep-link verifier.
+//
+// The user-scoped client cannot write this row: at the moment the bot calls back there is no
+// browser session, and the profile being written belongs to whoever signed the token, not to the
+// caller. Ownership is established by the token verification the route performs before it gets
+// here, so this is a privileged write with the authorization already done.
+//
+// It also backfills a missing username from the linked Telegram handle. That is best-effort on
+// purpose: the chat id is the important part, and a handle collision must not fail the link --
+// the member can pick a different one in settings.
+export async function linkTelegramAsVerifiedBot(
+  userId: string,
+  chatId: string,
+  telegramUsername: string | null,
+): Promise<
+  { ok: true; usernameAssigned: boolean } | { ok: false; reason: 'taken' | 'unavailable' | 'failed' }
+> {
+  const supabase = createSupabaseAdminClient();
+
+  if (!supabase) {
+    return { ok: false, reason: 'unavailable' };
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      telegram_chat_id: chatId,
+      telegram_username: telegramUsername,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId);
+
+  if (error) {
+    // 23505 = unique violation on profiles_telegram_chat_id_key.
+    const taken = error.code === '23505' || /duplicate key|already exists/i.test(error.message);
+    console.error('Telegram link write error:', error.message);
+    return { ok: false, reason: taken ? 'taken' : 'failed' };
+  }
+
+  if (!telegramUsername) {
+    return { ok: true, usernameAssigned: false };
+  }
+
+  // A handle that is already legal but taken by someone else is simply skipped: the link stands.
+  const candidate = validateUsername(telegramUsername);
+
+  if (!candidate.ok) {
+    return { ok: true, usernameAssigned: false };
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('username')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (profile?.username) {
+    return { ok: true, usernameAssigned: false };
+  }
+
+  const { error: usernameError } = await supabase
+    .from('profiles')
+    .update({ username: candidate.username, updated_at: new Date().toISOString() })
+    .eq('id', userId)
+    .is('username', null);
+
+  if (usernameError) {
+    console.warn('Could not auto-assign username from Telegram:', usernameError.message);
+  }
+
+  return { ok: true, usernameAssigned: !usernameError };
+}
+
+// Resolves a profile's own Telegram chat id, for notification delivery.
+// Returns null when the person has never linked Telegram, which is what makes
+// notifications best-effort rather than an error.
+export async function getTelegramChatIdForUser(userId: string): Promise<string | null> {
+  const supabase = await db();
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('telegram_chat_id')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching telegram chat id:', error.message);
+    return null;
+  }
+
+  if (data?.telegram_chat_id === null || data?.telegram_chat_id === undefined) {
+    return null;
+  }
+
+  return String(data.telegram_chat_id);
 }
 
 // Some reads must work for BrandForge staff even though row level security only grants them

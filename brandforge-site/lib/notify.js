@@ -93,7 +93,13 @@ function buildMessage(event, details = {}) {
 async function sendTelegramMessage(text, options = {}) {
   const env = options.env || process.env;
 
-  if (!isNotifyConfigured(env)) {
+  // Team sends need both the bot token and the team chat. A personal send (see the chatId
+  // handling below) only needs the token, because the destination is the member's own chat.
+  const hasToken = Boolean(String(env.TELEGRAM_BOT_TOKEN || '').trim());
+  const isPersonal = options.chatId !== undefined;
+  const hasDestination = isPersonal || Boolean(String(env.TELEGRAM_CHAT_ID || '').trim());
+
+  if (!hasToken || !hasDestination) {
     return { sent: false, reason: 'not_configured' };
   }
 
@@ -103,7 +109,30 @@ async function sendTelegramMessage(text, options = {}) {
   }
 
   const token = String(env.TELEGRAM_BOT_TOKEN).trim();
-  const chatId = String(env.TELEGRAM_CHAT_ID).trim();
+
+  // `options.chatId` targets one person's own chat instead of the team chat, which is how a
+  // member who linked Telegram (Pillar A) gets their own proposal-ready / payment-released
+  // pings. The id is validated before use so a malformed profile value can never become an
+  // arbitrary sendMessage target.
+  const personalChatId = String(options.chatId ?? '').trim();
+
+  if (options.chatId !== undefined && personalChatId !== '' && !/^-?\d{1,20}$/.test(personalChatId)) {
+    return { sent: false, reason: 'invalid_chat_id' };
+  }
+
+  // A personal send must not silently fall back to the team chat: that would leak one
+  // member's milestone news to the whole ops channel. If no valid id was supplied, stop.
+  if (options.chatId !== undefined && personalChatId === '') {
+    return { sent: false, reason: 'no_linked_chat' };
+  }
+
+  const chatId = personalChatId !== '' ? personalChatId : String(env.TELEGRAM_CHAT_ID).trim();
+
+  // A personal send does not need the team chat to be configured at all.
+  if (!personalChatId && !String(env.TELEGRAM_CHAT_ID || '').trim()) {
+    return { sent: false, reason: 'not_configured' };
+  }
+
   const body = JSON.stringify({
     chat_id: chatId,
     text: String(text).slice(0, 4000),
@@ -134,6 +163,60 @@ async function sendTelegramMessage(text, options = {}) {
   }
 }
 
+// Personal (member-facing) notifications, delivered to that person's own linked Telegram chat
+// rather than the team chat. Same guarantees as the team messages: no message bodies, no
+// secrets, never throws, silent no-op when unconfigured or when the person has not linked.
+//
+// A member-facing event is written in the second person and points at the app, because a
+// founder reading it should never have to guess which internal system is talking to them.
+function buildPersonalMessage(event, details = {}) {
+  switch (event) {
+    case 'proposal_ready':
+      return `BrandForge: your proposal "${clip(details.title)}" is ready to review in the chat.${
+        money(details.totalAmount, details.currency) ? ` ${money(details.totalAmount, details.currency)}` : ''
+      }`;
+
+    case 'funding_submitted':
+      return 'BrandForge: we received your funding transfer and are verifying it on-chain. We will confirm here once it clears.';
+
+    case 'funding_verified':
+      return 'BrandForge: your funding is verified and work has started.';
+
+    case 'funding_rejected':
+      return `BrandForge: we could not verify that transfer${
+        clip(details.note) ? ` (${clip(details.note)})` : ''
+      }. Please resend it from the chat.`;
+
+    case 'milestone_ready':
+      return `BrandForge: "${clip(details.title)}" is delivered and waiting for your approval.`;
+
+    case 'payment_released':
+      return `BrandForge: the payment for "${clip(details.title)}" has been released.`;
+
+    case 'telegram_linked':
+      return 'BrandForge: your Telegram is linked. You will get a ping here whenever something needs you.';
+
+    default:
+      return null;
+  }
+}
+
+// Sends to one person. `chatId` comes from their own profile row (written by the bot deep-link
+// verifier), never from a request body, and an unlinked member is a silent no-op.
+async function notifyUser(chatId, event, details = {}, options = {}) {
+  const text = buildPersonalMessage(event, details);
+
+  if (!text) {
+    return { sent: false, reason: 'unknown_event' };
+  }
+
+  if (!/^-?\d{1,20}$/.test(String(chatId ?? '').trim())) {
+    return { sent: false, reason: 'no_linked_chat' };
+  }
+
+  return sendTelegramMessage(text, { ...options, chatId: String(chatId).trim() });
+}
+
 // The public entry point. Await it inside the route (serverless runtimes may kill fire-and-forget
 // work after the response); it is fast, bounded by a timeout, and never throws.
 async function notify(event, details = {}, options = {}) {
@@ -150,6 +233,8 @@ module.exports = {
   TELEGRAM_API_BASE,
   isNotifyConfigured,
   buildMessage,
+  buildPersonalMessage,
   sendTelegramMessage,
   notify,
+  notifyUser,
 };

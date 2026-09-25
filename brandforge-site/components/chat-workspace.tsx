@@ -18,6 +18,7 @@ import {
 interface PersistedMessage {
   id: string;
   sender_type: string;
+  sender_name?: string | null;
   content: string;
   content_type: string | null;
   created_at: string | null;
@@ -38,6 +39,7 @@ function toChatMessage(message: PersistedMessage): ChatMessage {
     sender,
     content: message.content,
     createdAt: message.created_at,
+    senderName: message.sender_name ?? null,
   };
 }
 
