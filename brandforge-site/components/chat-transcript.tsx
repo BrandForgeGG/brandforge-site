@@ -56,11 +56,14 @@ function Avatar({
   label,
   tone,
   author,
+  userId,
+  conversationId,
 }: {
   label: string;
   tone: 'ember' | 'trust' | 'human';
-  /** Screen-reader label: initials alone ("AL") are meaningless when read aloud. */
   author?: string;
+  userId?: string | null;
+  conversationId?: string;
 }) {
   const toneClass =
     tone === 'ember'
@@ -69,13 +72,37 @@ function Avatar({
         ? 'bg-[#5aa578] text-[#14171a]'
         : 'bg-[#2b3238] text-[#ece7de]';
 
+  const [profile, setProfile] = useState<{ displayId: number | null; username: string | null; displayName: string | null; role: string | null } | null>(null);
+  const [showProfile, setShowProfile] = useState(false);
+  async function openProfile() {
+    if (!userId || !conversationId || profile) { setShowProfile(true); return; }
+    setShowProfile(true);
+    const response = await fetch(`/api/profile-card?conversationId=${encodeURIComponent(conversationId)}&userId=${encodeURIComponent(userId)}`);
+    if (response.ok) { const data = await response.json(); setProfile(data.identity); }
+  }
+
   return (
-    <div
-      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${toneClass}`}
-      aria-hidden={author ? true : undefined}
-    >
-      {label}
-      {author ? <span className="sr-only">{author}</span> : null}
+    <div className="relative" onMouseEnter={() => void openProfile()} onFocus={() => void openProfile()}>
+      <div
+        className={`flex h-8 w-8 shrink-0 cursor-help items-center justify-center rounded-full text-xs font-semibold ${toneClass}`}
+        tabIndex={userId ? 0 : undefined}
+        aria-label={author ? `View ${author}'s profile` : undefined}
+        aria-hidden={author ? undefined : true}
+      >
+        {label}
+        {author ? <span className="sr-only">{author}</span> : null}
+      </div>
+      {showProfile && userId ? (
+        <div role="dialog" aria-label={`${author || 'Profile'} details`} className="absolute bottom-10 left-0 z-30 w-52 rounded-xl border border-white/15 bg-[#111417] p-3 text-left shadow-2xl">
+          {profile ? (
+            <>
+              <p className="text-sm font-medium text-[#ece7de]">{profile.displayName || author || 'Member'}</p>
+              <p className="mt-1 text-xs text-[#9aa0a6]">{profile.displayId ? `#${profile.displayId}` : 'Member'}{profile.username ? ` · @${profile.username}` : ''}</p>
+              {profile.role ? <p className="mt-1 text-[10px] uppercase tracking-[0.15em] text-[#b8763b]">{profile.role}</p> : null}
+            </>
+          ) : <p className="text-xs text-[#9aa0a6]">Loading profile…</p>}
+        </div>
+      ) : null}
     </div>
   );
 }

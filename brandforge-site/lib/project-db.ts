@@ -151,7 +151,6 @@ export async function isAdminAccount(userId: string): Promise<boolean> {
   return role === 'admin';
 }
 
-// ---------- Identity (Pillar A) ----------
 //
 // Every person is a person: a public sequential number, a chosen handle, and an
 // optional Telegram delivery target. These reads use the caller's own client so
@@ -197,6 +196,17 @@ export function shapeProfileIdentity(row: Record<string, unknown> | null): Profi
 
 const IDENTITY_COLUMNS =
   'id, display_id, username, display_name, email, role, telegram_chat_id, telegram_username, created_at';
+
+export async function getParticipantIdentity(conversationId: string, userId: string): Promise<ProfileIdentity | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data: participant } = await admin.from('participants').select('user_id').eq('conversation_id', conversationId).eq('user_id', userId).maybeSingle();
+  if (!participant) return null;
+  const { data } = await admin.from('profiles').select(IDENTITY_COLUMNS).eq('id', userId).maybeSingle();
+  return shapeProfileIdentity(data);
+}
+
+
 
 // The signed-in user's own identity. Backfills a missing display_id/username
 // through the 0009 trigger by writing the row once; a no-op update is harmless
