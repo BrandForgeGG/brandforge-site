@@ -23,8 +23,8 @@ export function LandingNav() {
   }, []);
 
   return (
-    <nav className="border-b border-white/10 px-6 py-4">
-      <div className="mx-auto flex max-w-6xl items-center justify-between">
+    <nav className="bf-landing-nav">
+      <div className="bf-landing-nav-inner">
         <div className="font-serif text-2xl text-[#ece7de]">
           Brand<span className="text-[#e8571e]">Forge</span>
         </div>

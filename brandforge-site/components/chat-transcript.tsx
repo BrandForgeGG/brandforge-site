@@ -2,6 +2,14 @@
 
 import { useState } from 'react';
 
+export type ChatEmbedAction = 'accept' | 'details' | 'review' | 'submit_funding';
+
+export type ChatEmbed =
+  | { type: 'proposal'; proposalId: string; status: string; title?: string }
+  | { type: 'agreement'; agreementId: string; status: string }
+  | { type: 'review_request'; conversationId: string }
+  | { type: 'funding'; agreementId: string; paymentId?: string; status?: string };
+
 export interface ChatMessage {
   id: string;
   sender: 'user' | 'ai' | 'human' | 'system';
@@ -11,6 +19,7 @@ export interface ChatMessage {
   streaming?: boolean;
   reactions?: { emoji: string; count: number; reactedByMe: boolean }[];
   artifactData?: { path: string; name: string; size: number; contentType: string } | null;
+  embed?: ChatEmbed | null;
   /**
    * The person behind a non-AI message. Pillar A of the overhaul: no shared "BrandForge Team"
    * author anywhere - every human message is attributed to a named individual who actually
@@ -20,14 +29,40 @@ export interface ChatMessage {
   senderId?: string | null;
 }
 
+function FundingForm({ messageId, disabled, onSubmit }: { messageId: string; disabled?: boolean; onSubmit: (txHash: string) => void }) {
+  const [txHash, setTxHash] = useState('');
+  return (
+    <form
+      className="mt-3 flex w-full flex-wrap gap-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const value = txHash.trim();
+        if (!value) return;
+        onSubmit(value);
+        setTxHash('');
+      }}
+    >
+      <label className="sr-only" htmlFor={`funding-${messageId}`}>Transaction hash</label>
+      <input
+        id={`funding-${messageId}`}
+        value={txHash}
+        onChange={(event) => setTxHash(event.target.value)}
+        placeholder="Paste your transaction hash"
+        disabled={disabled}
+        className="min-w-0 flex-1 rounded-lg border border-white/10 bg-[#14171a] px-3 py-1.5 text-xs text-[#ece7de] placeholder:text-[#6f757b] disabled:opacity-60"
+      />
+      <button type="submit" disabled={disabled || !txHash.trim()} className="rounded-lg bg-[#e8571e] px-3 py-1.5 text-xs font-semibold text-[#14171a] disabled:opacity-60">Submit for verification</button>
+    </form>
+  );
+}
+
+// Example starters for a first-timer. These deliberately read like a real, well-formed first
+// message rather than a bare category ("Build a website"), because a newcomer needs to see the
+// shape of a good opening before writing one. Tapping a chip sends it verbatim as the first message.
 export const SUGGESTED_PROMPTS = [
-  'Build a website',
-  'Build an app',
-  'Launch a SaaS',
-  'Automate my business',
-  'Build an AI product',
-  'Grow my business',
-  'I have an idea',
+  'I run a small bakery and I want a website that takes online orders and shows our daily specials. I have photos and a logo already, and I need it live before the end of next month.',
+  'We keep missing support tickets because they arrive by email. I want a simple internal tool where my team can log a ticket, assign it, and see what is still open.',
+  'I want to launch a small SaaS that turns customer feedback into a prioritised roadmap. I have a prototype in a spreadsheet, but I do not know the right stack or what to build first.',
 ];
 
 /**
@@ -84,7 +119,7 @@ function Avatar({
   return (
     <div className="relative" onMouseEnter={() => void openProfile()} onFocus={() => void openProfile()}>
       <div
-        className={`flex h-8 w-8 shrink-0 cursor-help items-center justify-center rounded-full text-xs font-semibold ${toneClass}`}
+        className={`bf-avatar flex h-8 w-8 shrink-0 cursor-help items-center justify-center rounded-full text-xs font-semibold ${toneClass}`}
         tabIndex={userId ? 0 : undefined}
         aria-label={author ? `View ${author}'s profile` : undefined}
         aria-hidden={author ? undefined : true}
@@ -93,7 +128,7 @@ function Avatar({
         {author ? <span className="sr-only">{author}</span> : null}
       </div>
       {showProfile && userId ? (
-        <div role="dialog" aria-label={`${author || 'Profile'} details`} className="absolute bottom-10 left-0 z-30 w-52 rounded-xl border border-white/15 bg-[#111417] p-3 text-left shadow-2xl">
+        <div role="dialog" aria-label={`${author || 'Profile'} details`} className="bf-profile-card absolute bottom-10 left-0 z-30 w-52 rounded-xl border border-white/15 bg-[#111417] p-3 text-left shadow-2xl">
           {profile ? (
             <>
               <p className="text-sm font-medium text-[#ece7de]">{profile.displayName || author || 'Member'}</p>
@@ -171,6 +206,43 @@ function MessageActions({
   );
 }
 
+// First-run orientation for a brand-new chat. This is static product copy, not an AI reply and
+// not a message row: nothing here is persisted, nothing is attributed to a person, and it never
+// enters the AI suggestion/approval queue. A new project starts in DISCOVERY, so the rail opens on
+// "Describe" and every later stage is visibly still ahead of the founder.
+const PROJECT_STAGES = [
+  { key: 'describe', label: 'Describe', hint: 'Tell us what you want built' },
+  { key: 'proposal', label: 'Proposal', hint: 'A specialist reviews and prices it' },
+  { key: 'fund', label: 'Fund', hint: 'You approve, then fund into escrow' },
+  { key: 'deliver', label: 'Deliver', hint: 'Work is built and milestone-released' },
+] as const;
+
+function FirstRunRail() {
+  return (
+    <ol className="mt-8 grid w-full max-w-xl grid-cols-2 gap-2 sm:grid-cols-4" aria-label="How a BrandForge project progresses">
+      {PROJECT_STAGES.map((stage, index) => (
+        <li key={stage.key} className="rounded-xl border border-white/10 bg-[#1c2024] p-3 text-left">
+          <div className="flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold ${
+                index === 0 ? 'bg-[#e8571e] text-[#14171a]' : 'border border-white/15 text-[#6f757b]'
+              }`}
+            >
+              {index + 1}
+            </span>
+            <span className={`text-xs font-semibold ${index === 0 ? 'text-[#ece7de]' : 'text-[#9aa0a6]'}`}>
+              {stage.label}
+            </span>
+            {index === 0 ? <span className="sr-only">(current stage)</span> : null}
+          </div>
+          <p className="mt-1.5 text-[11px] leading-relaxed text-[#6f757b]">{stage.hint}</p>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export function ChatTranscript({
   messages,
   isStreaming,
@@ -180,6 +252,9 @@ export function ChatTranscript({
   onDeleteMessage,
   onReact,
   conversationId,
+  onEmbedAction,
+  embedBusy,
+  canDecide,
 }: {
   messages: ChatMessage[];
   isStreaming: boolean;
@@ -189,28 +264,46 @@ export function ChatTranscript({
   onDeleteMessage: (id: string) => Promise<void>;
   onReact: (id: string, emoji: string) => Promise<void>;
   conversationId: string;
+  onEmbedAction?: (embed: ChatEmbed, action: ChatEmbedAction, value?: string) => void;
+  embedBusy?: boolean;
+  /**
+   * Only the founder who owns the project may accept a proposal or submit funding. Staff reading
+   * someone else's chat see the same card as read-only context instead of a button that the
+   * server will reject with 403.
+   */
+  canDecide?: boolean;
 }) {
   if (messages.length === 0) {
     return (
       <div className="mx-auto flex h-full w-full max-w-2xl flex-col items-center justify-center py-10 text-center">
         <h1 className="font-serif text-3xl text-[#ece7de] sm:text-4xl">What are you building?</h1>
         <p className="mt-4 max-w-xl text-base leading-relaxed text-[#9aa0a6]">
-          Describe your idea, business, product or problem. BrandForge will ask what it needs to
-          know, structure the requirements as you talk, and turn this conversation into a real
-          project with a human team.
+          Tell me what you want built — a few sentences is enough to start. Share the problem and who
+          it is for, and I will turn it into requirements you can correct as we talk.
+        </p>
+        <p className="mt-3 max-w-xl text-xs leading-relaxed text-[#6f757b]">
+          Your first message creates the project. A BrandForge specialist then reviews it in this same
+          chat and sends a priced proposal you can accept, decline, or send back with changes. Nothing
+          is charged before you approve a proposal, and your money is held in escrow until you approve
+          delivered work.
         </p>
 
-        <div className="mt-8 flex flex-wrap justify-center gap-2">
-          {SUGGESTED_PROMPTS.map((prompt) => (
-            <button
-              key={prompt}
-              type="button"
-              onClick={() => onSuggestion(prompt)}
-              className="rounded-full border border-white/10 bg-[#1c2024] px-4 py-2 text-sm text-[#ece7de] transition hover:border-[#e8571e]"
-            >
-              {prompt}
-            </button>
-          ))}
+        <FirstRunRail />
+
+        <div className="mt-8 flex w-full max-w-2xl flex-col gap-2">
+          <p className="text-[10px] uppercase tracking-[0.18em] text-[#6f757b]">Or start from an example</p>
+          <div className="flex flex-col gap-2">
+            {SUGGESTED_PROMPTS.map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                onClick={() => onSuggestion(prompt)}
+                className="rounded-xl border border-white/10 bg-[#1c2024] px-4 py-3 text-left text-sm leading-relaxed text-[#ece7de] transition hover:border-[#e8571e]"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -220,6 +313,26 @@ export function ChatTranscript({
     <div className="mx-auto w-full max-w-3xl space-y-6">
       {messages.map((message) => {
         if (message.sender === 'system') {
+          if (message.embed) {
+            const embed = message.embed;
+            return (
+              <div key={message.id} className="flex justify-center">
+                <div className="w-full max-w-xl rounded-2xl border border-[#e8571e]/30 bg-[#1c2024] p-4 text-left">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#b8763b]">Project action</p>
+                  <p className="mt-1 font-medium text-[#ece7de]">
+                    {embed.type === 'proposal' ? embed.title || 'Proposal ready' : embed.type === 'agreement' ? 'Agreement ready' : embed.type === 'funding' ? 'Funding action' : 'Review request'}
+                  </p>
+                  <p className="mt-1 text-xs text-[#9aa0a6]">{message.content}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {canDecide && embed.type === 'proposal' && embed.status === 'pending' ? <button type="button" disabled={embedBusy} onClick={() => onEmbedAction?.(embed, 'accept')} className="rounded-lg bg-[#e8571e] px-3 py-1.5 text-xs font-semibold text-[#14171a] disabled:opacity-60">Accept proposal</button> : null}
+                    {embed.type === 'review_request' ? <button type="button" disabled={embedBusy} onClick={() => onEmbedAction?.(embed, 'review')} className="rounded-lg bg-[#e8571e] px-3 py-1.5 text-xs font-semibold text-[#14171a] disabled:opacity-60">Send to review</button> : null}
+                    {canDecide && embed.type === 'funding' && (embed.status === 'failed' || embed.status === 'pending_funding' || !embed.status) ? <FundingForm messageId={message.id} disabled={embedBusy} onSubmit={(txHash) => onEmbedAction?.(embed, 'submit_funding', txHash)} /> : null}
+                    <button type="button" onClick={() => onEmbedAction?.(embed, 'details')} className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[#ece7de]">View details</button>
+                  </div>
+                </div>
+              </div>
+            );
+          }
           return (
             <div key={message.id} className="flex justify-center">
               <p className="rounded-full border border-[#5aa578]/30 bg-[#5aa578]/10 px-4 py-2 text-center text-xs leading-relaxed text-[#d9f7ea]">
@@ -261,12 +374,15 @@ export function ChatTranscript({
               >
                 {message.artifactData ? (
                   <div className="mb-2">
-                     {message.artifactData.contentType.startsWith('audio/') ? (
+                     {message.artifactData.contentType?.startsWith('audio/') ? (
                        <audio controls preload="none" className="mb-2 w-full max-w-sm" aria-label={`Audio attachment ${message.artifactData.name}`}>
                          <source src={`/api/attachments?path=${encodeURIComponent(message.artifactData.path)}`} type={message.artifactData.contentType} />
                        </audio>
                      ) : null}
-                    {message.artifactData.contentType.startsWith('image/') ? (
+                    {message.artifactData.contentType?.startsWith('image/') ? (
+                       // Attachments stream from the authenticated /api/attachments route with a
+                       // runtime path, so next/image optimization would drop the session check.
+                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={`/api/attachments?path=${encodeURIComponent(message.artifactData.path)}`}
                         alt={message.artifactData.name}

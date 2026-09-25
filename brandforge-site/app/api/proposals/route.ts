@@ -8,6 +8,7 @@ import {
   canAccessConversation,
   addMessage,
   isStaffAccount,
+  recordFunnelEvent,
   updateConversationStatus,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
@@ -67,8 +68,15 @@ export async function POST(request: NextRequest) {
       conversation_id: conversationId,
       sender_type: 'ai',
       sender_name: 'BrandForge',
-      content: `BrandForge sent a proposal: ${title}. Review it on the right and accept, decline or request changes here in the chat.`,
+      content: `BrandForge sent a proposal: ${title}. Accept it here in the chat, or open the project panel to read the full scope.`,
       content_type: 'system',
+      artifact_data: { type: 'proposal', id: proposal.id, status: proposal.status, title },
+    });
+
+    // Recorded server-side at the moment the proposal actually exists.
+    await recordFunnelEvent('proposal_received', {
+      signedIn: true,
+      properties: { total_amount: totalAmount, currency: 'EUR', stage: 'proposal' },
     });
 
     await notify('proposal_sent', {
@@ -155,6 +163,7 @@ export async function PATCH(request: NextRequest) {
         sender_name: 'BrandForge',
         content: statusLine,
         content_type: 'system',
+        artifact_data: { type: 'proposal', id: proposalId, status },
       });
 
       if (status === 'accepted') {
@@ -164,6 +173,13 @@ export async function PATCH(request: NextRequest) {
       }
 
       await notify('proposal_answered', { title: existing.title, status });
+
+      if (status === 'accepted') {
+        await recordFunnelEvent('proposal_accepted', {
+          signedIn: true,
+          properties: { total_amount: existing.total_amount, currency: existing.currency, stage: 'fund' },
+        });
+      }
     }
 
     return NextResponse.json({ success: true, proposal });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { addMessage, addParticipant, isAdminAccount } from '@/lib/project-db';
+import { addMessage, addParticipant, isAdminAccount, recordFunnelEvent } from '@/lib/project-db';
 import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
@@ -62,6 +62,11 @@ export async function POST(
           { status: 400 }
         );
       }
+
+      // A real approval, recorded server-side. Declines are intentionally not an event: the brief asks
+      // for application_approved, and counting declines would turn a conversion metric into something
+      // that rewards rejecting people.
+      await recordFunnelEvent('application_approved', { signedIn: true });
 
       return NextResponse.json({ success: true, application: data });
     }

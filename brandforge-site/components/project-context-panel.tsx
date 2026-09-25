@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { getNextDeliveryTask, isTaskOverdue, summarizeTaskProgress } from '@/lib/task-board';
+import { buildProjectPulse, describeAgreementStatus, describeNextDeliveryAction, describePaymentStatus, describeProposalStatus, isTaskOverdue, summarizeTaskProgress } from '@/lib/task-board';
 import type { ClientProjectState } from '@/lib/conversation-state';
 import { DISCOVERY_THRESHOLD } from '@/lib/discovery';
 
@@ -54,18 +54,6 @@ export const STATUS_LABELS: Record<string, string> = {
 
 // What the client sees for each raw payment status. 'pending' means the client submitted a
 // transaction hash and BrandForge is verifying it on-chain; 'paid' means verified and held.
-const PAYMENT_STATUS_LABELS: Record<string, string> = {
-  scheduled: 'scheduled',
-  pending: 'verifying',
-  paid: 'held by BrandForge',
-  released: 'released',
-  failed: 'failed',
-};
-
-function paymentStatusLabel(status: string): string {
-  return PAYMENT_STATUS_LABELS[status] ?? status;
-}
-
 function money(amount: number | null | undefined, currency: string): string {
   if (amount === null || amount === undefined) {
     return '—';
@@ -168,11 +156,18 @@ export function ProjectContextPanel({
   const fundingSubmitted =
     payments.length > 0 && payments.every((payment) => payment.status !== 'scheduled');
   const submittedTx = payments.find((payment) => payment.tx_hash)?.tx_hash ?? null;
+  const detailsRef = useRef<HTMLDetailsElement | null>(null);
+  const openDetails = () => {
+    detailsRef.current?.setAttribute('open', '');
+    detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const projectPulse = buildProjectPulse({ state, proposal, agreement, tasks: state?.tasks ?? [] });
   const submittedNetwork = payments.find((payment) => payment.network)?.network ?? null;
 
   return (
     <aside className="fixed inset-y-0 right-0 z-40 flex w-80 max-w-[85vw] shrink-0 flex-col border-l border-white/10 bg-[#111417] shadow-2xl xl:sticky xl:top-0 xl:z-auto xl:h-screen xl:max-w-none xl:shadow-none">
-      <div className="flex items-start justify-between gap-3 border-b border-white/10 p-4">
+      <div className="bf-panel-header flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-[0.2em] text-[#b8763b]">Project</p>
           <h2 className="mt-1 truncate font-serif text-lg text-[#ece7de]">
@@ -182,7 +177,7 @@ export function ProjectContextPanel({
         <button
           type="button"
           onClick={onClose}
-          className="shrink-0 rounded-lg p-1.5 text-[#9aa0a6] transition hover:bg-white/5 hover:text-[#ece7de]"
+          className="bf-panel-close shrink-0"
           aria-label="Hide project insights"
         >
           <span aria-hidden="true">x</span>
@@ -190,24 +185,39 @@ export function ProjectContextPanel({
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
-        <div className="mb-6">
-          <p className="mb-2 text-xs uppercase tracking-[0.2em] text-[#9aa0a6]">Status</p>
-          <div
-            className={`rounded-xl border px-3 py-2 ${
-              state?.status && state.status !== 'DISCOVERY'
-                ? 'border-[#5aa578]/40 bg-[#5aa578]/10'
-                : 'border-white/10 bg-[#1c2024]'
-            }`}
-          >
+        <div className="bf-panel-section">
+          <p className="bf-section-label">Project pulse</p>
+          <div className="bf-panel-card bf-panel-card-emphasis">
+            <p className="text-xs text-[#ece7de]">Project pulse</p>
+            <div className="grid gap-2">
+              {projectPulse.map((item) => (
+                <div key={item.key} className="flex items-start justify-between gap-3 text-xs">
+                  <span className="text-[#9aa0a6]">{item.label}</span>
+                  <span className="text-right text-[#ece7de]">{item.value}</span>
+                </div>
+              ))}
+              {projectPulse.length === 0 ? <p className="text-xs text-[#9aa0a6]">Start the conversation to shape the project.</p> : null}
+            </div>
+            <button type="button" onClick={openDetails} className="mt-3 text-xs font-semibold text-[#b8763b] hover:text-[#ece7de]">
+              Open project details →
+            </button>
+          </div>
+        </div>
+
+        <details ref={detailsRef} className="bf-panel-section group">
+          <summary className="bf-section-label cursor-pointer list-none">Project details</summary>
+          <div className="mt-4">
+        <div className="bf-panel-section">
+          <div className={`bf-panel-card ${state?.status && state.status !== 'DISCOVERY' ? 'bf-panel-card-emphasis' : ''}`}>
             <span className="text-sm text-[#ece7de]">
               {state ? STATUS_LABELS[state.status] ?? state.status : '—'}
             </span>
           </div>
         </div>
 
-        <div className="mb-6">
-          <p className="mb-2 text-xs uppercase tracking-[0.2em] text-[#9aa0a6]">Discovery</p>
-          <div className="rounded-xl border border-white/10 bg-[#1c2024] px-3 py-3">
+        <div className="bf-panel-section">
+          <p className="bf-section-label">Discovery</p>
+          <div className="bf-panel-card">
             <div className="mb-2 flex items-center gap-2">
               <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
                 <div
@@ -231,9 +241,9 @@ export function ProjectContextPanel({
           </div>
         </div>
 
-        <div className="mb-6">
-          <p className="mb-2 text-xs uppercase tracking-[0.2em] text-[#9aa0a6]">Requirements</p>
-          <div className="rounded-xl border border-white/10 bg-[#1c2024] px-3 py-2">
+        <div className="bf-panel-section">
+          <p className="bf-section-label">Requirements</p>
+          <div className="bf-panel-card">
             <p className="text-sm text-[#ece7de]">
               {state ? state.requirementsCount : 0}
               <span className="text-[#9aa0a6]"> captured</span>
@@ -252,9 +262,9 @@ export function ProjectContextPanel({
           </div>
         </div>
 
-        <div className="mb-6">
-          <p className="mb-2 text-xs uppercase tracking-[0.2em] text-[#9aa0a6]">Open questions</p>
-          <div className="rounded-xl border border-white/10 bg-[#1c2024] px-3 py-2">
+        <div className="bf-panel-section">
+          <p className="bf-section-label">Open questions</p>
+          <div className="bf-panel-card">
             <p className="text-sm text-[#ece7de]">
               {state ? state.openQuestions.length : 0}
             </p>
@@ -272,9 +282,9 @@ export function ProjectContextPanel({
           </div>
         </div>
 
-        <div className="mb-6">
-          <p className="mb-2 text-xs uppercase tracking-[0.2em] text-[#9aa0a6]">Milestones</p>
-          <div className="rounded-xl border border-white/10 bg-[#1c2024] px-3 py-2">
+        <div className="bf-panel-section">
+          <p className="bf-section-label">Milestones</p>
+          <div className="bf-panel-card">
             {state && state.milestones.length > 0 ? (
               <>
                 <ul className="space-y-2">
@@ -299,9 +309,9 @@ export function ProjectContextPanel({
           </div>
         </div>
 
-        <div className="mb-6">
-          <p className="mb-2 text-xs uppercase tracking-[0.2em] text-[#9aa0a6]">AI drafts</p>
-          <div className="rounded-xl border border-[#e8571e]/30 bg-[#1c2024] px-3 py-2">
+        <div className="bf-panel-section">
+          <p className="bf-section-label">AI drafts</p>
+          <div className="bf-panel-card bf-panel-card-alert">
             {aiDrafts.length > 0 ? aiDrafts.map((draft) => (
               <div key={draft.id} className="border-b border-white/10 py-2 last:border-0">
                 <p className="whitespace-pre-wrap text-xs leading-relaxed text-[#ece7de]">{draft.content}</p>
@@ -314,13 +324,13 @@ export function ProjectContextPanel({
           </div>
         </div>
 
-        <div className="mb-6">
-          <p className="mb-2 text-xs uppercase tracking-[0.2em] text-[#9aa0a6]">Tasks</p>
+        <div className="bf-panel-section">
+          <p className="bf-section-label">Tasks</p>
           {state ? (() => {
             const progress = summarizeTaskProgress(state.tasks);
-            const nextTask = getNextDeliveryTask(state.tasks);
+            // next action is rendered from the shared helper below
             return (
-              <div className="mb-3 rounded-xl border border-[#5aa578]/25 bg-[#1c2024] px-3 py-2">
+              <div className="mb-3 bf-panel-card bf-panel-card-emphasis">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-[#ece7de]">Delivery progress</span>
                   <span className="text-[#5aa578]">{progress.done}/{progress.total} complete</span>
@@ -329,11 +339,11 @@ export function ProjectContextPanel({
                   <div className="h-full rounded-full bg-[#5aa578] transition-all" style={{ width: `${progress.percent}%` }} />
                 </div>
                 <p className="mt-1 text-[10px] text-[#9aa0a6]">{progress.inProgress} in progress · {progress.review} awaiting review · {progress.queued} queued{progress.overdue ? ` · ${progress.overdue} overdue` : ''}</p>
-                {nextTask ? <p className="mt-2 border-t border-white/10 pt-2 text-[10px] text-[#b8763b]">Next: {nextTask.title}{nextTask.assigneeName ? ` · ${nextTask.assigneeName}` : ''}</p> : <p className="mt-2 border-t border-white/10 pt-2 text-[10px] text-[#5aa578]">All planned delivery tasks are complete.</p>}
+                {describeNextDeliveryAction(state.tasks)}
               </div>
             );
           })() : null}
-          <div className="rounded-xl border border-white/10 bg-[#1c2024] px-3 py-2">
+          <div className="bf-panel-card">
             {state && state.tasks.length > 0 ? (
               <ul className="space-y-2">
                 {state.tasks.map((task) => {
@@ -424,9 +434,9 @@ export function ProjectContextPanel({
           </div>
         </div>
 
-        <div className="mb-6">
-          <p className="mb-2 text-xs uppercase tracking-[0.2em] text-[#9aa0a6]">AI estimate</p>
-          <div className="rounded-xl border border-[#e8571e]/20 bg-[#14171a] px-3 py-2">
+        <div className="bf-panel-section">
+          <p className="bf-section-label">AI estimate</p>
+          <div className="bf-panel-card">
             {state?.estimate ? (
               <>
                 <p className="text-xs text-[#b8763b]">AI-generated · not final</p>
@@ -443,7 +453,7 @@ export function ProjectContextPanel({
           </div>
         </div>
 
-        {proposal && proposal.status === 'pending' && !isStaff ? (
+        {proposal && !isStaff ? (
           <div className="mb-6 rounded-xl border border-[#e8571e]/30 bg-[#1c2024] p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-[#b8763b]">BrandForge proposal</p>
             <h3 className="mt-1 font-serif text-base text-[#ece7de]">{proposal.title}</h3>
@@ -453,17 +463,19 @@ export function ProjectContextPanel({
             <p className="mt-3 text-lg text-[#ece7de]">
               {money(proposal.total_amount, proposal.currency)}
             </p>
+            <p className="mt-1 text-xs text-[#b8763b]">{describeProposalStatus(proposal.status)}</p>
             <p className="mt-1 text-xs text-[#9aa0a6]">
               {proposal.estimated_weeks_min ?? '?'}–{proposal.estimated_weeks_max ?? '?'} weeks delivery
             </p>
-            <div className="mt-3 space-y-2">
-              <button
+            {proposal.status === 'pending' ? (
+              <div className="mt-3 space-y-2">
+                <button
                 type="button"
                 onClick={() => onProposalAction('accept')}
                 disabled={busyAction !== null}
                 className="w-full rounded-lg bg-[#5aa578] px-3 py-2 text-xs font-semibold text-[#14171a] transition hover:opacity-95 disabled:opacity-60"
               >
-                Accept proposal
+                Accept proposal and continue to funding
               </button>
               <button
                 type="button"
@@ -482,6 +494,7 @@ export function ProjectContextPanel({
                 Decline
               </button>
             </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -489,7 +502,7 @@ export function ProjectContextPanel({
           <div className="mb-6 rounded-xl border border-white/10 bg-[#1c2024] p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-[#b8763b]">Agreement</p>
             <p className="mt-1 text-sm text-[#ece7de]">
-              {money(agreement.total_amount, agreement.currency)} · {agreement.status.replace('_', ' ')}
+              {money(agreement.total_amount, agreement.currency)} · {describeAgreementStatus(agreement.status)}
             </p>
             <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-[#9aa0a6]">{agreement.terms}</p>
 
@@ -502,7 +515,7 @@ export function ProjectContextPanel({
                         {payment.sequence}. {payment.title}
                       </span>
                       <span className="ml-2 whitespace-nowrap text-[#ece7de]">
-                        {money(payment.amount, payment.currency)} · {paymentStatusLabel(payment.status)}
+                        {money(payment.amount, payment.currency)} · {describePaymentStatus(payment.status)}
                       </span>
                     </div>
                     {payment.tx_hash ? (
@@ -637,11 +650,13 @@ export function ProjectContextPanel({
             type="button"
             onClick={onRequestReview}
             disabled={busyAction !== null}
-            className="w-full rounded-xl bg-[#e8571e] px-4 py-3 text-sm font-semibold text-[#14171a] transition hover:opacity-95 disabled:opacity-60"
+            className="bf-action bf-action-primary w-full"
           >
             {busyAction === 'review' ? 'Sending…' : 'Send to BrandForge review'}
           </button>
         ) : null}
+          </div>
+        </details>
       </div>
     </aside>
   );

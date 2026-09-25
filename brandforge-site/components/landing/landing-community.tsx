@@ -12,8 +12,8 @@ const TELEGRAM_CHANNELS = [
 export function LandingCommunity() {
   return (
     <>
-      <section id="community" className="border-t border-white/10 px-6 py-16">
-        <div className="mx-auto max-w-6xl">
+      <section id="community" className="bf-section">
+        <div className="bf-container">
           <p className="text-xs uppercase tracking-[0.2em] text-[#b8763b]">Get in early</p>
           <h2 className="mt-2 font-serif text-3xl text-[#ece7de] sm:text-4xl">
             The app is live. The community is where builds land first.
@@ -27,7 +27,7 @@ export function LandingCommunity() {
               href={COMMUNITY_LINKS.discord.href}
               target="_blank"
               rel="noreferrer"
-              className="group rounded-2xl border border-[#e8571e]/30 bg-[#e8571e]/10 p-6 transition hover:border-[#e8571e]"
+              className="bf-community-card bf-community-card-featured"
             >
               <p className="font-serif text-xl text-[#ece7de]">Discord</p>
               <p className="mt-2 text-sm leading-relaxed text-[#9aa0a6]">
@@ -39,7 +39,7 @@ export function LandingCommunity() {
               </p>
             </a>
 
-            <div className="rounded-2xl border border-white/10 bg-[#1c2024] p-6">
+            <div className="bf-community-card">
               <p className="font-serif text-xl text-[#ece7de]">Telegram</p>
               <div className="mt-3 space-y-3">
                 {TELEGRAM_CHANNELS.map((channel) => (

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/app-shell';
 import { getSessionUser } from '@/lib/browser-auth';
+import { trackEvent } from '@/lib/funnel-client';
 
 type ApplicationStatus = {
   id: string;
@@ -28,6 +29,29 @@ const STATUS_COPY: Record<string, { title: string; body: string }> = {
     body: 'We are keeping the team small for now. You are welcome to apply again later.',
   },
 };
+
+// What actually happens after a specialist applies, in the order it happens. Every step here is
+// something the product really does (see /admin/applications + the identity/Telegram linking
+// work). No invented SLAs, no "we usually reply within X" — we do not have measured numbers yet,
+// so the copy describes the process rather than promising a timeframe we cannot keep.
+const NEXT_STEPS = [
+  {
+    title: 'An admin reads your note',
+    body: 'Every application is read by a person, not auto-rejected. If it is not a fit right now, you will see a decline here rather than silence.',
+  },
+  {
+    title: 'If accepted, your account gets operator access',
+    body: 'Accepting sets your profile role to operator, which is what grants you access to project chats. It is a role on your account, not a separate login.',
+  },
+  {
+    title: 'Link Telegram if you want to be notified',
+    body: 'Once accepted, you can link a Telegram account from Settings. We use it to tell you when a founder chat needs a specialist — it is optional.',
+  },
+  {
+    title: 'Work arrives as chat invitations',
+    body: 'There is no dashboard to check. When there is work that fits you, you will be invited into that founder’s conversation and it will appear in your chat list.',
+  },
+] as const;
 
 export default function ApplyPage() {
   const router = useRouter();
@@ -54,6 +78,9 @@ export default function ApplyPage() {
 
   useEffect(() => {
     let cancelled = false;
+
+    // Reaching the apply form at all is the specialist-funnel entry point.
+    trackEvent('apply_started', { source: 'apply_page' });
 
     async function load() {
       const user = await getSessionUser();
@@ -160,6 +187,52 @@ export default function ApplyPage() {
           </p>
           <h2 className="mt-2 font-serif text-2xl text-[#ece7de]">{copy.title}</h2>
           <p className="mt-2 text-sm leading-relaxed text-[#9aa0a6]">{copy.body}</p>
+
+          {application.status === 'pending' ? (
+            <div className="mt-5 rounded-xl border border-white/10 bg-[#14171a] p-4">
+              <p className="text-xs uppercase tracking-[0.15em] text-[#6f757b]">What happens next</p>
+              <ol className="mt-3 space-y-3">
+                {NEXT_STEPS.map((step, index) => (
+                  <li key={step.title} className="flex gap-3">
+                    <span
+                      aria-hidden="true"
+                      className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/15 text-[10px] font-semibold text-[#9aa0a6]"
+                    >
+                      {index + 1}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-[#ece7de]">{step.title}</span>
+                      <span className="mt-0.5 block text-xs leading-relaxed text-[#9aa0a6]">{step.body}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+              <p className="mt-4 border-t border-white/10 pt-3 text-xs leading-relaxed text-[#6f757b]">
+                This page always shows your current status — reload it any time to check whether your
+                application has been accepted or declined. You do not need to email us to follow up.
+              </p>
+            </div>
+          ) : null}
+
+          {application.status === 'accepted' ? (
+            <div className="mt-5 rounded-xl border border-white/10 bg-[#14171a] p-4">
+              <p className="text-xs uppercase tracking-[0.15em] text-[#6f757b]">Your next step</p>
+              <ol className="mt-3 space-y-3">
+                <li className="flex gap-3">
+                  <span aria-hidden="true" className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/15 text-[10px] font-semibold text-[#9aa0a6]">1</span>
+                  <span className="text-xs leading-relaxed text-[#9aa0a6]">
+                    Link Telegram in Settings if you want to be told when a chat needs you. It is optional.
+                  </span>
+                </li>
+                <li className="flex gap-3">
+                  <span aria-hidden="true" className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/15 text-[10px] font-semibold text-[#9aa0a6]">2</span>
+                  <span className="text-xs leading-relaxed text-[#9aa0a6]">
+                    Start a project of your own in chat, or wait to be invited into a founder’s conversation.
+                  </span>
+                </li>
+              </ol>
+            </div>
+          ) : null}
 
           <div className="mt-5 rounded-xl border border-white/10 bg-[#14171a] p-4">
             <p className="text-xs uppercase tracking-[0.15em] text-[#6f757b]">Your note</p>

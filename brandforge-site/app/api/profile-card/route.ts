@@ -13,6 +13,15 @@ export async function GET(request: NextRequest) {
   if (!(await canAccessConversation(user.id, conversationId, { allowStaff: true }))) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
   const identity = await getParticipantIdentity(conversationId, userId);
   if (!identity) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-  const { email: _email, telegramChatId: _telegramChatId, ...publicIdentity } = identity;
+  // Never leak private contact fields through the profile card: strip them explicitly.
+  const publicIdentity = {
+    userId: identity.userId,
+    displayId: identity.displayId,
+    username: identity.username,
+    displayName: identity.displayName,
+    role: identity.role,
+    telegramUsername: identity.telegramUsername,
+    createdAt: identity.createdAt,
+  };
   return NextResponse.json({ identity: publicIdentity });
 }

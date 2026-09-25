@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { trackEvent } from '@/lib/funnel-client';
 import {
   buildOAuthRedirectUrl,
   getAuthErrorMessage,
@@ -25,6 +26,10 @@ export function AuthCard() {
     setLoading(true);
     setError('');
     setMessage('');
+
+    // Intent, not outcome: recorded before the OAuth redirect so a drop-off between here and
+    // Google is still visible in the funnel.
+    trackEvent('signin_started', { source: 'google' });
 
     const siteUrl = resolveSiteUrl(
       process.env.NEXT_PUBLIC_SITE_URL ||

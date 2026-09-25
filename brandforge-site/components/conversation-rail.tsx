@@ -54,7 +54,7 @@ export function relativeTime(value: string | null): string {
 
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-[#1a1d20] px-3 py-2">
+    <div className="bf-rail-stat">
       <p className="text-lg font-medium leading-tight text-[#ece7de]">{value}</p>
       <p className="mt-0.5 text-[9px] uppercase tracking-[0.15em] text-[#6f757b]">{label}</p>
     </div>
@@ -237,7 +237,7 @@ export function ConversationRail({
           (isMobileOpen ? 'flex' : 'hidden')
         }
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-white/10 p-4">
+        <div className="bf-rail-header flex shrink-0 items-center justify-between">
           <Link
             href="/"
             onClick={onMobileClose}
@@ -267,7 +267,7 @@ export function ConversationRail({
               }
             }}
             disabled={isCreatingConversation}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#e8571e] px-4 py-3 text-sm font-semibold text-[#14171a] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+            className="bf-new-chat"
           >
             <span className="text-lg leading-none">+</span>
             {isCreatingConversation ? 'Starting...' : 'New Chat'}
@@ -284,14 +284,14 @@ export function ConversationRail({
 
 
             <section className="min-h-0 flex-1">
-              <p className="mb-3 text-xs uppercase tracking-[0.2em] text-[#9aa0a6]">Recents</p>
+              <p className="bf-rail-section-label">Recents</p>
 
               {recents.length === 0 ? (
                 <p className="text-xs leading-relaxed text-[#6f757b]">
                   Conversations appear here once you send a first message.
                 </p>
               ) : (
-                <div className="space-y-1">
+                <div className="bf-recents">
                   {recents.map((conversation) => {
                     const isActive = conversation.id === activeConversationId;
                     const isPendingDelete = pendingDeleteId === conversation.id;
@@ -300,7 +300,7 @@ export function ConversationRail({
                       <div
                         key={conversation.id}
                         className={
-                          'rounded-lg transition ' + (isActive ? 'bg-white/10' : 'hover:bg-white/5')
+                          'bf-recent-item ' + (isActive ? 'bf-recent-item-active' : '')
                         }
                       >
                         <div className="flex items-start gap-2 px-3 py-2">
@@ -376,7 +376,7 @@ export function ConversationRail({
         )}
 
         {isCollapsed ? null : (
-          <div className="shrink-0 border-t border-white/10 px-4 py-3">
+          <div className="bf-rail-footer shrink-0">
             <div className="mb-2 flex items-center justify-between gap-2">
               <p className="text-[10px] uppercase tracking-[0.2em] text-[#9aa0a6]">Platform</p>
               {isStaff && newChatCount > 0 ? (
@@ -396,7 +396,7 @@ export function ConversationRail({
           </div>
         )}
 
-        <div className="mt-auto shrink-0 border-t border-white/10 p-4">
+        <div className="bf-rail-footer mt-auto shrink-0">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e8571e]/15 text-xs font-semibold text-[#e8571e]">
               BF
@@ -422,7 +422,7 @@ export function ConversationRail({
               onClick={() => {
                 void handleSignOut();
               }}
-              className="rounded-lg border border-white/10 px-3 py-1.5 text-center text-xs text-[#9aa0a6] transition hover:border-red-400/40 hover:text-red-200"
+              className="bf-action bf-action-danger bf-action-compact"
             >
               Sign out
             </button>

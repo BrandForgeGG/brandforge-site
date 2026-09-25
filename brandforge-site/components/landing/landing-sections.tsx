@@ -39,7 +39,7 @@ const SERVICES = [
 export function LandingSections() {
   return (
     <>
-      <section id="process" className="border-t border-white/10 px-6 py-16">
+      <section id="process" className="bf-section" aria-labelledby="process-title">
         <div className="mx-auto max-w-6xl">
           <p className="text-xs uppercase tracking-[0.2em] text-[#b8763b]">How it works</p>
           <h2 className="mt-2 font-serif text-3xl text-[#ece7de] sm:text-4xl">
@@ -58,7 +58,7 @@ export function LandingSections() {
         </div>
       </section>
 
-      <section id="services" className="border-t border-white/10 px-6 py-16">
+      <section id="services" className="bf-section">
         <div className="mx-auto max-w-6xl">
           <p className="text-xs uppercase tracking-[0.2em] text-[#b8763b]">Specialists</p>
           <h2 className="mt-2 font-serif text-3xl text-[#ece7de] sm:text-4xl">

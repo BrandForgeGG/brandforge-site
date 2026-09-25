@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { addMessage, canAccessConversation, updateConversationStatus } from '@/lib/project-db';
+import { addMessage, canAccessConversation, updateConversationStatus, recordFunnelEvent } from '@/lib/project-db';
 import { syncDiscoveryCompleteness } from '@/lib/conversation-state';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { isDiscoveryComplete } from '@/lib/discovery';
@@ -52,9 +52,15 @@ export async function POST(request: NextRequest) {
         ? 'Requirements sent to BrandForge. A member of the team will review them and join this conversation with a proposal.'
         : `Requirements sent to BrandForge at ${discovery.percent}% discovery. The team will review them and may ask follow-up questions in this conversation.`,
       content_type: 'system',
+      artifact_data: { type: 'review_request', id: conversationId },
     });
 
     await notify('review_requested', { percent: discovery.percent });
+
+    await recordFunnelEvent('review_requested', {
+      signedIn: true,
+      properties: { percent: discovery.percent, stage: 'proposal' },
+    });
 
     return NextResponse.json({
       success: true,

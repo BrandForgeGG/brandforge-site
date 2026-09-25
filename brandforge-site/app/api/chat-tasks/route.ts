@@ -9,6 +9,7 @@ import {
   getTask,
   isStaffAccount,
   nextTaskStatusFor,
+  recordFunnelEvent,
   updateTaskDueDate,
   updateTaskStatus,
 } from '@/lib/project-db';
@@ -186,6 +187,15 @@ export async function PATCH(request: NextRequest) {
       await notify('task_review', {
         title: updatedTask.title,
         assigneeName: updatedTask.assignee_name,
+      });
+    }
+
+    // A task reaching DONE is a founder approving delivered work, which is the unit the escrow
+    // schedule is paid against. Recorded server-side at the moment the transition succeeds.
+    if (updatedTask.status === 'DONE') {
+      await recordFunnelEvent('milestone_completed', {
+        signedIn: true,
+        properties: { stage: 'deliver', status: 'DONE' },
       });
     }
 

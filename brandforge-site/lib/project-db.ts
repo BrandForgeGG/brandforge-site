@@ -9,11 +9,99 @@
 
 import { createSupabaseServerClient } from './supabase/server';
 import { createSupabaseAdminClient } from './supabase/admin';
+import { track } from './funnel.js';
 import { headers } from 'next/headers';
 
 import { validateUsername } from '@/lib/identity';
 
+// Admin-only funnel read. Lives here (rather than in the API route) so the service-role client
+// stays confined to this single allow-listed module, preserving the H7 boundary.
+export async function getFunnelSummary(limit = 10000) {
+  const admin = createSupabaseAdminClient();
+
+  if (!admin) {
+    return null;
+  }
+
+  const { data, error } = await admin
+    .from('funnel_events')
+    .select('event, created_at')
+    .order('created_at', { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    // The table is missing until migration 0012 is applied; that is an expected, non-fatal state.
+    if (error.code === '42P01') {
+      return null;
+    }
+    console.error('Funnel summary error:', error.message);
+    return null;
+  }
+
+  const rows = (data ?? []) as { event: string; created_at: string }[];
+
+  const counts = new Map<string, number>();
+  let first: string | null = null;
+  let last: string | null = null;
+
+  for (const row of rows) {
+    counts.set(row.event, (counts.get(row.event) ?? 0) + 1);
+    if (!first) first = row.created_at;
+    last = row.created_at;
+  }
+
+  return {
+    window: { firstEventAt: first, lastEventAt: last, eventsCounted: rows.length },
+    counts,
+  };
+}
+
 export type ProjectDbClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+
+// Server-side funnel recording. The events table has no client INSERT policy on purpose, so every
+// write goes through this function using the service role. `signedIn` is a boolean rather than an
+// account id: a funnel can be read without joining events back to a person. The visitor id is an
+// opaque, client-generated first-party id, not the user id and not the email.
+//
+// Fire-and-forget by design: a metrics write must never delay or fail a product request. When the
+// table is missing (migration 0012 not applied yet) this logs once and no-ops, so wiring call sites
+// before the migration is safe.
+let funnelUnavailableLogged = false;
+
+export async function recordFunnelEvent(
+  event: string,
+  options: { signedIn?: boolean; visitorId?: string; properties?: Record<string, unknown> } = {}
+) {
+  const admin = createSupabaseAdminClient();
+
+  if (!admin) {
+    return;
+  }
+
+  const result = await track(event, {
+    signedIn: options.signedIn ?? false,
+    visitorId: options.visitorId ?? '',
+    properties: options.properties,
+    insert: async (row) => {
+      const { error } = await admin.from('funnel_events').insert(row);
+
+      if (error) {
+        // 42P01 = undefined_table: migration 0012 has not been applied yet. That is an expected,
+        // non-fatal state during rollout, so warn once instead of on every page view.
+        if (error.code === '42P01') {
+          if (!funnelUnavailableLogged) {
+            funnelUnavailableLogged = true;
+            console.warn('funnel_events table missing — apply migration 0012_funnel_events.sql');
+          }
+          return;
+        }
+        throw new Error(error.message);
+      }
+    },
+  });
+
+  return result;
+}
 
 async function db(): Promise<ProjectDbClient> {
   // Route handlers cannot always expose their NextRequest here, so read the
@@ -1113,14 +1201,16 @@ export async function resolveAiDraft(
   messageId: string,
   staffId: string,
   staffName: string,
-  action: 'approve' | 'reject'
+  action: 'approve' | 'reject',
+  conversationId?: string
 ): Promise<'approved' | 'rejected' | 'not_found'> {
   const admin = createSupabaseAdminClient();
   if (!admin) return 'not_found';
   const { data: draft } = await admin
     .from('messages')
-    .select('id,content_type,deleted_at')
+    .select('id,content_type,deleted_at,conversation_id')
     .eq('id', messageId)
+    .eq('conversation_id', conversationId ?? '')
     .maybeSingle();
   if (!draft || draft.content_type !== 'ai_draft' || draft.deleted_at) return 'not_found';
   if (action === 'reject') {

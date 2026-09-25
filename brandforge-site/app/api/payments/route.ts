@@ -8,6 +8,7 @@ import {
   releasePaymentToOperator,
   addMessage,
   isStaffAccount,
+  recordFunnelEvent,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 // lib/crypto-payments.js is dependency-free CommonJS so node:test can run it without a build.
@@ -21,13 +22,14 @@ import { notify } from '@/lib/notify';
 
 export const dynamic = 'force-dynamic';
 
-function systemMessage(conversationId: string, content: string) {
+function systemMessage(conversationId: string, content: string, artifactData?: Record<string, unknown>) {
   return addMessage({
     conversation_id: conversationId,
     sender_type: 'ai',
     sender_name: 'BrandForge',
     content,
     content_type: 'system',
+    ...(artifactData ? { artifact_data: artifactData } : {}),
   });
 }
 
@@ -94,8 +96,16 @@ export async function POST(request: NextRequest) {
 
     await systemMessage(
       agreement.conversation_id,
-      `Payment submitted for verification. BrandForge is confirming the transfer on-chain (tx ${txHash}). The project moves to delivery as soon as it checks out.`
+      `Payment submitted for verification. BrandForge is confirming the transfer on-chain (tx ${txHash}). The project moves to delivery as soon as it checks out.`,
+      { type: 'funding', id: agreementId, status: 'verifying' }
     );
+
+    // The founder submitted real evidence, so this is a genuine funding step. The tx hash itself is
+    // deliberately not recorded — only the network label.
+    await recordFunnelEvent('funding_submitted', {
+      signedIn: true,
+      properties: { network: network ?? '', total_amount: agreement.total_amount, stage: 'fund' },
+    });
 
     await notify('payment_submitted', {
       txHash,
@@ -159,8 +169,15 @@ export async function PATCH(request: NextRequest) {
 
         await systemMessage(
           result.conversationId,
-          'Payment verified on-chain. The project is funded and delivery starts now. BrandForge holds the funds and releases each milestone payment after the founder approves the delivered work.'
+          'Payment verified on-chain. The project is funded and delivery starts now. BrandForge holds the funds and releases each milestone payment after the founder approves the delivered work.',
+          { type: 'funding', id: agreementId, status: 'funded' }
         );
+
+        // Verified means the money actually arrived on-chain.
+        await recordFunnelEvent('funding_verified', {
+          signedIn: true,
+          properties: { total_amount: agreement.total_amount, stage: 'deliver' },
+        });
 
         await notify('payment_verified', {});
 
@@ -174,7 +191,8 @@ export async function PATCH(request: NextRequest) {
 
       await systemMessage(
         agreement.conversation_id,
-        `The submitted payment could not be verified${note ? `: ${note}` : ''}. Please check the amount and network, then resubmit the transaction hash.`
+        `The submitted payment could not be verified${note ? `: ${note}` : ''}. Please check the amount and network, then resubmit the transaction hash.`,
+        { type: 'funding', id: agreementId, status: 'failed' }
       );
 
       await notify('payment_rejected', { note });
@@ -197,8 +215,15 @@ export async function PATCH(request: NextRequest) {
 
       await systemMessage(
         released.conversation_id,
-        `Milestone payment "${released.title}" (${released.currency} ${Number(released.amount).toLocaleString()}) released to the operator.`
+        `Milestone payment "${released.title}" (${released.currency} ${Number(released.amount).toLocaleString()}) released to the operator.`,
+        { type: 'funding', id: agreementId, paymentId, status: 'released' }
       );
+
+      // Money actually moved to the operator. This is the last step of the escrow loop.
+      await recordFunnelEvent('payment_released', {
+        signedIn: true,
+        properties: { amount: released.amount, currency: released.currency, stage: 'deliver' },
+      });
 
       await notify('payment_released', {
         title: released.title,

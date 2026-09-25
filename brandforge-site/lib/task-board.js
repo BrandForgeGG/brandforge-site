@@ -69,3 +69,60 @@ export function getNextDeliveryTask(tasks) {
     .filter((task) => priority[task?.status] !== undefined)
     .sort((a, b) => priority[a.status] - priority[b.status])[0] ?? null;
 }
+
+export function describeAgreementStatus(status) {
+  const labels = {
+    pending_funding: 'Awaiting funding — submit the transaction hash after sending funds',
+    funded: 'Funded — BrandForge is holding the funds while delivery continues',
+    active: 'In delivery — review work as it is submitted',
+    completed: 'Completed — all agreed delivery work is done',
+    cancelled: 'Cancelled — the agreement is no longer active',
+  };
+  return labels[status] ?? 'Agreement status unavailable.';
+}
+
+export function describeProposalStatus(status) {
+  const labels = {
+    pending: 'Awaiting your decision — review the scope and timeline before continuing.',
+    changes_requested: 'Changes requested — BrandForge is revising the proposal in chat.',
+    accepted: 'Accepted — the agreement and payment schedule are being prepared.',
+    declined: 'Declined — you can return to chat if you want a new proposal.',
+    expired: 'Expired — ask the team in chat for an updated proposal.',
+  };
+  return labels[status] ?? 'Proposal status unavailable.';
+}
+
+export function buildProjectPulse({ state, proposal, agreement, tasks } = {}) {
+  const items = [];
+  if (state) {
+    items.push({ key: 'status', label: 'Project state', value: state.status === 'DISCOVERY' ? 'Shaping the brief' : 'In delivery' });
+  }
+  if (tasks && typeof tasks === 'object') {
+    const action = describeNextDeliveryAction(tasks);
+    if (action !== 'No delivery tasks are planned yet.') items.push({ key: 'next', label: 'Next delivery action', value: action.replace(/^Next: /, '') });
+  }
+  if (proposal?.status === 'pending') items.push({ key: 'proposal', label: 'Decision', value: 'Review the proposal in this panel' });
+  if (agreement?.status === 'pending_funding') items.push({ key: 'funding', label: 'Funding', value: 'Submit the transaction hash for verification' });
+  if (state?.openQuestions?.length) items.push({ key: 'questions', label: 'Open questions', value: `${state.openQuestions.length} need an answer` });
+  return items.slice(0, 5);
+}
+
+export function describePaymentStatus(status) {
+  const labels = {
+    scheduled: 'Scheduled — submit your transaction hash after funding',
+    pending: 'Verifying — BrandForge is checking the transfer',
+    paid: 'Held by BrandForge — delivery can continue',
+    released: 'Released to the specialist',
+    failed: 'Not verified — check the transaction and resubmit',
+  };
+  return labels[status] ?? 'Payment status unavailable';
+}
+
+export function describeNextDeliveryAction(tasks) {
+  const next = getNextDeliveryTask(tasks);
+  if (!next) return 'No delivery tasks are planned yet.';
+  const owner = next.assigneeName ? ` · ${next.assigneeName}` : ' · unassigned';
+  if (next.status === 'REVIEW') return `Next: review ${next.title}${owner}.`;
+  if (next.status === 'IN_PROGRESS') return `Next: continue ${next.title}${owner}.`;
+  return `Next: start ${next.title}${owner}.`;
+}

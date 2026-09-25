@@ -3,7 +3,7 @@
 // unit-tested; the route imports normalizeTaskDueDate from lib/task-board.js.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { getNextDeliveryTask, isTaskOverdue, normalizeTaskDueDate, shapeTaskRoster, summarizeTaskProgress } from './task-board.js';
+import { buildProjectPulse, getNextDeliveryTask, describeAgreementStatus, describeNextDeliveryAction, describePaymentStatus, describeProposalStatus, isTaskOverdue, normalizeTaskDueDate, shapeTaskRoster, summarizeTaskProgress } from './task-board.js';
 
 describe('isTaskOverdue', () => {
   it('marks unfinished past-due tasks but never completed tasks', () => {
@@ -23,6 +23,55 @@ describe('getNextDeliveryTask', () => {
     assert.equal(getNextDeliveryTask([{ id: 'done', status: 'DONE' }]), null);
   });
 });
+
+describe('describeNextDeliveryAction', () => {
+  it('turns persisted task priority into a clear next action', () => {
+    assert.equal(describeNextDeliveryAction([{ status: 'TODO', title: 'Build the landing page' }]), 'Next: start Build the landing page · unassigned.');
+    assert.equal(describeNextDeliveryAction([{ status: 'REVIEW', title: 'Approve the prototype', assigneeName: 'Ada' }]), 'Next: review Approve the prototype · Ada.');
+    assert.equal(describeNextDeliveryAction([{ status: 'DONE', title: 'Ship it' }]), 'No delivery tasks are planned yet.');
+  });
+});
+
+describe('describeAgreementStatus', () => {
+  it('turns agreement state into a clear founder next step', () => {
+    assert.match(describeAgreementStatus('pending_funding'), /Awaiting funding/);
+    assert.match(describeAgreementStatus('active'), /In delivery/);
+    assert.equal(describeAgreementStatus('unknown'), 'Agreement status unavailable.');
+  });
+});
+
+
+describe('describePaymentStatus', () => {
+  it('turns persisted payment state into a clear next step', () => {
+    assert.match(describePaymentStatus('pending'), /Verifying/);
+    assert.match(describePaymentStatus('paid'), /Held by BrandForge/);
+    assert.equal(describePaymentStatus('unknown'), 'Payment status unavailable');
+  });
+describe('buildProjectPulse', () => {
+  it('keeps the panel focused on five decision-critical items', () => {
+    const pulse = buildProjectPulse({
+      state: { status: 'ACTIVE', openQuestions: [{ id: 'q1' }, { id: 'q2' }] },
+      tasks: [{ status: 'REVIEW', title: 'Approve copy' }],
+      proposal: { status: 'pending' },
+      agreement: { status: 'pending_funding' },
+    });
+    assert.deepEqual(pulse.map((item) => item.key), ['status', 'next', 'proposal', 'funding', 'questions']);
+  });
+});
+
+
+});
+
+
+
+describe('describeProposalStatus', () => {
+  it('turns proposal states into founder-readable next steps', () => {
+    assert.match(describeProposalStatus('pending'), /Awaiting your decision/);
+    assert.match(describeProposalStatus('changes_requested'), /revising/);
+    assert.equal(describeProposalStatus('unknown'), 'Proposal status unavailable.');
+  });
+});
+
 
 
 describe('summarizeTaskProgress', () => {

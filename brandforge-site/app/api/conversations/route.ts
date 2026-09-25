@@ -4,6 +4,8 @@ import {
   createConversation,
   deleteConversationForUser,
   getUserConversationSummaries,
+  isStaffAccount,
+  recordFunnelEvent,
 } from '@/lib/project-db';
 import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
 
@@ -29,6 +31,15 @@ export async function POST(request: NextRequest) {
 
     const initialMessage = String(body.initialMessage ?? '').trim().slice(0, 8000);
 
+    // Read the founder's existing projects *before* creating the new one, so "returning founder"
+    // is a fact rather than a guess. A staff member opening their own chat is not a returning
+    // founder, so this is only counted for non-staff accounts.
+    const [existing, staff] = await Promise.all([
+      getUserConversationSummaries(user.id),
+      isStaffAccount(user.id),
+    ]);
+    const isRepeatFounder = !staff && existing.length > 0;
+
     const conversationId = await createConversation(user.id, 'New Project');
 
     if (!conversationId) {
@@ -52,6 +63,19 @@ export async function POST(request: NextRequest) {
           { error: 'The conversation was created but the first message could not be stored' },
           { status: 500 }
         );
+      }
+
+      // The first message is the moment a founder actually described a project. Recorded server-side
+      // because the client cannot be trusted to report it, and only the length is kept — never the text.
+      await recordFunnelEvent('project_described', {
+        signedIn: true,
+        properties: { source: 'first_message', percent: 0 },
+      });
+
+      // A second project from the same founder is the strongest retention signal we have. Counted
+      // only alongside a real first message, so an abandoned empty chat is not a repeat project.
+      if (isRepeatFounder) {
+        await recordFunnelEvent('repeat_project_started', { signedIn: true });
       }
     }
 

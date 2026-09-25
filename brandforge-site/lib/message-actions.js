@@ -1,3 +1,30 @@
+const MAX_MESSAGE_LENGTH = 8000;
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const ALLOWED_ATTACHMENT_TYPES = new Set([
+  'image/png', 'image/jpeg', 'image/webp', 'application/pdf', 'text/plain',
+  'application/json', 'application/zip', 'text/csv', 'audio/webm', 'audio/ogg',
+  'audio/mpeg', 'audio/mp4',
+]);
+
+function validateMessageInput(value) {
+  const content = typeof value === 'string' ? value.trim() : '';
+  if (!content) return { error: 'Write a message before sending.' };
+  if (content.length > MAX_MESSAGE_LENGTH) return { error: `Messages must be 8,000 characters or fewer.` };
+  return { value: content };
+}
+
+function validateAttachment(file) {
+  if (!file || typeof file !== 'object') return { error: 'Choose a file to attach.' };
+  if (typeof file.name !== 'string' || !file.name.trim()) return { error: 'That file needs a name.' };
+  if (typeof file.type !== 'string' || !ALLOWED_ATTACHMENT_TYPES.has(file.type)) {
+    return { error: 'That file type is not supported. Use an image, PDF, document, archive, CSV, or audio file.' };
+  }
+  if (!Number.isFinite(file.size) || file.size <= 0 || file.size > MAX_ATTACHMENT_BYTES) {
+    return { error: 'Attachments must be 10 MB or smaller.' };
+  }
+  return { file };
+}
+
 function normalizeMessageEdit(value) {
   const content = typeof value === 'string' ? value.trim() : '';
   if (!content || content.length > 8000) return null;
@@ -40,16 +67,51 @@ function parseSlashCommand(value) {
   if (!raw.startsWith('/')) return null;
   const [name, ...args] = raw.slice(1).split(/\s+/);
   const command = name.toLowerCase();
-  if (!['help', 'progress', 'review', 'attach'].includes(command)) return { error: `Unknown command /${name}` };
+  if (!['help', 'progress', 'review', 'attach', 'contract'].includes(command)) return { error: `Unknown command /${name}` };
   return { command, args: args.join(' ').trim() };
 }
 
+// A chat action embed is structured metadata attached to a system message. It is never trusted
+// blindly: unknown types, missing ids, and non-object payloads resolve to null so the transcript
+// falls back to the plain system message instead of rendering a broken card.
+function parseChatEmbed(artifactData) {
+  if (!artifactData || typeof artifactData !== 'object' || Array.isArray(artifactData)) return null;
+  const type = typeof artifactData.type === 'string' ? artifactData.type : '';
+  const id = typeof artifactData.id === 'string' ? artifactData.id : '';
+  const status = typeof artifactData.status === 'string' ? artifactData.status : '';
+
+  if (type === 'proposal' && id) {
+    const title = typeof artifactData.title === 'string' ? artifactData.title : undefined;
+    return { type, proposalId: id, status, ...(title ? { title } : {}) };
+  }
+  if (type === 'agreement' && id) return { type, agreementId: id, status };
+  if (type === 'funding' && id) {
+    const paymentId = typeof artifactData.paymentId === 'string' ? artifactData.paymentId : undefined;
+    return { type, agreementId: id, status, ...(paymentId ? { paymentId } : {}) };
+  }
+  if (type === 'review_request' && id) return { type, conversationId: id };
+  return null;
+}
+
+// Composer command chips must never destroy what the user already typed.
+function insertComposerCommand(current, command) {
+  const text = typeof current === 'string' ? current.replace(/\s+$/, '') : '';
+  return text ? `${text} ${command} ` : `${command} `;
+}
+
 module.exports = {
+  MAX_MESSAGE_LENGTH,
+  MAX_ATTACHMENT_BYTES,
+  ALLOWED_ATTACHMENT_TYPES,
+  validateMessageInput,
+  validateAttachment,
   normalizeMessageEdit,
   normalizeReactionEmoji,
   canMutateMessage,
   displayAttachmentName,
   safeDownloadName,
   parseSlashCommand,
+  parseChatEmbed,
+  insertComposerCommand,
 };
 

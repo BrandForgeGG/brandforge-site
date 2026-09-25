@@ -79,8 +79,9 @@ export async function POST(request: NextRequest) {
       conversation_id: conversationId,
       sender_type: 'ai',
       sender_name: 'BrandForge',
-      content: 'Agreement created and awaiting funding. The payment schedule is shown on the right.',
+      content: 'Agreement created and awaiting funding. Submit your transaction hash here in the chat or in the project panel.',
       content_type: 'system',
+      artifact_data: { type: 'agreement', id: agreement.id, status: agreement.status },
     });
 
     return NextResponse.json({ success: true, agreement });

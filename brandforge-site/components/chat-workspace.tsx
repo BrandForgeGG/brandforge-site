@@ -6,7 +6,7 @@ import { useConversationPresence } from '@/lib/presence';
 import { formatTypingLabel } from '@/lib/presence-utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { ClientProjectState } from '@/lib/conversation-state';
-import { parseSlashCommand } from '@/lib/message-actions';
+import { insertComposerCommand, parseChatEmbed, parseSlashCommand, validateAttachment, validateMessageInput } from '@/lib/message-actions';
 import { summarizeTaskProgress } from '@/lib/task-board';
 import { shapeTaskRoster } from '@/lib/task-board';
 import { ChatTranscript, type ChatMessage } from '@/components/chat-transcript';
@@ -26,7 +26,7 @@ interface PersistedMessage {
   sender_name?: string | null;
   content: string;
   content_type: string | null;
-  artifact_data?: { path: string; name: string; size: number; contentType: string } | null;
+  artifact_data?: Record<string, unknown> | null;
   sender_id?: string | null;
   edited_at?: string | null;
   deleted_at?: string | null;
@@ -53,7 +53,8 @@ function toChatMessage(message: PersistedMessage): ChatMessage {
     senderId: message.sender_id ?? null,
     editedAt: message.edited_at ?? null,
     reactions: message.reactions ?? [],
-    artifactData: message.artifact_data ?? null,
+    artifactData: (message.artifact_data && typeof message.artifact_data.path === 'string' ? message.artifact_data as { path: string; name: string; size: number; contentType: string } : null),
+    embed: parseChatEmbed(message.artifact_data) as ChatMessage['embed'],
   };
 }
 
@@ -145,6 +146,7 @@ export function ChatWorkspace() {
   const [attachment, setAttachment] = useState<File | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [commandStatus, setCommandStatus] = useState<string | null>(null);
   // Desktop-style layout: the left rail is shown by default, the right insights panel is hidden
   // until the user asks for it. On mobile both become drawers.
   const [isRailOpen, setIsRailOpen] = useState(false);
@@ -467,18 +469,24 @@ export function ChatWorkspace() {
 
   const handleSend = useCallback(
     async (suggestion?: string) => {
-      const text = (suggestion ?? input).trim();
+      const checkedText = validateMessageInput((suggestion ?? input).trim());
+      const text = checkedText.value ?? '';
+      if (checkedText.error && !attachment) { setError(checkedText.error); return; }
       const slash = parseSlashCommand(text);
       if (slash) {
         if (slash.error) { setError(slash.error); return; }
-        if (slash.command === 'help') { setError('Commands: /progress, /review, /attach'); return; }
-        if (slash.command === 'attach') { setError('Choose a file below the message box, then add a caption if you want context.'); return; }
+        setCommandStatus(null);
+        if (slash.command === 'help') { setCommandStatus('Commands: /progress, /review, /contract, /attach'); return; }
+        if (slash.command === 'contract') { setIsContextOpen(true); setCommandStatus('Review the proposal action, then accept to continue to the agreement and payment schedule.'); return; }
+        if (slash.command === 'attach') { setCommandStatus('Choose a file below the message box, then add a caption if you want context.'); return; }
         if (slash.command === 'progress') {
+          setIsContextOpen(true);
           const progress = summarizeTaskProgress(state?.tasks ?? []);
           setError(`${progress.done}/${progress.total} complete · ${progress.inProgress} in progress · ${progress.review} awaiting review${progress.overdue ? ` · ${progress.overdue} overdue` : ''}`);
           return;
         }
         if (slash.command === 'review') {
+          setIsContextOpen(true);
           try {
             const response = await fetch('/api/request-review', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId }) });
             if (!response.ok) throw new Error('Review request failed');
@@ -489,6 +497,8 @@ export function ChatWorkspace() {
       }
 
       if (attachment) {
+        const checkedFile = validateAttachment(attachment);
+        if (checkedFile.error) { setError(checkedFile.error); return; }
         if (!conversationId) {
           setError('Start a conversation before adding a file.');
           return;
@@ -661,7 +671,7 @@ export function ChatWorkspace() {
     if (!conversationId) return;
     setBusyAction(`draft-${id}`);
     try {
-      const response = await fetch('/api/staff/ai-drafts', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messageId: id, action }) });
+      const response = await fetch('/api/staff/ai-drafts', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messageId: id, conversationId, action }) });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'The AI draft could not be resolved');
       await refreshAiDrafts(conversationId);
@@ -725,7 +735,7 @@ export function ChatWorkspace() {
         }
 
         if (action === 'accept') {
-          await fetch('/api/agreements', {
+          const agreementResponse = await fetch('/api/agreements', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -735,6 +745,10 @@ export function ChatWorkspace() {
               totalAmount: proposal.total_amount,
             }),
           });
+          const agreementData = await agreementResponse.json().catch(() => ({}));
+          if (!agreementResponse.ok || !agreementData.success) {
+            throw new Error(agreementData.error || 'The proposal was accepted, but the agreement could not be created. Contact the team before funding.');
+          }
         }
 
         await Promise.all([
@@ -884,7 +898,7 @@ export function ChatWorkspace() {
       />
 
       <main className="flex min-w-0 flex-1 flex-col">
-        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-white/10 px-4 py-4 sm:px-6">
+        <header className="bf-chat-header flex shrink-0 items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
@@ -910,12 +924,12 @@ export function ChatWorkspace() {
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {state && taskProgress.total > 0 ? (
-              <div className="hidden items-center gap-2 rounded-full border border-[#5aa578]/30 bg-[#5aa578]/10 px-3 py-1 sm:flex" title="Completed delivery tasks">
+              <div className="bf-chat-status bf-chat-status-delivery hidden items-center gap-2 sm:inline-flex">
                 <span className="text-[10px] uppercase tracking-[0.15em] text-[#9aa0a6]">Delivery</span>
                 <span className="text-[10px] font-semibold text-[#5aa578]">{taskProgress.percent}%</span>
               </div>
             ) : null}
-            <span className="hidden rounded-full border border-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-[#9aa0a6] sm:inline">
+            <span className="bf-chat-status hidden sm:inline-flex">
               {state ? STATUS_LABELS[state.status] ?? state.status : 'Discovery'}
             </span>
             {canDeleteConversation ? (
@@ -934,13 +948,9 @@ export function ChatWorkspace() {
             <button
               type="button"
               onClick={() => setIsContextOpen((value) => !value)}
-              className={
-                'rounded-lg border px-3 py-2 text-[10px] uppercase tracking-[0.2em] transition ' +
-                (isContextOpen
-                  ? 'border-[#e8571e]/50 text-[#ece7de]'
-                  : 'border-white/10 text-[#9aa0a6] hover:border-[#e8571e] hover:text-[#ece7de]')
-              }
-              aria-label={isContextOpen ? 'Hide project insights' : 'Show project insights'}
+              className="bf-insights-toggle"
+              aria-expanded={isContextOpen}
+               aria-label={isContextOpen ? 'Hide project insights' : 'Show project insights'}
             >
               {isContextOpen ? 'Hide insights' : 'Insights'}
             </button>
@@ -949,7 +959,17 @@ export function ChatWorkspace() {
 
         <div ref={scrollerRef} className="flex-1 overflow-y-auto px-6 py-6">
           {isBooting && messages.length === 0 ? (
-            <p className="py-10 text-center text-sm text-[#9aa0a6]">Loading your conversation…</p>
+            <div className="py-10 text-center" role="status" aria-live="polite">
+              <p className="text-sm text-[#9aa0a6]">Loading your conversation…</p>
+            </div>
+          ) : !conversationId ? (
+            <div className="mx-auto flex h-full w-full max-w-2xl flex-col items-center justify-center py-10 text-center">
+              <h1 className="font-serif text-3xl text-[#ece7de]">Start a new project</h1>
+              <p className="mt-4 max-w-xl text-base leading-relaxed text-[#9aa0a6]">
+                Choose New Chat, then describe what you want to build. Your first message creates the
+                project and keeps every later decision in the same conversation.
+              </p>
+            </div>
           ) : (
             <ChatTranscript
               messages={messages}
@@ -972,13 +992,28 @@ export function ChatWorkspace() {
                 try { await handleMessageAction(id, 'react', emoji); }
                 catch (cause) { setError(cause instanceof Error ? cause.message : 'Reaction could not be saved'); }
               }}
+                onEmbedAction={(embed, action, value) => {
+                  if (action === 'details') { setIsContextOpen(true); return; }
+                  if (action === 'review') { void handleRequestReview(); return; }
+                  if (action === 'submit_funding') { void handleSubmitPayment(value ?? ''); return; }
+                  if (embed.type === 'proposal') void handleProposalAction('accept');
+                }}
+               embedBusy={busyAction !== null}
+               canDecide={isOwnConversation}
             />
           )}
         </div>
 
+        {commandStatus ? (
+          <div className="px-6 pb-2">
+            <div className="mx-auto max-w-3xl rounded-xl border border-[#5aa578]/30 bg-[#5aa578]/10 px-4 py-3 text-sm text-[#b9e3c4]" role="status">
+              {commandStatus}
+            </div>
+          </div>
+        ) : null}
         {error ? (
           <div className="px-6 pb-2">
-            <div className="mx-auto max-w-3xl rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            <div className="mx-auto max-w-3xl rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200" role="alert">
               {error}
             </div>
           </div>
@@ -1011,7 +1046,7 @@ export function ChatWorkspace() {
           </div>
         </div>
 
-        <div className="sticky bottom-0 shrink-0 border-t border-white/10 bg-[#14171a] px-4 py-4 sm:px-6">
+        <div className="bf-composer-shell sticky bottom-0 shrink-0">
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -1032,7 +1067,7 @@ export function ChatWorkspace() {
                onChange={(event) => setAttachment(event.target.files?.[0] ?? null)}
                className="mb-2 max-w-full text-xs text-[#9aa0a6] file:mr-2 file:rounded file:border-0 file:bg-[#2b3238] file:px-2 file:py-1 file:text-[#ece7de]"
              />
-            <div className="relative">
+            <div className="bf-composer">
               <textarea
                 value={input}
                 onChange={(event) => {
@@ -1042,7 +1077,7 @@ export function ChatWorkspace() {
                 placeholder={conversationId ? 'Ask anything…' : 'Describe what you want to build…'}
                 rows={2}
                 disabled={isBusy}
-                className="w-full resize-none rounded-2xl border border-white/10 bg-[#1c2024] px-4 py-3 pr-14 text-sm text-[#ece7de] outline-none transition placeholder:text-[#6f757b] focus:border-[#e8571e] disabled:opacity-60"
+                className="bf-composer-input"
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault();
@@ -1053,13 +1088,20 @@ export function ChatWorkspace() {
               <button
                 type="submit"
                 disabled={isBusy || (!input.trim() && !attachment)}
-                className="absolute bottom-3 right-3 rounded-lg bg-[#e8571e] px-3 py-1.5 text-sm font-semibold text-[#14171a] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="bf-composer-send"
               >
                 {isStreaming ? '···' : '↑'}
               </button>
             </div>
+             <div className="mt-2 flex flex-wrap justify-center gap-1.5" aria-label="Chat actions">
+               {['/progress', '/review', '/contract', '/attach'].map((command) => (
+                 <button key={command} type="button" onClick={() => setInput((current) => insertComposerCommand(current, command))} className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] text-[#9aa0a6] transition hover:border-[#e8571e] hover:text-[#ece7de]">
+                   {command}
+                 </button>
+               ))}
+             </div>
             <p className="mt-2 text-center text-[10px] uppercase tracking-[0.2em] text-[#6f757b]">
-              AI estimate only · a human BrandForge proposal follows review
+              Try /progress · /review · /contract · /attach
             </p>
           </form>
         </div>

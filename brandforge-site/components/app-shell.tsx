@@ -15,7 +15,7 @@ export function AppShell({
   const [isRailOpen, setIsRailOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#14171a] text-[#ece7de]">
+    <div className="bf-page">
       <div className="mx-auto flex max-w-[1600px]">
         <ConversationRail
           isMobileOpen={isRailOpen}
@@ -42,7 +42,7 @@ export function AppShell({
             </div>
           </header>
 
-          <div className="mb-6 rounded-2xl border border-white/10 bg-[#1c2024] p-4 text-sm text-[#9aa0a6]">
+          <div className="mb-6 bf-surface p-4 text-sm text-[#9aa0a6]" role="status">
             {subtitle}
           </div>
 

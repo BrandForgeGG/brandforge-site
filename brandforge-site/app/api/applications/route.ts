@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { getProfileRole } from '@/lib/project-db';
+import { getProfileRole, recordFunnelEvent } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { notify } from '@/lib/notify';
@@ -85,6 +85,8 @@ export async function POST(request: NextRequest) {
     }
 
     await notify('application_submitted', { email: user.email });
+
+    await recordFunnelEvent('apply_submitted', { signedIn: true });
 
     return NextResponse.json({ application: data }, { status: 201 });
   } catch (error) {

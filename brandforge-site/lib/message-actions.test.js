@@ -7,7 +7,21 @@ const {
   displayAttachmentName,
   safeDownloadName,
   parseSlashCommand,
+  parseChatEmbed,
+  insertComposerCommand,
+  validateMessageInput,
+  validateAttachment,
 } = require('./message-actions.js');
+test('message and attachment validation gives actionable limits', () => {
+  assert.deepEqual(validateMessageInput('  hello  '), { value: 'hello' });
+  assert.match(validateMessageInput('x'.repeat(8001)).error, /8,000/);
+  assert.match(validateMessageInput('   ').error, /Write a message/);
+  assert.deepEqual(validateAttachment({ name: 'brief.pdf', type: 'application/pdf', size: 1024 }).file.name, 'brief.pdf');
+  assert.match(validateAttachment({ name: 'huge.pdf', type: 'application/pdf', size: 10 * 1024 * 1024 + 1 }).error, /10 MB/);
+  assert.match(validateAttachment({ name: 'bad.exe', type: 'application/x-msdownload', size: 10 }).error, /not supported/);
+});
+
+
 
 test('normalizeMessageEdit trims and bounds human edits', () => {
   assert.equal(normalizeMessageEdit('  corrected copy  '), 'corrected copy');
@@ -35,9 +49,32 @@ test('image attachments are inline while other files remain downloads', () => {
 });
 
 test('canMutateMessage allows only the original live human sender', () => {
+test('parseChatEmbed normalizes every supported action embed and rejects junk', () => {
+  assert.deepEqual(parseChatEmbed({ type: 'proposal', id: 'p1', status: 'pending', title: 'Site' }), { type: 'proposal', proposalId: 'p1', status: 'pending', title: 'Site' });
+  assert.deepEqual(parseChatEmbed({ type: 'proposal', id: 'p1', status: 'accepted' }), { type: 'proposal', proposalId: 'p1', status: 'accepted' });
+  assert.deepEqual(parseChatEmbed({ type: 'agreement', id: 'a1', status: 'pending_funding' }), { type: 'agreement', agreementId: 'a1', status: 'pending_funding' });
+  assert.deepEqual(parseChatEmbed({ type: 'review_request', id: 'c1' }), { type: 'review_request', conversationId: 'c1' });
+  assert.deepEqual(parseChatEmbed({ type: 'funding', id: 'a1', status: 'verifying' }), { type: 'funding', agreementId: 'a1', status: 'verifying' });
+  assert.deepEqual(parseChatEmbed({ type: 'funding', id: 'a1', status: 'released', paymentId: 'pay1' }), { type: 'funding', agreementId: 'a1', status: 'released', paymentId: 'pay1' });
+  assert.equal(parseChatEmbed({ type: 'proposal' }), null);
+  assert.equal(parseChatEmbed({ type: 'unknown', id: 'x' }), null);
+  assert.equal(parseChatEmbed(null), null);
+  assert.equal(parseChatEmbed([{ type: 'proposal', id: 'p1' }]), null);
+  // Attachments must never be mistaken for embeds.
+  assert.equal(parseChatEmbed({ path: 'a/b.png', name: 'b.png', size: 1, contentType: 'image/png' }), null);
+});
+
+test('insertComposerCommand preserves the existing draft', () => {
+  assert.equal(insertComposerCommand('', '/progress'), '/progress ');
+  assert.equal(insertComposerCommand('we need a landing page', '/review'), 'we need a landing page /review ');
+  assert.equal(insertComposerCommand('draft  ', '/contract'), 'draft /contract ');
+  assert.equal(insertComposerCommand(undefined, '/attach'), '/attach ');
+});
+
 test('parseSlashCommand recognizes delivery commands and rejects unknown commands', () => {
   assert.deepEqual(parseSlashCommand(' /progress '), { command: 'progress', args: '' });
   assert.deepEqual(parseSlashCommand('/review launch brief'), { command: 'review', args: 'launch brief' });
+  assert.deepEqual(parseSlashCommand('/contract'), { command: 'contract', args: '' });
   assert.deepEqual(parseSlashCommand('/wat'), { error: 'Unknown command /wat' });
   assert.equal(parseSlashCommand('hello'), null);
 });
