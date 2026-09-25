@@ -5,6 +5,8 @@ entries at the top. If a change had no marketing angle, say so explicitly.
 
 | Date | Development change | Distribution move | Channel / asset |
 | --- | --- | --- | --- |
+| 2026-09-25 | **Slash command foundation** — the chat composer now recognizes `/help`, `/progress`, `/review`, and `/attach`; progress reads the persisted task state, review calls the existing review handoff, and unknown commands fail clearly. Added parser tests; 90/90 tests, ESLint, TypeScript, and build green. | No public launch copy yet; the commands are an internal delivery-loop affordance until the full checklist is verified. | Internal changelog; demo note |
+
 | 2026-09-25 | **AI approval boundary foundation** — AI turns now persist as `ai_draft`, stay out of the next model history, and are hidden from ordinary transcript reads. Staff can list, approve, or reject drafts through `/api/staff/ai-drafts`; approval promotes the row to a named `human_operator` message with AI provenance metadata. 89/89 tests, ESLint, TypeScript, and build green. | No public claim yet: the staff approval queue UI and two-session verification remain open release-gate work. | Internal release note; founder review |
 
 | 2026-09-25 | **Named staff presence and join copy** — removed remaining shared staff-author fallbacks from chat presence, join notices, and funding copy; unnamed staff now render as `BrandForge specialist` or a stable fallback instead of pretending to be one shared person. 89/89 tests, ESLint, TypeScript, and build green. | No public announcement; supports the named-human product promise. | In-app changelog; demo note |

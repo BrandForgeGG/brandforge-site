@@ -6,6 +6,7 @@ import { useConversationPresence } from '@/lib/presence';
 import { formatTypingLabel } from '@/lib/presence-utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { ClientProjectState } from '@/lib/conversation-state';
+import { parseSlashCommand } from '@/lib/message-actions';
 import { summarizeTaskProgress } from '@/lib/task-board';
 import { shapeTaskRoster } from '@/lib/task-board';
 import { ChatTranscript, type ChatMessage } from '@/components/chat-transcript';
@@ -142,7 +143,6 @@ export function ChatWorkspace() {
   });
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [attachment, setAttachment] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Desktop-style layout: the left rail is shown by default, the right insights panel is hidden
@@ -468,8 +468,26 @@ export function ChatWorkspace() {
   const handleSend = useCallback(
     async (suggestion?: string) => {
       const text = (suggestion ?? input).trim();
+      const slash = parseSlashCommand(text);
+      if (slash) {
+        if (slash.error) { setError(slash.error); return; }
+        if (slash.command === 'help') { setError('Commands: /progress, /review, /attach'); return; }
+        if (slash.command === 'attach') { setError('Choose a file below the message box, then add a caption if you want context.'); return; }
+        if (slash.command === 'progress') {
+          const progress = summarizeTaskProgress(state?.tasks ?? []);
+          setError(`${progress.done}/${progress.total} complete · ${progress.inProgress} in progress · ${progress.review} awaiting review${progress.overdue ? ` · ${progress.overdue} overdue` : ''}`);
+          return;
+        }
+        if (slash.command === 'review') {
+          try {
+            const response = await fetch('/api/request-review', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId }) });
+            if (!response.ok) throw new Error('Review request failed');
+            setError('Project sent for review.');
+          } catch (cause) { setError(cause instanceof Error ? cause.message : 'Review request failed'); }
+          return;
+        }
+      }
 
-        setIsUploading(true);
       if (attachment) {
         if (!conversationId) {
           setError('Start a conversation before adding a file.');
@@ -562,7 +580,7 @@ export function ChatWorkspace() {
 
       await runTurn(conversationId, text);
     },
-    [attachment, conversationId, input, isOwnConversation, isStreaming, loadRecents, railMeta.isStaff, refreshMessages, router, runTurn, scrollToBottom]
+    [attachment, conversationId, input, isOwnConversation, isStreaming, loadRecents, railMeta.isStaff, refreshMessages, router, runTurn, scrollToBottom, state?.tasks]
   );
 
   // BrandForge staff: opening a chat IS picking it up. The join call registers the participant row
@@ -682,6 +700,7 @@ export function ChatWorkspace() {
     } finally {
       setBusyAction(null);
     }
+
   }, [conversationId, loadRecents, refreshMessages, refreshState]);
 
   const handleProposalAction = useCallback(
@@ -842,7 +861,7 @@ export function ChatWorkspace() {
 
   const projectLabel = state?.project.name || state?.title || 'New project';
   const taskProgress = summarizeTaskProgress(state?.tasks ?? []);
-  const isBusy = isStreaming || isCreatingConversation || isUploading;
+  const isBusy = isStreaming || isCreatingConversation;
   // The active row from Recents carries the staff marker; staff never delete founder chats here.
   const activeConversation =
     recents.find((conversation) => conversation.id === conversationId) ?? null;

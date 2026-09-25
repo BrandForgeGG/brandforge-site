@@ -34,11 +34,22 @@ function safeDownloadName(value) {
   return value.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
 }
 
+
+function parseSlashCommand(value) {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw.startsWith('/')) return null;
+  const [name, ...args] = raw.slice(1).split(/\s+/);
+  const command = name.toLowerCase();
+  if (!['help', 'progress', 'review', 'attach'].includes(command)) return { error: `Unknown command /${name}` };
+  return { command, args: args.join(' ').trim() };
+}
+
 module.exports = {
   normalizeMessageEdit,
   normalizeReactionEmoji,
   canMutateMessage,
   displayAttachmentName,
   safeDownloadName,
+  parseSlashCommand,
 };
 

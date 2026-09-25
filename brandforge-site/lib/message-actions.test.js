@@ -6,6 +6,7 @@ const {
   canMutateMessage,
   displayAttachmentName,
   safeDownloadName,
+  parseSlashCommand,
 } = require('./message-actions.js');
 
 test('normalizeMessageEdit trims and bounds human edits', () => {
@@ -34,6 +35,14 @@ test('image attachments are inline while other files remain downloads', () => {
 });
 
 test('canMutateMessage allows only the original live human sender', () => {
+test('parseSlashCommand recognizes delivery commands and rejects unknown commands', () => {
+  assert.deepEqual(parseSlashCommand(' /progress '), { command: 'progress', args: '' });
+  assert.deepEqual(parseSlashCommand('/review launch brief'), { command: 'review', args: 'launch brief' });
+  assert.deepEqual(parseSlashCommand('/wat'), { error: 'Unknown command /wat' });
+  assert.equal(parseSlashCommand('hello'), null);
+});
+
+
   const message = { id: 'm1', sender_id: 'u1', sender_type: 'user', content_type: 'text' };
   assert.equal(canMutateMessage(message, 'u1'), true);
   assert.equal(canMutateMessage(message, 'u2'), false);
