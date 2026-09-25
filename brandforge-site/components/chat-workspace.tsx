@@ -559,12 +559,22 @@ export function ChatWorkspace() {
   }, [conversationId, isOwnConversation, loadRecents, railMeta.isStaff]);
 
   const handleMessageAction = useCallback(
-    async (messageId: string, action: 'edit' | 'delete' | 'react', content?: string) => {
+    async (
+      messageId: string,
+      action: 'edit' | 'delete' | 'react',
+      value?: string
+    ) => {
       if (!conversationId) return;
       const response = await fetch('/api/messages', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messageId, action, content, conversationId }),
+        body: JSON.stringify({
+          messageId,
+          action,
+          conversationId,
+          ...(action === 'edit' ? { content: value } : {}),
+          ...(action === 'react' ? { emoji: value } : {}),
+        }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Message action failed');
