@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
   }
 
   const history = await getMessages(conversationId, { limit: MAX_HISTORY });
-  const conversational = history.filter((entry) => entry.content_type !== 'system');
+  const conversational = history.filter((entry) => entry.content_type !== 'system' && entry.content_type !== 'ai_draft');
   const lastMessage = conversational[conversational.length - 1];
 
   if (!lastMessage || lastMessage.sender_type !== 'user') {
@@ -144,7 +144,8 @@ export async function POST(request: NextRequest) {
             sender_type: 'ai',
             sender_name: 'BrandForge AI',
             content,
-            content_type: 'text',
+            content_type: 'ai_draft',
+            artifact_data: { source: 'ai', status: 'pending' },
           });
 
           send({ type: 'message', id: assistantMessageId });

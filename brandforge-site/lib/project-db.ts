@@ -1086,6 +1086,49 @@ export async function downloadConversationAttachment(path: string) {
   return data;
 }
 
+export async function getPendingAiDrafts(conversationId: string) {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const { data } = await admin
+    .from('messages')
+    .select('*')
+    .eq('conversation_id', conversationId)
+    .eq('content_type', 'ai_draft')
+    .is('deleted_at', null)
+    .order('created_at', { ascending: true });
+  return data ?? [];
+}
+
+export async function resolveAiDraft(
+  messageId: string,
+  staffId: string,
+  staffName: string,
+  action: 'approve' | 'reject'
+): Promise<'approved' | 'rejected' | 'not_found'> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return 'not_found';
+  const { data: draft } = await admin
+    .from('messages')
+    .select('id,content_type,deleted_at')
+    .eq('id', messageId)
+    .maybeSingle();
+  if (!draft || draft.content_type !== 'ai_draft' || draft.deleted_at) return 'not_found';
+  if (action === 'reject') {
+    const { error } = await admin.from('messages').update({ deleted_at: new Date().toISOString() }).eq('id', messageId);
+    return error ? 'not_found' : 'rejected';
+  }
+  const { error } = await admin
+    .from('messages')
+    .update({
+      sender_type: 'human_operator',
+      sender_id: staffId,
+      sender_name: staffName,
+      content_type: 'text',
+      artifact_data: { source: 'ai', approved_by: staffId, approved_at: new Date().toISOString() },
+    })
+    .eq('id', messageId);
+  return error ? 'not_found' : 'approved';
+}
 export async function addMessage(message: {
   conversation_id: string;
   sender_type: 'user' | 'ai' | 'human_operator' | 'human_builder';
@@ -1139,6 +1182,7 @@ export async function getMessages(
     .select('*')
     .eq('conversation_id', conversationId)
     .is('deleted_at', null)
+    .neq('content_type', 'ai_draft')
     .order('created_at', { ascending: true });
 
   if (error) {
