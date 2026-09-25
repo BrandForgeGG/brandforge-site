@@ -6,6 +6,7 @@ import { useConversationPresence } from '@/lib/presence';
 import { formatTypingLabel } from '@/lib/presence-utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { ClientProjectState } from '@/lib/conversation-state';
+import { summarizeTaskProgress } from '@/lib/task-board';
 import { shapeTaskRoster } from '@/lib/task-board';
 import { ChatTranscript, type ChatMessage } from '@/components/chat-transcript';
 import { ConversationRail, relativeTime, type RecentConversation } from '@/components/conversation-rail';
@@ -803,6 +804,7 @@ export function ChatWorkspace() {
   );
 
   const projectLabel = state?.project.name || state?.title || 'New project';
+  const taskProgress = summarizeTaskProgress(state?.tasks ?? []);
   const isBusy = isStreaming || isCreatingConversation || isUploading;
   // The active row from Recents carries the staff marker; staff never delete founder chats here.
   const activeConversation =
@@ -851,6 +853,12 @@ export function ChatWorkspace() {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            {state && taskProgress.total > 0 ? (
+              <div className="hidden items-center gap-2 rounded-full border border-[#5aa578]/30 bg-[#5aa578]/10 px-3 py-1 sm:flex" title="Completed delivery tasks">
+                <span className="text-[10px] uppercase tracking-[0.15em] text-[#9aa0a6]">Delivery</span>
+                <span className="text-[10px] font-semibold text-[#5aa578]">{taskProgress.percent}%</span>
+              </div>
+            ) : null}
             <span className="hidden rounded-full border border-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-[#9aa0a6] sm:inline">
               {state ? STATUS_LABELS[state.status] ?? state.status : 'Discovery'}
             </span>
