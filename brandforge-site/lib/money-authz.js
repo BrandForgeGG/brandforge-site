@@ -10,9 +10,6 @@
 
 const PROPOSAL_STATUSES = ['pending', 'accepted', 'declined', 'changes_requested', 'expired'];
 
-/** Statuses only staff may set (lifecycle housekeeping). */
-const STAFF_ONLY_PROPOSAL_STATUSES = ['expired'];
-
 /** Statuses a founder may answer a proposal with. */
 const FOUNDER_PROPOSAL_STATUSES = ['accepted', 'declined', 'changes_requested'];
 
@@ -98,7 +95,6 @@ function canResolveAiDraft({ actor }) {
 
 module.exports = {
   PROPOSAL_STATUSES,
-  STAFF_ONLY_PROPOSAL_STATUSES,
   FOUNDER_PROPOSAL_STATUSES,
   canSetProposalStatus,
   canCreateAgreement,

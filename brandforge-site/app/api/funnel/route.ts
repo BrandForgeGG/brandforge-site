@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { recordFunnelEvent, isAdminAccount, getFunnelSummary } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { FUNNEL_EVENTS } from '@/lib/funnel.js';
@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic';
 // It is deliberately unauthenticated for anonymous events (landing_viewed, signin_started,
 // apply_started) — a signed-in user is only ever recorded as a boolean, never by id.
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   let body: { event?: unknown; visitorId?: unknown; properties?: unknown } = {};
 
   try {
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   // Best-effort: if the session lookup fails we still record the event as signed-out.
   let signedIn = false;
   try {
-    const user = await getAuthenticatedUser(request as never);
+    const user = await getAuthenticatedUser(request);
     signedIn = Boolean(user);
   } catch {
     signedIn = false;
@@ -54,8 +54,8 @@ export async function POST(request: Request) {
 
 // GET /api/funnel — admin-only funnel counts, with the measurement window stated explicitly so a
 // reader can never mistake a partial window for a real number.
-export async function GET(request: Request) {
-  const user = await getAuthenticatedUser(request as never).catch(() => null);
+export async function GET(request: NextRequest) {
+  const user = await getAuthenticatedUser(request).catch(() => null);
 
   if (!user || !(await isAdminAccount(user.id))) {
     return NextResponse.json({ error: 'Admin access only' }, { status: 403 });

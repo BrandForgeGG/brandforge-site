@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { embedActions, showsFundingForm } from '@/lib/embed-actions.js';
 
 export type ChatEmbedAction = 'accept' | 'details' | 'submit_funding';
@@ -110,19 +110,42 @@ function Avatar({
 
   const [profile, setProfile] = useState<{ displayId: number | null; username: string | null; displayName: string | null; role: string | null } | null>(null);
   const [showProfile, setShowProfile] = useState(false);
+  // The avatar is the trigger and the only thing a keyboard user can reach, so focus returns to it
+  // on dismissal. Without this, Escape would strand focus on <body> and lose the user's place.
+  const triggerRef = useRef<HTMLDivElement | null>(null);
   async function openProfile() {
     if (!userId || !conversationId || profile) { setShowProfile(true); return; }
     setShowProfile(true);
     const response = await fetch(`/api/profile-card?conversationId=${encodeURIComponent(conversationId)}&userId=${encodeURIComponent(userId)}`);
     if (response.ok) { const data = await response.json(); setProfile(data.identity); }
   }
+  function closeProfile() {
+    setShowProfile(false);
+    triggerRef.current?.focus();
+  }
 
   return (
-    <div className="relative" onMouseEnter={() => void openProfile()} onFocus={() => void openProfile()}>
+    <div
+      className="relative"
+      onMouseEnter={() => void openProfile()}
+      onMouseLeave={() => setShowProfile(false)}
+      onFocus={() => void openProfile()}
+      // Escape dismisses and returns focus. onKeyDown on the wrapper catches it while focus is on
+      // the trigger or the card, so the card is not a focus trap with no way out.
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && showProfile) {
+          event.stopPropagation();
+          closeProfile();
+        }
+      }}
+    >
       <div
+        ref={triggerRef}
         className={`bf-avatar flex h-8 w-8 shrink-0 cursor-help items-center justify-center rounded-full text-xs font-semibold ${toneClass}`}
         tabIndex={userId ? 0 : undefined}
-        aria-label={author ? `View ${author}'s profile` : undefined}
+        role={userId ? 'button' : undefined}
+        aria-expanded={userId ? showProfile : undefined}
+        aria-label={author ? `${author} — view profile` : undefined}
         aria-hidden={author ? undefined : true}
       >
         {label}
