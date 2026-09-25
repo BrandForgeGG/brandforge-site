@@ -28,6 +28,11 @@ test('attachment download names hide storage UUIDs and sanitize unsafe character
   assert.equal(safeDownloadName('my file(1).pdf'), 'my_file_1_.pdf');
 });
 
+test('image attachments are inline while other files remain downloads', () => {
+  assert.equal('inline; filename="hero.png"', `inline; filename="${safeDownloadName('hero.png')}"`);
+  assert.equal('attachment; filename="notes.pdf"', `attachment; filename="${safeDownloadName('notes.pdf')}"`);
+});
+
 test('canMutateMessage allows only the original live human sender', () => {
   const message = { id: 'm1', sender_id: 'u1', sender_type: 'user', content_type: 'text' };
   assert.equal(canMutateMessage(message, 'u1'), true);

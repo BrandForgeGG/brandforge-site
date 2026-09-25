@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
   return new NextResponse(data as BodyInit, {
     headers: {
       'Content-Type': contentType,
-      'Content-Disposition': `attachment; filename="${safeDownloadName(name)}"`,
+      'Content-Disposition': `${contentType.startsWith('image/') ? 'inline' : 'attachment'}; filename="${safeDownloadName(name)}"`,
       'Cache-Control': 'private, no-store',
     },
   });

@@ -5,6 +5,8 @@ entries at the top. If a change had no marketing angle, say so explicitly.
 
 | Date | Development change | Distribution move | Channel / asset |
 | --- | --- | --- | --- |
+| 2026-09-25 | **Image previews render inline** — authenticated image attachments now return `Content-Disposition: inline` so the transcript preview is not forced into a download; PDFs, archives, and text files remain downloads. Added regression coverage; 86/86 tests, ESLint, TypeScript, and build green. | No public copy needed; improves the shipped attachment experience. | In-app changelog; product demo |
+
 | 2026-09-25 | **Attachment download naming** — downloads now hide the internal storage UUID and preserve the original safe filename, with a new focused unit test; 85/85 tests, ESLint, TypeScript, and production build green. | No public copy needed; improves the user experience of the already-shipped attachment feature. | In-app changelog; product demo |
 
 | 2026-09-25 | **Attachment polish deployed** — downloads now preserve useful MIME types (images/PDF/text/JSON/CSV), README product status reflects that private 10 MB conversation attachments shipped, and 84/84 tests + build remain green. | No new public claim; the attachment capability is now documented as a real conversation feature for release notes and demos. | In-app changelog; product demo |
