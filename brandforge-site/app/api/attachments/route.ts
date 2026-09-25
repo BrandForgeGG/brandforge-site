@@ -1,3 +1,15 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { displayAttachmentName, safeDownloadName } from '@/lib/message-actions';
+import { canAccessConversation, downloadConversationAttachment, removeConversationAttachment, uploadConversationAttachment, addMessage } from '@/lib/project-db';
+import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
+
+export const dynamic = 'force-dynamic';
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const ALLOWED_TYPES = new Set([
+  'image/png', 'image/jpeg', 'image/webp', 'application/pdf', 'text/plain',
+  'application/json', 'application/zip', 'text/csv',
+]);
+
 export async function GET(request: NextRequest) {
   const user = await getAuthenticatedUser(request);
   if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
@@ -8,7 +20,7 @@ export async function GET(request: NextRequest) {
   }
   const data = await downloadConversationAttachment(path);
   if (!data) return NextResponse.json({ error: 'Attachment not found' }, { status: 404 });
-  const name = decodeURIComponent(path.split('/').pop() ?? 'attachment');
+  const name = displayAttachmentName(path.split('/').pop() ?? 'attachment');
   const extension = name.toLowerCase().split('.').pop();
   const contentType = extension === 'png' ? 'image/png'
     : extension === 'jpg' || extension === 'jpeg' ? 'image/jpeg'
@@ -21,22 +33,11 @@ export async function GET(request: NextRequest) {
   return new NextResponse(data as BodyInit, {
     headers: {
       'Content-Type': contentType,
-      'Content-Disposition': `attachment; filename="${name.replace(/[^a-zA-Z0-9._-]/g, '_')}"`,
+      'Content-Disposition': `attachment; filename="${safeDownloadName(name)}"`,
       'Cache-Control': 'private, no-store',
     },
   });
 }
-
-import { NextRequest, NextResponse } from 'next/server';
-import { canAccessConversation, downloadConversationAttachment, removeConversationAttachment, uploadConversationAttachment, addMessage } from '@/lib/project-db';
-import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
-
-export const dynamic = 'force-dynamic';
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const ALLOWED_TYPES = new Set([
-  'image/png', 'image/jpeg', 'image/webp', 'application/pdf', 'text/plain',
-  'application/json', 'application/zip', 'text/csv',
-]);
 
 export async function POST(request: NextRequest) {
   const user = await getAuthenticatedUser(request);
@@ -73,3 +74,4 @@ export async function POST(request: NextRequest) {
   }
   return NextResponse.json({ attachment, messageId });
 }
+

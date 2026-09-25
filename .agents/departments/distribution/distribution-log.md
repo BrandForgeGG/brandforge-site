@@ -5,6 +5,8 @@ entries at the top. If a change had no marketing angle, say so explicitly.
 
 | Date | Development change | Distribution move | Channel / asset |
 | --- | --- | --- | --- |
+| 2026-09-25 | **Attachment download naming** — downloads now hide the internal storage UUID and preserve the original safe filename, with a new focused unit test; 85/85 tests, ESLint, TypeScript, and production build green. | No public copy needed; improves the user experience of the already-shipped attachment feature. | In-app changelog; product demo |
+
 | 2026-09-25 | **Attachment polish deployed** — downloads now preserve useful MIME types (images/PDF/text/JSON/CSV), README product status reflects that private 10 MB conversation attachments shipped, and 84/84 tests + build remain green. | No new public claim; the attachment capability is now documented as a real conversation feature for release notes and demos. | In-app changelog; product demo |
 
 | 2026-09-25 | **Reaction payload fix** — the transcript sent the selected emoji as `content`, but `/api/messages` requires reaction actions to use `emoji`; the UI now sends the correct field while preserving `content` for edits. 84/84 tests, ESLint, TypeScript, and build green. | No public copy needed; this restores the already-announced reaction capability without changing the product story. | In-app changelog / internal release note |

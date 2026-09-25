@@ -24,8 +24,21 @@ function canMutateMessage(message, userId) {
   );
 }
 
+function displayAttachmentName(storageName) {
+  const decoded = decodeURIComponent(storageName);
+  const uuidPrefix = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}-/i;
+  return decoded.replace(uuidPrefix, '') || 'attachment';
+}
+
+function safeDownloadName(value) {
+  return value.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
+}
+
 module.exports = {
   normalizeMessageEdit,
   normalizeReactionEmoji,
   canMutateMessage,
+  displayAttachmentName,
+  safeDownloadName,
 };
+

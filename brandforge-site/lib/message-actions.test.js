@@ -4,6 +4,8 @@ const {
   normalizeMessageEdit,
   normalizeReactionEmoji,
   canMutateMessage,
+  displayAttachmentName,
+  safeDownloadName,
 } = require('./message-actions.js');
 
 test('normalizeMessageEdit trims and bounds human edits', () => {
@@ -18,6 +20,12 @@ test('normalizeReactionEmoji accepts compact emoji sequences', () => {
   assert.equal(normalizeReactionEmoji('👨‍👩‍👧‍👦'), '👨‍👩‍👧‍👦');
   assert.equal(normalizeReactionEmoji(''), null);
   assert.equal(normalizeReactionEmoji('👍👍👍👍👍'), '👍👍👍👍👍');
+});
+
+test('attachment download names hide storage UUIDs and sanitize unsafe characters', () => {
+  assert.equal(displayAttachmentName('550e8400-e29b-41d4-a716-446655440000-report final.pdf'), 'report final.pdf');
+  assert.equal(displayAttachmentName('plain.txt'), 'plain.txt');
+  assert.equal(safeDownloadName('my file(1).pdf'), 'my_file_1_.pdf');
 });
 
 test('canMutateMessage allows only the original live human sender', () => {
