@@ -42,6 +42,15 @@ BrandForge/
 
 - Live: https://brandforge.gg (Vercel, `brandforge-site` production).
 - Chat-first product: landing -> chat -> AI-structured project -> human proposal -> escrow.
+- **Chat Workspace UX 2.0 (2026-09-26, not yet deployed)**: conversation-centric 3-pane workspace.
+  AI answers render as editorial content through a sanitising markdown renderer; each turn carries a
+  collapsible **Thoughts** strip built only from `activity` SSE events (steps that really ran);
+  attached text/csv/json/markdown files are read for real under a token budget while binaries are
+  listed only; identity is deterministic (photo when present, otherwise hash-stable initials + role);
+  the sidebar dropped platform counters for an account block. Collapsed width is remembered
+  (`localStorage` key `brandforge:rail-collapsed`) and keeps letter-chip recents plus an avatar icon.
+  No schema change, nothing to migrate.
+
 - **Open auth**: any Google account can sign in (login allowlist removed). Staff/admin access
   is `profiles.role` (`admin` / `operator`), not email.
 - Operator pipeline: specialists apply at `/apply`; admin reviews at `/admin/applications`

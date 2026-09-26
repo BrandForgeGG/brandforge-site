@@ -62,8 +62,15 @@ npx eslint <changed files>       # lint only what you touched
 - Task board (2026-09-25): staff assign tasks to chat participants and set/clear due dates
   from the panel (`PATCH /api/chat-tasks` `action=assign` / `action=schedule`); every change posts
   into the chat. Needs migration `0008_task_due_dates_and_assignees.sql` in prod.
-- "Online" counters are Realtime presence (`lib/presence.ts`), never a stored `last_seen` column, so
-  they need no migration and show `—` when Realtime is unreachable.
+- Presence (2026-09-26): the platform-wide "online / staff online" counters are gone — the rail shows
+  an account block instead. `lib/presence.ts` keeps only per-conversation presence, which drives the
+  typing indicator and the "who else is here" label. Still Realtime-only, still no stored `last_seen`.
+- Chat Workspace UX 2.0 (2026-09-26): three panes, generous message column, conversation header
+  (title, status, participant stack, `•••` menu), AI answers rendered as editorial content via
+  `lib/markdown.js` → `components/rich-content.tsx` (no raw HTML ever), a collapsed **Thoughts**
+  strip fed only by `type: "activity"` SSE events from `app/api/chat/route.ts`, real file context
+  (`lib/file-context.js`), an Attach chip with a true upload state, and hash-stable initials when a
+  person has no photo. No new tables or columns — nothing to migrate.
 - Staff read every chat's history (2026-09-23): `canAccessConversation(userId, id, { allowStaff: true })`
   is used by the read routes + chat-tasks, and `readClient(asStaff)` in `lib/project-db.ts` reads the
   founder-scoped tables (requirements, milestones, proposals, agreements, payments, participants) with

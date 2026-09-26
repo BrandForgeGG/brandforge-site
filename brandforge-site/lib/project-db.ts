@@ -260,6 +260,8 @@ export interface ProfileIdentity {
   displayName: string | null;
   email: string | null;
   role: ProfileRole | null;
+  /** Google-uploaded profile image when the member has one; deterministic initials otherwise. */
+  avatarUrl: string | null;
   telegramChatId: string | null;
   telegramUsername: string | null;
   createdAt: string | null;
@@ -280,6 +282,7 @@ export function shapeProfileIdentity(row: Record<string, unknown> | null): Profi
     displayName: row.display_name ? String(row.display_name) : null,
     email: row.email ? String(row.email) : null,
     role: (row.role as ProfileRole | undefined) ?? null,
+    avatarUrl: row.avatar_url ? String(row.avatar_url) : null,
     telegramChatId:
       row.telegram_chat_id === null || row.telegram_chat_id === undefined
         ? null
@@ -290,7 +293,7 @@ export function shapeProfileIdentity(row: Record<string, unknown> | null): Profi
 }
 
 const IDENTITY_COLUMNS =
-  'id, display_id, username, display_name, email, role, telegram_chat_id, telegram_username, created_at';
+  'id, display_id, username, display_name, email, role, avatar_url, telegram_chat_id, telegram_username, created_at';
 
 export async function getParticipantIdentity(conversationId: string, userId: string): Promise<ProfileIdentity | null> {
   const admin = createSupabaseAdminClient();

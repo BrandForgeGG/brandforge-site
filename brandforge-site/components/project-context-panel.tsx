@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { buildProjectPulse, describeAgreementStatus, describeNextDeliveryAction, describePaymentStatus, describeProposalStatus, isTaskOverdue, summarizeTaskProgress } from '@/lib/task-board';
+import { avatarTone, formatRole, initialsFor } from '@/lib/identity-display';
 import type { ClientProjectState } from '@/lib/conversation-state';
 import { DISCOVERY_THRESHOLD } from '@/lib/discovery';
 
@@ -84,6 +85,7 @@ export function ProjectContextPanel({
   busyAction,
   isStaff,
   participants,
+  files,
   onClose,
   onRequestReview,
   onProposalAction,
@@ -100,6 +102,8 @@ export function ProjectContextPanel({
   busyAction: string | null;
   isStaff: boolean;
   participants: TaskParticipant[];
+  /** Real attachments in this chat, derived from persisted messages - never fabricated. */
+  files: { name: string; size: number; contentType: string; path: string }[];
   onClose: () => void;
   onRequestReview: () => void;
   onProposalAction: (action: 'accept' | 'decline' | 'request_changes') => void;
@@ -174,6 +178,18 @@ export function ProjectContextPanel({
   const projectPulse = buildProjectPulse({ state, proposal, agreement, tasks: state?.tasks ?? [] });
   const submittedNetwork = payments.find((payment) => payment.network)?.network ?? null;
 
+  // "What happens next?" - the next delivery task, else the first unmet discovery step,
+  // else an honest prompt. Never a fabricated milestone.
+  const nextDeliveryRaw = describeNextDeliveryAction(state?.tasks ?? []);
+  const nextDelivery = nextDeliveryRaw.startsWith('Next: ')
+    ? nextDeliveryRaw.slice('Next: '.length)
+    : nextDeliveryRaw === 'No delivery tasks are planned yet.'
+      ? null
+      : nextDeliveryRaw;
+  const nextDiscoveryStep = (discovery?.checklist ?? []).find((step) => !step.met)?.label ?? null;
+  const nextStepLabel =
+    nextDelivery ?? nextDiscoveryStep ?? 'Describe your project in the chat to get started';
+
   return (
     <aside className="fixed inset-y-0 right-0 z-40 flex w-80 max-w-[85vw] shrink-0 flex-col border-l border-white/10 bg-[#111417] shadow-2xl xl:sticky xl:top-0 xl:z-auto xl:h-screen xl:max-w-none xl:shadow-none">
       <div className="bf-panel-header flex items-start justify-between gap-3">
@@ -219,6 +235,85 @@ export function ProjectContextPanel({
           </div>
         </div>
 
+        <div className="bf-panel-section">
+          <p className="bf-section-label">Next</p>
+          <div className="bf-panel-card bf-panel-card-emphasis">
+            <p className="text-sm leading-relaxed text-[#ece7de]">{nextStepLabel}</p>
+          </div>
+        </div>
+
+        <div className="bf-panel-section">
+          <p className="bf-section-label">Requirements</p>
+          <div className="bf-panel-card">
+            <p className="text-sm text-[#ece7de]">
+              {state ? state.requirementsCount : 0}
+              <span className="text-[#9aa0a6]"> captured</span>
+            </p>
+            {state && state.requirements.length > 0 ? (
+              <ul className="mt-2 space-y-1">
+                {state.requirements.slice(-5).map((requirement) => (
+                  <li key={requirement.id} className="flex items-start gap-2 text-xs">
+                    <span className="text-[#5aa578]" aria-hidden="true">✓</span>
+                    <span className="min-w-0 text-[#9aa0a6]">{requirement.title}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-1 text-xs text-[#9aa0a6]">Nothing captured yet.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="bf-panel-section">
+          <p className="bf-section-label">Team</p>
+          <div className="bf-panel-card">
+            <ul className="space-y-2.5">
+              <li className="flex items-center gap-2.5">
+                <span className="bf-stack-item bf-stack-ai" aria-hidden="true">B</span>
+                <span className="min-w-0">
+                  <span className="block truncate text-xs text-[#ece7de]">BrandForge AI</span>
+                  <span className="block text-[10px] uppercase tracking-[0.14em] text-[#6f757b]">Execution Assistant</span>
+                </span>
+              </li>
+              {participants.map((person) => (
+                <li key={person.userId} className="flex items-center gap-2.5">
+                  <span className="bf-stack-item" style={avatarTone(person.userId)} aria-hidden="true">
+                    {initialsFor(person.displayName)}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-xs text-[#ece7de]">{person.displayName}</span>
+                    <span className="block text-[10px] uppercase tracking-[0.14em] text-[#6f757b]">{formatRole(person.role)}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="bf-panel-section">
+          <p className="bf-section-label">Files</p>
+          <div className="bf-panel-card">
+            {files.length > 0 ? (
+              <ul className="space-y-1.5">
+                {files.map((file) => (
+                  <li key={file.path}>
+                    <a
+                      href={`/api/attachments?path=${encodeURIComponent(file.path)}`}
+                      className="flex items-center gap-2 text-xs text-[#ece7de] transition hover:text-[#e8571e]"
+                    >
+                      <span aria-hidden="true">📄</span>
+                      <span className="min-w-0 flex-1 truncate">{file.name}</span>
+                      <span className="shrink-0 text-[10px] text-[#9aa0a6]">{Math.ceil(file.size / 1024)} KB</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-[#9aa0a6]">No files yet.</p>
+            )}
+          </div>
+        </div>
+
         <details
           ref={detailsRef}
           id="bf-project-details"
@@ -258,27 +353,6 @@ export function ProjectContextPanel({
                 </li>
               ))}
             </ul>
-          </div>
-        </div>
-
-        <div className="bf-panel-section">
-          <p className="bf-section-label">Requirements</p>
-          <div className="bf-panel-card">
-            <p className="text-sm text-[#ece7de]">
-              {state ? state.requirementsCount : 0}
-              <span className="text-[#9aa0a6]"> captured</span>
-            </p>
-            {state && state.requirements.length > 0 ? (
-              <ul className="mt-2 space-y-1">
-                {state.requirements.slice(-5).map((requirement) => (
-                  <li key={requirement.id} className="truncate text-xs text-[#9aa0a6]">
-                    • {requirement.title}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-1 text-xs text-[#9aa0a6]">Nothing captured yet.</p>
-            )}
           </div>
         </div>
 

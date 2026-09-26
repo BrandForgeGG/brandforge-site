@@ -5,6 +5,10 @@ entries at the top. If a change had no marketing angle, say so explicitly.
 
 | Date | Development change | Distribution move | Channel / asset |
 | --- | --- | --- | --- |
+| 2026-09-26 | **Chat Workspace UX 2.0 deployed to production** — finishing pass, then shipped. The workspace styles landed in `app/globals.css` (editorial answer typography, collapsed **Thoughts** strip, `•••` header menu with a positioned root, composer chips/tools with upload states, deterministic avatar stack, per-conversation "who is here", `:focus-visible` rings and a `prefers-reduced-motion` block; no gradients anywhere). Dead code left by the counter removal was deleted: `usePresenceCounts`, `PresenceCounts`, `countStaffPresence`, plus the orphaned `.bf-rail-stat`, `.bf-message-author`, `.bf-message-bubble-*`, `.bf-chat-status-delivery` rules and the unused `--space-page` token (224/224 braces balanced, every `bf-*` class used by JSX now has a rule and vice versa). The composer send button got an `aria-label` with its glyph `aria-hidden`. `/api/chat` now decodes the Supabase storage blob through `arrayBuffer()` into a `Uint8Array`, so attachment reading works at runtime instead of failing the type checker. The rail remembers its collapsed width (`localStorage` key `brandforge:rail-collapsed`) and collapsed mode keeps letter-chip Recents with tooltips plus an account avatar carrying an unseen dot. 151/151 tests, `tsc --noEmit`, `eslint .` (0 errors, 0 warnings) and `npm run build` green. Deployed to Vercel production and aliased to brandforge.gg; live probes on the real domain: `/` and `/login` → 200, `/chat`, `/apply`, `/admin/applications` → 307 to sign-in, unauthenticated `POST /api/conversations` → 401, `GET /api/stats` → 401, and the CSS bundle being served contains the new classes. | Makes the drafted announcement publishable with a live URL instead of a promise: the honesty line — *it shows what it actually read and what it actually did, and says so when it cannot open your file* — is now demonstrable on brandforge.gg in under 30 seconds. No new landing copy: nothing in the promise changed, only the proof got real. | Publish the Telegram + Discord draft already written below the table, with the live link; record the two-session demo (attach `brief.txt`, ask about it, open Thoughts) against production. |
+
+| 2026-09-26 | **Chat Workspace UX 2.0** — the three-pane workspace was rebuilt around the conversation: roomier message column with a real header (title, live status, participant stack, `•••` menu); AI answers now render as editorial content through a sanitising markdown renderer (no raw HTML ever rendered, links limited to http/https/relative); every AI turn carries a collapsed **Thoughts** strip built only from steps the server actually ran; uploaded files are read for real (text/csv/json/markdown decoded under a token budget, binaries listed as "listed only", never summarised); the composer has a real Attach flow with an in-composer chip showing the true upload state, plus an "Ask about this file" shortcut that only appears for formats BrandForge can genuinely open; identity is deterministic (real photo when the person has one, otherwise hash-stable initials, role always); the sidebar dropped platform vanity counters for an account block (@handle, role, sign out). 151/151 tests, TypeScript, ESLint (0 errors, 0 warnings) and the production build are green. | Sharpens a claim competitors cannot copy: *"BrandForge never pretends. It shows what it actually read and what it actually did — and when it cannot open your file, it says so."* In-app copy carries it without a press release: the new empty state names four real starting moves, and Thoughts is one click away under every AI reply. Announcement draft + demo script written below the table. Landing copy untouched (nothing in the promise changed). | Telegram channel `https://t.me/BrandForge_gg` + Discord `https://discord.gg/GSKHXkUY85`; 30s two-session demo (attach `brief.txt`, ask about it, open Thoughts) |
+
 | 2026-09-25 | **Profile cards cover founder messages** — the current-user avatar now uses the same hover/focus profile-card behavior as specialist avatars, closing the gap where only non-user authors were inspectable. Conversation access and field stripping remain enforced. 90/90 tests, TypeScript, build, and ESLint (warnings only) green. | No public copy; completes the named-human profile affordance. | In-app changelog; two-session demo |
 
 | 2026-09-25 | **Named staff marker in conversation rail** — the recents marker now says `specialist in chat` instead of the shared `team in chat` identity. 90/90 tests, ESLint, TypeScript, and build remain green. | No public copy; continues the named-human identity cleanup. | In-app changelog; two-session demo |
@@ -163,5 +167,31 @@ entries at the top. If a change had no marketing angle, say so explicitly.
 | 2026-09-23 | **DEPLOYED to production (brandforge.gg).** Admin-verified crypto escrow (API + UI), legal pages (/terms /privacy /refunds), landing truth pass, brand fonts and new metadata are live. Verified in prod: all pages 200, money routes 401 unauthenticated, escrow copy + new OG title live. Two follow-ups before the escrow flow is fully usable: apply migration `0007_admin_crypto_escrow.sql` in the Supabase SQL editor (funding submissions will error until then), and set `NEXT_PUBLIC_DEPOSIT_WALLET_ADDRESS` / `NEXT_PUBLIC_DEPOSIT_NETWORK` in Vercel (panel shows chat fallback until then). | Announce now in Discord + Telegram: "BrandForge is live: describe your project, get a human proposal, fund in crypto - a human verifies your transfer and your money is only released when you approve the work. Terms and refund policy are written down." Re-share the link so embeds pick up the new title/description. | Discord announcement; Telegram channel post; re-share link for new embeds |
 
 
+
+
+## Draft — Chat Workspace UX 2.0 (2026-09-26)
+
+**Telegram channel / Discord launch post**
+
+> The chat is the product. We rebuilt the BrandForge workspace around that.
+>
+> - AI answers read like answers, not system logs.
+> - Every AI reply can be opened to show **Thoughts** — the steps it actually took. Nothing invented,
+>   nothing performed.
+> - Share a text file, CSV or JSON and BrandForge really reads it. Anything it cannot open is listed
+>   as unread, never summarised from imagination.
+> - Your specialists appear as named people: their photo when they have one, initials when they do
+>   not, their role always.
+> - The sidebar stopped counting users and started showing your chats and your account.
+>
+> Next step: open https://brandforge.gg, describe a project, attach a file, and open Thoughts on the
+> first reply.
+
+**Demo note (30-second screen recording):** sign in → describe a landing-page project → attach
+`brief.txt` → ask "What are the most important points in brief.txt?" → open the Thoughts strip under
+the reply → point at the header avatar stack (founder + BrandForge mark + specialist).
+
+**What was removed, if anyone asks:** the sidebar user / online / staff-online counters. They measured
+nothing a founder could act on; per-chat staff pickup badges replaced them.
 
 

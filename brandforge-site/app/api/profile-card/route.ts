@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
     username: identity.username,
     displayName: identity.displayName,
     role: identity.role,
+    avatarUrl: identity.avatarUrl,
     telegramUsername: identity.telegramUsername,
     createdAt: identity.createdAt,
   };

@@ -1,25 +1,38 @@
-'use client';
+"use client";
 
-import { useRef, useState } from 'react';
-import { embedActions, showsFundingForm } from '@/lib/embed-actions.js';
+import { useEffect, useRef, useState } from "react";
+import { embedActions, showsFundingForm } from "@/lib/embed-actions.js";
+import { avatarLabel, avatarTone, initialsFor } from "@/lib/identity-display";
+import { isDirectlyReadable } from "@/lib/file-context";
+import { RichContent } from "@/components/rich-content";
 
-export type ChatEmbedAction = 'accept' | 'details' | 'submit_funding';
+export type ChatEmbedAction = "accept" | "details" | "submit_funding";
 
 export type ChatEmbed =
-  | { type: 'proposal'; proposalId: string; status: string; title?: string }
-  | { type: 'agreement'; agreementId: string; status: string }
-  | { type: 'review_request'; conversationId: string }
-  | { type: 'funding'; agreementId: string; paymentId?: string; status?: string };
+  | { type: "proposal"; proposalId: string; status: string; title?: string }
+  | { type: "agreement"; agreementId: string; status: string }
+  | { type: "review_request"; conversationId: string }
+  | {
+      type: "funding";
+      agreementId: string;
+      paymentId?: string;
+      status?: string;
+    };
 
 export interface ChatMessage {
   id: string;
-  sender: 'user' | 'ai' | 'human' | 'system';
+  sender: "user" | "ai" | "human" | "system";
   content: string;
   createdAt: string | null;
   editedAt?: string | null;
   streaming?: boolean;
   reactions?: { emoji: string; count: number; reactedByMe: boolean }[];
-  artifactData?: { path: string; name: string; size: number; contentType: string } | null;
+  artifactData?: {
+    path: string;
+    name: string;
+    size: number;
+    contentType: string;
+  } | null;
   embed?: ChatEmbed | null;
   /**
    * The person behind a non-AI message. Pillar A of the overhaul: no shared "BrandForge Team"
@@ -28,10 +41,25 @@ export interface ChatMessage {
    */
   senderName?: string | null;
   senderId?: string | null;
+  /**
+   * User-safe activity labels recorded for real steps of a turn ("Read project context").
+   * Progress/status only — never hidden reasoning, never fabricated.
+   */
+  thoughts?: string[];
+  /** Live status while the assistant message is still streaming. */
+  status?: string;
 }
 
-export function FundingForm({ messageId, disabled, onSubmit }: { messageId: string; disabled?: boolean; onSubmit: (txHash: string) => void }) {
-  const [txHash, setTxHash] = useState('');
+export function FundingForm({
+  messageId,
+  disabled,
+  onSubmit,
+}: {
+  messageId: string;
+  disabled?: boolean;
+  onSubmit: (txHash: string) => void;
+}) {
+  const [txHash, setTxHash] = useState("");
   return (
     <form
       className="mt-3 flex w-full flex-wrap gap-2"
@@ -40,10 +68,12 @@ export function FundingForm({ messageId, disabled, onSubmit }: { messageId: stri
         const value = txHash.trim();
         if (!value) return;
         onSubmit(value);
-        setTxHash('');
+        setTxHash("");
       }}
     >
-      <label className="sr-only" htmlFor={`funding-${messageId}`}>Transaction hash</label>
+      <label className="sr-only" htmlFor={`funding-${messageId}`}>
+        Transaction hash
+      </label>
       <input
         id={`funding-${messageId}`}
         value={txHash}
@@ -52,7 +82,13 @@ export function FundingForm({ messageId, disabled, onSubmit }: { messageId: stri
         disabled={disabled}
         className="min-w-0 flex-1 rounded-lg border border-white/10 bg-[#14171a] px-3 py-1.5 text-xs text-[#ece7de] placeholder:text-[#6f757b] disabled:opacity-60"
       />
-      <button type="submit" disabled={disabled || !txHash.trim()} className="rounded-lg bg-[#e8571e] px-3 py-1.5 text-xs font-semibold text-[#14171a] disabled:opacity-60">Submit for verification</button>
+      <button
+        type="submit"
+        disabled={disabled || !txHash.trim()}
+        className="rounded-lg bg-[#e8571e] px-3 py-1.5 text-xs font-semibold text-[#14171a] disabled:opacity-60"
+      >
+        Submit for verification
+      </button>
     </form>
   );
 }
@@ -61,68 +97,87 @@ export function FundingForm({ messageId, disabled, onSubmit }: { messageId: stri
 // message rather than a bare category ("Build a website"), because a newcomer needs to see the
 // shape of a good opening before writing one. Tapping a chip sends it verbatim as the first message.
 export const SUGGESTED_PROMPTS = [
-  'I run a small bakery and I want a website that takes online orders and shows our daily specials. I have photos and a logo already, and I need it live before the end of next month.',
-  'We keep missing support tickets because they arrive by email. I want a simple internal tool where my team can log a ticket, assign it, and see what is still open.',
-  'I want to launch a small SaaS that turns customer feedback into a prioritised roadmap. I have a prototype in a spreadsheet, but I do not know the right stack or what to build first.',
+  "I run a small bakery and I want a website that takes online orders and shows our daily specials. I have photos and a logo already, and I need it live before the end of next month.",
+  "We keep missing support tickets because they arrive by email. I want a simple internal tool where my team can log a ticket, assign it, and see what is still open.",
+  "I want to launch a small SaaS that turns customer feedback into a prioritised roadmap. I have a prototype in a spreadsheet, but I do not know the right stack or what to build first.",
 ];
 
-/**
- * Two-letter initials for a person's name, so each staff member gets their own avatar
- * instead of a shared "BF". Handles single names and multi-part names ("Ada Lovelace"
- * -> "AL", "cher" -> "CH"); falls back to "?" when there is nothing to derive from.
- */
-function initialsFor(name: string): string {
-  const parts = name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
+// Two-letter initials come from lib/identity-display.js so the rail, header and
+// transcript all derive the same deterministic fallback avatar for the same person.
 
-  if (parts.length === 0) {
-    return '?';
+// Profile cards load once per person per session and are shared by every message
+// avatar, so a long conversation never refetches the same identity.
+type ProfileCard = {
+  displayId: number | null;
+  username: string | null;
+  displayName: string | null;
+  role: string | null;
+  avatarUrl: string | null;
+};
+
+const profileCache = new Map<string, Promise<ProfileCard | null>>();
+
+function loadProfileCard(
+  conversationId: string,
+  userId: string,
+): Promise<ProfileCard | null> {
+  const key = `${conversationId}:${userId}`;
+  let pending = profileCache.get(key);
+  if (!pending) {
+    pending = fetch(
+      `/api/profile-card?conversationId=${encodeURIComponent(conversationId)}&userId=${encodeURIComponent(userId)}`,
+    )
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => (data?.identity ? (data.identity as ProfileCard) : null))
+      .catch(() => null);
+    profileCache.set(key, pending);
   }
-
-  if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase();
-  }
-
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return pending;
 }
 
 function Avatar({
   label,
-  tone,
   author,
   userId,
   conversationId,
 }: {
   label: string;
-  tone: 'ember' | 'trust' | 'human';
   author?: string;
   userId?: string | null;
   conversationId?: string;
 }) {
-  const toneClass =
-    tone === 'ember'
-      ? 'bg-[#e8571e] text-[#14171a]'
-      : tone === 'trust'
-        ? 'bg-[#5aa578] text-[#14171a]'
-        : 'bg-[#2b3238] text-[#ece7de]';
-
-  const [profile, setProfile] = useState<{ displayId: number | null; username: string | null; displayName: string | null; role: string | null } | null>(null);
+  const [profile, setProfile] = useState<ProfileCard | null>(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
   // The avatar is the trigger and the only thing a keyboard user can reach, so focus returns to it
   // on dismissal. Without this, Escape would strand focus on <body> and lose the user's place.
   const triggerRef = useRef<HTMLDivElement | null>(null);
-  async function openProfile() {
-    if (!userId || !conversationId || profile) { setShowProfile(true); return; }
+  // Deterministic muted tone: the same person keeps the same fallback avatar across sessions.
+  const tone = avatarTone(userId ?? author ?? label);
+
+  // Real profile image when the member has one; initials otherwise. Loaded once per
+  // person per session through the shared cache, so hover never refetches.
+  useEffect(() => {
+    if (!userId || !conversationId) return;
+    let cancelled = false;
+    void loadProfileCard(conversationId, userId).then((data) => {
+      if (!cancelled && data) setProfile(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, conversationId]);
+
+  function openProfile() {
     setShowProfile(true);
-    const response = await fetch(`/api/profile-card?conversationId=${encodeURIComponent(conversationId)}&userId=${encodeURIComponent(userId)}`);
-    if (response.ok) { const data = await response.json(); setProfile(data.identity); }
   }
   function closeProfile() {
     setShowProfile(false);
     triggerRef.current?.focus();
   }
+
+  const displayName = profile?.displayName || author || "";
+  const showImage = Boolean(userId && profile?.avatarUrl && !imageFailed);
 
   return (
     <div
@@ -133,7 +188,7 @@ function Avatar({
       // Escape dismisses and returns focus. onKeyDown on the wrapper catches it while focus is on
       // the trigger or the card, so the card is not a focus trap with no way out.
       onKeyDown={(event) => {
-        if (event.key === 'Escape' && showProfile) {
+        if (event.key === "Escape" && showProfile) {
           event.stopPropagation();
           closeProfile();
         }
@@ -141,32 +196,118 @@ function Avatar({
     >
       <div
         ref={triggerRef}
-        className={`bf-avatar flex h-8 w-8 shrink-0 cursor-help items-center justify-center rounded-full text-xs font-semibold ${toneClass}`}
+        style={showImage ? undefined : tone}
+        className="bf-avatar flex h-8 w-8 shrink-0 cursor-help items-center justify-center overflow-hidden rounded-full text-xs font-semibold"
         tabIndex={userId ? 0 : undefined}
-        role={userId ? 'button' : undefined}
+        role={userId ? "button" : undefined}
         aria-expanded={userId ? showProfile : undefined}
         aria-label={author ? `${author} — view profile` : undefined}
         aria-hidden={author ? undefined : true}
       >
-        {label}
+        {showImage ? (
+          /* eslint-disable-next-line @next/next/no-img-element -- avatars come from arbitrary
+             third-party hosts (Google OAuth and Supabase Storage), so next/image remotePatterns
+             cannot be pinned safely. Sizes are small and CSS-cropped by .bf-avatar-img. */
+          <img
+            src={profile?.avatarUrl ?? ""}
+            alt={avatarLabel(displayName)}
+            className="bf-avatar-img"
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          label
+        )}
         {author ? <span className="sr-only">{author}</span> : null}
       </div>
       {showProfile && userId ? (
-        <div role="dialog" aria-label={`${author || 'Profile'} details`} className="bf-profile-card absolute bottom-10 left-0 z-30 w-52 rounded-xl border border-white/15 bg-[#111417] p-3 text-left shadow-2xl">
+        <div
+          role="dialog"
+          aria-label={`${author || "Profile"} details`}
+          className="bf-profile-card absolute bottom-10 left-0 z-30 w-52 rounded-xl border border-white/15 bg-[#111417] p-3 text-left shadow-2xl"
+        >
           {profile ? (
             <>
-              <p className="text-sm font-medium text-[#ece7de]">{profile.displayName || author || 'Member'}</p>
-              <p className="mt-1 text-xs text-[#9aa0a6]">{profile.displayId ? `#${profile.displayId}` : 'Member'}{profile.username ? ` · @${profile.username}` : ''}</p>
-              {profile.role ? <p className="mt-1 text-[10px] uppercase tracking-[0.15em] text-[#b8763b]">{profile.role}</p> : null}
+              <div className="flex items-center gap-2.5">
+                {profile.avatarUrl && !imageFailed ? (
+                  /* eslint-disable-next-line @next/next/no-img-element -- same as the avatar
+                     button above: third-party avatar hosts cannot be pinned in remotePatterns. */
+                  <img
+                    src={profile.avatarUrl}
+                    alt={avatarLabel(displayName)}
+                    className="bf-avatar-img h-9 w-9 rounded-full"
+                    onError={() => setImageFailed(true)}
+                  />
+                ) : (
+                  <span
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+                    style={avatarTone(userId)}
+                    aria-hidden="true"
+                  >
+                    {initialsFor(displayName)}
+                  </span>
+                )}
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-[#ece7de]">
+                    {displayName || "Member"}
+                  </p>
+                  <p className="truncate text-xs text-[#9aa0a6]">
+                    {profile.username
+                      ? `@${profile.username}`
+                      : profile.displayId
+                        ? `#${profile.displayId}`
+                        : ""}
+                  </p>
+                </div>
+              </div>
+              {profile.role ? (
+                <p className="mt-2 text-[10px] uppercase tracking-[0.15em] text-[#b8763b]">
+                  {profile.role}
+                </p>
+              ) : null}
             </>
-          ) : <p className="text-xs text-[#9aa0a6]">Loading profile…</p>}
+          ) : (
+            <p className="text-xs text-[#9aa0a6]">Loading profile…</p>
+          )}
         </div>
       ) : null}
     </div>
   );
 }
 
-const REACTION_EMOJI = ['👍', '❤️', '🎉', '👀'] as const;
+// BrandForge AI is software, not a person: it gets the BrandForge mark, never a
+// human-looking avatar, robot head or cartoon face.
+function BrandForgeMark() {
+  return (
+    <div
+      className="bf-ai-mark flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px]"
+      aria-hidden="true"
+    >
+      <span className="font-serif text-sm font-semibold">B</span>
+    </div>
+  );
+}
+
+// Collapsed-by-default activity summary. Only user-safe results of steps that actually
+// ran this turn — never chain-of-thought, system prompts or tool arguments.
+function Thoughts({ steps }: { steps: string[] }) {
+  if (steps.length === 0) return null;
+  return (
+    <details className="bf-thoughts">
+      <summary>
+        Thoughts · {steps.length} step{steps.length === 1 ? "" : "s"}
+      </summary>
+      <ul>
+        {steps.map((step, index) => (
+          <li key={`${step}-${index}`}>
+            <span aria-hidden="true">✓</span> {step}
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+const REACTION_EMOJI = ["👍", "❤️", "🎉", "👀"] as const;
 
 function MessageActions({
   message,
@@ -197,33 +338,72 @@ function MessageActions({
   return (
     <div className="mt-1 flex flex-wrap items-center gap-1.5">
       {REACTION_EMOJI.map((emoji) => {
-        const reaction = message.reactions?.find((entry) => entry.emoji === emoji);
+        const reaction = message.reactions?.find(
+          (entry) => entry.emoji === emoji,
+        );
         if (!reaction) return null;
         return (
-          <button key={emoji} type="button" disabled={busy} onClick={() => void run(() => onReact(emoji))}
-            className="rounded-full border border-white/10 px-2 py-0.5 text-xs hover:border-[#e8571e]">
+          <button
+            key={emoji}
+            type="button"
+            disabled={busy}
+            onClick={() => void run(() => onReact(emoji))}
+            className="rounded-full border border-white/10 px-2 py-0.5 text-xs hover:border-[#e8571e]"
+          >
             {emoji} {reaction.count}
           </button>
         );
       })}
-      <button type="button" disabled={busy} aria-label="React with thumbs up"
-        onClick={() => void run(() => onReact('👍'))} className="rounded px-1.5 py-0.5 text-xs text-[#9aa0a6] hover:bg-white/5">
+      <button
+        type="button"
+        disabled={busy}
+        aria-label="React with thumbs up"
+        onClick={() => void run(() => onReact("👍"))}
+        className="rounded px-1.5 py-0.5 text-xs text-[#9aa0a6] hover:bg-white/5"
+      >
         +👍
       </button>
       {canManage ? (
         <>
-          <button type="button" disabled={busy} onClick={() => setEditing((value) => !value)}
-            className="rounded px-1.5 py-0.5 text-xs text-[#9aa0a6] hover:bg-white/5">Edit</button>
-          <button type="button" disabled={busy} onClick={() => void run(onDelete)}
-            className="rounded px-1.5 py-0.5 text-xs text-[#9aa0a6] hover:bg-white/5">Delete</button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setEditing((value) => !value)}
+            className="rounded px-1.5 py-0.5 text-xs text-[#9aa0a6] hover:bg-white/5"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void run(onDelete)}
+            className="rounded px-1.5 py-0.5 text-xs text-[#9aa0a6] hover:bg-white/5"
+          >
+            Delete
+          </button>
         </>
       ) : null}
       {editing ? (
         <div className="mt-1 flex w-full gap-2">
-          <input value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={8000}
-            className="min-w-0 flex-1 rounded-lg border border-white/15 bg-[#14171a] px-2 py-1.5 text-sm text-[#ece7de]" />
-          <button type="button" disabled={busy || !draft.trim()} onClick={() => void run(async () => { await onEdit(draft); setEditing(false); })}
-            className="rounded-lg bg-[#e8571e] px-3 py-1.5 text-xs font-semibold text-[#14171a]">Save</button>
+          <input
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            maxLength={8000}
+            className="min-w-0 flex-1 rounded-lg border border-white/15 bg-[#14171a] px-2 py-1.5 text-sm text-[#ece7de]"
+          />
+          <button
+            type="button"
+            disabled={busy || !draft.trim()}
+            onClick={() =>
+              void run(async () => {
+                await onEdit(draft);
+                setEditing(false);
+              })
+            }
+            className="rounded-lg bg-[#e8571e] px-3 py-1.5 text-xs font-semibold text-[#14171a]"
+          >
+            Save
+          </button>
         </div>
       ) : null}
     </div>
@@ -235,32 +415,54 @@ function MessageActions({
 // enters the AI suggestion/approval queue. A new project starts in DISCOVERY, so the rail opens on
 // "Describe" and every later stage is visibly still ahead of the founder.
 const PROJECT_STAGES = [
-  { key: 'describe', label: 'Describe', hint: 'Tell us what you want built' },
-  { key: 'proposal', label: 'Proposal', hint: 'A specialist reviews and prices it' },
-  { key: 'fund', label: 'Fund', hint: 'You approve, then fund into escrow' },
-  { key: 'deliver', label: 'Deliver', hint: 'Work is built and milestone-released' },
+  { key: "describe", label: "Describe", hint: "Tell us what you want built" },
+  {
+    key: "proposal",
+    label: "Proposal",
+    hint: "A specialist reviews and prices it",
+  },
+  { key: "fund", label: "Fund", hint: "You approve, then fund into escrow" },
+  {
+    key: "deliver",
+    label: "Deliver",
+    hint: "Work is built and milestone-released",
+  },
 ] as const;
 
 function FirstRunRail() {
   return (
-    <ol className="mt-8 grid w-full max-w-xl grid-cols-2 gap-2 sm:grid-cols-4" aria-label="How a BrandForge project progresses">
+    <ol
+      className="mt-8 grid w-full max-w-xl grid-cols-2 gap-2 sm:grid-cols-4"
+      aria-label="How a BrandForge project progresses"
+    >
       {PROJECT_STAGES.map((stage, index) => (
-        <li key={stage.key} className="rounded-xl border border-white/10 bg-[#1c2024] p-3 text-left">
+        <li
+          key={stage.key}
+          className="rounded-xl border border-white/10 bg-[#1c2024] p-3 text-left"
+        >
           <div className="flex items-center gap-2">
             <span
               aria-hidden="true"
               className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold ${
-                index === 0 ? 'bg-[#e8571e] text-[#14171a]' : 'border border-white/15 text-[#6f757b]'
+                index === 0
+                  ? "bg-[#e8571e] text-[#14171a]"
+                  : "border border-white/15 text-[#6f757b]"
               }`}
             >
               {index + 1}
             </span>
-            <span className={`text-xs font-semibold ${index === 0 ? 'text-[#ece7de]' : 'text-[#9aa0a6]'}`}>
+            <span
+              className={`text-xs font-semibold ${index === 0 ? "text-[#ece7de]" : "text-[#9aa0a6]"}`}
+            >
               {stage.label}
             </span>
-            {index === 0 ? <span className="sr-only">(current stage)</span> : null}
+            {index === 0 ? (
+              <span className="sr-only">(current stage)</span>
+            ) : null}
           </div>
-          <p className="mt-1.5 text-[11px] leading-relaxed text-[#6f757b]">{stage.hint}</p>
+          <p className="mt-1.5 text-[11px] leading-relaxed text-[#6f757b]">
+            {stage.hint}
+          </p>
         </li>
       ))}
     </ol>
@@ -279,6 +481,9 @@ export function ChatTranscript({
   onEmbedAction,
   embedBusy,
   canDecide,
+  onAskFile,
+  selfRole,
+  participantRoles,
 }: {
   messages: ChatMessage[];
   isStreaming: boolean;
@@ -288,7 +493,11 @@ export function ChatTranscript({
   onDeleteMessage: (id: string) => Promise<void>;
   onReact: (id: string, emoji: string) => Promise<void>;
   conversationId: string;
-  onEmbedAction?: (embed: ChatEmbed, action: ChatEmbedAction, value?: string) => void;
+  onEmbedAction?: (
+    embed: ChatEmbed,
+    action: ChatEmbedAction,
+    value?: string,
+  ) => void;
   embedBusy?: boolean;
   /**
    * Only the founder who owns the project may accept a proposal or submit funding. Staff reading
@@ -296,26 +505,38 @@ export function ChatTranscript({
    * server will reject with 403.
    */
   canDecide?: boolean;
+  /** Prefills the composer with an "ask about this file" prompt for a readable attachment. */
+  onAskFile?: (fileName: string) => void;
+  /** The signed-in member's honest role label ("Founder", "BrandForge staff"), when known. */
+  selfRole?: string | null;
+  /** Lowercased display name -> role, built from the real participant roster. */
+  participantRoles?: Record<string, string>;
 }) {
   if (messages.length === 0) {
     return (
       <div className="mx-auto flex h-full w-full max-w-2xl flex-col items-center justify-center py-10 text-center">
-        <h1 className="font-serif text-3xl text-[#ece7de] sm:text-4xl">What are you building?</h1>
+        <h1 className="font-serif text-3xl text-[#ece7de] sm:text-4xl">
+          What are you building?
+        </h1>
         <p className="mt-4 max-w-xl text-base leading-relaxed text-[#9aa0a6]">
-          Tell me what you want built — a few sentences is enough to start. Share the problem and who
-          it is for, and I will turn it into requirements you can correct as we talk.
+          Tell me what you want built — a few sentences is enough to start.
+          Share the problem and who it is for, and I will turn it into
+          requirements you can correct as we talk.
         </p>
         <p className="mt-3 max-w-xl text-xs leading-relaxed text-[#6f757b]">
-          Your first message creates the project. A BrandForge specialist then reviews it in this same
-          chat and sends a priced proposal you can accept, decline, or send back with changes. Nothing
-          is charged before you approve a proposal, and your money is held in escrow until you approve
-          delivered work.
+          Your first message creates the project. A BrandForge specialist then
+          reviews it in this same chat and sends a priced proposal you can
+          accept, decline, or send back with changes. Nothing is charged before
+          you approve a proposal, and your money is held in escrow until you
+          approve delivered work.
         </p>
 
         <FirstRunRail />
 
         <div className="mt-8 flex w-full max-w-2xl flex-col gap-2">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-[#6f757b]">Or start from an example</p>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-[#6f757b]">
+            Or start from an example
+          </p>
           <div className="flex flex-col gap-2">
             {SUGGESTED_PROMPTS.map((prompt) => (
               <button
@@ -334,30 +555,42 @@ export function ChatTranscript({
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
-      {messages.map((message) => {
-        if (message.sender === 'system') {
+    <div className="mx-auto w-full max-w-3xl">
+      {messages.map((message, index) => {
+        if (message.sender === "system") {
           if (message.embed) {
             const embed = message.embed;
             return (
-              <div key={message.id} className="flex justify-center">
+              <div key={message.id} className="mt-4 flex justify-center">
                 <div className="w-full max-w-xl rounded-2xl border border-[#e8571e]/30 bg-[#1c2024] p-4 text-left">
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#b8763b]">Project action</p>
-                  <p className="mt-1 font-medium text-[#ece7de]">
-                    {embed.type === 'proposal' ? embed.title || 'Proposal ready' : embed.type === 'agreement' ? 'Agreement ready' : embed.type === 'funding' ? 'Funding action' : 'Review request'}
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#b8763b]">
+                    Project action
                   </p>
-                  <p className="mt-1 text-xs text-[#9aa0a6]">{message.content}</p>
+                  <p className="mt-1 font-medium text-[#ece7de]">
+                    {embed.type === "proposal"
+                      ? embed.title || "Proposal ready"
+                      : embed.type === "agreement"
+                        ? "Agreement ready"
+                        : embed.type === "funding"
+                          ? "Funding action"
+                          : "Review request"}
+                  </p>
+                  <p className="mt-1 text-xs text-[#9aa0a6]">
+                    {message.content}
+                  </p>
 
                   {showsFundingForm(embed, canDecide) ? (
                     <FundingForm
                       messageId={message.id}
                       disabled={embedBusy}
-                      onSubmit={(txHash) => onEmbedAction?.(embed, 'submit_funding', txHash)}
+                      onSubmit={(txHash) =>
+                        onEmbedAction?.(embed, "submit_funding", txHash)
+                      }
                     />
                   ) : null}
 
                   {/* A review_request is written after the handoff succeeds, so it is a receipt. */}
-                  {embed.type === 'review_request' ? (
+                  {embed.type === "review_request" ? (
                     <p className="mt-3 text-xs text-[#9aa0a6]">
                       Sent to the team — they will reply in this chat.
                     </p>
@@ -366,11 +599,11 @@ export function ChatTranscript({
                   <div className="mt-3 flex flex-wrap gap-2">
                     {/* Which controls appear is decided by the tested embed-actions module. */}
                     {embedActions({ embed, canDecide }).map((item) =>
-                      item.action === 'details' ? (
+                      item.action === "details" ? (
                         <button
                           key={item.action}
                           type="button"
-                          onClick={() => onEmbedAction?.(embed, 'details')}
+                          onClick={() => onEmbedAction?.(embed, "details")}
                           className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[#ece7de]"
                         >
                           {item.label}
@@ -385,7 +618,7 @@ export function ChatTranscript({
                         >
                           {item.label}
                         </button>
-                      )
+                      ),
                     )}
                   </div>
                 </div>
@@ -393,7 +626,7 @@ export function ChatTranscript({
             );
           }
           return (
-            <div key={message.id} className="flex justify-center">
+            <div key={message.id} className="mt-4 flex justify-center">
               <p className="rounded-full border border-[#5aa578]/30 bg-[#5aa578]/10 px-4 py-2 text-center text-xs leading-relaxed text-[#d9f7ea]">
                 {message.content}
               </p>
@@ -401,97 +634,189 @@ export function ChatTranscript({
           );
         }
 
-        const isUser = message.sender === 'user';
-        const isHuman = message.sender === 'human';
+        const isUser = message.sender === "user";
+        const isHuman = message.sender === "human";
+        const isAI = message.sender === "ai";
+        const artifact = message.artifactData;
 
         // Pillar A: a human message is always a named person. Older rows stored before
         // sender_name existed fall back to a neutral word rather than inventing a team identity.
-        const authorName = message.senderName?.trim() || (isHuman ? 'BrandForge' : '');
+        const authorName = isAI
+          ? "BrandForge AI"
+          : message.senderName?.trim() || (isHuman ? "BrandForge" : "You");
         const authorInitials = initialsFor(authorName);
 
+        // Grouped-message behavior: avatar and name appear on the first message of a run,
+        // follow-ups tuck underneath with a compact gap. System pills and embeds break groups.
+        const previous = messages[index - 1];
+        const grouped = Boolean(
+          previous &&
+          previous.sender !== "system" &&
+          previous.sender === message.sender &&
+          (message.sender !== "human" ||
+            (previous.senderName ?? "") === (message.senderName ?? "")),
+        );
+
+        const roleLabel = isAI
+          ? "Execution Assistant"
+          : isUser
+            ? selfRole || null
+            : participantRoles?.[authorName.trim().toLowerCase()] || null;
+
         return (
-          <div key={message.id} className={`flex gap-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
+          <div
+            key={message.id}
+            className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"} ${grouped ? "mt-1.5" : "mt-5"}`}
+          >
             {!isUser ? (
-              <Avatar
-                label={isHuman ? authorInitials : 'AI'}
-                tone={isHuman ? 'human' : 'ember'}
-              />
+              grouped ? (
+                <div className="w-8 shrink-0" aria-hidden="true" />
+              ) : isAI ? (
+                <BrandForgeMark />
+              ) : (
+                <Avatar
+                  label={authorInitials}
+                  author={authorName}
+                  userId={message.senderId}
+                  conversationId={conversationId}
+                />
+              )
             ) : null}
 
-            <div className={`max-w-2xl ${isUser ? 'order-first' : ''}`}>
-              {isHuman ? (
-                <p className="mb-1 text-xs font-medium tracking-wide text-[#b8763b]">
-                  {authorName}
+            <div
+              className={`min-w-0 max-w-2xl ${isUser ? "order-first flex flex-col items-end" : ""}`}
+            >
+              {!grouped ? (
+                <p className="mb-1 flex items-baseline gap-2">
+                  <span className="text-[13px] font-semibold text-[#ece7de]">
+                    {authorName}
+                  </span>
+                  {roleLabel ? (
+                    <span className="text-[10px] uppercase tracking-[0.14em] text-[#6f757b]">
+                      {roleLabel}
+                    </span>
+                  ) : null}
                 </p>
               ) : null}
               <div
-                className={`whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                  isUser
-                    ? 'bg-[#e8571e] text-[#14171a]'
-                    : 'border border-white/10 bg-[#1c2024] text-[#ece7de]'
-                }`}
+                className={
+                  isAI
+                    ? "bf-ai-content"
+                    : `whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed border border-white/10 text-[#ece7de] ${
+                        isUser ? "bg-[#20262b]" : "bg-[#1c2024]"
+                      }`
+                }
               >
-                {message.artifactData ? (
+                {artifact ? (
                   <div className="mb-2">
-                     {message.artifactData.contentType?.startsWith('audio/') ? (
-                       <audio controls preload="none" className="mb-2 w-full max-w-sm" aria-label={`Audio attachment ${message.artifactData.name}`}>
-                         <source src={`/api/attachments?path=${encodeURIComponent(message.artifactData.path)}`} type={message.artifactData.contentType} />
-                       </audio>
-                     ) : null}
-                    {message.artifactData.contentType?.startsWith('image/') ? (
-                       // Attachments stream from the authenticated /api/attachments route with a
-                       // runtime path, so next/image optimization would drop the session check.
-                       // eslint-disable-next-line @next/next/no-img-element
+                    {artifact.contentType?.startsWith("audio/") ? (
+                      <audio
+                        controls
+                        preload="none"
+                        className="mb-2 w-full max-w-sm"
+                        aria-label={`Audio attachment ${artifact.name}`}
+                      >
+                        <source
+                          src={`/api/attachments?path=${encodeURIComponent(artifact.path)}`}
+                          type={artifact.contentType}
+                        />
+                      </audio>
+                    ) : null}
+                    {artifact.contentType?.startsWith("image/") ? (
+                      // Attachments stream from the authenticated /api/attachments route with a
+                      // runtime path, so next/image optimization would drop the session check.
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={`/api/attachments?path=${encodeURIComponent(message.artifactData.path)}`}
-                        alt={message.artifactData.name}
+                        src={`/api/attachments?path=${encodeURIComponent(artifact.path)}`}
+                        alt={artifact.name}
                         className="mb-2 max-h-64 max-w-full rounded-xl border border-white/10 object-contain"
                       />
                     ) : null}
                     <a
-                      href={`/api/attachments?path=${encodeURIComponent(message.artifactData.path)}`}
+                      href={`/api/attachments?path=${encodeURIComponent(artifact.path)}`}
                       className="flex items-center gap-2 rounded-xl border border-[#e8571e]/30 bg-[#14171a]/50 px-3 py-2 text-xs text-[#ece7de] hover:border-[#e8571e]"
                     >
-                    <span aria-hidden="true">↗</span>
-                    <span className="min-w-0 flex-1 truncate">{message.artifactData.name}</span>
-                      <span className="text-[10px] text-[#9aa0a6]">{Math.ceil(message.artifactData.size / 1024)} KB</span>
+                      <span aria-hidden="true">↗</span>
+                      <span className="min-w-0 flex-1 truncate">
+                        {artifact.name}
+                      </span>
+                      <span className="text-[10px] text-[#9aa0a6]">
+                        {Math.ceil(artifact.size / 1024)} KB
+                      </span>
                     </a>
+                    {/* Only genuinely readable files get an "ask" shortcut - never imply the AI
+                        can open a PDF or image it has no parser for. */}
+                    {onAskFile && isDirectlyReadable(artifact.contentType) ? (
+                      <button
+                        type="button"
+                        onClick={() => onAskFile(artifact.name)}
+                        className="mt-2 text-xs font-semibold text-[#b8763b] transition hover:text-[#ece7de]"
+                      >
+                        Ask BrandForge about this file
+                      </button>
+                    ) : null}
                   </div>
                 ) : null}
-                {message.content}
-                {message.editedAt ? <span className={isUser ? 'ml-2 text-[10px] opacity-60' : 'ml-2 text-[10px] text-[#9aa0a6]'}>edited</span> : null}
-                {message.streaming && !message.content ? (
-                  <span className="inline-flex gap-1">
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#9aa0a6]" />
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#9aa0a6] [animation-delay:120ms]" />
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#9aa0a6] [animation-delay:240ms]" />
+                {isAI ? (
+                  <RichContent content={message.content} />
+                ) : (
+                  message.content
+                )}
+                {message.editedAt ? (
+                  <span
+                    className={
+                      isUser
+                        ? "ml-2 text-[10px] opacity-60"
+                        : "ml-2 text-[10px] text-[#9aa0a6]"
+                    }
+                  >
+                    edited
                   </span>
                 ) : null}
+                {message.streaming && !message.content ? (
+                  <p className="bf-streaming-state" role="status">
+                    <span className="bf-streaming-dot" aria-hidden="true" />
+                    {message.status ?? "Working…"}
+                  </p>
+                ) : null}
               </div>
+              {isAI && message.thoughts && message.thoughts.length > 0 ? (
+                <Thoughts steps={message.thoughts} />
+              ) : null}
               <MessageActions
                 message={message}
-                canManage={Boolean(currentUserId && message.senderId === currentUserId)}
+                canManage={Boolean(
+                  currentUserId && message.senderId === currentUserId,
+                )}
                 onEdit={(content) => onEditMessage(message.id, content)}
                 onDelete={() => onDeleteMessage(message.id)}
                 onReact={(emoji) => onReact(message.id, emoji)}
               />
             </div>
 
-            {isUser ? <Avatar label="You" tone="trust" userId={message.senderId} conversationId={conversationId} /> : null}
+            {isUser ? (
+              grouped ? (
+                <div className="w-8 shrink-0" aria-hidden="true" />
+              ) : (
+                <Avatar
+                  label={authorInitials}
+                  author={authorName}
+                  userId={message.senderId}
+                  conversationId={conversationId}
+                />
+              )
+            ) : null}
           </div>
         );
       })}
 
       {isStreaming && !messages.some((message) => message.streaming) ? (
-        <div className="flex gap-4">
-          <Avatar label="AI" tone="ember" />
-          <div className="rounded-2xl border border-white/10 bg-[#1c2024] px-4 py-3">
-            <span className="inline-flex gap-1">
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#9aa0a6]" />
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#9aa0a6] [animation-delay:120ms]" />
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#9aa0a6] [animation-delay:240ms]" />
-            </span>
-          </div>
+        <div className="mt-5 flex gap-3">
+          <BrandForgeMark />
+          <p className="bf-streaming-state" role="status">
+            <span className="bf-streaming-dot" aria-hidden="true" />
+            Working…
+          </p>
         </div>
       ) : null}
     </div>

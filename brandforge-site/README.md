@@ -85,7 +85,10 @@ founder message
        ├─ persist the founder message                        messages
        ├─ load the transcript from the database (the client never supplies history)
        ├─ system prompt + CURRENT PROJECT STATE block (read from the database)
+       ├─ file context: recent text attachments are really read (budgeted) and appended  file-context.js
        ├─ OpenRouter stream: SSE deltas forwarded to the browser as they arrive
+       │    └─ type: "activity" events name each step that actually ran (project read, file read,
+       │       tool executed) so the UI can show them under the answer as "Thoughts"
        ├─ tool calls → lib/ai-tools.ts      validate → write → return the result to the model
        └─ persist the reply, recompute discovery, return the state snapshot
 ```
@@ -96,7 +99,7 @@ Key modules:
 | --- | --- |
 | `app/page.tsx` | Landing "What are you building?" → creates the conversation, hands off to the chat. |
 | `components/chat-workspace.tsx` | Chat orchestration: streaming, transcript, sidebars, proposal/payment actions. |
-| `components/conversation-rail.tsx` | Single left sidebar for chat **and** every AppShell page: logo, New Chat, Recents (delete + "team in chat" marker), platform counters (users, online, staff on), user card footer. |
+| `components/conversation-rail.tsx` | Single left sidebar for chat **and** every AppShell page: logo, New Chat, Recents (delete + "team in chat" marker), collapsible icon rail, account footer with @handle/role + Settings + Sign out. No platform-wide counters. |
 | `components/chat-transcript.tsx` | Messages, empty state, suggested prompts. |
 | `components/project-context-panel.tsx` | Right sidebar: status, discovery, requirements, open questions, milestones, AI estimate, proposal, agreement, payments. |
 | `app/api/chat/route.ts` | Exactly one conversation turn, server-authoritative. |
@@ -104,6 +107,10 @@ Key modules:
 | `lib/ai-tools.ts` | Server-side validation and execution of every AI tool call. |
 | `lib/conversation-state.ts` | Snapshot composition, discovery sync, client state payload. |
 | `lib/discovery.js` | Deterministic discovery scoring, shared by the API and the AI tool (unit tested). |
+| `lib/file-context.js` | Turns recent attachments into an honest prompt block: text/csv/json/markdown are read under a per-file and total character budget, binaries are listed as "listed only" — never summarised (unit tested). |
+| `lib/markdown.js` | Safe markdown parser: emits a token tree (headings, lists, code, links limited to http/https/relative), never raw HTML (unit tested). |
+| `components/rich-content.tsx` | Renders that token tree as the AI answer's editorial content. |
+| `lib/identity-display.js` | Deterministic identity display: initials, hover label, hash-stable avatar tone, role formatting (unit tested). |
 | `lib/project-db.ts` | All chat-table access through the request-scoped Supabase session (RLS enforced). |
 | `proxy.ts` | Next 16 `proxy` (formerly middleware): auth gate for `/chat`, `/settings`, `/apply`, `/admin`; strips client-supplied `x-user-*` headers (H6); legacy `/signup` → `/login`. |
 
@@ -186,8 +193,9 @@ Weighted, deterministic (`lib/discovery.js`): project name 10, problem statement
   policy. The route answers `503` if `SUPABASE_SERVICE_ROLE_KEY` is missing. The service-role
   client may only be imported by `lib/project-db.ts` — enforced in CI by
   `lib/service-role-allowlist.test.js` (audit H7).
-- "Online" in the sidebar is live Realtime presence (`lib/presence.ts`), not stored presence: it
-  counts open tabs, so it reads `—` when Realtime is unavailable rather than guessing.
+- The sidebar no longer shows platform-wide "online" counters (removed with the Workspace UX 2.0
+  cleanup, 2026-09-26). `lib/presence.ts` still provides per-conversation presence, which drives the
+  typing indicator and the "who else is here" label — signals you can act on.
 - Staff can read any chat's history. The API gate is `canAccessConversation(..., { allowStaff: true })`
   and the founder-scoped tables (requirements, milestones, proposals, agreements, payments,
   participants) are read with the service role (`readClient(asStaff)`), because RLS only grants staff
@@ -218,11 +226,13 @@ Closed testing runs two accounts:
 - Joining writes a `participants` row and a system line into the founder's transcript, so both
   sides see the team arrive. Human replies land as `messages.sender_type = 'human_operator'`
   (`sender: 'human'` in the transcript).
-- The chat shell follows the premium LLM layout: left rail (New Chat, Projects, live Activity,
-  Recents, user card with Settings/Sign out), center conversation with a sticky composer, and a
-  right insights panel that is **hidden by default** behind the header toggle. On mobile, the
-  rail and the insights panel become drawers.
-- `GET /api/stats` feeds the rail's live activity tiles (projects, messages, tasks shipped/open).
+- The chat shell follows the premium LLM layout: left rail (New Chat, Recents, account footer with
+  @handle/role + Settings/Sign out), center conversation with a sticky composer, and a right
+  insights panel that is **hidden by default** behind the header toggle. The rail collapses to an
+  icon strip and remembers that choice in `localStorage` (`brandforge:rail-collapsed`). On mobile,
+  the rail and the insights panel become drawers.
+- `GET /api/stats` now only supplies the rail's `isStaff` / `isAdmin` flags; the platform-wide
+  counters it used to feed were removed with Workspace UX 2.0 (they measured nobody's work).
 - `GET /auth/signout` clears the Supabase session and returns to the landing page.
 
 ## Public launch status (2026-09-22)

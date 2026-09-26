@@ -1,16 +1,27 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useRealtimeMessages } from '@/lib/realtime-messages';
-import { useConversationPresence } from '@/lib/presence';
-import { formatTypingLabel } from '@/lib/presence-utils';
-import { useRouter, useSearchParams } from 'next/navigation';
-import type { ClientProjectState } from '@/lib/conversation-state';
-import { insertComposerCommand, parseChatEmbed, parseSlashCommand, validateAttachment, validateMessageInput } from '@/lib/message-actions';
-import { summarizeTaskProgress } from '@/lib/task-board';
-import { shapeTaskRoster } from '@/lib/task-board';
-import { ChatTranscript, type ChatMessage } from '@/components/chat-transcript';
-import { ConversationRail, relativeTime, type RecentConversation } from '@/components/conversation-rail';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRealtimeMessages } from "@/lib/realtime-messages";
+import { useConversationPresence } from "@/lib/presence";
+import { formatTypingLabel } from "@/lib/presence-utils";
+import { avatarTone, formatRole, initialsFor } from "@/lib/identity-display";
+import { useRouter, useSearchParams } from "next/navigation";
+import type { ClientProjectState } from "@/lib/conversation-state";
+import {
+  insertComposerCommand,
+  parseChatEmbed,
+  parseSlashCommand,
+  validateAttachment,
+  validateMessageInput,
+} from "@/lib/message-actions";
+import { summarizeTaskProgress } from "@/lib/task-board";
+import { shapeTaskRoster } from "@/lib/task-board";
+import { ChatTranscript, type ChatMessage } from "@/components/chat-transcript";
+import {
+  ConversationRail,
+  relativeTime,
+  type RecentConversation,
+} from "@/components/conversation-rail";
 import {
   ProjectContextPanel,
   STATUS_LABELS,
@@ -18,7 +29,7 @@ import {
   type PaymentSummary,
   type ProposalSummary,
   type TaskParticipant,
-} from '@/components/project-context-panel';
+} from "@/components/project-context-panel";
 
 interface PersistedMessage {
   id: string;
@@ -35,14 +46,14 @@ interface PersistedMessage {
 }
 
 function toChatMessage(message: PersistedMessage): ChatMessage {
-  const sender: ChatMessage['sender'] =
-    message.sender_type === 'user'
-      ? 'user'
-      : message.sender_type === 'ai'
-        ? message.content_type === 'system'
-          ? 'system'
-          : 'ai'
-        : 'human';
+  const sender: ChatMessage["sender"] =
+    message.sender_type === "user"
+      ? "user"
+      : message.sender_type === "ai"
+        ? message.content_type === "system"
+          ? "system"
+          : "ai"
+        : "human";
 
   return {
     id: message.id,
@@ -53,21 +64,46 @@ function toChatMessage(message: PersistedMessage): ChatMessage {
     senderId: message.sender_id ?? null,
     editedAt: message.edited_at ?? null,
     reactions: message.reactions ?? [],
-    artifactData: (message.artifact_data && typeof message.artifact_data.path === 'string' ? message.artifact_data as { path: string; name: string; size: number; contentType: string } : null),
-    embed: parseChatEmbed(message.artifact_data) as ChatMessage['embed'],
+    artifactData:
+      message.artifact_data && typeof message.artifact_data.path === "string"
+        ? (message.artifact_data as {
+            path: string;
+            name: string;
+            size: number;
+            contentType: string;
+          })
+        : null,
+    embed: parseChatEmbed(message.artifact_data) as ChatMessage["embed"],
   };
 }
+
+// Shortcut prefixes for the new-chat screen. They prefill the composer rather than
+// sending anything - shortcuts, not a rigid form.
+const STARTERS = [
+  { label: "Build a SaaS", prefix: "I want to build a SaaS that " },
+  { label: "Launch a website", prefix: "I want to launch a website for " },
+  { label: "Create an app", prefix: "I want to create an app that " },
+  {
+    label: "Automate a business",
+    prefix: "I want to automate this business process: ",
+  },
+  { label: "Something else", prefix: "" },
+];
 
 export function ChatWorkspace() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const conversationId = searchParams.get('conversationId') ?? '';
+  const conversationId = searchParams.get("conversationId") ?? "";
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [state, setState] = useState<ClientProjectState | null>(null);
   const [recents, setRecents] = useState<RecentConversation[]>([]);
   // Staff accounts see every conversation plus how many nobody has picked up yet.
-  const [railMeta, setRailMeta] = useState<{ isStaff: boolean; unseenCount: number; userId: string | null }>({
+  const [railMeta, setRailMeta] = useState<{
+    isStaff: boolean;
+    unseenCount: number;
+    userId: string | null;
+  }>({
     isStaff: false,
     unseenCount: 0,
     userId: null,
@@ -76,9 +112,13 @@ export function ChatWorkspace() {
   const [agreement, setAgreement] = useState<AgreementSummary | null>(null);
   const [payments, setPayments] = useState<PaymentSummary[]>([]);
   // Roster for the task assignee picker: people already in this chat (staff + founder).
-  const [taskParticipants, setTaskParticipants] = useState<TaskParticipant[]>([]);
-  const [aiDrafts, setAiDrafts] = useState<{ id: string; content: string; created_at: string | null }[]>([]);
-  const [input, setInput] = useState('');
+  const [taskParticipants, setTaskParticipants] = useState<TaskParticipant[]>(
+    [],
+  );
+  const [aiDrafts, setAiDrafts] = useState<
+    { id: string; content: string; created_at: string | null }[]
+  >([]);
+  const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [isBooting, setIsBooting] = useState(false);
 
@@ -88,8 +128,9 @@ export function ChatWorkspace() {
   const selfPresence = railMeta.userId
     ? {
         userId: railMeta.userId,
-        name: state?.title?.trim() ||
-          (railMeta.isStaff ? 'BrandForge specialist' : 'You'),
+        name:
+          state?.title?.trim() ||
+          (railMeta.isStaff ? "BrandForge specialist" : "You"),
         staff: railMeta.isStaff,
       }
     : null;
@@ -97,14 +138,24 @@ export function ChatWorkspace() {
   // Typing is derived from the composer: non-empty input, and reset as soon as it is sent.
   // Presence and typing share one Realtime channel so a topic is never subscribed twice.
   const [isTyping, setIsTyping] = useState(false);
-  const livePresence = useConversationPresence(conversationId, selfPresence, isTyping);
+  const livePresence = useConversationPresence(
+    conversationId,
+    selfPresence,
+    isTyping,
+  );
   const typingLabel = formatTypingLabel(livePresence.typing);
 
   // Rows already rendered, so a pushed row can never duplicate one the poll just delivered.
   const seenMessageIdsRef = useRef<Set<string>>(new Set());
 
   const handleLiveMessage = useCallback(
-    (row: { id: string; sender_type: string; content: string; content_type: string | null; created_at: string | null }) => {
+    (row: {
+      id: string;
+      sender_type: string;
+      content: string;
+      content_type: string | null;
+      created_at: string | null;
+    }) => {
       if (seenMessageIdsRef.current.has(row.id)) {
         return;
       }
@@ -121,29 +172,43 @@ export function ChatWorkspace() {
       // While our own turn is streaming, the assistant bubble is already on screen. The real
       // row arrives over this same channel once the AI finishes, so accepting it now would show
       // the answer twice. The post-turn refreshMessages() picks it up instead.
-      if (isStreaming && incoming.sender === 'ai') {
+      if (isStreaming && incoming.sender === "ai") {
         return;
       }
 
       setMessages((current) =>
-        current.some((entry) => entry.id === incoming.id) ? current : [...current, incoming]
+        current.some((entry) => entry.id === incoming.id)
+          ? current
+          : [...current, incoming],
       );
     },
-    [isStreaming]
+    [isStreaming],
   );
 
   useRealtimeMessages(conversationId, handleLiveMessage, (event, row) => {
-    if (event === 'deleted') {
+    if (event === "deleted") {
       seenMessageIdsRef.current.delete(row.id);
-      setMessages((current) => current.filter((message) => message.id !== row.id));
+      setMessages((current) =>
+        current.filter((message) => message.id !== row.id),
+      );
       return;
     }
-    setMessages((current) => current.map((message) => message.id === row.id
-      ? { ...message, content: row.content, editedAt: row.edited_at ?? message.editedAt }
-      : message));
+    setMessages((current) =>
+      current.map((message) =>
+        message.id === row.id
+          ? {
+              ...message,
+              content: row.content,
+              editedAt: row.edited_at ?? message.editedAt,
+            }
+          : message,
+      ),
+    );
   });
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [attachment, setAttachment] = useState<File | null>(null);
+  // Real upload state: "Uploading…" only while the POST is actually in flight.
+  const [isUploading, setIsUploading] = useState(false);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [commandStatus, setCommandStatus] = useState<string | null>(null);
@@ -151,9 +216,41 @@ export function ChatWorkspace() {
   // until the user asks for it. On mobile both become drawers.
   const [isRailOpen, setIsRailOpen] = useState(false);
   const [isContextOpen, setIsContextOpen] = useState(false);
+  // Popover menus: attachments, composer actions, conversation menu, project team.
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  const [commandsOpen, setCommandsOpen] = useState(false);
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const [teamOpen, setTeamOpen] = useState(false);
 
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const autoAnsweredRef = useRef<Set<string>>(new Set());
+
+  // Close every popover on outside click or Escape so no menu can strand focus.
+  useEffect(() => {
+    if (!attachMenuOpen && !commandsOpen && !headerMenuOpen && !teamOpen)
+      return;
+    const closeAll = () => {
+      setAttachMenuOpen(false);
+      setCommandsOpen(false);
+      setHeaderMenuOpen(false);
+      setTeamOpen(false);
+    };
+    const onMouseDown = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target || !target.closest?.(".bf-menu-root")) closeAll();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeAll();
+    };
+    document.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [attachMenuOpen, commandsOpen, headerMenuOpen, teamOpen]);
 
   // Reset the workspace when the conversation changes (React-endorsed render-phase pattern,
   // avoids synchronous setState inside an effect).
@@ -180,64 +277,86 @@ export function ChatWorkspace() {
 
   const loadRecents = useCallback(async () => {
     try {
-      const response = await fetch('/api/conversations-list');
-      if (!response.ok) return { isStaff: false, unseenCount: 0, userId: null, conversations: [] as RecentConversation[] };
+      const response = await fetch("/api/conversations-list");
+      if (!response.ok)
+        return {
+          isStaff: false,
+          unseenCount: 0,
+          userId: null,
+          conversations: [] as RecentConversation[],
+        };
       const data = await response.json();
-      const conversations: RecentConversation[] = Array.isArray(data.conversations)
+      const conversations: RecentConversation[] = Array.isArray(
+        data.conversations,
+      )
         ? data.conversations
         : [];
       setRecents(conversations);
       const meta = {
         isStaff: Boolean(data.isStaff),
         unseenCount: Number(data.unseenCount ?? 0),
-        userId: typeof data.userId === 'string' ? data.userId : null,
+        userId: typeof data.userId === "string" ? data.userId : null,
       };
       setRailMeta(meta);
       return { ...meta, conversations };
     } catch {
       // Recents are a convenience feed; a failure must not break the conversation.
-      return { isStaff: false, unseenCount: 0, userId: null, conversations: [] as RecentConversation[] };
+      return {
+        isStaff: false,
+        unseenCount: 0,
+        userId: null,
+        conversations: [] as RecentConversation[],
+      };
     }
   }, []);
 
-  const refreshMessages = useCallback(async (id: string): Promise<ChatMessage[]> => {
-    const response = await fetch(`/api/messages?conversationId=${id}`);
-    if (!response.ok) return [];
+  const refreshMessages = useCallback(
+    async (id: string): Promise<ChatMessage[]> => {
+      const response = await fetch(`/api/messages?conversationId=${id}`);
+      if (!response.ok) return [];
 
-    const data = await response.json();
-    const mapped: ChatMessage[] = (Array.isArray(data.messages) ? data.messages : []).map(toChatMessage);
-    setMessages(mapped);
+      const data = await response.json();
+      const mapped: ChatMessage[] = (
+        Array.isArray(data.messages) ? data.messages : []
+      ).map(toChatMessage);
+      setMessages(mapped);
 
-    // Seed the realtime dedupe set from the authoritative fetch. Without this, a row delivered
-    // by polling and then pushed over the channel in the same tick would render twice.
-    const seen = new Set<string>();
-    for (const entry of Array.isArray(data.messages) ? data.messages : []) {
-      const id = (entry as { id?: unknown })?.id;
-      if (id) {
-        seen.add(String(id));
+      // Seed the realtime dedupe set from the authoritative fetch. Without this, a row delivered
+      // by polling and then pushed over the channel in the same tick would render twice.
+      const seen = new Set<string>();
+      for (const entry of Array.isArray(data.messages) ? data.messages : []) {
+        const id = (entry as { id?: unknown })?.id;
+        if (id) {
+          seen.add(String(id));
+        }
       }
-    }
-    seenMessageIdsRef.current = seen;
+      seenMessageIdsRef.current = seen;
 
-    return mapped;
-  }, []);
+      return mapped;
+    },
+    [],
+  );
 
-  const refreshState = useCallback(async (id: string): Promise<ClientProjectState | null> => {
-    const response = await fetch(`/api/project-context?conversationId=${id}`);
-    if (!response.ok) return null;
+  const refreshState = useCallback(
+    async (id: string): Promise<ClientProjectState | null> => {
+      const response = await fetch(`/api/project-context?conversationId=${id}`);
+      if (!response.ok) return null;
 
-    const data = await response.json();
-    setState(data.state ?? null);
+      const data = await response.json();
+      setState(data.state ?? null);
 
-    return (data.state ?? null) as ClientProjectState | null;
-  }, []);
+      return (data.state ?? null) as ClientProjectState | null;
+    },
+    [],
+  );
 
   const refreshArtifacts = useCallback(async (id: string) => {
-    const [proposalResult, agreementResult, participantsResult] = await Promise.all([
-      fetch(`/api/proposals?conversationId=${id}`),
-      fetch(`/api/agreements?conversationId=${id}`),
-      fetch(`/api/participants?conversationId=${id}`),
-    ]);
+    const [proposalResult, agreementResult, participantsResult] =
+      await Promise.all([
+        fetch(`/api/proposals?conversationId=${id}`),
+        fetch(`/api/agreements?conversationId=${id}`),
+        fetch(`/api/participants?conversationId=${id}`),
+      ]);
 
     if (proposalResult.ok) {
       const data = await proposalResult.json();
@@ -272,71 +391,124 @@ export function ChatWorkspace() {
       if (message) {
         setMessages((prev) => [
           ...prev,
-          { id: `local-user-${Date.now()}`, sender: 'user', content: message, createdAt: now },
+          {
+            id: `local-user-${Date.now()}`,
+            sender: "user",
+            content: message,
+            createdAt: now,
+          },
         ]);
       }
 
       setMessages((prev) => [
         ...prev,
-        { id: assistantMessageId, sender: 'ai', content: '', createdAt: now, streaming: true },
+        {
+          id: assistantMessageId,
+          sender: "ai",
+          content: "",
+          createdAt: now,
+          streaming: true,
+        },
       ]);
       scrollToBottom();
 
-      let streamedText = '';
+      let streamedText = "";
       let succeeded = false;
+      // Real activity labels streamed by the server for steps that actually ran this turn.
+      const turnThoughts: string[] = [];
+      let turnStatus = "Working…";
 
       try {
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ conversationId: id, ...(message ? { message } : {}) }),
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            conversationId: id,
+            ...(message ? { message } : {}),
+          }),
         });
 
         if (!response.ok) {
           const payload = await response.json().catch(() => ({}));
-          throw new Error(payload.error || 'BrandForge AI could not answer');
+          throw new Error(payload.error || "BrandForge AI could not answer");
         }
 
         const reader = response.body?.getReader();
 
         if (!reader) {
-          throw new Error('The response stream could not be read');
+          throw new Error("The response stream could not be read");
         }
 
         const decoder = new TextDecoder();
-        let buffer = '';
+        let buffer = "";
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
-          const frames = buffer.split('\n\n');
-          buffer = frames.pop() ?? '';
+          const frames = buffer.split("\n\n");
+          buffer = frames.pop() ?? "";
 
           for (const frame of frames) {
-            const line = frame.split('\n').find((entry) => entry.startsWith('data:'));
+            const line = frame
+              .split("\n")
+              .find((entry) => entry.startsWith("data:"));
             if (!line) continue;
 
-            let payload: { type?: string; chunk?: string; error?: string; state?: ClientProjectState };
+            let payload: {
+              type?: string;
+              chunk?: string;
+              error?: string;
+              state?: ClientProjectState;
+              label?: string;
+            };
             try {
               payload = JSON.parse(line.slice(5).trim());
             } catch {
               continue;
             }
 
-            if (payload.type === 'delta' && typeof payload.chunk === 'string') {
+            if (
+              payload.type === "activity" &&
+              typeof payload.label === "string"
+            ) {
+              // User-safe progress only ("Read project context") - never hidden reasoning.
+              if (turnThoughts[turnThoughts.length - 1] !== payload.label) {
+                turnThoughts.push(payload.label);
+              }
+              turnStatus = payload.label;
+              setMessages((prev) =>
+                prev.map((entry) =>
+                  entry.id === assistantMessageId
+                    ? {
+                        ...entry,
+                        thoughts: [...turnThoughts],
+                        status: turnStatus,
+                      }
+                    : entry,
+                ),
+              );
+              scrollToBottom();
+            } else if (
+              payload.type === "delta" &&
+              typeof payload.chunk === "string"
+            ) {
               streamedText += payload.chunk;
               setMessages((prev) =>
                 prev.map((entry) =>
-                  entry.id === assistantMessageId ? { ...entry, content: streamedText } : entry
-                )
+                  entry.id === assistantMessageId
+                    ? { ...entry, content: streamedText }
+                    : entry,
+                ),
               );
               scrollToBottom();
-            } else if (payload.type === 'state' && payload.state) {
+            } else if (payload.type === "state" && payload.state) {
               setState(payload.state);
-            } else if (payload.type === 'error') {
-              throw new Error(payload.error || 'BrandForge AI could not answer');
+            } else if (payload.type === "error") {
+              throw new Error(
+                payload.error || "BrandForge AI could not answer",
+              );
             }
           }
         }
@@ -344,9 +516,30 @@ export function ChatWorkspace() {
         succeeded = true;
         await refreshMessages(id);
         await loadRecents();
+
+        // Carry the real activity trail onto the persisted answer row so the collapsed
+        // "Thoughts" strip survives the reload from the database.
+        if (turnThoughts.length > 0) {
+          setMessages((prev) => {
+            if (prev.length === 0) return prev;
+            const last = prev[prev.length - 1];
+            if (last.sender !== "ai") return prev;
+            return prev.map((entry, index) =>
+              index === prev.length - 1
+                ? { ...entry, thoughts: [...turnThoughts] }
+                : entry,
+            );
+          });
+        }
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : 'BrandForge AI could not answer');
-        setMessages((prev) => prev.filter((entry) => entry.id !== assistantMessageId));
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : "BrandForge AI could not answer",
+        );
+        setMessages((prev) =>
+          prev.filter((entry) => entry.id !== assistantMessageId),
+        );
         // Never show a fabricated answer: reload reality and hand the text back for a retry.
         if (message) {
           setInput((current) => (current ? current : message));
@@ -361,7 +554,7 @@ export function ChatWorkspace() {
         await refreshState(id);
       }
     },
-    [loadRecents, refreshMessages, refreshState, scrollToBottom]
+    [loadRecents, refreshMessages, refreshState, scrollToBottom],
   );
 
   useEffect(() => {
@@ -401,15 +594,17 @@ export function ChatWorkspace() {
       // chat the staff member owns, they get the founder experience and the AI answers.
       const isOwn = Boolean(
         meta.userId &&
-          meta.conversations.some(
-            (conversation) => conversation.id === conversationId && conversation.ownerId === meta.userId
-          )
+        meta.conversations.some(
+          (conversation) =>
+            conversation.id === conversationId &&
+            conversation.ownerId === meta.userId,
+        ),
       );
 
       if (
         (!meta.isStaff || isOwn) &&
         lastMessage &&
-        lastMessage.sender === 'user' &&
+        lastMessage.sender === "user" &&
         !autoAnsweredRef.current.has(conversationId)
       ) {
         autoAnsweredRef.current.add(conversationId);
@@ -420,13 +615,21 @@ export function ChatWorkspace() {
     return () => {
       cancelled = true;
     };
-  }, [conversationId, loadRecents, refreshArtifacts, refreshMessages, refreshState, runTurn, scrollToBottom]);
+  }, [
+    conversationId,
+    loadRecents,
+    refreshArtifacts,
+    refreshMessages,
+    refreshState,
+    runTurn,
+    scrollToBottom,
+  ]);
 
   // New Chat is the landing view, not a stored row: the conversation is created by the first
   // message (handleSend), so no empty duplicate ever shows up in Recents.
   const handleNewChat = useCallback(() => {
     setError(null);
-    router.push('/chat');
+    router.push("/chat");
   }, [router]);
 
   const handleDeleteConversation = useCallback(
@@ -434,92 +637,144 @@ export function ChatWorkspace() {
       setError(null);
 
       try {
-        const response = await fetch('/api/conversations', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
+        const response = await fetch("/api/conversations", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ conversationId: id }),
         });
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-          throw new Error(data.error || 'The conversation could not be deleted');
+          throw new Error(
+            data.error || "The conversation could not be deleted",
+          );
         }
 
-        setRecents((current) => current.filter((conversation) => conversation.id !== id));
+        setRecents((current) =>
+          current.filter((conversation) => conversation.id !== id),
+        );
 
         if (id === conversationId) {
-          router.push('/chat');
+          router.push("/chat");
         }
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : 'The conversation could not be deleted');
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : "The conversation could not be deleted",
+        );
       }
     },
-    [conversationId, router]
+    [conversationId, router],
   );
 
   // Staff act as the team only inside chats owned by somebody else. A chat a staff member owns
   // is their own project: it behaves like any founder's chat (AI answers, founder actions).
   const isOwnConversation = Boolean(
     conversationId &&
-      railMeta.userId &&
-      recents.some(
-        (conversation) => conversation.id === conversationId && conversation.ownerId === railMeta.userId
-      )
+    railMeta.userId &&
+    recents.some(
+      (conversation) =>
+        conversation.id === conversationId &&
+        conversation.ownerId === railMeta.userId,
+    ),
   );
 
   const handleSend = useCallback(
     async (suggestion?: string) => {
       const checkedText = validateMessageInput((suggestion ?? input).trim());
-      const text = checkedText.value ?? '';
-      if (checkedText.error && !attachment) { setError(checkedText.error); return; }
+      const text = checkedText.value ?? "";
+      if (checkedText.error && !attachment) {
+        setError(checkedText.error);
+        return;
+      }
       const slash = parseSlashCommand(text);
       if (slash) {
-        if (slash.error) { setError(slash.error); return; }
-        setCommandStatus(null);
-        if (slash.command === 'help') { setCommandStatus('Commands: /progress, /review, /contract, /attach'); return; }
-        if (slash.command === 'contract') { setIsContextOpen(true); setCommandStatus('Review the proposal action, then accept to continue to the agreement and payment schedule.'); return; }
-        if (slash.command === 'attach') { setCommandStatus('Choose a file below the message box, then add a caption if you want context.'); return; }
-        if (slash.command === 'progress') {
-          setIsContextOpen(true);
-          const progress = summarizeTaskProgress(state?.tasks ?? []);
-          setError(`${progress.done}/${progress.total} complete · ${progress.inProgress} in progress · ${progress.review} awaiting review${progress.overdue ? ` · ${progress.overdue} overdue` : ''}`);
+        if (slash.error) {
+          setError(slash.error);
           return;
         }
-        if (slash.command === 'review') {
+        setCommandStatus(null);
+        if (slash.command === "help") {
+          setCommandStatus("Commands: /progress, /review, /contract, /attach");
+          return;
+        }
+        if (slash.command === "contract") {
+          setIsContextOpen(true);
+          setCommandStatus(
+            "Review the proposal action, then accept to continue to the agreement and payment schedule.",
+          );
+          return;
+        }
+        if (slash.command === "attach") {
+          setCommandStatus(
+            "Choose a file below the message box, then add a caption if you want context.",
+          );
+          return;
+        }
+        if (slash.command === "progress") {
+          setIsContextOpen(true);
+          const progress = summarizeTaskProgress(state?.tasks ?? []);
+          setError(
+            `${progress.done}/${progress.total} complete · ${progress.inProgress} in progress · ${progress.review} awaiting review${progress.overdue ? ` · ${progress.overdue} overdue` : ""}`,
+          );
+          return;
+        }
+        if (slash.command === "review") {
           setIsContextOpen(true);
           try {
-            const response = await fetch('/api/request-review', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId }) });
-            if (!response.ok) throw new Error('Review request failed');
-            setError('Project sent for review.');
-          } catch (cause) { setError(cause instanceof Error ? cause.message : 'Review request failed'); }
+            const response = await fetch("/api/request-review", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ conversationId }),
+            });
+            if (!response.ok) throw new Error("Review request failed");
+            setError("Project sent for review.");
+          } catch (cause) {
+            setError(
+              cause instanceof Error ? cause.message : "Review request failed",
+            );
+          }
           return;
         }
       }
 
       if (attachment) {
         const checkedFile = validateAttachment(attachment);
-        if (checkedFile.error) { setError(checkedFile.error); return; }
+        if (checkedFile.error) {
+          setError(checkedFile.error);
+          return;
+        }
         if (!conversationId) {
-          setError('Start a conversation before adding a file.');
+          setError("Start a conversation before adding a file.");
           return;
         }
 
         try {
+          setIsUploading(true);
           const form = new FormData();
-          form.set('conversationId', conversationId);
-          form.set('file', attachment);
-          form.set('caption', text);
-          const response = await fetch('/api/attachments', { method: 'POST', body: form });
+          form.set("conversationId", conversationId);
+          form.set("file", attachment);
+          form.set("caption", text);
+          const response = await fetch("/api/attachments", {
+            method: "POST",
+            body: form,
+          });
           const data = await response.json().catch(() => ({}));
-          if (!response.ok) throw new Error(data.error || 'The file could not be uploaded');
+          if (!response.ok)
+            throw new Error(data.error || "The file could not be uploaded");
           setAttachment(null);
-          setInput('');
+          setInput("");
           await refreshMessages(conversationId);
           await loadRecents();
         } catch (cause) {
-          setError(cause instanceof Error ? cause.message : 'The file could not be uploaded');
+          setError(
+            cause instanceof Error
+              ? cause.message
+              : "The file could not be uploaded",
+          );
         } finally {
-
+          setIsUploading(false);
         }
         return;
       }
@@ -528,7 +783,7 @@ export function ChatWorkspace() {
         return;
       }
 
-      setInput('');
+      setInput("");
 
       // BrandForge staff reply as the team (human_operator) inside a founder chat instead of
       // triggering the AI, so the founder always sees a human voice in the same chat. Sending
@@ -537,21 +792,25 @@ export function ChatWorkspace() {
         setIsStreaming(true);
 
         try {
-          const response = await fetch('/api/staff/post', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+          const response = await fetch("/api/staff/post", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ conversationId, message: text }),
           });
           const data = await response.json().catch(() => ({}));
 
           if (!response.ok) {
-            throw new Error(data.error || 'The message could not be sent');
+            throw new Error(data.error || "The message could not be sent");
           }
 
           await refreshMessages(conversationId);
           await loadRecents();
         } catch (cause) {
-          setError(cause instanceof Error ? cause.message : 'The message could not be sent');
+          setError(
+            cause instanceof Error
+              ? cause.message
+              : "The message could not be sent",
+          );
           setInput(text);
         } finally {
           setIsStreaming(false);
@@ -566,20 +825,24 @@ export function ChatWorkspace() {
         setIsCreatingConversation(true);
 
         try {
-          const response = await fetch('/api/conversations', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+          const response = await fetch("/api/conversations", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ initialMessage: text }),
           });
           const data = await response.json().catch(() => ({}));
 
           if (!response.ok || !data.conversationId) {
-            throw new Error(data.error || 'Could not start your project');
+            throw new Error(data.error || "Could not start your project");
           }
 
           router.push(`/chat?conversationId=${data.conversationId}`);
         } catch (cause) {
-          setError(cause instanceof Error ? cause.message : 'Could not start your project');
+          setError(
+            cause instanceof Error
+              ? cause.message
+              : "Could not start your project",
+          );
           setInput(text);
         } finally {
           setIsCreatingConversation(false);
@@ -590,7 +853,20 @@ export function ChatWorkspace() {
 
       await runTurn(conversationId, text);
     },
-    [attachment, conversationId, input, isOwnConversation, isStreaming, loadRecents, railMeta.isStaff, refreshMessages, router, runTurn, scrollToBottom, state?.tasks]
+    [
+      attachment,
+      conversationId,
+      input,
+      isOwnConversation,
+      isStreaming,
+      loadRecents,
+      railMeta.isStaff,
+      refreshMessages,
+      router,
+      runTurn,
+      scrollToBottom,
+      state?.tasks,
+    ],
   );
 
   // BrandForge staff: opening a chat IS picking it up. The join call registers the participant row
@@ -599,7 +875,12 @@ export function ChatWorkspace() {
   const pickedUpRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!conversationId || !railMeta.isStaff || isOwnConversation || pickedUpRef.current.has(conversationId)) {
+    if (
+      !conversationId ||
+      !railMeta.isStaff ||
+      isOwnConversation ||
+      pickedUpRef.current.has(conversationId)
+    ) {
       return;
     }
 
@@ -607,9 +888,9 @@ export function ChatWorkspace() {
 
     void (async () => {
       try {
-        await fetch('/api/staff/join', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        await fetch("/api/staff/join", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ conversationId }),
         });
         await loadRecents();
@@ -622,37 +903,47 @@ export function ChatWorkspace() {
   const handleMessageAction = useCallback(
     async (
       messageId: string,
-      action: 'edit' | 'delete' | 'react',
-      value?: string
+      action: "edit" | "delete" | "react",
+      value?: string,
     ) => {
       if (!conversationId) return;
-      const response = await fetch('/api/messages', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/messages", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messageId,
           action,
           conversationId,
-          ...(action === 'edit' ? { content: value } : {}),
-          ...(action === 'react' ? { emoji: value } : {}),
+          ...(action === "edit" ? { content: value } : {}),
+          ...(action === "react" ? { emoji: value } : {}),
         }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'Message action failed');
+      if (!response.ok) throw new Error(data.error || "Message action failed");
       await refreshMessages(conversationId);
     },
-    [conversationId, refreshMessages]
+    [conversationId, refreshMessages],
   );
 
-  const refreshAiDrafts = useCallback(async (id: string) => {
-    if (!id || !railMeta.isStaff) { setAiDrafts([]); return; }
-    try {
-      const response = await fetch(`/api/staff/ai-drafts?conversationId=${id}`);
-      if (!response.ok) return;
-      const data = await response.json().catch(() => ({}));
-      setAiDrafts(Array.isArray(data.drafts) ? data.drafts : []);
-    } catch { setAiDrafts([]); }
-  }, [railMeta.isStaff]);
+  const refreshAiDrafts = useCallback(
+    async (id: string) => {
+      if (!id || !railMeta.isStaff) {
+        setAiDrafts([]);
+        return;
+      }
+      try {
+        const response = await fetch(
+          `/api/staff/ai-drafts?conversationId=${id}`,
+        );
+        if (!response.ok) return;
+        const data = await response.json().catch(() => ({}));
+        setAiDrafts(Array.isArray(data.drafts) ? data.drafts : []);
+      } catch {
+        setAiDrafts([]);
+      }
+    },
+    [railMeta.isStaff],
+  );
 
   useEffect(() => {
     if (!conversationId || !railMeta.isStaff) {
@@ -661,41 +952,65 @@ export function ChatWorkspace() {
     }
     let cancelled = false;
     void fetch(`/api/staff/ai-drafts?conversationId=${conversationId}`)
-      .then((response) => response.ok ? response.json() : null)
-      .then((data) => { if (!cancelled) setAiDrafts(Array.isArray(data?.drafts) ? data.drafts : []); })
-      .catch(() => { if (!cancelled) setAiDrafts([]); });
-    return () => { cancelled = true; };
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (!cancelled)
+          setAiDrafts(Array.isArray(data?.drafts) ? data.drafts : []);
+      })
+      .catch(() => {
+        if (!cancelled) setAiDrafts([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [conversationId, railMeta.isStaff]);
 
-  const resolveDraft = useCallback(async (id: string, action: 'approve' | 'reject') => {
-    if (!conversationId) return;
-    setBusyAction(`draft-${id}`);
-    try {
-      const response = await fetch('/api/staff/ai-drafts', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messageId: id, conversationId, action }) });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'The AI draft could not be resolved');
-      await refreshAiDrafts(conversationId);
-      await refreshMessages(conversationId);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'The AI draft could not be resolved'); }
-    finally { setBusyAction(null); }
-  }, [conversationId, refreshAiDrafts, refreshMessages]);
+  const resolveDraft = useCallback(
+    async (id: string, action: "approve" | "reject") => {
+      if (!conversationId) return;
+      setBusyAction(`draft-${id}`);
+      try {
+        const response = await fetch("/api/staff/ai-drafts", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messageId: id, conversationId, action }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok)
+          throw new Error(data.error || "The AI draft could not be resolved");
+        await refreshAiDrafts(conversationId);
+        await refreshMessages(conversationId);
+      } catch (cause) {
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : "The AI draft could not be resolved",
+        );
+      } finally {
+        setBusyAction(null);
+      }
+    },
+    [conversationId, refreshAiDrafts, refreshMessages],
+  );
 
   const handleRequestReview = useCallback(async () => {
     if (!conversationId) return;
 
-    setBusyAction('review');
+    setBusyAction("review");
     setError(null);
 
     try {
-      const response = await fetch('/api/request-review', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/request-review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ conversationId }),
       });
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data.error || 'Could not send the requirements for review');
+        throw new Error(
+          data.error || "Could not send the requirements for review",
+        );
       }
 
       await Promise.all([
@@ -705,16 +1020,17 @@ export function ChatWorkspace() {
       ]);
     } catch (cause) {
       setError(
-        cause instanceof Error ? cause.message : 'Could not send the requirements for review'
+        cause instanceof Error
+          ? cause.message
+          : "Could not send the requirements for review",
       );
     } finally {
       setBusyAction(null);
     }
-
   }, [conversationId, loadRecents, refreshMessages, refreshState]);
 
   const handleProposalAction = useCallback(
-    async (action: 'accept' | 'decline' | 'request_changes') => {
+    async (action: "accept" | "decline" | "request_changes") => {
       if (!conversationId || !proposal) return;
 
       setBusyAction(action);
@@ -722,32 +1038,41 @@ export function ChatWorkspace() {
 
       try {
         const status =
-          action === 'accept' ? 'accepted' : action === 'decline' ? 'declined' : 'changes_requested';
+          action === "accept"
+            ? "accepted"
+            : action === "decline"
+              ? "declined"
+              : "changes_requested";
 
-        const response = await fetch('/api/proposals', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+        const response = await fetch("/api/proposals", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ proposalId: proposal.id, status }),
         });
 
         if (!response.ok) {
-          throw new Error('The proposal could not be updated');
+          throw new Error("The proposal could not be updated");
         }
 
-        if (action === 'accept') {
-          const agreementResponse = await fetch('/api/agreements', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+        if (action === "accept") {
+          const agreementResponse = await fetch("/api/agreements", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               conversationId,
               proposalId: proposal.id,
-              terms: `BrandForge project agreement for ${proposal.title}. Total ${proposal.currency} ${proposal.total_amount}. Estimated delivery ${proposal.estimated_weeks_min ?? '?'}-${proposal.estimated_weeks_max ?? '?'} weeks.`,
+              terms: `BrandForge project agreement for ${proposal.title}. Total ${proposal.currency} ${proposal.total_amount}. Estimated delivery ${proposal.estimated_weeks_min ?? "?"}-${proposal.estimated_weeks_max ?? "?"} weeks.`,
               totalAmount: proposal.total_amount,
             }),
           });
-          const agreementData = await agreementResponse.json().catch(() => ({}));
+          const agreementData = await agreementResponse
+            .json()
+            .catch(() => ({}));
           if (!agreementResponse.ok || !agreementData.success) {
-            throw new Error(agreementData.error || 'The proposal was accepted, but the agreement could not be created. Contact the team before funding.');
+            throw new Error(
+              agreementData.error ||
+                "The proposal was accepted, but the agreement could not be created. Contact the team before funding.",
+            );
           }
         }
 
@@ -757,12 +1082,16 @@ export function ChatWorkspace() {
           refreshMessages(conversationId),
         ]);
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : 'The proposal could not be updated');
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : "The proposal could not be updated",
+        );
       } finally {
         setBusyAction(null);
       }
     },
-    [conversationId, proposal, refreshArtifacts, refreshMessages, refreshState]
+    [conversationId, proposal, refreshArtifacts, refreshMessages, refreshState],
   );
 
   // Task status transitions from inside the chat. Founder sees accept/send-back on delivered
@@ -770,7 +1099,12 @@ export function ChatWorkspace() {
   const handleTaskAction = useCallback(
     async (
       taskId: string,
-      payload: { action?: string; status?: string; assigneeId?: string; dueDate?: string | null }
+      payload: {
+        action?: string;
+        status?: string;
+        assigneeId?: string;
+        dueDate?: string | null;
+      },
     ) => {
       if (!conversationId) return;
 
@@ -778,15 +1112,15 @@ export function ChatWorkspace() {
       setError(null);
 
       try {
-        const response = await fetch('/api/chat-tasks', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+        const response = await fetch("/api/chat-tasks", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ taskId, ...payload }),
         });
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-          throw new Error(data.error || 'Could not update the task');
+          throw new Error(data.error || "Could not update the task");
         }
 
         await Promise.all([
@@ -795,12 +1129,14 @@ export function ChatWorkspace() {
           refreshArtifacts(conversationId),
         ]);
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : 'Could not update the task');
+        setError(
+          cause instanceof Error ? cause.message : "Could not update the task",
+        );
       } finally {
         setBusyAction(null);
       }
     },
-    [conversationId, refreshArtifacts, refreshMessages, refreshState]
+    [conversationId, refreshArtifacts, refreshMessages, refreshState],
   );
 
   // Funding is real now: the founder pastes the crypto transaction hash after sending to the
@@ -809,19 +1145,19 @@ export function ChatWorkspace() {
     async (txHash: string) => {
       if (!conversationId || !agreement) return;
 
-      setBusyAction('fund');
+      setBusyAction("fund");
       setError(null);
 
       try {
-        const response = await fetch('/api/payments', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const response = await fetch("/api/payments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ agreementId: agreement.id, txHash }),
         });
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-          throw new Error(data.error || 'The payment could not be submitted');
+          throw new Error(data.error || "The payment could not be submitted");
         }
 
         await Promise.all([
@@ -830,33 +1166,51 @@ export function ChatWorkspace() {
           refreshMessages(conversationId),
         ]);
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : 'The payment could not be submitted');
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : "The payment could not be submitted",
+        );
       } finally {
         setBusyAction(null);
       }
     },
-    [agreement, conversationId, refreshArtifacts, refreshMessages, refreshState]
+    [
+      agreement,
+      conversationId,
+      refreshArtifacts,
+      refreshMessages,
+      refreshState,
+    ],
   );
 
   // Staff money actions: verify the transfer on-chain, reject it, or release a milestone
   // payment to the operator after founder approval.
   const handlePaymentAction = useCallback(
-    async (payload: { action: 'verify' | 'reject' | 'release'; paymentId?: string; note?: string }) => {
+    async (payload: {
+      action: "verify" | "reject" | "release";
+      paymentId?: string;
+      note?: string;
+    }) => {
       if (!conversationId || !agreement) return;
 
-      setBusyAction(payload.action === 'release' ? `release-${payload.paymentId}` : payload.action);
+      setBusyAction(
+        payload.action === "release"
+          ? `release-${payload.paymentId}`
+          : payload.action,
+      );
       setError(null);
 
       try {
-        const response = await fetch('/api/payments', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+        const response = await fetch("/api/payments", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ agreementId: agreement.id, ...payload }),
         });
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-          throw new Error(data.error || 'The payment action failed');
+          throw new Error(data.error || "The payment action failed");
         }
 
         await Promise.all([
@@ -865,21 +1219,72 @@ export function ChatWorkspace() {
           refreshMessages(conversationId),
         ]);
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : 'The payment action failed');
+        setError(
+          cause instanceof Error ? cause.message : "The payment action failed",
+        );
       } finally {
         setBusyAction(null);
       }
     },
-    [agreement, conversationId, refreshArtifacts, refreshMessages, refreshState]
+    [
+      agreement,
+      conversationId,
+      refreshArtifacts,
+      refreshMessages,
+      refreshState,
+    ],
   );
 
-  const projectLabel = state?.project.name || state?.title || 'New project';
+  const projectLabel = state?.project.name || state?.title || "New project";
   const taskProgress = summarizeTaskProgress(state?.tasks ?? []);
   const isBusy = isStreaming || isCreatingConversation;
+
+  // Honest role labels: founders own their chats; staff inside someone else's chat are staff.
+  const selfRoleLabel = railMeta.isStaff
+    ? isOwnConversation
+      ? "Founder"
+      : "BrandForge staff"
+    : conversationId
+      ? "Founder"
+      : null;
+
+  // Real roster -> role labels for message headers (lowercased-name lookup).
+  const participantRoles = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const person of taskParticipants) {
+      const name = person.displayName.trim().toLowerCase();
+      if (name && person.role) map[name] = formatRole(person.role);
+    }
+    return map;
+  }, [taskParticipants]);
+
+  // Files in this chat, derived from persisted attachment messages - never a fabricated list.
+  const conversationFiles = useMemo(() => {
+    const files: {
+      name: string;
+      size: number;
+      contentType: string;
+      path: string;
+    }[] = [];
+    const seen = new Set<string>();
+    for (const message of messages) {
+      const artifact = message.artifactData;
+      if (!artifact || seen.has(artifact.path)) continue;
+      seen.add(artifact.path);
+      files.push({
+        name: artifact.name,
+        size: artifact.size,
+        contentType: artifact.contentType ?? "",
+        path: artifact.path,
+      });
+    }
+    return files;
+  }, [messages]);
   // The active row from Recents carries the staff marker; staff never delete founder chats here.
   const activeConversation =
     recents.find((conversation) => conversation.id === conversationId) ?? null;
-  const canDeleteConversation = Boolean(conversationId) && (!railMeta.isStaff || isOwnConversation);
+  const canDeleteConversation =
+    Boolean(conversationId) && (!railMeta.isStaff || isOwnConversation);
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#14171a] text-[#ece7de]">
@@ -898,7 +1303,7 @@ export function ChatWorkspace() {
       />
 
       <main className="flex min-w-0 flex-1 flex-col">
-        <header className="bf-chat-header flex shrink-0 items-center justify-between gap-4 px-4 py-4 sm:px-6">
+        <header className="bf-chat-header flex shrink-0 items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
@@ -909,110 +1314,313 @@ export function ChatWorkspace() {
               <span aria-hidden="true">=</span>
             </button>
             <div className="min-w-0">
-              <h1 className="truncate font-serif text-xl text-[#ece7de]">{projectLabel}</h1>
-              {activeConversation?.staffViewedBy ? (
-                <p className="mt-1 truncate text-xs text-[#5aa578]">
-                  {activeConversation.staffViewedBy} joined the chat
-                  {activeConversation.staffViewedAt
-                    ? ' · ' + relativeTime(activeConversation.staffViewedAt)
-                    : ''}
-                </p>
-              ) : state?.project.problemStatement ? (
-                <p className="mt-1 truncate text-xs text-[#9aa0a6]">{state.project.problemStatement}</p>
-              ) : null}
+              <div className="flex min-w-0 items-baseline gap-2.5">
+                <h1 className="truncate font-serif text-xl text-[#ece7de]">
+                  {projectLabel}
+                </h1>
+                <span className="bf-chat-status shrink-0">
+                  <span className="bf-status-dot" aria-hidden="true" />
+                  {state
+                    ? (STATUS_LABELS[state.status] ?? state.status)
+                    : "Discovery"}
+                </span>
+              </div>
+              <p className="mt-0.5 truncate text-xs text-[#9aa0a6]">
+                {state
+                  ? `${state.requirementsCount} requirement${state.requirementsCount === 1 ? "" : "s"}${
+                      taskProgress.total > 0
+                        ? ` · ${taskProgress.done}/${taskProgress.total} tasks`
+                        : ""
+                    }`
+                  : "Describe what you want to build to get started"}
+                {activeConversation?.staffViewedBy
+                  ? ` · ${activeConversation.staffViewedBy} joined${
+                      activeConversation.staffViewedAt
+                        ? " " + relativeTime(activeConversation.staffViewedAt)
+                        : ""
+                    }`
+                  : ""}
+              </p>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {state && taskProgress.total > 0 ? (
-              <div className="bf-chat-status bf-chat-status-delivery hidden items-center gap-2 sm:inline-flex">
-                <span className="text-[10px] uppercase tracking-[0.15em] text-[#9aa0a6]">Delivery</span>
-                <span className="text-[10px] font-semibold text-[#5aa578]">{taskProgress.percent}%</span>
-              </div>
-            ) : null}
-            <span className="bf-chat-status hidden sm:inline-flex">
-              {state ? STATUS_LABELS[state.status] ?? state.status : 'Discovery'}
-            </span>
-            {canDeleteConversation ? (
+          <div className="flex shrink-0 items-center gap-1.5">
+            {/* Project team: real participants plus BrandForge AI - never a fabricated roster. */}
+            <div className="bf-menu-root relative">
               <button
                 type="button"
-                onClick={() => {
-                  if (window.confirm('Delete this chat? The project, proposal and messages go with it.')) {
-                    void handleDeleteConversation(conversationId);
-                  }
-                }}
-                className="rounded-lg border border-white/10 px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-[#9aa0a6] transition hover:border-red-400/40 hover:text-red-200"
+                onClick={() => setTeamOpen((value) => !value)}
+                aria-expanded={teamOpen}
+                aria-label="Show project team"
+                className="bf-participants"
               >
-                Delete
+                <span className="bf-participant-stack" aria-hidden="true">
+                  <span className="bf-stack-item bf-stack-ai">B</span>
+                  {taskParticipants.slice(0, 3).map((person) => (
+                    <span
+                      key={person.userId}
+                      className="bf-stack-item"
+                      style={avatarTone(person.userId)}
+                    >
+                      {initialsFor(person.displayName)}
+                    </span>
+                  ))}
+                </span>
+                {taskParticipants.length > 3 ? (
+                  <span className="bf-stack-more">
+                    +{taskParticipants.length - 3}
+                  </span>
+                ) : null}
               </button>
-            ) : null}
+              {teamOpen ? (
+                <div
+                  role="dialog"
+                  aria-label="Project team"
+                  className="bf-menu absolute right-0 top-full z-40 mt-2 w-64 p-3"
+                >
+                  <p className="bf-section-label">Project team</p>
+                  <ul className="mt-2 space-y-2.5">
+                    <li className="flex items-center gap-2.5">
+                      <span
+                        className="bf-stack-item bf-stack-ai"
+                        aria-hidden="true"
+                      >
+                        B
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm text-[#ece7de]">
+                          BrandForge AI
+                        </span>
+                        <span className="block text-[10px] uppercase tracking-[0.14em] text-[#6f757b]">
+                          Execution Assistant
+                        </span>
+                      </span>
+                    </li>
+                    {taskParticipants.map((person) => (
+                      <li
+                        key={person.userId}
+                        className="flex items-center gap-2.5"
+                      >
+                        <span
+                          className="bf-stack-item"
+                          style={avatarTone(person.userId)}
+                          aria-hidden="true"
+                        >
+                          {initialsFor(person.displayName)}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm text-[#ece7de]">
+                            {person.displayName}
+                          </span>
+                          <span className="block text-[10px] uppercase tracking-[0.14em] text-[#6f757b]">
+                            {formatRole(person.role)}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
             <button
               type="button"
               onClick={() => setIsContextOpen((value) => !value)}
               className="bf-insights-toggle"
               aria-expanded={isContextOpen}
-               aria-label={isContextOpen ? 'Hide project insights' : 'Show project insights'}
+              aria-label={
+                isContextOpen ? "Hide project context" : "Show project context"
+              }
             >
-              {isContextOpen ? 'Hide insights' : 'Insights'}
+              Project
             </button>
+            {/* Destructive actions live behind this menu, never as a first-visual-element button. */}
+            <div className="bf-menu-root relative">
+              <button
+                type="button"
+                onClick={() => setHeaderMenuOpen((value) => !value)}
+                aria-expanded={headerMenuOpen}
+                aria-haspopup="menu"
+                aria-label="Conversation menu"
+                className="bf-header-menu-btn"
+              >
+                <span aria-hidden="true">•••</span>
+              </button>
+              {headerMenuOpen ? (
+                <div
+                  role="menu"
+                  className="bf-menu absolute right-0 top-full z-40 mt-2 w-48 p-1"
+                >
+                  <button
+                    role="menuitem"
+                    type="button"
+                    className="bf-menu-item"
+                    onClick={() => {
+                      setIsContextOpen(true);
+                      setHeaderMenuOpen(false);
+                    }}
+                  >
+                    Open project panel
+                  </button>
+                  {canDeleteConversation ? (
+                    <button
+                      role="menuitem"
+                      type="button"
+                      className="bf-menu-item bf-menu-item-danger"
+                      onClick={() => {
+                        setHeaderMenuOpen(false);
+                        if (
+                          window.confirm(
+                            "Delete this chat? The project, proposal and messages go with it.",
+                          )
+                        ) {
+                          void handleDeleteConversation(conversationId);
+                        }
+                      }}
+                    >
+                      Delete chat
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
           </div>
         </header>
 
         <div ref={scrollerRef} className="flex-1 overflow-y-auto px-6 py-6">
           {isBooting && messages.length === 0 ? (
             <div className="py-10 text-center" role="status" aria-live="polite">
-              <p className="text-sm text-[#9aa0a6]">Loading your conversation…</p>
+              <p className="text-sm text-[#9aa0a6]">
+                Loading your conversation…
+              </p>
             </div>
           ) : !conversationId ? (
             <div className="mx-auto flex h-full w-full max-w-2xl flex-col items-center justify-center py-10 text-center">
-              <h1 className="font-serif text-3xl text-[#ece7de]">Start a new project</h1>
-              <p className="mt-4 max-w-xl text-base leading-relaxed text-[#9aa0a6]">
-                Choose New Chat, then describe what you want to build. Your first message creates the
-                project and keeps every later decision in the same conversation.
+              <div
+                className="bf-ai-mark flex h-11 w-11 items-center justify-center rounded-xl"
+                aria-hidden="true"
+              >
+                <span className="font-serif text-xl font-semibold">B</span>
+              </div>
+              <h1 className="mt-5 font-serif text-2xl text-[#ece7de] sm:text-3xl">
+                What are you building?
+              </h1>
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-[#9aa0a6]">
+                Describe the idea in your own words. BrandForge turns it into a
+                structured project and keeps the next step visible in this chat.
+              </p>
+              <div
+                className="mt-6 flex flex-wrap justify-center gap-2"
+                role="group"
+                aria-label="Starter shortcuts"
+              >
+                {STARTERS.map((starter) => (
+                  <button
+                    key={starter.label}
+                    type="button"
+                    onClick={() => {
+                      setInput((current) => current || starter.prefix);
+                      requestAnimationFrame(() => composerRef.current?.focus());
+                    }}
+                    className="rounded-full border border-white/10 px-3.5 py-1.5 text-xs text-[#9aa0a6] transition hover:border-[#e8571e] hover:text-[#ece7de]"
+                  >
+                    {starter.label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-5 text-[11px] uppercase tracking-[0.16em] text-[#6f757b]">
+                Tell me what is on your mind — your first message creates the
+                project
               </p>
             </div>
           ) : (
             <ChatTranscript
               messages={messages}
-               conversationId={conversationId}
+              conversationId={conversationId}
               isStreaming={isStreaming}
               onSuggestion={(prompt) => {
                 void handleSend(prompt);
               }}
               currentUserId={railMeta.userId}
               onEditMessage={async (id, content) => {
-                try { await handleMessageAction(id, 'edit', content); }
-                catch (cause) { setError(cause instanceof Error ? cause.message : 'Message could not be edited'); }
+                try {
+                  await handleMessageAction(id, "edit", content);
+                } catch (cause) {
+                  setError(
+                    cause instanceof Error
+                      ? cause.message
+                      : "Message could not be edited",
+                  );
+                }
               }}
               onDeleteMessage={async (id) => {
-                if (!window.confirm('Delete this message? The conversation will keep its place.')) return;
-                try { await handleMessageAction(id, 'delete'); }
-                catch (cause) { setError(cause instanceof Error ? cause.message : 'Message could not be deleted'); }
+                if (
+                  !window.confirm(
+                    "Delete this message? The conversation will keep its place.",
+                  )
+                )
+                  return;
+                try {
+                  await handleMessageAction(id, "delete");
+                } catch (cause) {
+                  setError(
+                    cause instanceof Error
+                      ? cause.message
+                      : "Message could not be deleted",
+                  );
+                }
               }}
               onReact={async (id, emoji) => {
-                try { await handleMessageAction(id, 'react', emoji); }
-                catch (cause) { setError(cause instanceof Error ? cause.message : 'Reaction could not be saved'); }
+                try {
+                  await handleMessageAction(id, "react", emoji);
+                } catch (cause) {
+                  setError(
+                    cause instanceof Error
+                      ? cause.message
+                      : "Reaction could not be saved",
+                  );
+                }
               }}
-                onEmbedAction={(embed, action, value) => {
-                  if (action === 'details') { setIsContextOpen(true); return; }
-                  if (action === 'submit_funding') { void handleSubmitPayment(value ?? ''); return; }
-                  if (action === 'accept') void handleProposalAction('accept');
-                }}
-               embedBusy={busyAction !== null}
-               canDecide={isOwnConversation}
+              onEmbedAction={(embed, action, value) => {
+                if (action === "details") {
+                  setIsContextOpen(true);
+                  return;
+                }
+                if (action === "submit_funding") {
+                  void handleSubmitPayment(value ?? "");
+                  return;
+                }
+                if (action === "accept") void handleProposalAction("accept");
+              }}
+              embedBusy={busyAction !== null}
+              canDecide={isOwnConversation}
+              selfRole={selfRoleLabel}
+              participantRoles={participantRoles}
+              onAskFile={(name) => {
+                setInput(
+                  (current) =>
+                    current || `What are the most important points in ${name}?`,
+                );
+                requestAnimationFrame(() => composerRef.current?.focus());
+              }}
             />
           )}
         </div>
 
         {commandStatus ? (
           <div className="px-6 pb-2">
-            <div className="mx-auto max-w-3xl rounded-xl border border-[#5aa578]/30 bg-[#5aa578]/10 px-4 py-3 text-sm text-[#b9e3c4]" role="status">
+            <div
+              className="mx-auto max-w-3xl rounded-xl border border-[#5aa578]/30 bg-[#5aa578]/10 px-4 py-3 text-sm text-[#b9e3c4]"
+              role="status"
+            >
               {commandStatus}
             </div>
           </div>
         ) : null}
         {error ? (
           <div className="px-6 pb-2">
-            <div className="mx-auto max-w-3xl rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200" role="alert">
+            <div
+              className="mx-auto max-w-3xl rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200"
+              role="alert"
+            >
               {error}
             </div>
           </div>
@@ -1053,32 +1661,61 @@ export function ChatWorkspace() {
             }}
             className="mx-auto max-w-3xl"
           >
-             {attachment ? (
-               <div className="mb-2 flex items-center justify-between rounded-xl border border-[#e8571e]/30 bg-[#1c2024] px-3 py-2 text-xs text-[#ece7de]">
-                 <span className="truncate">📎 {attachment.name}</span>
-                 <button type="button" onClick={() => setAttachment(null)} aria-label="Remove file">×</button>
-               </div>
-             ) : null}
-             <input
-               type="file"
-               accept="image/png,image/jpeg,image/webp,application/pdf,text/plain,application/json,application/zip,text/csv,audio/webm,audio/ogg,audio/mpeg,audio/mp4"
-               disabled={isBusy || !conversationId}
-               onChange={(event) => setAttachment(event.target.files?.[0] ?? null)}
-               className="mb-2 max-w-full text-xs text-[#9aa0a6] file:mr-2 file:rounded file:border-0 file:bg-[#2b3238] file:px-2 file:py-1 file:text-[#ece7de]"
-             />
+            {attachment ? (
+              <div className="bf-composer-chip" role="status">
+                <span aria-hidden="true">📄</span>
+                <span className="min-w-0 flex-1 truncate">
+                  {attachment.name}
+                </span>
+                <span className="text-[10px] text-[#9aa0a6]">
+                  {Math.ceil(attachment.size / 1024)} KB
+                </span>
+                <span
+                  className={`bf-chip-state${isUploading ? " is-busy" : ""}`}
+                >
+                  {isUploading ? "Uploading…" : "Ready"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setAttachment(null)}
+                  disabled={isUploading}
+                  aria-label="Remove file"
+                  className="bf-chip-remove"
+                >
+                  ×
+                </button>
+              </div>
+            ) : null}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,application/pdf,text/plain,application/json,application/zip,text/csv,audio/webm,audio/ogg,audio/mpeg,audio/mp4"
+              disabled={isBusy || !conversationId}
+              onChange={(event) =>
+                setAttachment(event.target.files?.[0] ?? null)
+              }
+              className="sr-only"
+              tabIndex={-1}
+              aria-label="Choose a file to attach"
+            />
             <div className="bf-composer">
               <textarea
+                ref={composerRef}
                 value={input}
                 onChange={(event) => {
                   setInput(event.target.value);
                   setIsTyping(Boolean(event.target.value.trim()));
                 }}
-                placeholder={conversationId ? 'Ask anything…' : 'Describe what you want to build…'}
+                placeholder={
+                  conversationId
+                    ? "Ask anything…"
+                    : "Describe what you want to build…"
+                }
                 rows={2}
                 disabled={isBusy}
                 className="bf-composer-input"
                 onKeyDown={(event) => {
-                  if (event.key === 'Enter' && !event.shiftKey) {
+                  if (event.key === "Enter" && !event.shiftKey) {
                     event.preventDefault();
                     void handleSend();
                   }
@@ -1087,21 +1724,107 @@ export function ChatWorkspace() {
               <button
                 type="submit"
                 disabled={isBusy || (!input.trim() && !attachment)}
+                aria-label={
+                  isStreaming ? "BrandForge is answering" : "Send message"
+                }
                 className="bf-composer-send"
               >
-                {isStreaming ? '···' : '↑'}
+                <span aria-hidden="true">{isStreaming ? "···" : "↑"}</span>
               </button>
             </div>
-             <div className="mt-2 flex flex-wrap justify-center gap-1.5" aria-label="Chat actions">
-               {['/progress', '/review', '/contract', '/attach'].map((command) => (
-                 <button key={command} type="button" onClick={() => setInput((current) => insertComposerCommand(current, command))} className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] text-[#9aa0a6] transition hover:border-[#e8571e] hover:text-[#ece7de]">
-                   {command}
-                 </button>
-               ))}
-             </div>
-            <p className="mt-2 text-center text-[10px] uppercase tracking-[0.2em] text-[#6f757b]">
-              Try /progress · /review · /contract · /attach
-            </p>
+            {/* Footer: attach + actions. Slash commands are discoverable here, not plastered
+                across the composer as permanent chips. */}
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <div className="bf-menu-root relative">
+                  <button
+                    type="button"
+                    className="bf-composer-tool"
+                    aria-expanded={attachMenuOpen}
+                    aria-haspopup="menu"
+                    disabled={!conversationId}
+                    title={
+                      conversationId
+                        ? undefined
+                        : "Send your first message to start the project, then attach files."
+                    }
+                    onClick={() => setAttachMenuOpen((value) => !value)}
+                  >
+                    <span aria-hidden="true">＋</span> Attach
+                  </button>
+                  {attachMenuOpen ? (
+                    <div
+                      role="menu"
+                      className="bf-menu absolute bottom-full left-0 z-40 mb-2 w-64 p-1"
+                    >
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="bf-menu-item"
+                        onClick={() => {
+                          setAttachMenuOpen(false);
+                          fileInputRef.current?.click();
+                        }}
+                      >
+                        Upload a file…
+                        <span className="bf-menu-hint">
+                          PNG, PDF, TXT, CSV, JSON, ZIP, audio · up to 10 MB
+                        </span>
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+                <div className="bf-menu-root relative">
+                  <button
+                    type="button"
+                    className="bf-composer-tool"
+                    aria-expanded={commandsOpen}
+                    aria-haspopup="menu"
+                    onClick={() => setCommandsOpen((value) => !value)}
+                  >
+                    <span aria-hidden="true">／</span> Actions
+                  </button>
+                  {commandsOpen ? (
+                    <div
+                      role="menu"
+                      className="bf-menu absolute bottom-full left-0 z-40 mb-2 w-60 p-1"
+                    >
+                      {[
+                        { command: "/progress", label: "Progress report" },
+                        {
+                          command: "/review",
+                          label: "Send to BrandForge review",
+                        },
+                        { command: "/contract", label: "Agreement steps" },
+                        { command: "/attach", label: "How to attach a file" },
+                      ].map((item) => (
+                        <button
+                          key={item.command}
+                          type="button"
+                          role="menuitem"
+                          className="bf-menu-item"
+                          onClick={() => {
+                            setCommandsOpen(false);
+                            setInput((current) =>
+                              insertComposerCommand(current, item.command),
+                            );
+                            requestAnimationFrame(() =>
+                              composerRef.current?.focus(),
+                            );
+                          }}
+                        >
+                          {item.label}
+                          <span className="bf-menu-hint">{item.command}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[#6f757b]">
+                Enter to send
+              </p>
+            </div>
           </form>
         </div>
       </main>
@@ -1115,6 +1838,7 @@ export function ChatWorkspace() {
           busyAction={busyAction}
           isStaff={railMeta.isStaff && !isOwnConversation}
           participants={taskParticipants}
+          files={conversationFiles}
           onClose={() => setIsContextOpen(false)}
           onRequestReview={() => {
             void handleRequestReview();
@@ -1132,7 +1856,9 @@ export function ChatWorkspace() {
             void handleTaskAction(taskId, payload);
           }}
           aiDrafts={aiDrafts}
-          onResolveDraft={(id, action) => { void resolveDraft(id, action); }}
+          onResolveDraft={(id, action) => {
+            void resolveDraft(id, action);
+          }}
         />
       ) : null}
     </div>
