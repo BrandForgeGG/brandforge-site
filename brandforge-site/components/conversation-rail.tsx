@@ -399,7 +399,8 @@ export function ConversationRail({
 
               {recents.length === 0 ? (
                 <p className="text-xs leading-relaxed text-[#6f757b]">
-                  Conversations appear here once you send a first message.
+                  Your first chat appears here the moment you send a message -
+                  just start typing in the message box.
                 </p>
               ) : (
                 <div className="bf-recents">

@@ -16,6 +16,7 @@ import {
 } from "@/lib/message-actions";
 import { summarizeTaskProgress } from "@/lib/task-board";
 import { shapeTaskRoster } from "@/lib/task-board";
+import { isNearBottom } from "@/lib/chat-scroll";
 import { ChatTranscript, type ChatMessage } from "@/components/chat-transcript";
 import {
   ConversationRail,
@@ -145,6 +146,46 @@ export function ChatWorkspace() {
   );
   const typingLabel = formatTypingLabel(livePresence.typing);
 
+  // Transcript scroller + follow behaviour. Defined before the live-message handler so a row that
+  // arrives over Realtime can follow the reader the same way a streamed answer does: only while
+  // they are already at the end. Someone who scrolled up to re-read their own brief stays put and
+  // gets a "Jump to latest" control instead of being dragged down by every streamed token.
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const stickToBottomRef = useRef(true);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+
+  const handleTranscriptScroll = useCallback(() => {
+    const node = scrollerRef.current;
+
+    if (!node) {
+      return;
+    }
+
+    const atEnd = isNearBottom(node);
+    stickToBottomRef.current = atEnd;
+    if (atEnd) {
+      setShowJumpToLatest(false);
+    }
+  }, []);
+
+  // force = the reader sent a message or opened a chat, so the newest row must come into view
+  // even if they were reading something older.
+  const scrollToBottom = useCallback((force = false) => {
+    if (!force && !stickToBottomRef.current) {
+      setShowJumpToLatest(true);
+      return;
+    }
+
+    stickToBottomRef.current = true;
+    setShowJumpToLatest(false);
+    requestAnimationFrame(() => {
+      const node = scrollerRef.current;
+      if (node) {
+        node.scrollTop = node.scrollHeight;
+      }
+    });
+  }, []);
+
   // Rows already rendered, so a pushed row can never duplicate one the poll just delivered.
   const seenMessageIdsRef = useRef<Set<string>>(new Set());
 
@@ -181,8 +222,12 @@ export function ChatWorkspace() {
           ? current
           : [...current, incoming],
       );
+
+      // A colleague's new row follows the reader only when they were already at the end; the
+      // call is a no-op scroll when the row turned out to be a duplicate the poll delivered.
+      scrollToBottom();
     },
-    [isStreaming],
+    [isStreaming, scrollToBottom],
   );
 
   useRealtimeMessages(conversationId, handleLiveMessage, (event, row) => {
@@ -222,7 +267,6 @@ export function ChatWorkspace() {
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [teamOpen, setTeamOpen] = useState(false);
 
-  const scrollerRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const autoAnsweredRef = useRef<Set<string>>(new Set());
@@ -266,14 +310,6 @@ export function ChatWorkspace() {
     setError(null);
   }
 
-  const scrollToBottom = useCallback(() => {
-    requestAnimationFrame(() => {
-      const node = scrollerRef.current;
-      if (node) {
-        node.scrollTop = node.scrollHeight;
-      }
-    });
-  }, []);
 
   const loadRecents = useCallback(async () => {
     try {
@@ -410,7 +446,8 @@ export function ChatWorkspace() {
           streaming: true,
         },
       ]);
-      scrollToBottom();
+      // The reader just sent something - their own message always comes into view.
+      scrollToBottom(true);
 
       let streamedText = "";
       let succeeded = false;
@@ -502,6 +539,7 @@ export function ChatWorkspace() {
                     : entry,
                 ),
               );
+              // Conditional on purpose: never pull a reader back down mid-answer.
               scrollToBottom();
             } else if (payload.type === "state" && payload.state) {
               setState(payload.state);
@@ -586,7 +624,8 @@ export function ChatWorkspace() {
       if (cancelled) return;
 
       setIsBooting(false);
-      scrollToBottom();
+      // Opening a chat always lands on the newest message, wherever the reader left off before.
+      scrollToBottom(true);
 
       const lastMessage = loadedMessages[loadedMessages.length - 1];
 
@@ -715,7 +754,8 @@ export function ChatWorkspace() {
         if (slash.command === "progress") {
           setIsContextOpen(true);
           const progress = summarizeTaskProgress(state?.tasks ?? []);
-          setError(
+          // Status, not a failure - the green status row is where this belongs.
+          setCommandStatus(
             `${progress.done}/${progress.total} complete · ${progress.inProgress} in progress · ${progress.review} awaiting review${progress.overdue ? ` · ${progress.overdue} overdue` : ""}`,
           );
           return;
@@ -729,7 +769,7 @@ export function ChatWorkspace() {
               body: JSON.stringify({ conversationId }),
             });
             if (!response.ok) throw new Error("Review request failed");
-            setError("Project sent for review.");
+            setCommandStatus("Project sent for review.");
           } catch (cause) {
             setError(
               cause instanceof Error ? cause.message : "Review request failed",
@@ -814,7 +854,8 @@ export function ChatWorkspace() {
           setInput(text);
         } finally {
           setIsStreaming(false);
-          scrollToBottom();
+          // Staff just posted this row - show it to them even if they had scrolled up.
+          scrollToBottom(true);
         }
 
         return;
@@ -1302,7 +1343,7 @@ export function ChatWorkspace() {
         }}
       />
 
-      <main className="flex min-w-0 flex-1 flex-col">
+      <main className="relative flex min-w-0 flex-1 flex-col">
         <header className="bf-chat-header flex shrink-0 items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-2">
             <button
@@ -1485,7 +1526,11 @@ export function ChatWorkspace() {
           </div>
         </header>
 
-        <div ref={scrollerRef} className="flex-1 overflow-y-auto px-6 py-6">
+        <div
+          ref={scrollerRef}
+          className="flex-1 overflow-y-auto px-6 py-6"
+          onScroll={handleTranscriptScroll}
+        >
           {isBooting && messages.length === 0 ? (
             <div className="py-10 text-center" role="status" aria-live="polite">
               <p className="text-sm text-[#9aa0a6]">
@@ -1605,6 +1650,17 @@ export function ChatWorkspace() {
           )}
         </div>
 
+        {showJumpToLatest && messages.length > 0 ? (
+          <div className="pointer-events-none absolute inset-x-0 bottom-32 z-20 flex justify-center">
+            <button
+              type="button"
+              className="bf-jump-latest pointer-events-auto"
+              onClick={() => scrollToBottom(true)}
+            >
+              <span aria-hidden="true">↓</span> Jump to latest
+            </button>
+          </div>
+        ) : null}
         {commandStatus ? (
           <div className="px-6 pb-2">
             <div
@@ -1618,10 +1674,19 @@ export function ChatWorkspace() {
         {error ? (
           <div className="px-6 pb-2">
             <div
-              className="mx-auto max-w-3xl rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200"
+              className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200"
               role="alert"
             >
-              {error}
+              <span className="min-w-0 flex-1">{error}</span>
+              {input.trim() && !isStreaming ? (
+                <button
+                  type="button"
+                  className="bf-error-retry shrink-0"
+                  onClick={() => void handleSend()}
+                >
+                  Try again
+                </button>
+              ) : null}
             </div>
           </div>
         ) : null}

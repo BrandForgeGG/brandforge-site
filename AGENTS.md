@@ -50,6 +50,14 @@ BrandForge/
   the sidebar dropped platform counters for an account block. Collapsed width is remembered
   (`localStorage` key `brandforge:rail-collapsed`) and keeps letter-chip recents plus an avatar icon.
   No schema change, nothing to migrate.
+- **First-run chat behaviour (2026-09-26, local until next deploy)**: the transcript no longer hijacks
+  the scroll. `lib/chat-scroll.js` (`isNearBottom`, 7 unit tests) gates every auto-scroll: streamed
+  tokens and Realtime rows follow only while the reader is at the end; sending a message or opening a
+  chat forces the newest row into view; anyone scrolled up gets a **Jump to latest** pill. A failed
+  send keeps its text in the composer and shows **Try again** in the red banner, and `/progress` +
+  "Project sent for review." moved to the green status row, so `role="alert"` now means a real
+  failure. No schema change.
+
 
 - **Open auth**: any Google account can sign in (login allowlist removed). Staff/admin access
   is `profiles.role` (`admin` / `operator`), not email.

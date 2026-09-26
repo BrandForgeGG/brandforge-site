@@ -98,7 +98,7 @@ Key modules:
 | File | Responsibility |
 | --- | --- |
 | `app/page.tsx` | Landing "What are you building?" → creates the conversation, hands off to the chat. |
-| `components/chat-workspace.tsx` | Chat orchestration: streaming, transcript, sidebars, proposal/payment actions. |
+| `components/chat-workspace.tsx` | Chat orchestration: streaming, transcript, sidebars, proposal/payment actions. Auto-scroll follows new messages only while the reader is at the end (`lib/chat-scroll.js`), otherwise a "Jump to latest" pill appears; a failed send keeps its text in the composer and offers **Try again**. |
 | `components/conversation-rail.tsx` | Single left sidebar for chat **and** every AppShell page: logo, New Chat, Recents (delete + "team in chat" marker), collapsible icon rail, account footer with @handle/role + Settings + Sign out. No platform-wide counters. |
 | `components/chat-transcript.tsx` | Messages, empty state, suggested prompts. |
 | `components/project-context-panel.tsx` | Right sidebar: status, discovery, requirements, open questions, milestones, AI estimate, proposal, agreement, payments. |

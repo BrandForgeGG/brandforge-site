@@ -71,6 +71,16 @@ npx eslint <changed files>       # lint only what you touched
   strip fed only by `type: "activity"` SSE events from `app/api/chat/route.ts`, real file context
   (`lib/file-context.js`), an Attach chip with a true upload state, and hash-stable initials when a
   person has no photo. No new tables or columns — nothing to migrate.
+- Scroll follow rule (2026-09-26): never move the transcript unless the reader is already at the end.
+  `lib/chat-scroll.js` (`isNearBottom`, `shouldFollowNewContent` — unit-tested in `lib/chat-scroll.test.js`)
+  is the single decision point, and `chat-workspace.tsx` keeps the answer in `stickToBottomRef`;
+  `scrollToBottom(force)` is forced only when the reader sent a message or opened a chat. Anyone left
+  scrolled up sees a **Jump to latest** pill. New auto-scroll call sites must go through
+  `scrollToBottom()`, never `node.scrollTop = …` directly.
+- Status vs failure channels (2026-09-26): `setError` renders the red `role="alert"` banner and is for
+  real failures only — those banners offer **Try again** (the composer still holds the failed text).
+  Anything that is progress or a confirmation (`/progress`, "Project sent for review.", slash-command
+  hints) goes through `setCommandStatus`, which renders the green `role="status"` row.
 - Staff read every chat's history (2026-09-23): `canAccessConversation(userId, id, { allowStaff: true })`
   is used by the read routes + chat-tasks, and `readClient(asStaff)` in `lib/project-db.ts` reads the
   founder-scoped tables (requirements, milestones, proposals, agreements, payments, participants) with

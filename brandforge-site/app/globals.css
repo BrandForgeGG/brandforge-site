@@ -1472,6 +1472,48 @@ footer p {
   outline-offset: 2px;
 }
 
+/* Transcript follow controls: "Jump to latest" shows only when the reader scrolled up while new
+   messages were arriving, and "Try again" only when a send actually failed with text still typed. */
+.bf-jump-latest {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border: 1px solid rgba(232, 87, 30, 0.55);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  box-shadow: 0 10px 24px rgb(0 0 0 / 55%);
+  cursor: pointer;
+}
+
+.bf-jump-latest:hover {
+  border-color: var(--ember);
+  background: var(--panel-2);
+}
+
+.bf-error-retry {
+  padding: 6px 12px;
+  border: 1px solid rgba(232, 87, 30, 0.6);
+  border-radius: 999px;
+  background: var(--ember-soft);
+  color: #ffd9cb;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.bf-error-retry:hover {
+  background: var(--ember);
+  color: #14140f;
+}
+
 /* Respect reduced-motion preferences everywhere. */
 @media (prefers-reduced-motion: reduce) {
   html {
