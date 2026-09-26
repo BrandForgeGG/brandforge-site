@@ -219,10 +219,12 @@ Closed testing runs two accounts:
 | `brandforge.gg@gmail.com` | Founder — describes projects, accepts proposals, approves delivered work. |
 | `mxstermind.com@gmail.com` | Operator — works the staff inbox, joins the same chat, posts as a human operator, moves delivery tasks. |
 
-- `/staff` is the operator inbox: every founder conversation with a real first message, a
-  one-click **Join as staff**, and a composer that posts into the founder's chat.
-- APIs: `/api/staff/conversations`, `/api/staff/participations`, `/api/staff/join`,
-  `/api/staff/post`. Authorization is the operator allowlist (`lib/auth-allowlist.js`).
+- Operators work **inside the same chat workspace** — there is no separate inbox page (`/staff` was
+  removed and 404s). Opening a founder chat offers **Join as staff**, the composer posts as a named
+  human, and pending AI drafts surface there for review.
+- APIs: `/api/staff/join`, `/api/staff/post`, `/api/staff/ai-drafts` (GET + POST). Every one of them
+  runs through `requireStaffContext` (`lib/staff.ts`), which reads `profiles.role`
+  (`operator` / `admin`) — not an email allowlist — and also accepts the conversation owner.
 - Joining writes a `participants` row and a system line into the founder's transcript, so both
   sides see the team arrive. Human replies land as `messages.sender_type = 'human_operator'`
   (`sender: 'human'` in the transcript).
