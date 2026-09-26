@@ -194,4 +194,9 @@ the reply → point at the header avatar stack (founder + BrandForge mark + spec
 **What was removed, if anyone asks:** the sidebar user / online / staff-online counters. They measured
 nothing a founder could act on; per-chat staff pickup badges replaced them.
 
+**Publish status (2026-09-26):** shipped to production the same day (Vercel production, aliased to
+brandforge.gg), so this draft can go out as written — the link, the file-reading claim and the Thoughts
+strip are all live and checkable. Post it as-is; do not soften "really reads it", and do not add numbers
+we do not have.
+
 

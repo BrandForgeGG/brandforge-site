@@ -42,7 +42,7 @@ BrandForge/
 
 - Live: https://brandforge.gg (Vercel, `brandforge-site` production).
 - Chat-first product: landing -> chat -> AI-structured project -> human proposal -> escrow.
-- **Chat Workspace UX 2.0 (2026-09-26, not yet deployed)**: conversation-centric 3-pane workspace.
+- **Chat Workspace UX 2.0 (2026-09-26, deployed to brandforge.gg)**: conversation-centric 3-pane workspace.
   AI answers render as editorial content through a sanitising markdown renderer; each turn carries a
   collapsible **Thoughts** strip built only from `activity` SSE events (steps that really ran);
   attached text/csv/json/markdown files are read for real under a token budget while binaries are
