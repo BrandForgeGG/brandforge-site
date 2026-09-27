@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   createAgreement,
   updateAgreementStatus,
+  updateAgreementTerms,
+  acceptAgreement,
   getAgreement,
+  getAgreementById,
   createPayments,
   getPayments,
   getMilestones,
@@ -11,10 +14,19 @@ import {
   canAccessConversation,
   addMessage,
   isStaffAccount,
+  recordFunnelEvent,
+  getTelegramChatIdForUser,
   type Milestone,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
-import { canCreateAgreement, canUpdateAgreement, reconcileSchedule } from '@/lib/money-authz.js';
+import {
+  canCreateAgreement,
+  canUpdateAgreement,
+  canEditAgreementTerms,
+  canAcceptAgreement,
+  reconcileSchedule,
+} from '@/lib/money-authz.js';
+import { notify, notifyUser } from '@/lib/notify';
 
 export const dynamic = 'force-dynamic';
 
@@ -119,29 +131,142 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { agreementId, status } = body;
+    const { agreementId, status, terms } = body;
+    const action = typeof body.action === 'string' ? body.action : '';
 
-    if (!agreementId || !status) {
+    if (!agreementId) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    const isStaff = await isStaffAccount(user.id);
+    const agreement = await getAgreementById(agreementId);
+
+    if (!agreement) {
+      return NextResponse.json({ error: 'Agreement not found' }, { status: 404 });
+    }
+
+    const ownerId = await getConversationOwnerId(agreement.conversation_id);
+    const actor = { userId: user.id, isStaff };
+    const isOwner = user.id === ownerId;
+
+    // ---- Contract signature: this side accepts the current terms (chat contract card). ----
+    if (action === 'accept') {
+      const decision = canAcceptAgreement({ actor, ownerId });
+      if (!decision.allowed) {
+        return NextResponse.json({ error: decision.reason }, { status: decision.status });
+      }
+
+      // Signing happens before money moves: after funding the contract is live and edits
+      // or late signatures would break what escrow was verified against.
+      if (agreement.status !== 'pending_funding') {
+        return NextResponse.json(
+          { error: 'This contract can only be signed while it awaits funding' },
+          { status: 409 }
+        );
+      }
+
+      const updated = await acceptAgreement(agreementId, isOwner ? 'founder' : 'team');
+      if (!updated) {
+        return NextResponse.json({ error: 'Failed to accept the contract' }, { status: 500 });
+      }
+
+      const bothSigned = Boolean(updated.founder_accepted_at && updated.team_accepted_at);
+
+      await addMessage({
+        conversation_id: agreement.conversation_id,
+        sender_type: 'ai',
+        sender_name: 'BrandForge',
+        content: bothSigned
+          ? 'Both sides accepted the contract. It is signed — fund escrow to start the project.'
+          : `Contract accepted by ${isOwner ? 'the founder' : 'the BrandForge team'}. Waiting for ${
+              isOwner ? 'the team' : 'the founder'
+            } to accept.`,
+        content_type: 'system',
+        artifact_data: { type: 'agreement', id: agreementId, status: updated.status },
+      });
+
+      if (bothSigned) {
+        await recordFunnelEvent('contract_signed', {
+          signedIn: true,
+          properties: { total_amount: Number(updated.total_amount) || 0, stage: 'agree' },
+        });
+        await notify('contract_signed', {});
+      } else if (isOwner) {
+        // Founder signed first: the team's accept is now the only thing left.
+        await notify('contract_accepted', { side: 'founder' });
+      } else {
+        // Team signed first: nag the founder personally if they linked Telegram
+        // (unlinked is a silent no-op by design).
+        const founderChatId = ownerId ? await getTelegramChatIdForUser(ownerId) : null;
+        if (founderChatId) {
+          await notifyUser(founderChatId, 'contract_accepted', { side: 'team' });
+        }
+      }
+
+      return NextResponse.json({ success: true, agreement: updated, bothSigned });
+    }
+
+    // ---- Contract revision: edit the terms; both prior signatures are cleared. ----
+    if (typeof terms === 'string') {
+      const decision = canEditAgreementTerms({ actor, ownerId });
+      if (!decision.allowed) {
+        return NextResponse.json({ error: decision.reason }, { status: decision.status });
+      }
+
+      const text = terms.trim();
+      if (!text || text.length > 8000) {
+        return NextResponse.json(
+          { error: 'Contract terms must be between 1 and 8,000 characters' },
+          { status: 400 }
+        );
+      }
+
+      if (agreement.status !== 'pending_funding') {
+        return NextResponse.json(
+          { error: 'Only a contract awaiting funding can be revised' },
+          { status: 409 }
+        );
+      }
+
+      const updated = await updateAgreementTerms(agreementId, text, user.id);
+      if (!updated) {
+        return NextResponse.json({ error: 'Failed to update the contract' }, { status: 500 });
+      }
+
+      await addMessage({
+        conversation_id: agreement.conversation_id,
+        sender_type: 'ai',
+        sender_name: 'BrandForge',
+        content: `Contract terms updated by ${
+          isOwner ? 'the founder' : 'the team'
+        }. Both sides must accept the revised contract before funding.`,
+        content_type: 'system',
+        artifact_data: { type: 'agreement', id: agreementId, status: updated.status },
+      });
+
+      return NextResponse.json({ success: true, agreement: updated });
+    }
+
+    if (!status) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     // Agreement lifecycle is staff work. 'funded' is never set here: funding only happens
     // through /api/payments after the client's crypto transfer is verified on-chain.
     // Shared, unit-tested decision (lib/money-authz.js).
-    const isStaff = await isStaffAccount(user.id);
-    const decision = canUpdateAgreement({ actor: { userId: user.id, isStaff }, status });
+    const decision = canUpdateAgreement({ actor, status });
 
     if (!decision.allowed) {
       return NextResponse.json({ error: decision.reason }, { status: decision.status });
     }
 
-    const agreement = await updateAgreementStatus(agreementId, status);
+    const updatedStatus = await updateAgreementStatus(agreementId, status);
 
-    if (!agreement) {
+    if (!updatedStatus) {
       return NextResponse.json({ error: 'Failed to update agreement' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, agreement });
+    return NextResponse.json({ success: true, agreement: updatedStatus });
   } catch (error) {
     console.error('Update agreement API error:', error);
     return NextResponse.json(

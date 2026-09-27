@@ -51,6 +51,7 @@ const FUNNEL_EVENTS = Object.freeze([
   'review_requested',
   'proposal_received',
   'proposal_accepted',
+  'contract_signed',
   'funding_submitted',
   'funding_verified',
   'milestone_completed',

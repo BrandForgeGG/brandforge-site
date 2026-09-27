@@ -54,6 +54,8 @@ test('parseChatEmbed normalizes every supported action embed and rejects junk', 
   assert.deepEqual(parseChatEmbed({ type: 'proposal', id: 'p1', status: 'accepted' }), { type: 'proposal', proposalId: 'p1', status: 'accepted' });
   assert.deepEqual(parseChatEmbed({ type: 'agreement', id: 'a1', status: 'pending_funding' }), { type: 'agreement', agreementId: 'a1', status: 'pending_funding' });
   assert.deepEqual(parseChatEmbed({ type: 'review_request', id: 'c1' }), { type: 'review_request', conversationId: 'c1' });
+assert.deepEqual(parseChatEmbed({ type: 'review_request', id: 'c1', percent: 75, complete: false }), { type: 'review_request', conversationId: 'c1', percent: 75, complete: false });
+assert.deepEqual(parseChatEmbed({ type: 'review_request', id: 'c1', percent: 'high' }), { type: 'review_request', conversationId: 'c1' });
   assert.deepEqual(parseChatEmbed({ type: 'funding', id: 'a1', status: 'verifying' }), { type: 'funding', agreementId: 'a1', status: 'verifying' });
   assert.deepEqual(parseChatEmbed({ type: 'funding', id: 'a1', status: 'released', paymentId: 'pay1' }), { type: 'funding', agreementId: 'a1', status: 'released', paymentId: 'pay1' });
   assert.equal(parseChatEmbed({ type: 'proposal' }), null);

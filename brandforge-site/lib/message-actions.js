@@ -89,7 +89,13 @@ function parseChatEmbed(artifactData) {
     const paymentId = typeof artifactData.paymentId === 'string' ? artifactData.paymentId : undefined;
     return { type, agreementId: id, status, ...(paymentId ? { paymentId } : {}) };
   }
-  if (type === 'review_request' && id) return { type, conversationId: id };
+  if (type === 'review_request' && id) {
+    // Snapshot of the brief at handoff: percent is the discovery completeness, complete marks a
+    // fully-shaped brief. Older rows lack both — the card falls back to the message text.
+    const percent = Number.isFinite(artifactData.percent) ? Number(artifactData.percent) : undefined;
+    const complete = typeof artifactData.complete === 'boolean' ? artifactData.complete : undefined;
+    return { type, conversationId: id, ...(percent !== undefined ? { percent } : {}), ...(complete !== undefined ? { complete } : {}) };
+  }
   return null;
 }
 

@@ -93,6 +93,30 @@ function canResolveAiDraft({ actor }) {
   return { allowed: true, status: 200, reason: 'staff' };
 }
 
+/**
+ * Can `actor` revise the contract terms? The owner and staff — nobody else. A revision
+ * clears BOTH sides' signature (the accepted text must be the text on screen), so it is
+ * a binding action, not a comment edit.
+ */
+function canEditAgreementTerms({ actor, ownerId }) {
+  if (!actor) return { allowed: false, status: 401, reason: 'Authentication required' };
+  if (actor.userId === ownerId) return { allowed: true, status: 200, reason: 'owner' };
+  if (actor.isStaff) return { allowed: true, status: 200, reason: 'staff' };
+  return { allowed: false, status: 403, reason: 'Only the founder and the team may edit the contract' };
+}
+
+/**
+ * Can `actor` sign (accept the current terms)? The owner signs as the founder, staff sign
+ * as the team; other participants can read but never sign. The caller also enforces the
+ * agreement status: signing happens before funding, never after.
+ */
+function canAcceptAgreement({ actor, ownerId }) {
+  if (!actor) return { allowed: false, status: 401, reason: 'Authentication required' };
+  if (actor.userId === ownerId) return { allowed: true, status: 200, reason: 'owner' };
+  if (actor.isStaff) return { allowed: true, status: 200, reason: 'staff' };
+  return { allowed: false, status: 403, reason: 'Only the founder and the team may accept the contract' };
+}
+
 function round2(value) {
   return Math.round(Number(value) * 100) / 100;
 }
@@ -160,6 +184,8 @@ module.exports = {
   canSetProposalStatus,
   canCreateAgreement,
   canUpdateAgreement,
+  canEditAgreementTerms,
+  canAcceptAgreement,
   canSubmitFunding,
   canResolveAiDraft,
   reconcileSchedule,

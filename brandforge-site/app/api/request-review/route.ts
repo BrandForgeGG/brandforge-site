@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { addMessage, canAccessConversation, updateConversationStatus, recordFunnelEvent } from '@/lib/project-db';
+import {
+  addMessage,
+  canAccessConversation,
+  getConversation,
+  updateConversationStatus,
+  recordFunnelEvent,
+} from '@/lib/project-db';
 import { syncDiscoveryCompleteness } from '@/lib/conversation-state';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { isDiscoveryComplete } from '@/lib/discovery';
@@ -37,6 +43,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
+    // The handoff fires once. Re-sending would stack duplicate brief cards and ping the team
+    // again; past review, the next move belongs to the team (proposal) — not a second handoff.
+    const conversation = await getConversation(conversationId);
+    const currentStatus = String(conversation?.status ?? 'DISCOVERY');
+
+    if (currentStatus !== 'DISCOVERY') {
+      return NextResponse.json(
+        {
+          error:
+            currentStatus === 'READY_FOR_REVIEW'
+              ? 'The brief is already with the team — keep adding context here, they reply in this chat.'
+              : 'This project has moved past review — keep talking in this chat and the team will pick it up.',
+        },
+        { status: 409 }
+      );
+    }
+
     const discovery = await syncDiscoveryCompleteness(conversationId);
     const updated = await updateConversationStatus(conversationId, 'READY_FOR_REVIEW');
 
@@ -52,7 +75,12 @@ export async function POST(request: NextRequest) {
         ? 'Requirements sent to BrandForge. A member of the team will review them and join this conversation with a proposal.'
         : `Requirements sent to BrandForge at ${discovery.percent}% discovery. The team will review them and may ask follow-up questions in this conversation.`,
       content_type: 'system',
-      artifact_data: { type: 'review_request', id: conversationId },
+      artifact_data: {
+        type: 'review_request',
+        id: conversationId,
+        percent: discovery.percent,
+        complete: isDiscoveryComplete(discovery.completeness),
+      },
     });
 
     await notify('review_requested', { percent: discovery.percent });

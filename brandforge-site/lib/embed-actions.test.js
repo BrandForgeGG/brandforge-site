@@ -80,3 +80,61 @@ test('details is always offered, so an embed is never a dead end', () => {
     }
   }
 });
+
+// ---------- contract card: the signature surface ----------
+
+const contract = (over) =>
+  over === null
+    ? null
+    : {
+        status: 'pending_funding',
+        founder_accepted_at: null,
+        team_accepted_at: null,
+        ...over,
+      };
+const agreementEmbed = { type: 'agreement', agreementId: 'a1', status: 'pending_funding' };
+const contractActions = ({ founder = false, staff = false, state = {} } = {}) =>
+  embedActions({ embed: agreementEmbed, canDecide: founder, isStaff: staff, contract: contract(state) }).map((a) => a.action);
+
+test('contract card: unsigned — founder gets accept + edit, staff get their own accept + edit', () => {
+  assert.deepEqual(contractActions({ founder: true }), ['accept_contract', 'edit_contract', 'details']);
+  assert.deepEqual(contractActions({ staff: true }), ['accept_contract', 'edit_contract', 'details']);
+});
+
+test('contract card: a signed side loses accept but keeps edit; the other side can still sign', () => {
+  const founderSigned = contractActions({ founder: true, state: { founder_accepted_at: 't1' } });
+  assert.deepEqual(founderSigned, ['edit_contract', 'details']);
+  // Staff have not signed yet, so the staff viewer still gets the accept button.
+  const staffView = contractActions({ staff: true, state: { founder_accepted_at: 't1' } });
+  assert.deepEqual(staffView, ['accept_contract', 'edit_contract', 'details']);
+});
+
+test('contract card: fully signed, or funded, or cancelled — read-only for everyone', () => {
+  const signed = { founder_accepted_at: 't1', team_accepted_at: 't2' };
+  for (const state of [
+    signed,
+    { ...signed, status: 'funded' },
+    { ...signed, status: 'active' },
+    { status: 'cancelled' },
+  ]) {
+    assert.deepEqual(contractActions({ founder: true, state }), ['details'], JSON.stringify(state));
+    assert.deepEqual(contractActions({ staff: true, state }), ['details'], JSON.stringify(state));
+  }
+});
+
+test('contract card: a participant who is neither owner nor staff is always read-only', () => {
+  assert.deepEqual(contractActions({ state: {} }), ['details']);
+  assert.deepEqual(contractActions({ state: { founder_accepted_at: 't1' } }), ['details']);
+});
+
+test('contract card: missing signature columns (migration not applied) stay read-only', () => {
+  // No accept timestamps at all = the DB migration has not run. Offering Accept would 500.
+  embedActions({
+    embed: agreementEmbed,
+    canDecide: true,
+    isStaff: true,
+    contract: { status: 'pending_funding' },
+  }).forEach((item) => assert.equal(item.action, 'details'));
+  // And a missing contract row (old message, artifacts not loaded) is read-only too.
+  assert.deepEqual(contractActions({ founder: true, state: null }), ['details']);
+});

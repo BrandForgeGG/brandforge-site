@@ -1145,6 +1145,17 @@ export function ChatWorkspace() {
   const handleRequestReview = useCallback(async () => {
     if (!conversationId) return;
 
+    // Client-side soft lock: past DISCOVERY the handoff already fired, so skip the request
+    // and say so. The server enforces the same rule (409) for anyone bypassing this.
+    if (state?.status && state.status !== "DISCOVERY") {
+      setError(
+        state.status === "READY_FOR_REVIEW"
+          ? "The brief is already with the team — keep adding context here, they reply in this chat."
+          : "This project has moved past review — keep talking in this chat and the team will pick it up.",
+      );
+      return;
+    }
+
     setBusyAction("review");
     setError(null);
 
@@ -1174,7 +1185,7 @@ export function ChatWorkspace() {
     } finally {
       setBusyAction(null);
     }
-  }, [conversationId, loadRecents, refreshMessages, refreshState]);
+  }, [conversationId, loadRecents, refreshMessages, refreshState, state]);
 
   const loadIdentity = useCallback(async () => {
     try {
@@ -1288,6 +1299,57 @@ export function ChatWorkspace() {
       }
     },
     [conversationId, proposal, refreshArtifacts, refreshMessages, refreshState],
+  );
+
+  // Contract card actions: sign this side of the contract, or revise the terms (which
+  // clears BOTH signatures server-side — the signed text must be what each side last saw).
+  const handleContractAction = useCallback(
+    async (
+      action: "accept_contract" | "edit_contract",
+      agreementId: string,
+      terms?: string,
+    ) => {
+      if (!conversationId || !agreementId) return;
+
+      setBusyAction(action);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/agreements", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            action === "accept_contract"
+              ? { agreementId, action: "accept" }
+              : { agreementId, terms: terms ?? "" },
+          ),
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(
+            data.error ||
+              (action === "accept_contract"
+                ? "The contract could not be accepted"
+                : "The contract could not be updated"),
+          );
+        }
+
+        await Promise.all([
+          refreshArtifacts(conversationId),
+          refreshMessages(conversationId),
+        ]);
+      } catch (cause) {
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : "The contract action could not be completed",
+        );
+      } finally {
+        setBusyAction(null);
+      }
+    },
+    [conversationId, refreshArtifacts, refreshMessages],
   );
 
   // Task status transitions from inside the chat. Founder sees accept/send-back on delivered
@@ -1828,9 +1890,22 @@ return (
                   return;
                 }
                 if (action === "accept") void handleProposalAction("accept");
+                if (action === "accept_contract" && embed.type === "agreement") {
+                  void handleContractAction("accept_contract", embed.agreementId);
+                  return;
+                }
+                if (action === "edit_contract" && embed.type === "agreement") {
+                  void handleContractAction(
+                    "edit_contract",
+                    embed.agreementId,
+                    value ?? "",
+                  );
+                }
               }}
               embedBusy={busyAction !== null}
               canDecide={isOwnConversation}
+              agreement={agreement}
+              isStaff={railMeta.isStaff}
               selfRole={selfRoleLabel}
               participantRoles={participantRoles}
                onAskFile={(name) => {
@@ -1961,6 +2036,20 @@ return (
                 >
                   ✕
                 </button>
+              </div>
+            ) : null}
+            {/* Soft lock: the brief already fired the handoff. Chat stays open — keep adding
+                context — but the next move belongs to the team, not another send-for-review. */}
+            {state?.status === "READY_FOR_REVIEW" && !railMeta.isStaff ? (
+              <div
+                className="mb-2 flex items-center gap-2 rounded-xl border border-[#e8571e]/25 bg-[#e8571e]/10 px-3 py-2 text-xs leading-relaxed text-[#f6d6c3]"
+                role="status"
+              >
+                <span className="bf-status-dot" aria-hidden="true" />
+                <span>
+                  Brief with the team — waiting for review. Keep adding context here;
+                  they reply in this chat.
+                </span>
               </div>
             ) : null}
             <input

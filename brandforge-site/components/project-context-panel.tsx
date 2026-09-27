@@ -29,6 +29,11 @@ export interface AgreementSummary {
   total_amount: number;
   currency: string;
   status: 'pending_funding' | 'funded' | 'active' | 'completed' | 'cancelled';
+  /** Contract signature (migration 0013): each side accepts the current terms; a terms
+      revision clears both. Absent until the migration is applied. */
+  founder_accepted_at?: string | null;
+  team_accepted_at?: string | null;
+  terms_updated_at?: string | null;
 }
 
 export interface PaymentSummary {

@@ -208,7 +208,15 @@ CREATE TABLE agreements (
   -- 'pending_funding' | 'funded' | 'active' | 'completed' | 'cancelled'
   
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  funded_at TIMESTAMPTZ
+  funded_at TIMESTAMPTZ,
+
+  -- Contract signature (migration 0013): both sides accept the CURRENT terms; any terms
+  -- revision clears both. Absent until the migration is applied — the chat contract card
+  -- stays read-only until these columns exist.
+  founder_accepted_at TIMESTAMPTZ,
+  team_accepted_at TIMESTAMPTZ,
+  terms_updated_at TIMESTAMPTZ,
+  terms_updated_by UUID
 );
 ```
 

@@ -1845,6 +1845,66 @@ export async function updateAgreementStatus(
   return data ?? null;
 }
 
+// Contract signature (chat card). Both sides edit the terms and accept; the accept columns
+// ARE the signature, so they live on the agreement row (survives message deletion) and any
+// terms revision clears BOTH accepts — the signed text must be what each side last saw.
+export async function updateAgreementTerms(agreementId: string, terms: string, editorId: string) {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) {
+    console.error('Error updating agreement terms: service role client not configured');
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from('agreements')
+    .update({
+      terms,
+      terms_updated_at: new Date().toISOString(),
+      terms_updated_by: editorId,
+      founder_accepted_at: null,
+      team_accepted_at: null,
+    })
+    .eq('id', agreementId)
+    .select()
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error updating agreement terms:', error.message);
+    return null;
+  }
+
+  return data ?? null;
+}
+
+// One side's signature. The `.is(column, null)` filter makes a double-click race harmless:
+// the second write matches zero rows and the existing accept is returned unchanged.
+export async function acceptAgreement(agreementId: string, side: 'founder' | 'team') {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) {
+    console.error('Error accepting agreement: service role client not configured');
+    return null;
+  }
+
+  const column = side === 'founder' ? 'founder_accepted_at' : 'team_accepted_at';
+  const { data, error } = await supabase
+    .from('agreements')
+    .update({ [column]: new Date().toISOString() })
+    .eq('id', agreementId)
+    .is(column, null)
+    .select()
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error accepting agreement:', error.message);
+    return null;
+  }
+
+  if (data) return data;
+
+  // Zero rows updated: either the row is gone or this side already signed — return current state.
+  return getAgreementById(agreementId);
+}
+
 // Route-level authorization needs the row before it is written, so this reads as the service
 // role regardless of caller visibility.
 export async function getAgreementById(agreementId: string) {

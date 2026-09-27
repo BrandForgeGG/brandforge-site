@@ -4,6 +4,8 @@ const {
   canSetProposalStatus,
   canCreateAgreement,
   canUpdateAgreement,
+  canEditAgreementTerms,
+  canAcceptAgreement,
   canSubmitFunding,
   canResolveAiDraft,
   reconcileSchedule,
@@ -95,6 +97,26 @@ test('a staff member who owns a chat is treated as that founder, not as staff', 
   assert.equal(canSubmitFunding({ actor: staffWhoOwns, ownerId: OWNER_ID }).allowed, true);
   // And a staff member on someone else's chat still cannot submit that founder's funding.
   assert.equal(canSubmitFunding({ actor: STAFF, ownerId: OWNER_ID }).allowed, false);
+});
+
+// ---------- contract signature (both-sides edit + accept) ----------
+
+test('contract terms: owner and staff may edit, other participants may not', () => {
+  assert.equal(canEditAgreementTerms({ actor: FOUNDER, ownerId: OWNER_ID }).allowed, true);
+  assert.equal(canEditAgreementTerms({ actor: STAFF, ownerId: OWNER_ID }).allowed, true);
+  const denied = canEditAgreementTerms({ actor: OTHER_FOUNDER, ownerId: OWNER_ID });
+  assert.equal(denied.allowed, false);
+  assert.equal(denied.status, 403);
+  assert.equal(canEditAgreementTerms({ actor: null, ownerId: OWNER_ID }).status, 401);
+});
+
+test('contract accept: the owner signs as the founder, staff sign as the team', () => {
+  assert.equal(canAcceptAgreement({ actor: FOUNDER, ownerId: OWNER_ID }).allowed, true);
+  assert.equal(canAcceptAgreement({ actor: STAFF, ownerId: OWNER_ID }).allowed, true);
+  const denied = canAcceptAgreement({ actor: OTHER_FOUNDER, ownerId: OWNER_ID });
+  assert.equal(denied.allowed, false);
+  assert.equal(denied.status, 403);
+  assert.equal(canAcceptAgreement({ actor: null, ownerId: OWNER_ID }).status, 401);
 });
 
 // ---------- payment schedule reconciliation (H3) ----------

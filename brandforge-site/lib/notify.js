@@ -63,6 +63,12 @@ function buildMessage(event, details = {}) {
     case 'proposal_answered':
       return `The founder answered proposal "${clip(details.title)}": ${clip(details.status) || 'updated'}.`;
 
+    case 'contract_signed':
+      return 'Contract signed by both sides. The founder can fund escrow now — verify the transfer on-chain when it lands.';
+
+    case 'contract_accepted':
+      return 'The founder accepted the contract — open the chat and accept it to complete signing.';
+
     case 'payment_submitted':
       return `Funding tx submitted for verification: ${clip(details.txHash)}${
         clip(details.network) ? ` on ${clip(details.network)}` : ''
@@ -181,6 +187,12 @@ function buildPersonalMessage(event, details = {}) {
 
     case 'funding_verified':
       return 'BrandForge: your funding is verified and work has started.';
+
+    case 'contract_signed':
+      return 'BrandForge: both sides signed the contract. Fund escrow when you are ready — the project starts once the transfer clears.';
+
+    case 'contract_accepted':
+      return 'BrandForge: the team accepted the contract. Accept it in the chat to complete signing.';
 
     case 'funding_rejected':
       return `BrandForge: we could not verify that transfer${

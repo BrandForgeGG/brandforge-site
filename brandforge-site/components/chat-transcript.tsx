@@ -6,18 +6,34 @@ import { avatarLabel, avatarTone, initialsFor } from "@/lib/identity-display";
 import { isDirectlyReadable } from "@/lib/file-context";
 import { RichContent } from "@/components/rich-content";
 
-export type ChatEmbedAction = "accept" | "details" | "submit_funding";
+export type ChatEmbedAction =
+  | "accept"
+  | "details"
+  | "submit_funding"
+  | "accept_contract"
+  | "edit_contract";
 
 export type ChatEmbed =
   | { type: "proposal"; proposalId: string; status: string; title?: string }
   | { type: "agreement"; agreementId: string; status: string }
-  | { type: "review_request"; conversationId: string }
+  | { type: "review_request"; conversationId: string; percent?: number; complete?: boolean }
   | {
       type: "funding";
       agreementId: string;
       paymentId?: string;
       status?: string;
     };
+
+/** The contract row as the card sees it — signature columns optional until migration 0013. */
+export type ContractSummary = {
+  id: string;
+  terms: string;
+  status: string;
+  total_amount?: number;
+  currency?: string;
+  founder_accepted_at?: string | null;
+  team_accepted_at?: string | null;
+};
 
 export interface ChatMessage {
   id: string;
@@ -90,6 +106,221 @@ export function FundingForm({
         Submit for verification
       </button>
     </form>
+  );
+}
+
+// One action card per system message: brief receipt, proposal, contract (the signature
+// surface), funding. Extracted into a component because the contract card carries its own
+// edit state — the textarea must survive re-renders of the surrounding transcript.
+function SystemEmbedCard({
+  message,
+  canDecide,
+  isStaff,
+  contract,
+  embedBusy,
+  onEmbedAction,
+}: {
+  message: ChatMessage;
+  canDecide?: boolean;
+  isStaff?: boolean;
+  contract: ContractSummary | null;
+  embedBusy?: boolean;
+  onEmbedAction?: (
+    embed: ChatEmbed,
+    action: ChatEmbedAction,
+    value?: string,
+  ) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  const embed = message.embed;
+  if (!embed) return null;
+
+  // Signature state only binds when the loaded contract IS this card's agreement.
+  const ownContract =
+    embed.type === "agreement" && contract && contract.id === embed.agreementId
+      ? contract
+      : null;
+  const founderSigned = Boolean(ownContract?.founder_accepted_at);
+  const teamSigned = Boolean(ownContract?.team_accepted_at);
+  const bothSigned = founderSigned && teamSigned;
+  const actions = embedActions({ embed, canDecide, isStaff, contract: ownContract });
+
+  const title =
+    embed.type === "proposal"
+      ? embed.title || "Proposal ready"
+      : embed.type === "agreement"
+        ? bothSigned
+          ? "Contract signed"
+          : founderSigned || teamSigned
+            ? "Contract awaiting signatures"
+            : "Contract ready to sign"
+        : embed.type === "funding"
+          ? "Funding action"
+          : embed.type === "review_request"
+            ? "Brief sent for review"
+            : "Project action";
+
+  const signatureBadge = (signed: boolean, label: string) => (
+    <span
+      className={
+        signed
+          ? "rounded-full border border-[#5aa578]/30 bg-[#5aa578]/10 px-2.5 py-0.5 text-[11px] text-[#d9f7ea]"
+          : "rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[11px] text-[#9aa0a6]"
+      }
+    >
+      {signed ? `✓ ${label} signed` : `${label} yet to sign`}
+    </span>
+  );
+
+  return (
+    <div className="mt-4 flex justify-center">
+      <div className="w-full max-w-xl rounded-2xl border border-[#e8571e]/30 bg-[#1c2024] p-4 text-left">
+        <p className="text-[10px] uppercase tracking-[0.18em] text-[#b8763b]">
+          {embed.type === "agreement" ? "Contract" : "Project action"}
+        </p>
+        <p className="mt-1 font-medium text-[#ece7de]">{title}</p>
+
+        {/* Brief receipt: how shaped the handoff was, and the honest waiting state. */}
+        {embed.type === "review_request" && typeof embed.percent === "number" ? (
+          <div className="mt-2">
+            <div className="flex items-center justify-between text-[11px] text-[#9aa0a6]">
+              <span>{embed.complete ? "Brief complete" : "Brief shaped"}</span>
+              <span>{embed.percent}%</span>
+            </div>
+            <div
+              className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/10"
+              role="progressbar"
+              aria-valuenow={embed.percent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Brief completeness"
+            >
+              <div
+                className="h-1.5 rounded-full bg-[#e8571e]"
+                style={{ width: `${Math.min(100, Math.max(0, embed.percent))}%` }}
+              />
+            </div>
+          </div>
+        ) : null}
+
+        {/* The contract itself: total, both signatures, and the exact text being signed. */}
+        {embed.type === "agreement" && ownContract ? (
+          <div className="mt-2">
+            {typeof ownContract.total_amount === "number" ? (
+              <p className="text-xs text-[#ece7de]">
+                {ownContract.currency || "EUR"}{" "}
+                {ownContract.total_amount.toLocaleString("en-US")}
+              </p>
+            ) : null}
+            <div className="mt-2 flex flex-wrap gap-2">
+              {signatureBadge(founderSigned, "Founder")}
+              {signatureBadge(teamSigned, "Team")}
+            </div>
+            <div className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap rounded-xl border border-white/10 bg-[#14171a] p-3 text-xs leading-relaxed text-[#9aa0a6]">
+              {ownContract.terms}
+            </div>
+          </div>
+        ) : null}
+
+        <p className="mt-2 text-xs text-[#9aa0a6]">{message.content}</p>
+
+        {showsFundingForm(embed, canDecide) ? (
+          <FundingForm
+            messageId={message.id}
+            disabled={embedBusy}
+            onSubmit={(txHash) =>
+              onEmbedAction?.(embed, "submit_funding", txHash)
+            }
+          />
+        ) : null}
+
+        {/* Inline contract revision: both sides may edit; saving clears both signatures. */}
+        {embed.type === "agreement" && editing ? (
+          <div className="mt-3">
+            <label className="sr-only" htmlFor={`terms-${message.id}`}>
+              Contract terms
+            </label>
+            <textarea
+              id={`terms-${message.id}`}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              rows={6}
+              maxLength={8000}
+              className="w-full rounded-xl border border-white/10 bg-[#14171a] p-3 text-xs leading-relaxed text-[#ece7de] focus:border-[#e8571e] focus:outline-none"
+            />
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={
+                  embedBusy ||
+                  !draft.trim() ||
+                  draft.trim() === (ownContract?.terms ?? "").trim()
+                }
+                onClick={() => {
+                  onEmbedAction?.(embed, "edit_contract", draft.trim());
+                  setEditing(false);
+                }}
+                className="rounded-lg bg-[#e8571e] px-3 py-1.5 text-xs font-semibold text-[#14171a] disabled:opacity-60"
+              >
+                Save contract
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditing(false)}
+                className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[#ece7de]"
+              >
+                Cancel
+              </button>
+            </div>
+            <p className="mt-1.5 text-[10px] leading-relaxed text-[#9aa0a6]">
+              Saving replaces the contract text and clears both signatures — each side
+              accepts the new version.
+            </p>
+          </div>
+        ) : null}
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          {/* Which controls appear is decided by the tested embed-actions module. */}
+          {actions.map((item) =>
+            item.action === "details" ? (
+              <button
+                key={item.action}
+                type="button"
+                onClick={() => onEmbedAction?.(embed, "details")}
+                className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[#ece7de]"
+              >
+                {item.label}
+              </button>
+            ) : item.action === "edit_contract" ? (
+              <button
+                key={item.action}
+                type="button"
+                disabled={embedBusy}
+                onClick={() => {
+                  setDraft(ownContract?.terms ?? "");
+                  setEditing(true);
+                }}
+                className="rounded-lg border border-[#e8571e]/40 px-3 py-1.5 text-xs font-semibold text-[#f6d6c3] disabled:opacity-60"
+              >
+                {item.label}
+              </button>
+            ) : (
+              <button
+                key={item.action}
+                type="button"
+                disabled={embedBusy}
+                onClick={() => onEmbedAction?.(embed, item.action)}
+                className="rounded-lg bg-[#e8571e] px-3 py-1.5 text-xs font-semibold text-[#14171a] disabled:opacity-60"
+              >
+                {item.label}
+              </button>
+            ),
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -564,6 +795,8 @@ export function ChatTranscript({
   onEmbedAction,
   embedBusy,
   canDecide,
+  agreement,
+  isStaff,
   onAskFile,
   selfRole,
   participantRoles,
@@ -588,9 +821,14 @@ export function ChatTranscript({
   /**
    * Only the founder who owns the project may accept a proposal or submit funding. Staff reading
    * someone else's chat see the same card as read-only context instead of a button that the
-   * server will reject with 403.
+   * server will reject with 403. The contract card is the exception: BOTH sides sign, so it also
+   * receives `isStaff` and the live `agreement` row (signature columns) to decide per side.
    */
   canDecide?: boolean;
+  /** Live contract row for signature state on agreement cards; null before one exists. */
+  agreement?: ContractSummary | null;
+  /** Whether the viewer is BrandForge staff (the "team" side of the contract signature). */
+  isStaff?: boolean;
   /** Prefills the composer with an "ask about this file" prompt for a readable attachment. */
   onAskFile?: (fileName: string) => void;
   /** The signed-in member's honest role label ("Founder", "BrandForge staff"), when known. */
@@ -650,70 +888,16 @@ export function ChatTranscript({
       {messages.map((message, index) => {
         if (message.sender === "system") {
           if (message.embed) {
-            const embed = message.embed;
             return (
-              <div key={message.id} className="mt-4 flex justify-center">
-                <div className="w-full max-w-xl rounded-2xl border border-[#e8571e]/30 bg-[#1c2024] p-4 text-left">
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#b8763b]">
-                    Project action
-                  </p>
-                  <p className="mt-1 font-medium text-[#ece7de]">
-                    {embed.type === "proposal"
-                      ? embed.title || "Proposal ready"
-                      : embed.type === "agreement"
-                        ? "Agreement ready"
-                        : embed.type === "funding"
-                          ? "Funding action"
-                          : "Review request"}
-                  </p>
-                  <p className="mt-1 text-xs text-[#9aa0a6]">
-                    {message.content}
-                  </p>
-
-                  {showsFundingForm(embed, canDecide) ? (
-                    <FundingForm
-                      messageId={message.id}
-                      disabled={embedBusy}
-                      onSubmit={(txHash) =>
-                        onEmbedAction?.(embed, "submit_funding", txHash)
-                      }
-                    />
-                  ) : null}
-
-                  {/* A review_request is written after the handoff succeeds, so it is a receipt. */}
-                  {embed.type === "review_request" ? (
-                    <p className="mt-3 text-xs text-[#9aa0a6]">
-                      Sent to the team — they will reply in this chat.
-                    </p>
-                  ) : null}
-
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {/* Which controls appear is decided by the tested embed-actions module. */}
-                    {embedActions({ embed, canDecide }).map((item) =>
-                      item.action === "details" ? (
-                        <button
-                          key={item.action}
-                          type="button"
-                          onClick={() => onEmbedAction?.(embed, "details")}
-                          className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[#ece7de]"
-                        >
-                          {item.label}
-                        </button>
-                      ) : (
-                        <button
-                          key={item.action}
-                          type="button"
-                          disabled={embedBusy}
-                          onClick={() => onEmbedAction?.(embed, item.action)}
-                          className="rounded-lg bg-[#e8571e] px-3 py-1.5 text-xs font-semibold text-[#14171a] disabled:opacity-60"
-                        >
-                          {item.label}
-                        </button>
-                      ),
-                    )}
-                  </div>
-                </div>
-              </div>
+              <SystemEmbedCard
+                key={message.id}
+                message={message}
+                canDecide={canDecide}
+                isStaff={isStaff}
+                contract={agreement ?? null}
+                embedBusy={embedBusy}
+                onEmbedAction={onEmbedAction}
+              />
             );
           }
           return (
