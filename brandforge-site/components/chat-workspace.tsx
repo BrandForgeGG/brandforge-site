@@ -733,6 +733,21 @@ export function ChatWorkspace() {
     void loadRecents();
   }, [loadRecents]);
 
+  // An idea typed on the landing page before sign-in waits in the composer here: the
+  // visitor presses Start, signs in, and their text is already in the box to send.
+  useEffect(() => {
+    try {
+      const pending = window.sessionStorage.getItem("brandforge:pending-message");
+      if (pending) {
+        window.sessionStorage.removeItem("brandforge:pending-message");
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time restore
+        setInput(pending);
+      }
+    } catch {
+      // Storage blocked (private mode) — nothing to restore.
+    }
+  }, []);
+
   // Opening a conversation loads persisted truth first, then answers the founder's last
   // message if the AI has not replied yet (this is how the landing page becomes a chat).
   useEffect(() => {
