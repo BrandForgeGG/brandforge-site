@@ -2,55 +2,37 @@ import { createSupabaseServerClient } from './supabase/server';
 import type { NextRequest } from 'next/server';
 import type { User } from '@supabase/supabase-js';
 import { headers } from 'next/headers';
-import { parseCookieHeader, sessionUserFromCookiePairs } from './auth-cookies';
+import crypto from 'node:crypto';
+import {
+  parseCookieHeader,
+  combineAuthChunks,
+  decodeSessionJson,
+} from './auth-cookies';
 
 // Server-side Supabase access for API routes.
 //
-// BrandForge stores every message, requirement, estimate and milestone through Postgres
-// row level security, so server code must run as the signed-in founder. The request
-// cookies carry the Supabase session, which is why every helper here builds a fresh
-// request-scoped client instead of reusing the anonymous browser client.
+// SECURITY (C1): identity is NEVER taken from a decoded cookie or from x-user-* headers.
+// Those are attacker-forgeable (any base64/JSON blob shaped like a session decodes into
+// a chosen user id). Instead: pull the access_token out of the cookie session, then let
+// Supabase verify it server-side with auth.getUser(token). That checks the JWT signature
+// and expiry against the auth server and returns the canonical user — a forged cookie
+// fails closed as 401.
 //
-// The middleware (proxy.ts) passes authenticated user info via request headers
-// (x-user-id, x-user-email, x-user-name) when it can read the session from cookies.
-// Prefer those headers — getUser() on every API call races refresh-token rotation
-// and was signing users out mid-session.
+// - getUser(token) with an explicit JWT never triggers a refresh, so it cannot race
+//   refresh-token rotation (the old auto-signout bug) and never writes cookies
+//   (createSupabaseServerClient.setAll is a no-op in route handlers).
+// - Results are cached per token for 60s so polling routes do not pay a network hop
+//   per request; staleness is bounded and revocation windows this short are acceptable
+//   because the JWT itself was verified at store time.
+// - No token in any cookie source = unauthenticated, no network call.
 //
 // On Vercel, NextRequest.cookies and cookies() are often empty in route handlers;
-// the working source is next/headers() → x-forwarded-cookie / cookie (same path
-// project-db already uses). Identity resolution (all local — never network getUser):
-//   1. x-user-* on the request, then on async headers()
-//   2. decode chunked base64url auth-token from request cookies, then headers()
-//   3. cookies() store, then supabase.auth.getSession()
+// cookie sources are merged: request cookies, x-forwarded-cookie, raw Cookie header,
+// async headers() store, cookies() store.
 
 export { createSupabaseServerClient };
 
-function userFromHeaderValues(
-  headerUserId: string | null,
-  headerEmail: string | null,
-  headerName: string | null
-): User | null {
-  // Email can be missing on some federated logins; id alone is enough for RLS.
-  if (!headerUserId) return null;
-
-  return {
-    id: headerUserId,
-    email: headerEmail ?? '',
-    user_metadata: { full_name: headerName ?? '' },
-    app_metadata: {},
-    aud: 'authenticated',
-    created_at: new Date().toISOString(),
-  } as unknown as User;
-}
-
-function userFromHeaderStore(h: Headers): User | null {
-  return userFromHeaderValues(h.get('x-user-id'), h.get('x-user-email'), h.get('x-user-name'));
-}
-
-function userFromRequest(request?: NextRequest): User | null {
-  if (!request) return null;
-  return userFromHeaderStore(request.headers);
-}
+type DecodedSession = { access_token?: unknown; refresh_token?: unknown } | null;
 
 function pairsFromRequest(request?: NextRequest): ReturnType<typeof parseCookieHeader> {
   const pairs: ReturnType<typeof parseCookieHeader> = [];
@@ -80,14 +62,8 @@ function pairsFromHeaderStore(h: Headers): ReturnType<typeof parseCookieHeader> 
   return pairs;
 }
 
-function userFromCookiePairs(pairs: ReturnType<typeof parseCookieHeader>): User | null {
-  if (pairs.length === 0) return null;
-  return sessionUserFromCookiePairs(pairs) as unknown as User | null;
-}
-
-export async function getAuthenticatedUser(request?: NextRequest): Promise<User | null> {
-  const fromRequestHeaders = userFromRequest(request);
-  if (fromRequestHeaders) return fromRequestHeaders;
+async function sessionTokenFromRequest(request?: NextRequest): Promise<string | null> {
+  const pairs = pairsFromRequest(request);
 
   let headerStore: Headers | null = null;
   try {
@@ -95,39 +71,58 @@ export async function getAuthenticatedUser(request?: NextRequest): Promise<User 
   } catch {
     headerStore = null;
   }
+  if (headerStore) pairs.push(...pairsFromHeaderStore(headerStore));
 
-  if (headerStore) {
-    const fromAsyncHeaders = userFromHeaderStore(headerStore);
-    if (fromAsyncHeaders) return fromAsyncHeaders;
-
-    // Primary Vercel path: middleware-forwarded Cookie header on headers().
-    const fromHeaderStoreCookies = userFromCookiePairs(pairsFromHeaderStore(headerStore));
-    if (fromHeaderStoreCookies) return fromHeaderStoreCookies;
-  }
-
-  const fromRequestCookies = userFromCookiePairs(pairsFromRequest(request));
-  if (fromRequestCookies) return fromRequestCookies;
-
+  let storePairs: ReturnType<typeof parseCookieHeader> = [];
   try {
     const { cookies } = await import('next/headers');
-    const store = await cookies();
-    const fromStore = userFromCookiePairs(store.getAll());
-    if (fromStore) return fromStore;
+    storePairs = (await cookies()).getAll();
   } catch {
     // no cookie store — fall through
   }
+  pairs.push(...storePairs);
 
-  // Fallback: local session only (no network getUser).
+  const combined = combineAuthChunks(pairs);
+  if (!combined) return null;
+
+  const session = decodeSessionJson(combined) as DecodedSession;
+  const token = session && typeof session.access_token === 'string' ? session.access_token : '';
+  return token || null;
+}
+
+// Verified-token cache: token hash -> user. Bounded; cleared wholesale past the cap
+// because a refresh re-issues tokens anyway and a cold miss costs one network call.
+const VERIFY_CACHE_TTL_MS = 60_000;
+const VERIFY_CACHE_MAX = 500;
+const verifyCache = new Map<string, { user: User; expiresAt: number }>();
+
+export async function getAuthenticatedUser(request?: NextRequest): Promise<User | null> {
+  const token = await sessionTokenFromRequest(request);
+  if (!token) return null;
+
+  const cacheKey = crypto.createHash('sha256').update(token).digest('hex');
+  const cached = verifyCache.get(cacheKey);
+  const now = Date.now();
+  if (cached && cached.expiresAt > now) {
+    return cached.user;
+  }
+  verifyCache.delete(cacheKey);
+
   const supabase = await createSupabaseServerClient(request);
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+    error,
+  } = await supabase.auth.getUser(token);
 
-  if (!session?.user) {
+  if (error || !user) {
+    // Expired or forged. The client refreshes its token on the next auth call and retries.
     return null;
   }
 
-  return session.user;
+  if (verifyCache.size >= VERIFY_CACHE_MAX) verifyCache.clear();
+  verifyCache.set(cacheKey, { user, expiresAt: now + VERIFY_CACHE_TTL_MS });
+
+  return user;
 }
 
 export function getActorName(
