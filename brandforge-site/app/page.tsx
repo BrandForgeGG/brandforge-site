@@ -3,6 +3,7 @@ import { LandingNav } from '@/components/landing/landing-nav';
 import { LandingHero } from '@/components/landing/landing-hero';
 import { LandingSections } from '@/components/landing/landing-sections';
 import { LandingCommunity } from '@/components/landing/landing-community';
+import { BetaBanner } from '@/components/beta-banner';
 
 export const metadata = {
   title: 'BrandForge — Describe it. Humans build it.',
@@ -13,6 +14,7 @@ export const metadata = {
 export default function Home() {
   return (
     <div className="bf-page">
+      <BetaBanner />
       <LandingNav />
       <main>
         <LandingHero />

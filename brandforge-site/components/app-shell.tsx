@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ConversationRail } from '@/components/conversation-rail';
+import { BetaBanner } from '@/components/beta-banner';
 
 export function AppShell({
   title,
@@ -16,6 +17,7 @@ export function AppShell({
 
   return (
     <div className="bf-page">
+      <BetaBanner />
       <div className="mx-auto flex max-w-[1600px]">
         <ConversationRail
           isMobileOpen={isRailOpen}
