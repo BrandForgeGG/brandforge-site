@@ -21,16 +21,6 @@ export const dynamic = 'force-dynamic';
 // Task actions from inside the chat. Staff may move a task forward and claim it; founders may accept
 // delivered work (REVIEW -> DONE) once the project is accepted/active/completed. Every transition
 // lands in the same chat.
-async function isStaff(userId: string, conversationId: string): Promise<boolean> {
-  // profiles.role decides who is staff, not the participant row: the team can act on a chat it has
-  // not joined yet. The participant lookup stays as a fallback for builders invited by hand.
-  if (await isStaffAccount(userId)) {
-    return true;
-  }
-
-  const participants = await getParticipants(conversationId);
-  return participants.some((participant) => participant.user_id === userId);
-}
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -66,7 +56,10 @@ export async function PATCH(request: NextRequest) {
 
     const conversation = await getConversation(conversationId);
     const conversationStatus = String(conversation?.status ?? 'DISCOVERY');
-    const staff = await isStaff(user.id, conversationId);
+    // profiles.role decides staff powers, nothing else. The old participant fallback meant any
+    // invited teammate counted as staff and could set due dates, assign work, claim tasks and
+    // advance any status (H2).
+    const staff = await isStaffAccount(user.id);
     const isFounder = conversation?.user_id === user.id;
 
     let updatedTask = task;

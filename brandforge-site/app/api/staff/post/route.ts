@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 // Post into a founder's chat as a human operator.
 export async function POST(request: NextRequest) {
   try {
-    let body: { conversationId?: string; message?: string; displayName?: string } = {};
+    let body: { conversationId?: string; message?: string } = {};
 
     try {
       body = await request.json();
@@ -33,11 +33,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Could not join the conversation' }, { status: 500 });
     }
 
+    // Sender name always comes from the caller's own verified profile — a client-supplied
+    // displayName could post under any name, including the founder's (H4).
     const messageId = await addMessage({
       conversation_id: context.conversationId,
       sender_type: 'human_operator',
       sender_id: context.user.id,
-      sender_name: String(body.displayName ?? '').trim() || context.displayName,
+      sender_name: context.displayName,
       content: message,
       content_type: 'text',
     });

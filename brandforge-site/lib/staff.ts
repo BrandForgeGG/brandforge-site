@@ -9,7 +9,9 @@ import {
 } from '@/lib/project-db';
 import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
 
-// Staff access = profiles.role is operator or admin (or you own/joined the conversation).
+// Staff access = profiles.role is operator or admin. Nothing else opens /api/staff/*:
+// owning the conversation or merely being a participant in it does not (H4) — the client
+// only calls these routes for real staff anyway.
 // Shared helpers for /api/staff/*.
 
 export interface StaffContext {
@@ -62,12 +64,13 @@ export async function requireStaffContext(
   ]);
 
   const isStaff = profileRole === 'operator' || profileRole === 'admin';
-  const isOwner = conversation.user_id === user.id;
-  const participant = participants.find((entry) => entry.user_id === user.id);
 
-  if (!isStaff && !isOwner && !participant) {
+  if (!isStaff) {
     return denied();
   }
+
+  const isOwner = conversation.user_id === user.id;
+  const participant = participants.find((entry) => entry.user_id === user.id);
 
   const role: StaffContext['role'] = isOwner
     ? 'founder'
