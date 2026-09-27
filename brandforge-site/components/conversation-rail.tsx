@@ -60,7 +60,8 @@ onMobileClose,
     staffUnseenCount: staffUnseenCountProp,
     telegramConnected,
     onTelegramConnect,
-    telegramLink,
+    telegramCode,
+    telegramBotUrl,
   }: {
     recents?: RecentConversation[];
     activeConversationId?: string;
@@ -72,10 +73,12 @@ onMobileClose,
     staffUnseenCount?: number;
     telegramConnected?: boolean;
     onTelegramConnect?: () => void;
-    telegramLink?: string;
+    telegramCode?: string;
+    telegramBotUrl?: string;
   }) {
   const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [telegramCodeCopied, setTelegramCodeCopied] = useState(false);
   const [account, setAccount] = useState<{
     name: string;
     email: string;
@@ -523,26 +526,48 @@ onMobileClose,
               </div>
             ) : null}
             {telegramConnected !== true ? (
-              <>
-                {telegramLink ? (
-                  <a
-                    href={telegramLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 flex w-full items-center gap-2 rounded-lg border border-[#e8571e]/30 bg-[#e8571e]/10 px-3 py-2 text-xs font-semibold text-[#e8571e] transition hover:bg-[#e8571e]/20"
-                  >
-                    <span aria-hidden="true">✈</span> Open in Telegram
-                  </a>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => void onTelegramConnect?.()}
-                    className="mt-2 flex w-full items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs text-[#9aa0a6] transition hover:border-[#e8571e] hover:text-[#ece7de]"
-                  >
-                    <span aria-hidden="true">✈</span> Connect Telegram
-                  </button>
-                )}
-              </>
+              telegramCode ? (
+                <div className="mt-2 rounded-lg border border-[#e8571e]/30 bg-[#e8571e]/10 px-3 py-2 text-xs text-[#e8571e]">
+                  <p className="mb-1.5 leading-snug text-[#c9b8a8]">
+                    Paste this code in the bot to get project updates in Telegram:
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="select-all font-mono text-sm font-bold tracking-[0.2em] text-[#ece7de]">
+                      {telegramCode}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void navigator.clipboard?.writeText(telegramCode).then(() => {
+                          setTelegramCodeCopied(true);
+                          setTimeout(() => setTelegramCodeCopied(false), 1500);
+                        });
+                      }}
+                      className="ml-auto rounded border border-[#e8571e]/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide transition hover:bg-[#e8571e]/20"
+                    >
+                      {telegramCodeCopied ? "Copied" : "Copy"}
+                    </button>
+                  </div>
+                  {telegramBotUrl ? (
+                    <a
+                      href={telegramBotUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1.5 inline-flex items-center gap-1 font-semibold underline-offset-2 transition hover:underline"
+                    >
+                      <span aria-hidden="true">✈</span> Open the bot
+                    </a>
+                  ) : null}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void onTelegramConnect?.()}
+                  className="mt-2 flex w-full items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs text-[#9aa0a6] transition hover:border-[#e8571e] hover:text-[#ece7de]"
+                >
+                  <span aria-hidden="true">✈</span> Connect Telegram
+                </button>
+              )
             ) : null}
           </div>
         )}

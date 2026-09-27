@@ -172,6 +172,101 @@ export function isTelegramChatId(value) {
   return /^-?\d{1,20}$/.test(String(value ?? '').trim());
 }
 
+// ---------- one-time Telegram link codes (paste-into-bot flow) ----------
+//
+// Telegram caps the ?start= deep-link payload at 64 bytes, which cannot hold a signed
+// token, so the app shows a short code instead: the member opens the bot and pastes
+// the code, and the bot confirms it against this account. The code is a truncated HMAC
+// over the user id and a 15-minute time bucket, so nothing has to be stored, it dies on
+// its own, and guessing one code anywhere in the member list inside a single bucket
+// window is infeasible (40 bits of code, verified against every account in one pass).
+
+export const LINK_CODE_LENGTH = 8;
+export const LINK_CODE_BUCKET_SECONDS = 15 * 60;
+
+// Lowercase, alphanumeric only: humans paste with stray spaces, dashes and capitals.
+export function normalizeLinkCode(value) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function linkCodeFor(userId, bucket, key) {
+  const digest = crypto.createHmac('sha256', key).update(`${userId}.${bucket}`).digest();
+  let out = '';
+  for (let i = 0; i < LINK_CODE_LENGTH; i += 1) {
+    out += TOKEN_ALPHABET[digest[i] % TOKEN_ALPHABET.length];
+  }
+  return out;
+}
+
+function linkCodeBucket(nowMs) {
+  return Math.floor((Number(nowMs) || Date.now()) / 1000 / LINK_CODE_BUCKET_SECONDS);
+}
+
+// Returns an 8-character code for this user in the current bucket, or null without a secret.
+export function createTelegramLinkCode(userId, secret, nowMs) {
+  const key = String(secret ?? '').trim();
+  const id = String(userId ?? '').trim();
+
+  if (!key || !id) {
+    return null;
+  }
+
+  return linkCodeFor(id, linkCodeBucket(nowMs), key);
+}
+
+/**
+ * @typedef {{ ok: true, userId: string }
+ *   | { ok: false, reason: string }} TelegramLinkCodeVerification
+ */
+
+// Verifies a pasted code against the list of member ids. Checks the current and the
+// previous bucket so a code keeps working across a boundary, and walks the whole
+// candidate list without an early return so timing does not reveal where a match sat.
+/**
+ * @param {unknown} code
+ * @param {string[]} candidateUserIds
+ * @param {string | undefined} secret
+ * @param {number} [nowMs]
+ * @returns {TelegramLinkCodeVerification}
+ */
+export function verifyTelegramLinkCode(code, candidateUserIds, secret, nowMs) {
+  const key = String(secret ?? '').trim();
+
+  if (!key) {
+    return { ok: false, reason: 'not_configured' };
+  }
+
+  const normalized = normalizeLinkCode(code);
+
+  if (normalized.length !== LINK_CODE_LENGTH) {
+    return { ok: false, reason: 'malformed_code' };
+  }
+
+  const bucket = linkCodeBucket(nowMs);
+  const candidates = Array.isArray(candidateUserIds) ? candidateUserIds : [];
+  let match = '';
+
+  for (const userId of candidates) {
+    const id = String(userId ?? '').trim();
+    if (!id) continue;
+
+    if (safeEqual(linkCodeFor(id, bucket, key), normalized)) {
+      match = id;
+    } else if (safeEqual(linkCodeFor(id, bucket - 1, key), normalized)) {
+      match = id;
+    }
+  }
+
+  if (!match) {
+    return { ok: false, reason: 'unknown_code' };
+  }
+
+  return { ok: true, userId: match };
+}
+
 // ---------- one-time Telegram link tokens ----------
 //
 // The deep link carries a stateless token instead of a database row: the user id and

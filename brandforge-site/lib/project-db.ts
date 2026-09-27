@@ -454,7 +454,28 @@ export async function linkTelegramToProfile(
   return { ok: true, identity };
 }
 
-// Service-role variant of linkTelegramToProfile, for the bot deep-link verifier.
+// Service-role list of every profile id, used by the bot's paste-code confirmation.
+// The link code is stateless, so verification proves ownership by recomputing it for
+// each account; if this list cannot be read, verification fails closed with zero
+// candidates and no link can be made.
+export async function listTelegramLinkCandidates(): Promise<string[]> {
+  const supabase = createSupabaseAdminClient();
+
+  if (!supabase) {
+    return [];
+  }
+
+  const { data, error } = await supabase.from('profiles').select('id');
+
+  if (error || !data) {
+    console.error('Telegram link candidates error:', error?.message ?? 'no data');
+    return [];
+  }
+
+  return data.map((row) => String((row as { id?: unknown }).id ?? '').trim()).filter(Boolean);
+}
+
+// Service-role variant of linkTelegramToProfile, for the bot link verifier.
 //
 // The user-scoped client cannot write this row: at the moment the bot calls back there is no
 // browser session, and the profile being written belongs to whoever signed the token, not to the

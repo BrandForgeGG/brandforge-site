@@ -16,6 +16,11 @@ const {
   normalizeTelegramUsername,
   isTelegramChatId,
   RESERVED_USERNAMES,
+  createTelegramLinkCode,
+  verifyTelegramLinkCode,
+  normalizeLinkCode,
+  LINK_CODE_LENGTH,
+  LINK_CODE_BUCKET_SECONDS,
 } = require('./identity.js');
 
 test('normalizeUsername trims, lowercases and drops a leading @', () => {
@@ -213,4 +218,65 @@ test('two users never receive the same token', () => {
   const a = createTelegramLinkToken(USER_ID, SECRET, NOW);
   const b = createTelegramLinkToken('66666666-2222-3333-4444-555555555555', SECRET, NOW);
   assert.notEqual(a, b);
+});
+
+// ---------- paste-into-bot link codes ----------
+
+test('a link code is short, stable within its bucket, and differs per user', () => {
+  const code = createTelegramLinkCode(USER_ID, SECRET, NOW);
+  assert.ok(code);
+  assert.equal(code.length, LINK_CODE_LENGTH);
+  assert.match(code, /^[a-z0-9]+$/);
+
+  // Same user, same bucket: deterministic, so re-requesting shows the same code.
+  assert.equal(createTelegramLinkCode(USER_ID, SECRET, NOW + 60_000), code);
+
+  // A different user gets a different code.
+  const other = createTelegramLinkCode('66666666-2222-3333-4444-555555555555', SECRET, NOW);
+  assert.notEqual(other, code);
+});
+
+test('the bot verifies a pasted code against the member list', () => {
+  const code = createTelegramLinkCode(USER_ID, SECRET, NOW);
+  const candidates = ['66666666-2222-3333-4444-555555555555', USER_ID];
+
+  const result = verifyTelegramLinkCode(code, candidates, SECRET, NOW);
+  assert.equal(result.ok, true);
+  assert.equal(result.userId, USER_ID);
+});
+
+test('a pasted code tolerates case, spaces and separators humans add', () => {
+  const code = createTelegramLinkCode(USER_ID, SECRET, NOW);
+  const messy = `  ${code.toUpperCase().slice(0, 4)}-${code.slice(4)}  `;
+
+  assert.equal(normalizeLinkCode(messy), code);
+  assert.equal(verifyTelegramLinkCode(messy, [USER_ID], SECRET, NOW).ok, true);
+});
+
+test('wrong, malformed and empty codes are rejected', () => {
+  const candidates = [USER_ID];
+  assert.equal(verifyTelegramLinkCode('zzzzzzzz', candidates, SECRET, NOW).reason, 'unknown_code');
+  assert.equal(verifyTelegramLinkCode('short', candidates, SECRET, NOW).reason, 'malformed_code');
+  assert.equal(verifyTelegramLinkCode('', candidates, SECRET, NOW).reason, 'malformed_code');
+  assert.equal(verifyTelegramLinkCode(null, candidates, SECRET, NOW).reason, 'malformed_code');
+  // No candidates (profile list unavailable) fails closed.
+  assert.equal(verifyTelegramLinkCode(createTelegramLinkCode(USER_ID, SECRET, NOW), [], SECRET, NOW).reason, 'unknown_code');
+});
+
+test('a code survives one bucket boundary and dies after two', () => {
+  const code = createTelegramLinkCode(USER_ID, SECRET, NOW);
+  const oneBucketLater = NOW + LINK_CODE_BUCKET_SECONDS * 1000;
+  const twoBucketsLater = NOW + LINK_CODE_BUCKET_SECONDS * 2000;
+
+  assert.equal(verifyTelegramLinkCode(code, [USER_ID], SECRET, oneBucketLater).ok, true);
+  assert.equal(verifyTelegramLinkCode(code, [USER_ID], SECRET, twoBucketsLater).ok, false);
+});
+
+test('no link code is minted or accepted without a secret', () => {
+  assert.equal(createTelegramLinkCode(USER_ID, '', NOW), null);
+  assert.equal(createTelegramLinkCode(USER_ID, null, NOW), null);
+  assert.equal(createTelegramLinkCode('', SECRET, NOW), null);
+
+  const code = createTelegramLinkCode(USER_ID, SECRET, NOW);
+  assert.equal(verifyTelegramLinkCode(code, [USER_ID], '', NOW).reason, 'not_configured');
 });

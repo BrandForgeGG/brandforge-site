@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'node:crypto';
-import { verifyTelegramLinkToken } from '@/lib/identity';
+import { normalizeLinkCode, LINK_CODE_LENGTH } from '@/lib/identity';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,6 +37,38 @@ async function callTelegramApi(method: string, body: Record<string, unknown>) {
   return response.json();
 }
 
+// Asks our own confirm endpoint to perform the link: it holds the bot-secret check and
+// the code/token verification, so the webhook never touches the database directly.
+async function confirmLink(payload: Record<string, unknown>): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://brandforge.gg'}/api/identity/telegram-link/confirm`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-brandforge-bot-secret': process.env.TELEGRAM_LINK_SECRET ?? '',
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(10000),
+      },
+    );
+
+    const data = (await response.json().catch(() => ({}))) as { error?: string };
+    return { ok: response.ok, error: data.error };
+  } catch {
+    return { ok: false, error: 'Could not link your account right now. Please try again.' };
+  }
+}
+
+const WELCOME_TEXT =
+  'Welcome to BrandForge.\n\n' +
+  'To link your account and get project updates here:\n' +
+  '1. Open the BrandForge app\n' +
+  '2. Press “Connect Telegram” in the sidebar\n' +
+  '3. Paste the 8-character code it shows you into this chat\n\n' +
+  'Codes are valid for about 15 minutes.';
+
 export async function POST(request: NextRequest) {
   try {
     if (!isAuthorized(request)) {
@@ -48,61 +80,13 @@ export async function POST(request: NextRequest) {
     const message = update.message;
     const callbackQuery = update.callback_query;
 
+    // Legacy deep-link buttons from before the paste-code flow. Answer them with the
+    // new instruction instead of acting on a callback payload Telegram can no longer carry.
     if (callbackQuery) {
-      const data = String(callbackQuery.data ?? '');
-      if (data.startsWith('link:')) {
-        const token = data.slice(5);
-        const chatId = String(callbackQuery.message?.chat?.id ?? '');
-
-        const verification = verifyTelegramLinkToken(
-          token,
-          process.env.TELEGRAM_LINK_SECRET,
-        );
-
-        if (!verification.ok) {
-          await callTelegramApi('answerCallbackQuery', {
-            callback_query_id: callbackQuery.id,
-            text: 'This link has expired. Please generate a new one in the app.',
-            show_alert: true,
-          });
-          return NextResponse.json({ ok: true });
-        }
-
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://brandforge.gg'}/api/identity/telegram-link/confirm`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-brandforge-bot-secret': process.env.TELEGRAM_LINK_SECRET ?? '',
-            },
-            body: JSON.stringify({
-              token,
-              chatId,
-              telegramUsername: callbackQuery.from?.username ?? null,
-            }),
-            signal: AbortSignal.timeout(10000),
-          },
-        );
-
-        if (response.ok) {
-          await callTelegramApi('editMessageText', {
-            chat_id: callbackQuery.message?.chat?.id,
-            message_id: callbackQuery.message?.message_id,
-            text: 'Your Telegram account is linked. You will now receive project updates here.',
-          });
-          await callTelegramApi('answerCallbackQuery', {
-            callback_query_id: callbackQuery.id,
-            text: 'Account linked successfully.',
-          });
-        } else {
-          await callTelegramApi('answerCallbackQuery', {
-            callback_query_id: callbackQuery.id,
-            text: 'Could not link your account. Please try again.',
-            show_alert: true,
-          });
-        }
-      }
+      await callTelegramApi('answerCallbackQuery', {
+        callback_query_id: callbackQuery.id,
+        text: 'Please paste your BrandForge link code into the chat instead.',
+      });
       return NextResponse.json({ ok: true });
     }
 
@@ -112,44 +96,52 @@ export async function POST(request: NextRequest) {
 
     const text = String(message.text ?? '');
     const chatId = String(message.chat?.id ?? '');
+    const from = message.from ?? {};
 
-    if (text.startsWith('/start')) {
-      const parts = text.split(' ');
-      const token = parts[1] ?? '';
+    if (!text || !chatId) {
+      return NextResponse.json({ ok: true });
+    }
 
-      if (token) {
-        const verification = verifyTelegramLinkToken(
-          token,
-          process.env.TELEGRAM_LINK_SECRET,
-        );
+    if (text.startsWith('/start') || text.startsWith('/help')) {
+      await callTelegramApi('sendMessage', { chat_id: chatId, text: WELCOME_TEXT });
+      return NextResponse.json({ ok: true });
+    }
 
-        if (verification.ok) {
-          await callTelegramApi('sendMessage', {
-            chat_id: chatId,
-            text: 'Link your BrandForge account to this Telegram chat.\n\nWe ask for this so we can send you project updates, milestone notifications, and payment confirmations directly here — no email needed.',
-            reply_markup: {
-              inline_keyboard: [
-                [
-                  {
-                    text: 'Yes, link my account',
-                    callback_data: `link:${token}`,
-                  },
-                ],
-              ],
-            },
-          });
-        } else {
-          await callTelegramApi('sendMessage', {
-            chat_id: chatId,
-            text: 'This link has expired or is not valid. Please open a new link from the BrandForge app.',
-          });
-        }
-      } else {
-        await callTelegramApi('sendMessage', {
-          chat_id: chatId,
-          text: 'Welcome to BrandForge. Open the app and go to Settings to link your Telegram account.',
-        });
-      }
+    if (text.startsWith('/')) {
+      await callTelegramApi('sendMessage', {
+        chat_id: chatId,
+        text: 'Unknown command. Paste your BrandForge link code to link your account.',
+      });
+      return NextResponse.json({ ok: true });
+    }
+
+    // Anything else: treat it as a pasted link code.
+    const code = normalizeLinkCode(text);
+
+    if (code.length !== LINK_CODE_LENGTH) {
+      await callTelegramApi('sendMessage', {
+        chat_id: chatId,
+        text: `That does not look like a link code. Codes are ${LINK_CODE_LENGTH} characters, like “k7m2q9xd” — generate one in the BrandForge app and paste it here.`,
+      });
+      return NextResponse.json({ ok: true });
+    }
+
+    const result = await confirmLink({
+      code,
+      chatId,
+      telegramUsername: from.username ?? null,
+    });
+
+    if (result.ok) {
+      await callTelegramApi('sendMessage', {
+        chat_id: chatId,
+        text: 'Linked. You will now receive project updates, milestone notifications and payment confirmations here.',
+      });
+    } else {
+      await callTelegramApi('sendMessage', {
+        chat_id: chatId,
+        text: `${result.error ?? 'That code is not valid.'} Open the app, press “Connect Telegram” for a fresh code, and paste it here.`,
+      });
     }
 
     return NextResponse.json({ ok: true });

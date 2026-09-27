@@ -134,7 +134,8 @@ export function ChatWorkspace() {
     null,
   );
   const [telegramConnected, setTelegramConnected] = useState(false);
-  const [telegramLink, setTelegramLink] = useState("");
+  const [telegramCode, setTelegramCode] = useState("");
+  const [telegramBotUrl, setTelegramBotUrl] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [showInviteForm, setShowInviteForm] = useState(false);
 
@@ -1114,7 +1115,8 @@ export function ChatWorkspace() {
       });
       if (!response.ok) return;
       const data = await response.json();
-      setTelegramLink(data.deepLink);
+      setTelegramCode(data.code ?? "");
+      setTelegramBotUrl(data.botUrl ?? "");
     } catch {
       // Telegram link fetch is best-effort.
     }
@@ -1409,7 +1411,8 @@ return (
         staffUnseenCount={railMeta.unseenCount}
         telegramConnected={telegramConnected}
         onTelegramConnect={handleTelegramConnect}
-        telegramLink={telegramLink}
+        telegramCode={telegramCode}
+        telegramBotUrl={telegramBotUrl}
       />
 
       <main className="relative flex min-w-0 flex-1 flex-col">
