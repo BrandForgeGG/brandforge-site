@@ -6,6 +6,7 @@ const {
   canUpdateAgreement,
   canSubmitFunding,
   canResolveAiDraft,
+  reconcileSchedule,
 } = require('./money-authz.js');
 
 const FOUNDER = { userId: 'founder-1', isStaff: false };
@@ -94,4 +95,79 @@ test('a staff member who owns a chat is treated as that founder, not as staff', 
   assert.equal(canSubmitFunding({ actor: staffWhoOwns, ownerId: OWNER_ID }).allowed, true);
   // And a staff member on someone else's chat still cannot submit that founder's funding.
   assert.equal(canSubmitFunding({ actor: STAFF, ownerId: OWNER_ID }).allowed, false);
+});
+
+// ---------- payment schedule reconciliation (H3) ----------
+
+const sum = (rows) => rows.reduce((acc, row) => acc + row.amount, 0);
+
+test('schedule: an exact match passes through unchanged', () => {
+  const rows = [{ amount: 400 }, { amount: 600 }];
+  const result = reconcileSchedule(rows, 1000);
+  assert.equal(result.ok, true);
+  assert.equal(result.adjusted, false);
+  assert.equal(sum(result.milestones), 1000);
+});
+
+test('schedule: the final installment absorbs a shortfall', () => {
+  const rows = [{ amount: 400 }, { amount: 400 }];
+  const result = reconcileSchedule(rows, 1000);
+  assert.equal(result.ok, true);
+  assert.equal(result.adjusted, true);
+  assert.deepEqual(
+    result.milestones.map((row) => row.amount),
+    [400, 600],
+  );
+  assert.equal(sum(result.milestones), 1000);
+});
+
+test('schedule: a null-amount final milestone becomes the remainder', () => {
+  const rows = [{ amount: 300 }, { amount: null }];
+  const result = reconcileSchedule(rows, 1000);
+  assert.equal(result.ok, true);
+  assert.equal(sum(result.milestones), 1000);
+  assert.equal(result.milestones[1].amount, 700);
+});
+
+test('schedule: cents-level rounding lands exactly on the total', () => {
+  const rows = [{ amount: 111.11 }, { amount: 111.11 }];
+  const result = reconcileSchedule(rows, 333.33);
+  assert.equal(result.ok, true);
+  assert.equal(sum(result.milestones), 333.33);
+});
+
+test('schedule: an over-summed schedule is pulled down onto the contract total', () => {
+  // AI drafts routinely over-sum. The contract total wins: the final installment shrinks,
+  // which keeps escrow collecting exactly the accepted price.
+  const result = reconcileSchedule([{ amount: 400 }, { amount: 400 }], 500);
+  assert.equal(result.ok, true);
+  assert.equal(result.adjusted, true);
+  assert.deepEqual(
+    result.milestones.map((row) => row.amount),
+    [400, 100],
+  );
+  assert.equal(sum(result.milestones), 500);
+});
+
+test('schedule: refused when absorbing would push the final installment below zero', () => {
+  // 700 of milestones against a EUR 100 contract: the remainder (-600) cannot land on the
+  // final row without going negative, so the mismatch is surfaced instead of papered over.
+  const result = reconcileSchedule([{ amount: 300 }, { amount: 400 }], 100);
+  assert.equal(result.ok, false);
+  assert.equal(result.status, 409);
+  assert.match(result.reason, /more than the accepted proposal total/);
+});
+
+test('schedule: an invalid proposal total is refused before any arithmetic', () => {
+  for (const bad of [0, -5, NaN, '4000abc', null, undefined]) {
+    const result = reconcileSchedule([{ amount: 10 }], bad);
+    assert.equal(result.ok, false, `total ${String(bad)}`);
+    assert.equal(result.status, 409);
+  }
+});
+
+test('schedule: no milestones is a valid (empty) schedule', () => {
+  const result = reconcileSchedule([], 1000);
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.milestones, []);
 });

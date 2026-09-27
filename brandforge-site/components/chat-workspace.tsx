@@ -1168,14 +1168,14 @@ export function ChatWorkspace() {
         }
 
         if (action === "accept") {
+          // Only the ids travel: the server derives the contract total and terms from
+          // the accepted proposal itself.
           const agreementResponse = await fetch("/api/agreements", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               conversationId,
               proposalId: proposal.id,
-              terms: `BrandForge project agreement for ${proposal.title}. Total ${proposal.currency} ${proposal.total_amount}. Estimated delivery ${proposal.estimated_weeks_min ?? "?"}-${proposal.estimated_weeks_max ?? "?"} weeks.`,
-              totalAmount: proposal.total_amount,
             }),
           });
           const agreementData = await agreementResponse

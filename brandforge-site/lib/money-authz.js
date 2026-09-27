@@ -93,6 +93,67 @@ function canResolveAiDraft({ actor }) {
   return { allowed: true, status: 200, reason: 'staff' };
 }
 
+function round2(value) {
+  return Math.round(Number(value) * 100) / 100;
+}
+
+/**
+ * Make the payment schedule partition the contract total exactly.
+ *
+ * The agreement total is server-derived from the accepted proposal (never taken from the
+ * request body), so the escrow invariant is: sum(payments) === agreement.total_amount.
+ * Milestone amounts come from AI drafts and routinely do not add up, so the final
+ * installment absorbs the difference in either direction (a schedule over the contract
+ * total is pulled down onto it); a remainder that would drive the final installment below
+ * zero is refused instead of papered over.
+ *
+ * @param {Array<{ amount?: number | null }>} milestones
+ * @param {unknown} totalAmount
+ * @returns {{ ok: true, milestones: Array<object>, adjusted: boolean }
+ *   | { ok: false, status: number, reason: string }}
+ */
+function reconcileSchedule(milestones, totalAmount) {
+  const total = Number(totalAmount);
+
+  if (!Number.isFinite(total) || total <= 0) {
+    return {
+      ok: false,
+      status: 409,
+      reason: 'The accepted proposal does not have a valid total amount',
+    };
+  }
+
+  const rows = Array.isArray(milestones) ? milestones : [];
+
+  if (rows.length === 0) {
+    return { ok: true, milestones: rows, adjusted: false };
+  }
+
+  const sum = rows.reduce((acc, row) => acc + (Number(row.amount) || 0), 0);
+  const delta = round2(total - sum);
+
+  if (delta === 0) {
+    return { ok: true, milestones: rows.map((row) => ({ ...row, amount: round2(Number(row.amount) || 0) })), adjusted: false };
+  }
+
+  const lastIndex = rows.length - 1;
+  const lastAmount = round2((Number(rows[lastIndex].amount) || 0) + delta);
+
+  if (lastAmount < 0) {
+    return {
+      ok: false,
+      status: 409,
+      reason: `The payment schedule (EUR ${round2(sum)}) adds up to more than the accepted proposal total (EUR ${total})`,
+    };
+  }
+
+  const next = rows.map((row, index) =>
+    index === lastIndex ? { ...row, amount: lastAmount } : { ...row, amount: round2(Number(row.amount) || 0) }
+  );
+
+  return { ok: true, milestones: next, adjusted: true };
+}
+
 module.exports = {
   PROPOSAL_STATUSES,
   FOUNDER_PROPOSAL_STATUSES,
@@ -101,4 +162,5 @@ module.exports = {
   canUpdateAgreement,
   canSubmitFunding,
   canResolveAiDraft,
+  reconcileSchedule,
 };

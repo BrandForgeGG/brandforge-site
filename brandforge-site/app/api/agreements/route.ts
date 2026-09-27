@@ -11,13 +11,16 @@ import {
   canAccessConversation,
   addMessage,
   isStaffAccount,
+  type Milestone,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
-import { canCreateAgreement, canUpdateAgreement } from '@/lib/money-authz.js';
+import { canCreateAgreement, canUpdateAgreement, reconcileSchedule } from '@/lib/money-authz.js';
 
 export const dynamic = 'force-dynamic';
 
 // An agreement is created when the founder accepts a BrandForge proposal in the chat.
+// The contract's total and terms are derived from the accepted proposal on the server —
+// the request body carries neither (H3: client-supplied totals could move escrow money).
 export async function POST(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser(request);
@@ -27,9 +30,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { conversationId, proposalId, terms, totalAmount } = body;
+    const { conversationId, proposalId } = body;
 
-    if (!conversationId || !proposalId || !terms || !totalAmount) {
+    if (!conversationId || !proposalId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -59,21 +62,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, agreement: existing });
     }
 
+    const totalAmount = Number(proposal.total_amount);
+    const currency = String(proposal.currency ?? 'EUR');
+    const terms = `BrandForge project agreement for ${proposal.title}. Total ${currency} ${proposal.total_amount}. Estimated delivery ${proposal.estimated_weeks_min ?? "?"}-${proposal.estimated_weeks_max ?? "?"} weeks.`;
+
+    // The schedule must partition the contract total exactly, or funding verification and
+    // milestone releases would disagree about how much escrow holds.
+    const milestones = await getMilestones(conversationId);
+    const schedule = reconcileSchedule(milestones, totalAmount);
+
+    if (!schedule.ok) {
+      return NextResponse.json({ error: schedule.reason }, { status: schedule.status });
+    }
+
     const agreement = await createAgreement({
       conversation_id: conversationId,
       proposal_id: proposalId,
       terms,
       total_amount: totalAmount,
-      currency: 'EUR',
+      currency,
     });
 
     if (!agreement) {
       return NextResponse.json({ error: 'Failed to create agreement' }, { status: 500 });
     }
 
-    const milestones = await getMilestones(conversationId);
-    if (milestones.length > 0) {
-      await createPayments(agreement.id, milestones);
+    if (schedule.milestones.length > 0) {
+      await createPayments(agreement.id, schedule.milestones as Milestone[]);
     }
 
     await addMessage({
