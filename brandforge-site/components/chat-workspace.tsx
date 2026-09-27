@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRealtimeMessages } from "@/lib/realtime-messages";
 import { useConversationPresence } from "@/lib/presence";
 import { formatTypingLabel } from "@/lib/presence-utils";
@@ -284,6 +284,15 @@ export function ChatWorkspace() {
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const autoAnsweredRef = useRef<Set<string>>(new Set());
+  // Mirror of the current conversation, readable inside async continuations: any fetch that
+  // resolves after the reader switched chats checks this before touching state (H5 races).
+  const conversationIdRef = useRef(conversationId);
+  useLayoutEffect(() => {
+    conversationIdRef.current = conversationId;
+    // Scratch state that belongs to one conversation dies with it.
+    pendingPrependRef.current = null;
+    seenMessageIdsRef.current = new Set();
+  }, [conversationId]);
 
   // Close every popover on outside click or Escape so no menu can strand focus.
   useEffect(() => {
@@ -319,6 +328,10 @@ export function ChatWorkspace() {
     setMessages([]);
     setHasOlder(false);
     setIsLoadingOlder(false);
+    // A stream or spinner from the previous chat must not follow us into the next one:
+    // the composer would stay locked and the loading state would strand (H5).
+    setIsStreaming(false);
+    setIsBooting(false);
     setState(null);
     setProposal(null);
     setAgreement(null);
@@ -387,6 +400,10 @@ export function ChatWorkspace() {
       if (!response.ok) return [];
 
       const data = await response.json();
+      // The reader switched chats while this was in flight: these rows belong to the old
+      // conversation and must not overwrite the new one (H5 race).
+      if (conversationIdRef.current !== id) return [];
+
       const mapped: ChatMessage[] = (
         Array.isArray(data.messages) ? data.messages : []
       ).map(toChatMessage);
@@ -414,22 +431,32 @@ export function ChatWorkspace() {
   // React has rendered the new rows.
   const loadOlderMessages = useCallback(async () => {
     if (!conversationId || isLoadingOlder || !hasOlder) return;
+    const requestedFor = conversationId;
     const oldest = messages[0]?.createdAt;
     if (!oldest) return;
 
     setIsLoadingOlder(true);
     try {
       const response = await fetch(
-        `/api/messages?conversationId=${conversationId}&limit=${MESSAGE_PAGE_SIZE}&before=${encodeURIComponent(oldest)}`,
+        `/api/messages?conversationId=${requestedFor}&limit=${MESSAGE_PAGE_SIZE}&before=${encodeURIComponent(oldest)}`,
       );
       if (!response.ok) return;
 
       const data = await response.json();
+      // Switched conversations mid-fetch: drop the stale page instead of prepending another
+      // chat's history (H5 race).
+      if (conversationIdRef.current !== requestedFor) return;
+
       const older: ChatMessage[] = (
         Array.isArray(data.messages) ? data.messages : []
       ).map(toChatMessage);
-      if (older.length === 0) {
-        setHasOlder(false);
+
+      // Realtime rows may have landed while the page was in flight - only rows we have
+      // never seen are safe to prepend, or the overlap renders twice.
+      const fresh = older.filter((entry) => !seenMessageIdsRef.current.has(entry.id));
+
+      if (fresh.length === 0) {
+        setHasOlder(data.hasMore === true);
         return;
       }
 
@@ -440,8 +467,8 @@ export function ChatWorkspace() {
           scrollTop: scroller.scrollTop,
         };
       }
-      for (const entry of older) seenMessageIdsRef.current.add(entry.id);
-      setMessages((current) => [...older, ...current]);
+      for (const entry of fresh) seenMessageIdsRef.current.add(entry.id);
+      setMessages((current) => [...fresh, ...current]);
       setHasOlder(data.hasMore === true);
     } finally {
       setIsLoadingOlder(false);
@@ -465,6 +492,7 @@ export function ChatWorkspace() {
       if (!response.ok) return null;
 
       const data = await response.json();
+      if (conversationIdRef.current !== id) return null;
       setState(data.state ?? null);
 
       return (data.state ?? null) as ClientProjectState | null;
@@ -479,6 +507,8 @@ export function ChatWorkspace() {
         fetch(`/api/agreements?conversationId=${id}`),
         fetch(`/api/participants?conversationId=${id}`),
       ]);
+
+    if (conversationIdRef.current !== id) return;
 
     if (proposalResult.ok) {
       const data = await proposalResult.json();
@@ -504,6 +534,10 @@ export function ChatWorkspace() {
   // sidebar show persisted rows rather than client-side guesses.
   const runTurn = useCallback(
     async (id: string, message?: string) => {
+      // True while the reader is still looking at the conversation this turn belongs to.
+      // Streamed rows, errors and scroll pulls must never land in a chat switched to mid-turn.
+      const stillHere = () => conversationIdRef.current === id;
+
       setError(null);
       setIsStreaming(true);
 
@@ -569,11 +603,19 @@ export function ChatWorkspace() {
           const { done, value } = await reader.read();
           if (done) break;
 
+          // Conversation switched mid-stream: stop reading and stop rendering this turn.
+          if (!stillHere()) {
+            await reader.cancel().catch(() => undefined);
+            break;
+          }
+
           buffer += decoder.decode(value, { stream: true });
           const frames = buffer.split("\n\n");
           buffer = frames.pop() ?? "";
 
           for (const frame of frames) {
+            if (!stillHere()) break;
+
             const line = frame
               .split("\n")
               .find((entry) => entry.startsWith("data:"));
@@ -643,7 +685,7 @@ export function ChatWorkspace() {
 
         // Carry the real activity trail onto the persisted answer row so the collapsed
         // "Thoughts" strip survives the reload from the database.
-        if (turnThoughts.length > 0) {
+        if (turnThoughts.length > 0 && stillHere()) {
           setMessages((prev) => {
             if (prev.length === 0) return prev;
             const last = prev[prev.length - 1];
@@ -656,22 +698,26 @@ export function ChatWorkspace() {
           });
         }
       } catch (cause) {
-        setError(
-          cause instanceof Error
-            ? cause.message
-            : "BrandForge AI could not answer",
-        );
-        setMessages((prev) =>
-          prev.filter((entry) => entry.id !== assistantMessageId),
-        );
-        // Never show a fabricated answer: reload reality and hand the text back for a retry.
-        if (message) {
-          setInput((current) => (current ? current : message));
+        if (stillHere()) {
+          setError(
+            cause instanceof Error
+              ? cause.message
+              : "BrandForge AI could not answer",
+          );
+          setMessages((prev) =>
+            prev.filter((entry) => entry.id !== assistantMessageId),
+          );
+          // Never show a fabricated answer: reload reality and hand the text back for a retry.
+          if (message) {
+            setInput((current) => (current ? current : message));
+          }
         }
         await refreshMessages(id).catch(() => undefined);
       } finally {
+        // Unconditional on purpose: whichever conversation is current, a finished turn must
+        // unlock the composer (the switch-time reset already cleared it for a new chat).
         setIsStreaming(false);
-        scrollToBottom();
+        if (stillHere()) scrollToBottom();
       }
 
       if (succeeded) {
@@ -700,12 +746,30 @@ export function ChatWorkspace() {
       setIsBooting(true);
       setError(null);
 
-      const [meta, loadedMessages] = await Promise.all([
-        loadRecents(),
-        refreshMessages(conversationId),
-        refreshState(conversationId),
-        refreshArtifacts(conversationId),
-      ]);
+      // Any rejection here used to strand the boot spinner forever: the loader only
+      // cleared on the happy path (H5).
+      let meta: Awaited<ReturnType<typeof loadRecents>>;
+      let loadedMessages: ChatMessage[] = [];
+
+      try {
+        [meta, loadedMessages] = await Promise.all([
+          loadRecents(),
+          refreshMessages(conversationId),
+          refreshState(conversationId),
+          refreshArtifacts(conversationId),
+        ]);
+      } catch {
+        // The boot still has to finish - the transcript shows whatever loaded, and the
+        // error banner (set below by later failures) or an empty state explains the rest.
+        meta = await loadRecents().catch(() => ({
+          isStaff: false,
+          unseenCount: 0,
+          userId: null,
+          name: "",
+          role: "user",
+          conversations: [] as RecentConversation[],
+        }));
+      }
 
       if (cancelled) return;
 
