@@ -91,6 +91,8 @@ const STARTERS = [
   { label: "Something else", prefix: "" },
 ];
 
+const MESSAGE_PAGE_SIZE = 300;
+
 export function ChatWorkspace() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -104,10 +106,14 @@ export function ChatWorkspace() {
     isStaff: boolean;
     unseenCount: number;
     userId: string | null;
+    name: string;
+    role: string;
   }>({
     isStaff: false,
     unseenCount: 0,
     userId: null,
+    name: "",
+    role: "user",
   });
   const [proposal, setProposal] = useState<ProposalSummary | null>(null);
   const [agreement, setAgreement] = useState<AgreementSummary | null>(null);
@@ -116,12 +122,21 @@ export function ChatWorkspace() {
   const [taskParticipants, setTaskParticipants] = useState<TaskParticipant[]>(
     [],
   );
-  const [aiDrafts, setAiDrafts] = useState<
-    { id: string; content: string; created_at: string | null }[]
-  >([]);
   const [input, setInput] = useState("");
+  const [isReplyingTo, setIsReplyingTo] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isBooting, setIsBooting] = useState(false);
+  // Older history pages. The first fetch returns the newest PAGE_SIZE rows; anything
+  // older loads on demand above the transcript without moving the reader's viewport.
+  const [hasOlder, setHasOlder] = useState(false);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
+  const pendingPrependRef = useRef<{ height: number; scrollTop: number } | null>(
+    null,
+  );
+  const [telegramConnected, setTelegramConnected] = useState(false);
+  const [telegramLink, setTelegramLink] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [showInviteForm, setShowInviteForm] = useState(false);
 
   // --- Live layer (Realtime) -------------------------------------------------------
   // Self identity for presence/typing. Deliberately the *display* name, never the email, and
@@ -129,9 +144,7 @@ export function ChatWorkspace() {
   const selfPresence = railMeta.userId
     ? {
         userId: railMeta.userId,
-        name:
-          state?.title?.trim() ||
-          (railMeta.isStaff ? "BrandForge specialist" : "You"),
+        name: railMeta.name || (railMeta.isStaff ? "BrandForge specialist" : "You"),
         staff: railMeta.isStaff,
       }
     : null;
@@ -273,13 +286,14 @@ export function ChatWorkspace() {
 
   // Close every popover on outside click or Escape so no menu can strand focus.
   useEffect(() => {
-    if (!attachMenuOpen && !commandsOpen && !headerMenuOpen && !teamOpen)
+    if (!attachMenuOpen && !commandsOpen && !headerMenuOpen && !teamOpen && !showInviteForm)
       return;
     const closeAll = () => {
       setAttachMenuOpen(false);
       setCommandsOpen(false);
       setHeaderMenuOpen(false);
       setTeamOpen(false);
+      setShowInviteForm(false);
     };
     const onMouseDown = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null;
@@ -294,7 +308,7 @@ export function ChatWorkspace() {
       document.removeEventListener("mousedown", onMouseDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [attachMenuOpen, commandsOpen, headerMenuOpen, teamOpen]);
+  }, [attachMenuOpen, commandsOpen, headerMenuOpen, teamOpen, showInviteForm]);
 
   // Reset the workspace when the conversation changes (React-endorsed render-phase pattern,
   // avoids synchronous setState inside an effect).
@@ -302,12 +316,25 @@ export function ChatWorkspace() {
   if (conversationId !== lastConversationId) {
     setLastConversationId(conversationId);
     setMessages([]);
+    setHasOlder(false);
+    setIsLoadingOlder(false);
     setState(null);
     setProposal(null);
     setAgreement(null);
     setPayments([]);
     setTaskParticipants([]);
     setError(null);
+    setInput("");
+    setIsReplyingTo(null);
+    setAttachment(null);
+    setCommandStatus(null);
+    setBusyAction(null);
+    setShowInviteForm(false);
+    setInviteEmail("");
+    setHeaderMenuOpen(false);
+    setAttachMenuOpen(false);
+    setCommandsOpen(false);
+    setTeamOpen(false);
   }
 
 
@@ -319,6 +346,8 @@ export function ChatWorkspace() {
           isStaff: false,
           unseenCount: 0,
           userId: null,
+          name: "",
+          role: "user",
           conversations: [] as RecentConversation[],
         };
       const data = await response.json();
@@ -332,15 +361,18 @@ export function ChatWorkspace() {
         isStaff: Boolean(data.isStaff),
         unseenCount: Number(data.unseenCount ?? 0),
         userId: typeof data.userId === "string" ? data.userId : null,
+        name: typeof data.name === "string" ? data.name : "",
+        role: typeof data.role === "string" ? data.role : "user",
       };
       setRailMeta(meta);
       return { ...meta, conversations };
     } catch {
-      // Recents are a convenience feed; a failure must not break the conversation.
       return {
         isStaff: false,
         unseenCount: 0,
         userId: null,
+        name: "",
+        role: "user",
         conversations: [] as RecentConversation[],
       };
     }
@@ -348,7 +380,9 @@ export function ChatWorkspace() {
 
   const refreshMessages = useCallback(
     async (id: string): Promise<ChatMessage[]> => {
-      const response = await fetch(`/api/messages?conversationId=${id}`);
+      const response = await fetch(
+        `/api/messages?conversationId=${id}&limit=${MESSAGE_PAGE_SIZE}`,
+      );
       if (!response.ok) return [];
 
       const data = await response.json();
@@ -356,6 +390,7 @@ export function ChatWorkspace() {
         Array.isArray(data.messages) ? data.messages : []
       ).map(toChatMessage);
       setMessages(mapped);
+      setHasOlder(data.hasMore === true);
 
       // Seed the realtime dedupe set from the authoritative fetch. Without this, a row delivered
       // by polling and then pushed over the channel in the same tick would render twice.
@@ -372,6 +407,56 @@ export function ChatWorkspace() {
     },
     [],
   );
+
+  // Prepends the previous page of history. The viewport must not move: rows land above
+  // the reader, so the scroller's scrollTop is corrected against the height delta once
+  // React has rendered the new rows.
+  const loadOlderMessages = useCallback(async () => {
+    if (!conversationId || isLoadingOlder || !hasOlder) return;
+    const oldest = messages[0]?.createdAt;
+    if (!oldest) return;
+
+    setIsLoadingOlder(true);
+    try {
+      const response = await fetch(
+        `/api/messages?conversationId=${conversationId}&limit=${MESSAGE_PAGE_SIZE}&before=${encodeURIComponent(oldest)}`,
+      );
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const older: ChatMessage[] = (
+        Array.isArray(data.messages) ? data.messages : []
+      ).map(toChatMessage);
+      if (older.length === 0) {
+        setHasOlder(false);
+        return;
+      }
+
+      const scroller = scrollerRef.current;
+      if (scroller) {
+        pendingPrependRef.current = {
+          height: scroller.scrollHeight,
+          scrollTop: scroller.scrollTop,
+        };
+      }
+      for (const entry of older) seenMessageIdsRef.current.add(entry.id);
+      setMessages((current) => [...older, ...current]);
+      setHasOlder(data.hasMore === true);
+    } finally {
+      setIsLoadingOlder(false);
+    }
+  }, [conversationId, hasOlder, isLoadingOlder, messages]);
+
+  // Scroll compensation for loadOlderMessages: runs after the prepended rows render.
+  useEffect(() => {
+    const pending = pendingPrependRef.current;
+    if (!pending) return;
+    pendingPrependRef.current = null;
+    const scroller = scrollerRef.current;
+    if (scroller) {
+      scroller.scrollTop = pending.scrollTop + (scroller.scrollHeight - pending.height);
+    }
+  }, [messages]);
 
   const refreshState = useCallback(
     async (id: string): Promise<ClientProjectState | null> => {
@@ -664,8 +749,8 @@ export function ChatWorkspace() {
     scrollToBottom,
   ]);
 
-  // New Chat is the landing view, not a stored row: the conversation is created by the first
-  // message (handleSend), so no empty duplicate ever shows up in Recents.
+  // Staff act as the team only inside chats owned by somebody else. A chat a staff member owns
+  // is their own project: it behaves like any founder's chat (AI answers, founder actions).
   const handleNewChat = useCallback(() => {
     setError(null);
     router.push("/chat");
@@ -707,8 +792,6 @@ export function ChatWorkspace() {
     [conversationId, router],
   );
 
-  // Staff act as the team only inside chats owned by somebody else. A chat a staff member owns
-  // is their own project: it behaves like any founder's chat (AI answers, founder actions).
   const isOwnConversation = Boolean(
     conversationId &&
     railMeta.userId &&
@@ -718,6 +801,8 @@ export function ChatWorkspace() {
         conversation.ownerId === railMeta.userId,
     ),
   );
+  const canDeleteConversation =
+    Boolean(conversationId) && (!railMeta.isStaff || isOwnConversation);
 
   const handleSend = useCallback(
     async (suggestion?: string) => {
@@ -824,6 +909,7 @@ export function ChatWorkspace() {
       }
 
       setInput("");
+      setIsReplyingTo(null);
 
       // BrandForge staff reply as the team (human_operator) inside a founder chat instead of
       // triggering the AI, so the founder always sees a human voice in the same chat. Sending
@@ -966,73 +1052,14 @@ export function ChatWorkspace() {
     [conversationId, refreshMessages],
   );
 
-  const refreshAiDrafts = useCallback(
-    async (id: string) => {
-      if (!id || !railMeta.isStaff) {
-        setAiDrafts([]);
-        return;
-      }
-      try {
-        const response = await fetch(
-          `/api/staff/ai-drafts?conversationId=${id}`,
-        );
-        if (!response.ok) return;
-        const data = await response.json().catch(() => ({}));
-        setAiDrafts(Array.isArray(data.drafts) ? data.drafts : []);
-      } catch {
-        setAiDrafts([]);
-      }
-    },
-    [railMeta.isStaff],
-  );
-
-  useEffect(() => {
-    if (!conversationId || !railMeta.isStaff) {
-      queueMicrotask(() => setAiDrafts([]));
-      return;
-    }
-    let cancelled = false;
-    void fetch(`/api/staff/ai-drafts?conversationId=${conversationId}`)
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data) => {
-        if (!cancelled)
-          setAiDrafts(Array.isArray(data?.drafts) ? data.drafts : []);
-      })
-      .catch(() => {
-        if (!cancelled) setAiDrafts([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [conversationId, railMeta.isStaff]);
-
-  const resolveDraft = useCallback(
-    async (id: string, action: "approve" | "reject") => {
-      if (!conversationId) return;
-      setBusyAction(`draft-${id}`);
-      try {
-        const response = await fetch("/api/staff/ai-drafts", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messageId: id, conversationId, action }),
-        });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok)
-          throw new Error(data.error || "The AI draft could not be resolved");
-        await refreshAiDrafts(conversationId);
-        await refreshMessages(conversationId);
-      } catch (cause) {
-        setError(
-          cause instanceof Error
-            ? cause.message
-            : "The AI draft could not be resolved",
-        );
-      } finally {
-        setBusyAction(null);
-      }
-    },
-    [conversationId, refreshAiDrafts, refreshMessages],
-  );
+  function handleReply(messageId: string) {
+    const message = messages.find((m) => m.id === messageId);
+    if (!message) return;
+    const senderName = message.senderName || "You";
+    setIsReplyingTo(messageId);
+    setInput(`@${senderName}: `);
+    requestAnimationFrame(() => composerRef.current?.focus());
+  }
 
   const handleRequestReview = useCallback(async () => {
     if (!conversationId) return;
@@ -1061,14 +1088,57 @@ export function ChatWorkspace() {
       ]);
     } catch (cause) {
       setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not send the requirements for review",
+        cause instanceof Error ? cause.message : "Could not send the requirements for review",
       );
     } finally {
       setBusyAction(null);
     }
   }, [conversationId, loadRecents, refreshMessages, refreshState]);
+
+  const loadIdentity = useCallback(async () => {
+    try {
+      const response = await fetch("/api/identity");
+      if (!response.ok) return;
+      const data = await response.json();
+      setTelegramConnected(data.telegram_connected === true);
+    } catch {
+      // Identity fetch is best-effort.
+    }
+  }, []);
+
+  const handleTelegramConnect = useCallback(async () => {
+    try {
+      const response = await fetch("/api/identity/telegram-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      setTelegramLink(data.deepLink);
+    } catch {
+      // Telegram link fetch is best-effort.
+    }
+  }, []);
+
+  const handleInvite = useCallback(async () => {
+    if (!conversationId || !inviteEmail.trim()) return;
+    try {
+      await fetch("/api/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId, email: inviteEmail.trim() }),
+      });
+      setInviteEmail("");
+      setShowInviteForm(false);
+    } catch {
+      // Invite is best-effort.
+    }
+  }, [conversationId, inviteEmail]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadIdentity();
+  }, [loadIdentity]);
 
   const handleProposalAction = useCallback(
     async (action: "accept" | "decline" | "request_changes") => {
@@ -1110,6 +1180,9 @@ export function ChatWorkspace() {
             .json()
             .catch(() => ({}));
           if (!agreementResponse.ok || !agreementData.success) {
+            await refreshArtifacts(conversationId);
+            await refreshState(conversationId);
+            await refreshMessages(conversationId);
             throw new Error(
               agreementData.error ||
                 "The proposal was accepted, but the agreement could not be created. Contact the team before funding.",
@@ -1280,14 +1353,16 @@ export function ChatWorkspace() {
   const taskProgress = summarizeTaskProgress(state?.tasks ?? []);
   const isBusy = isStreaming || isCreatingConversation;
 
-  // Honest role labels: founders own their chats; staff inside someone else's chat are staff.
+  // The active row from Recents carries the staff marker.
+  const activeConversation =
+    recents.find((conversation) => conversation.id === conversationId) ?? null;
+
+  // Role labels: staff see "admin" or "staff"; regular users see no role badge.
   const selfRoleLabel = railMeta.isStaff
-    ? isOwnConversation
-      ? "Founder"
-      : "BrandForge staff"
-    : conversationId
-      ? "Founder"
-      : null;
+    ? railMeta.role === 'founder'
+      ? 'admin'
+      : 'staff'
+    : null;
 
   // Real roster -> role labels for message headers (lowercased-name lookup).
   const participantRoles = useMemo(() => {
@@ -1321,14 +1396,8 @@ export function ChatWorkspace() {
     }
     return files;
   }, [messages]);
-  // The active row from Recents carries the staff marker; staff never delete founder chats here.
-  const activeConversation =
-    recents.find((conversation) => conversation.id === conversationId) ?? null;
-  const canDeleteConversation =
-    Boolean(conversationId) && (!railMeta.isStaff || isOwnConversation);
-
-  return (
-    <div className="flex h-screen overflow-hidden bg-[#14171a] text-[#ece7de]">
+return (
+      <div className="flex h-screen overflow-hidden bg-[#14171a] text-[#ece7de]">
       <ConversationRail
         recents={recents}
         activeConversationId={conversationId}
@@ -1338,9 +1407,9 @@ export function ChatWorkspace() {
         onMobileClose={() => setIsRailOpen(false)}
         isStaff={railMeta.isStaff}
         staffUnseenCount={railMeta.unseenCount}
-        onConversationDeleted={(id) => {
-          void handleDeleteConversation(id);
-        }}
+        telegramConnected={telegramConnected}
+        onTelegramConnect={handleTelegramConnect}
+        telegramLink={telegramLink}
       />
 
       <main className="relative flex min-w-0 flex-1 flex-col">
@@ -1462,66 +1531,92 @@ export function ChatWorkspace() {
                 </div>
               ) : null}
             </div>
+            <div className="bf-menu-root relative">
             <button
               type="button"
-              onClick={() => setIsContextOpen((value) => !value)}
-              className="bf-insights-toggle"
-              aria-expanded={isContextOpen}
-              aria-label={
-                isContextOpen ? "Hide project context" : "Show project context"
-              }
+              onClick={() => setHeaderMenuOpen((value) => !value)}
+              aria-expanded={headerMenuOpen}
+              aria-haspopup="menu"
+              aria-label="Conversation menu"
+              className="bf-header-menu-btn"
             >
-              Project
+              <span aria-hidden="true">•••</span>
             </button>
-            {/* Destructive actions live behind this menu, never as a first-visual-element button. */}
-            <div className="bf-menu-root relative">
-              <button
-                type="button"
-                onClick={() => setHeaderMenuOpen((value) => !value)}
-                aria-expanded={headerMenuOpen}
-                aria-haspopup="menu"
-                aria-label="Conversation menu"
-                className="bf-header-menu-btn"
+            {headerMenuOpen ? (
+              <div
+                role="menu"
+                className="bf-menu absolute right-0 top-full z-40 mt-2 w-48 p-1"
               >
-                <span aria-hidden="true">•••</span>
-              </button>
-              {headerMenuOpen ? (
-                <div
-                  role="menu"
-                  className="bf-menu absolute right-0 top-full z-40 mt-2 w-48 p-1"
+                <button
+                  role="menuitem"
+                  type="button"
+                  className="bf-menu-item"
+                  onClick={() => {
+                    setIsContextOpen(true);
+                    setHeaderMenuOpen(false);
+                  }}
                 >
+                  Project context
+                </button>
+                <button
+                  role="menuitem"
+                  type="button"
+                  className="bf-menu-item"
+                  onClick={() => {
+                    setShowInviteForm(true);
+                    setHeaderMenuOpen(false);
+                  }}
+                >
+                  Invite
+                </button>
+                {canDeleteConversation ? (
                   <button
                     role="menuitem"
                     type="button"
-                    className="bf-menu-item"
+                    className="bf-menu-item bf-menu-item-danger"
                     onClick={() => {
-                      setIsContextOpen(true);
                       setHeaderMenuOpen(false);
+                      if (
+                        window.confirm(
+                          "Delete this chat? The project, proposal and messages go with it.",
+                        )
+                      ) {
+                        void handleDeleteConversation(conversationId);
+                      }
                     }}
                   >
-                    Open project panel
+                    Delete
                   </button>
-                  {canDeleteConversation ? (
-                    <button
-                      role="menuitem"
-                      type="button"
-                      className="bf-menu-item bf-menu-item-danger"
-                      onClick={() => {
-                        setHeaderMenuOpen(false);
-                        if (
-                          window.confirm(
-                            "Delete this chat? The project, proposal and messages go with it.",
-                          )
-                        ) {
-                          void handleDeleteConversation(conversationId);
-                        }
-                      }}
-                    >
-                      Delete chat
-                    </button>
-                  ) : null}
+                ) : null}
                 </div>
-              ) : null}
+            ) : null}
+            {showInviteForm ? (
+              <div className="bf-menu-root relative">
+                <div
+                  role="dialog"
+                  aria-label="Invite by email"
+                  className="bf-menu absolute right-0 top-full z-40 mt-2 w-56 p-3"
+                >
+                  <p className="bf-section-label">Invite by email</p>
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(event) => setInviteEmail(event.target.value)}
+                      placeholder="friend@example.com"
+                      className="min-w-0 flex-1 rounded-lg border border-white/15 bg-[#14171a] px-2 py-1.5 text-sm text-[#ece7de] placeholder:text-[#6f757b]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void handleInvite()}
+                      className="rounded-lg bg-[#e8571e] px-3 py-1.5 text-xs font-semibold text-[#14171a]"
+                    >
+                      Send
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
             </div>
           </div>
         </header>
@@ -1577,14 +1672,28 @@ export function ChatWorkspace() {
               </p>
             </div>
           ) : (
+            <>
+              {hasOlder ? (
+                <div className="mb-4 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => void loadOlderMessages()}
+                    disabled={isLoadingOlder}
+                    className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-[#9aa0a6] transition hover:border-[#e8571e] hover:text-[#ece7de] disabled:opacity-60"
+                  >
+                    {isLoadingOlder ? "Loading…" : "↑ Load earlier messages"}
+                  </button>
+                </div>
+              ) : null}
             <ChatTranscript
-              messages={messages}
+               messages={messages}
               conversationId={conversationId}
               isStreaming={isStreaming}
               onSuggestion={(prompt) => {
                 void handleSend(prompt);
               }}
               currentUserId={railMeta.userId}
+              onReply={handleReply}
               onEditMessage={async (id, content) => {
                 try {
                   await handleMessageAction(id, "edit", content);
@@ -1639,14 +1748,17 @@ export function ChatWorkspace() {
               canDecide={isOwnConversation}
               selfRole={selfRoleLabel}
               participantRoles={participantRoles}
-              onAskFile={(name) => {
+               onAskFile={(name) => {
                 setInput(
                   (current) =>
                     current || `What are the most important points in ${name}?`,
                 );
                 requestAnimationFrame(() => composerRef.current?.focus());
               }}
+              isTyping={livePresence.typing.length > 0}
+              typingNames={livePresence.typing}
             />
+            </>
           )}
         </div>
 
@@ -1751,6 +1863,21 @@ export function ChatWorkspace() {
                 </button>
               </div>
             ) : null}
+            {isReplyingTo ? (
+              <div className="mb-2 flex items-center justify-between rounded-lg border border-[#e8571e]/30 bg-[#1c2024] px-3 py-2 text-xs text-[#ece7de]">
+                <span>Replying to message</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsReplyingTo(null);
+                    setInput("");
+                  }}
+                  className="text-[#9aa0a6] hover:text-[#ece7de]"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : null}
             <input
               ref={fileInputRef}
               type="file"
@@ -1772,9 +1899,11 @@ export function ChatWorkspace() {
                   setIsTyping(Boolean(event.target.value.trim()));
                 }}
                 placeholder={
-                  conversationId
-                    ? "Ask anything…"
-                    : "Describe what you want to build…"
+                  isReplyingTo
+                    ? "Type your reply…"
+                    : conversationId
+                      ? "Ask anything…"
+                      : "Describe what you want to build…"
                 }
                 rows={2}
                 disabled={isBusy}
@@ -1919,10 +2048,6 @@ export function ChatWorkspace() {
           }}
           onTaskAction={(taskId, payload) => {
             void handleTaskAction(taskId, payload);
-          }}
-          aiDrafts={aiDrafts}
-          onResolveDraft={(id, action) => {
-            void resolveDraft(id, action);
           }}
         />
       ) : null}

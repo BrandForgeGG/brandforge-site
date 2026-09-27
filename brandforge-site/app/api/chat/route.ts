@@ -66,11 +66,12 @@ async function collectFileContext(
   }>;
   labels: string[];
 }> {
-  const rows = await getMessages(conversationId, { limit: 100 });
+  const rows = await getMessages(conversationId, { limit: 100, includeDeleted: false });
   const seen = new Set<string>();
   const artifacts: ArtifactRef[] = [];
 
   for (const row of rows) {
+    if (row.deleted_at) continue;
     const data = row.artifact_data as {
       path?: unknown;
       name?: unknown;
@@ -231,10 +232,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const history = await getMessages(conversationId, { limit: MAX_HISTORY });
+  const history = await getMessages(conversationId, { limit: MAX_HISTORY, includeDeleted: false });
   const conversational = history.filter(
     (entry) =>
-      entry.content_type !== "system" && entry.content_type !== "ai_draft",
+      !entry.deleted_at &&
+      entry.content_type !== "system" &&
+      entry.content_type !== "ai_draft",
   );
   const lastMessage = conversational[conversational.length - 1];
 
@@ -312,11 +315,15 @@ export async function POST(request: NextRequest) {
             sender_type: "ai",
             sender_name: "BrandForge AI",
             content,
-            content_type: "ai_draft",
+            content_type: "text",
             artifact_data: { source: "ai", status: "pending" },
           });
 
-          send({ type: "message", id: assistantMessageId });
+          if (assistantMessageId) {
+            send({ type: "message", id: assistantMessageId });
+          } else {
+            send({ type: "error", message: "The answer could not be saved. Please try again." });
+          }
         }
 
         const discovery = await syncDiscoveryCompleteness(conversationId);
@@ -351,10 +358,7 @@ export async function POST(request: NextRequest) {
         console.error("Chat turn failed:", error);
         send({
           type: "error",
-          error:
-            error instanceof Error
-              ? error.message
-              : "BrandForge AI could not answer",
+          error: "BrandForge AI could not answer. Please try again.",
         });
       } finally {
         controller.close();

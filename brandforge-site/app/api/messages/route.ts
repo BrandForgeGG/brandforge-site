@@ -35,12 +35,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    const messages = await getMessages(conversationId);
-    return NextResponse.json({ messages });
+    // Newest page first; older history loads with `before=<oldest created_at>`.
+    const limitRaw = Number(searchParams.get('limit'));
+    const limit = Number.isFinite(limitRaw) && limitRaw > 0
+      ? Math.min(Math.floor(limitRaw), 1000)
+      : 300;
+    const before = searchParams.get('before');
+
+    const messages = await getMessages(conversationId, {
+      viewerId: user.id,
+      limit,
+      before: before && !Number.isNaN(Date.parse(before)) ? before : undefined,
+      excludeAiDrafts: true,
+    });
+    return NextResponse.json({
+      messages,
+      hasMore: messages.length >= limit,
+    });
   } catch (error) {
     console.error('Error fetching messages:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch messages' },
+      { error: 'Failed to fetch messages' },
       { status: 500 }
     );
   }

@@ -12,7 +12,7 @@ const TELEGRAM_CHANNELS = [
 export function LandingCommunity() {
   return (
     <>
-      <section id="community" className="bf-section">
+        <section id="community" className="bf-section">
         <div className="bf-container">
           <p className="text-xs uppercase tracking-[0.2em] text-[#b8763b]">Get in early</p>
           <h2 className="mt-2 font-serif text-3xl text-[#ece7de] sm:text-4xl">
@@ -59,33 +59,6 @@ export function LandingCommunity() {
           </div>
         </div>
       </section>
-
-      <footer className="border-t border-white/10 px-6 py-8">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 text-sm text-[#6f757b] sm:flex-row sm:items-center sm:justify-between">
-          <p className="font-serif text-base text-[#ece7de]">
-            Brand<span className="text-[#e8571e]">Forge</span>
-          </p>
-          <p>brandforge.gg — describe it, humans build it.</p>
-          <div className="flex gap-4">
-            <a
-              href={COMMUNITY_LINKS.discord.href}
-              target="_blank"
-              rel="noreferrer"
-              className="transition hover:text-[#ece7de]"
-            >
-              Discord
-            </a>
-            <a
-              href={COMMUNITY_LINKS.telegramChannel.href}
-              target="_blank"
-              rel="noreferrer"
-              className="transition hover:text-[#ece7de]"
-            >
-              Telegram
-            </a>
-          </div>
-        </div>
-      </footer>
     </>
   );
 }

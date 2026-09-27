@@ -52,7 +52,10 @@ export async function POST(request: NextRequest) {
     );
 
     if (!verification.ok) {
-      return NextResponse.json({ error: 'Link token is not valid' }, { status: 400 });
+      const reason = verification.reason === 'expired_token'
+        ? 'This link has expired. Please generate a new one in the app.'
+        : 'This link is not valid. Please generate a new one in the app.';
+      return NextResponse.json({ error: reason }, { status: 400 });
     }
 
     if (!isTelegramChatId(body.chatId)) {

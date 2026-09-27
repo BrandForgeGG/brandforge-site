@@ -24,8 +24,7 @@ export default function Home() {
           <p className="text-sm text-[#9aa0a6]">
             <span className="font-serif text-[#ece7de]">
               Brand<span className="text-[#e8571e]">Forge</span>
-            </span>{' '}
-            — describe it, humans build it.
+            </span>
           </p>
           <nav className="flex gap-6 text-sm text-[#9aa0a6]">
             <Link href="/terms" className="transition hover:text-[#ece7de]">
@@ -33,9 +32,6 @@ export default function Home() {
             </Link>
             <Link href="/privacy" className="transition hover:text-[#ece7de]">
               Privacy
-            </Link>
-            <Link href="/refunds" className="transition hover:text-[#ece7de]">
-              Refunds
             </Link>
           </nav>
         </div>

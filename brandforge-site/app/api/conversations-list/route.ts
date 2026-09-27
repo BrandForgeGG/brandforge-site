@@ -5,6 +5,7 @@ import {
   isStaffAccount,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
+import { getUserRoleFromEmail } from '@/lib/user-roles';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +31,12 @@ export async function GET(request: NextRequest) {
       ? conversations.filter((conversation) => conversation.isUnseen).length
       : 0;
 
-    return NextResponse.json({ conversations, isStaff, unseenCount, userId: user.id });
+    const name =
+      user.user_metadata?.full_name ?? user.user_metadata?.name ?? null;
+    const email = user.email ?? null;
+    const role = email ? getUserRoleFromEmail(email) : 'user';
+
+    return NextResponse.json({ conversations, isStaff, unseenCount, userId: user.id, name, email, role });
   } catch (error) {
     console.error('Conversations list API error:', error);
     return NextResponse.json({ error: 'Failed to fetch conversations' }, { status: 500 });

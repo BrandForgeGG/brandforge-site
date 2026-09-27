@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { getSessionUser } from "@/lib/browser-auth";
-import { getUserRoleFromEmail } from "@/lib/user-roles";
 import { avatarTone, initialsFor } from "@/lib/identity-display";
 
 export interface RecentConversation {
@@ -56,21 +55,25 @@ export function ConversationRail({
   onNewChat,
   isCreatingConversation = false,
   isMobileOpen,
-  onMobileClose,
-  isStaff: isStaffProp,
-  staffUnseenCount: staffUnseenCountProp,
-  onConversationDeleted,
-}: {
-  recents?: RecentConversation[];
-  activeConversationId?: string;
-  onNewChat?: () => void;
-  isCreatingConversation?: boolean;
-  isMobileOpen: boolean;
-  onMobileClose: () => void;
-  isStaff?: boolean;
-  staffUnseenCount?: number;
-  onConversationDeleted?: (conversationId: string) => void;
-}) {
+onMobileClose,
+    isStaff: isStaffProp,
+    staffUnseenCount: staffUnseenCountProp,
+    telegramConnected,
+    onTelegramConnect,
+    telegramLink,
+  }: {
+    recents?: RecentConversation[];
+    activeConversationId?: string;
+    onNewChat?: () => void;
+    isCreatingConversation?: boolean;
+    isMobileOpen: boolean;
+    onMobileClose: () => void;
+    isStaff?: boolean;
+    staffUnseenCount?: number;
+    telegramConnected?: boolean;
+    onTelegramConnect?: () => void;
+    telegramLink?: string;
+  }) {
   const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [account, setAccount] = useState<{
@@ -83,9 +86,7 @@ export function ConversationRail({
   const [isSelfStaff, setIsSelfStaff] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [unseenCount, setUnseenCount] = useState(0);
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   // Remember how wide the founder left the sidebar. Read after mount so the server render and the
   // first client render agree (no hydration mismatch); the flip one frame later is invisible.
@@ -145,7 +146,7 @@ export function ConversationRail({
       setAccount({
         name: fullName?.trim() || email.split("@")[0],
         email,
-        role: getUserRoleFromEmail(email),
+        role: account?.role ?? 'user',
         username,
       });
     }
@@ -154,7 +155,7 @@ export function ConversationRail({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [account?.role]);
 
   const [selfRecents, setSelfRecents] = useState<RecentConversation[] | null>(
     null,
@@ -218,46 +219,6 @@ export function ConversationRail({
   async function handleSignOut() {
     await supabase.auth.signOut();
     router.push("/login");
-  }
-
-  // Deleting a chat deletes the project with it (messages, requirements, proposal, milestones,
-  // agreement, payments). Two taps: pick the row, then confirm.
-  async function handleDeleteConversation(conversationId: string) {
-    setDeletingId(conversationId);
-    setNotice(null);
-
-    try {
-      const response = await fetch("/api/conversations", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId }),
-      });
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(data.error || "The conversation could not be deleted");
-      }
-
-      setPendingDeleteId(null);
-
-      if (recentsProp === undefined) {
-        setSelfRecents((current) =>
-          (current ?? []).filter(
-            (conversation) => conversation.id !== conversationId,
-          ),
-        );
-      }
-
-      onConversationDeleted?.(conversationId);
-    } catch (cause) {
-      setNotice(
-        cause instanceof Error
-          ? cause.message
-          : "The conversation could not be deleted",
-      );
-    } finally {
-      setDeletingId(null);
-    }
   }
 
   return (
@@ -406,7 +367,6 @@ export function ConversationRail({
                 <div className="bf-recents">
                   {recents.map((conversation) => {
                     const isActive = conversation.id === activeConversationId;
-                    const isPendingDelete = pendingDeleteId === conversation.id;
 
                     return (
                       <div
@@ -433,62 +393,8 @@ export function ConversationRail({
                                 {conversation.title}
                               </span>
                             </p>
-                            <p className="mt-0.5 flex items-center justify-between text-[10px] uppercase tracking-[0.15em] text-[#6f757b]">
-                              <span>
-                                {relativeTime(conversation.lastActivity)}
-                              </span>
-                              <span>
-                                {conversation.staffViewedBy
-                                  ? "specialist in chat"
-                                  : conversation.messageCount + " msg"}
-                              </span>
-                            </p>
                           </Link>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setNotice(null);
-                              setPendingDeleteId(
-                                isPendingDelete ? null : conversation.id,
-                              );
-                            }}
-                            aria-label={"Delete " + conversation.title}
-                            className="shrink-0 rounded-md px-1.5 py-1 text-[11px] text-[#6f757b] transition hover:bg-white/5 hover:text-red-200"
-                          >
-                            ✕
-                          </button>
                         </div>
-
-                        {isPendingDelete ? (
-                          <div className="flex items-center justify-between gap-2 px-3 pb-2">
-                            <span className="text-[10px] uppercase tracking-[0.15em] text-[#9aa0a6]">
-                              Delete chat?
-                            </span>
-                            <span className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                disabled={deletingId === conversation.id}
-                                onClick={() => {
-                                  void handleDeleteConversation(
-                                    conversation.id,
-                                  );
-                                }}
-                                className="rounded-md border border-red-400/40 px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-red-200 disabled:opacity-50"
-                              >
-                                {deletingId === conversation.id
-                                  ? "Deleting…"
-                                  : "Delete"}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setPendingDeleteId(null)}
-                                className="rounded-md border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-[#9aa0a6]"
-                              >
-                                Cancel
-                              </button>
-                            </span>
-                          </div>
-                        ) : null}
                       </div>
                     );
                   })}
@@ -528,14 +434,28 @@ export function ConversationRail({
             </Link>
           </div>
         ) : (
-          <div className="bf-rail-footer mt-auto shrink-0">
+          <div className="bf-rail-footer mt-auto shrink-0 relative">
             {/* Staff pickup badge: real per-chat operational signal, not a platform statistic. */}
             {isStaff && newChatCount > 0 ? (
               <p className="mb-2 rounded-full bg-[#e8571e]/15 px-2 py-0.5 text-center text-[9px] uppercase tracking-[0.15em] text-[#e8571e]">
                 {newChatCount} new chat{newChatCount === 1 ? "" : "s"}
               </p>
             ) : null}
-            <div className="flex items-center gap-3">
+            <div
+              className="flex items-center gap-3 cursor-pointer"
+              onClick={() => setDropdownOpen((v) => !v)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setDropdownOpen((v) => !v);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-expanded={dropdownOpen}
+              aria-haspopup="menu"
+              aria-label="Account menu"
+            >
               <span
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
                 style={avatarTone(accountId || account?.name || "guest")}
@@ -557,27 +477,72 @@ export function ConversationRail({
                 </p>
               </div>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <Link
-                href="/settings"
-                className="rounded-lg border border-white/10 px-3 py-1.5 text-center text-xs text-[#9aa0a6] transition hover:border-[#e8571e] hover:text-[#ece7de]"
-              >
-                Settings
-              </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  void handleSignOut();
-                }}
-                className="bf-action bf-action-danger bf-action-compact"
-              >
-                Sign out
-              </button>
-            </div>
-            {notice ? (
-              <p className="mt-2 text-[10px] leading-relaxed text-red-200">
-                {notice}
-              </p>
+            {dropdownOpen ? (
+              <div className="absolute bottom-full left-0 mb-2 w-56 rounded-xl border border-white/10 bg-[#1c2024] p-3 shadow-xl">
+                <Link
+                  href="/settings"
+                  onClick={() => setDropdownOpen(false)}
+                  className="block rounded-lg px-3 py-2 text-sm text-[#9aa0a6] transition hover:bg-white/5 hover:text-[#ece7de]"
+                >
+                  Settings
+                </Link>
+<div className="border-t border-white/10 pt-2">
+                   <p className="px-3 py-1 text-[10px] uppercase tracking-[0.15em] text-[#6f757b]">
+                     Learn more
+                   </p>
+                  {[
+                    { label: 'About BrandForge', href: '/about' },
+                    { label: 'Usage Policy', href: '/usage-policy' },
+                    { label: 'Privacy Policy', href: '/privacy' },
+                    { label: 'Terms of Service', href: '/terms' },
+                    { label: 'Your Privacy Choices', href: '/privacy-choices' },
+                    { label: 'Payments', href: '/payments' },
+                  ].map((item) => (
+                    <Link
+                      key={item.label}
+                      href={item.href}
+                      onClick={() => setDropdownOpen(false)}
+                      className="block rounded-lg px-3 py-2 text-sm text-[#9aa0a6] transition hover:bg-white/5 hover:text-[#ece7de]"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+                <div className="border-t border-white/10 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      void handleSignOut();
+                    }}
+                    className="bf-action bf-action-danger bf-action-compact w-full text-left"
+                  >
+                    Sign out
+                  </button>
+                </div>
+              </div>
+            ) : null}
+            {telegramConnected !== true ? (
+              <>
+                {telegramLink ? (
+                  <a
+                    href={telegramLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 flex w-full items-center gap-2 rounded-lg border border-[#e8571e]/30 bg-[#e8571e]/10 px-3 py-2 text-xs font-semibold text-[#e8571e] transition hover:bg-[#e8571e]/20"
+                  >
+                    <span aria-hidden="true">✈</span> Open in Telegram
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void onTelegramConnect?.()}
+                    className="mt-2 flex w-full items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs text-[#9aa0a6] transition hover:border-[#e8571e] hover:text-[#ece7de]"
+                  >
+                    <span aria-hidden="true">✈</span> Connect Telegram
+                  </button>
+                )}
+              </>
             ) : null}
           </div>
         )}

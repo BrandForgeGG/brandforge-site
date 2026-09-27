@@ -161,7 +161,7 @@ function Avatar({
     if (!userId || !conversationId) return;
     let cancelled = false;
     void loadProfileCard(conversationId, userId).then((data) => {
-      if (!cancelled && data) setProfile(data);
+      if (!cancelled) setProfile(data);
     });
     return () => {
       cancelled = true;
@@ -315,16 +315,21 @@ function MessageActions({
   onEdit,
   onDelete,
   onReact,
+  onReply,
 }: {
   message: ChatMessage;
   canManage: boolean;
   onEdit: (content: string) => Promise<void>;
   onDelete: () => Promise<void>;
   onReact: (emoji: string) => Promise<void>;
+  onReply?: (messageId: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(message.content);
   const [busy, setBusy] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function run(action: () => Promise<void>) {
     setBusy(true);
@@ -335,54 +340,129 @@ function MessageActions({
     }
   }
 
+  function handleCopy() {
+    void navigator.clipboard.writeText(message.content).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+
+  function handlePointerDown(e: React.PointerEvent) {
+    if (e.pointerType === 'mouse') return;
+    longPressTimerRef.current = setTimeout(() => {
+      setVisible(true);
+    }, 500);
+  }
+
+  function handlePointerUp() {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }
+
   return (
-    <div className="mt-1 flex flex-wrap items-center gap-1.5">
-      {REACTION_EMOJI.map((emoji) => {
-        const reaction = message.reactions?.find(
-          (entry) => entry.emoji === emoji,
-        );
-        if (!reaction) return null;
-        return (
-          <button
-            key={emoji}
-            type="button"
-            disabled={busy}
-            onClick={() => void run(() => onReact(emoji))}
-            className="rounded-full border border-white/10 px-2 py-0.5 text-xs hover:border-[#e8571e]"
-          >
-            {emoji} {reaction.count}
-          </button>
-        );
-      })}
-      <button
-        type="button"
-        disabled={busy}
-        aria-label="React with thumbs up"
-        onClick={() => void run(() => onReact("👍"))}
-        className="rounded px-1.5 py-0.5 text-xs text-[#9aa0a6] hover:bg-white/5"
-      >
-        +👍
-      </button>
-      {canManage ? (
+    <div
+      className="mt-1 flex flex-wrap items-center gap-1.5"
+      onMouseEnter={() => setVisible(true)}
+      onMouseLeave={() => setVisible(false)}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+    >
+      {visible ? (
         <>
+          {REACTION_EMOJI.map((emoji) => {
+            const reaction = message.reactions?.find(
+              (entry) => entry.emoji === emoji,
+            );
+            if (!reaction) return null;
+            return (
+              <button
+                key={emoji}
+                type="button"
+                disabled={busy}
+                onClick={() => void run(() => onReact(emoji))}
+                className="rounded-full border border-white/10 px-2 py-0.5 text-xs hover:border-[#e8571e]"
+              >
+                {emoji} {reaction.count}
+              </button>
+            );
+          })}
+          {REACTION_EMOJI.filter(
+            (emoji) =>
+              !message.reactions?.some((entry) => entry.emoji === emoji),
+          ).map((emoji) => (
+            <button
+              key={`add-${emoji}`}
+              type="button"
+              disabled={busy}
+              aria-label={`React with ${emoji}`}
+              onClick={() => void run(() => onReact(emoji))}
+              className="rounded px-1.5 py-0.5 text-xs text-[#9aa0a6] hover:bg-white/5"
+            >
+              +{emoji}
+            </button>
+          ))}
+          {onReply ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => onReply(message.id)}
+              className="rounded px-1.5 py-0.5 text-xs text-[#9aa0a6] hover:bg-white/5"
+            >
+              ↩ Reply
+            </button>
+          ) : null}
           <button
             type="button"
             disabled={busy}
-            onClick={() => setEditing((value) => !value)}
+            onClick={handleCopy}
             className="rounded px-1.5 py-0.5 text-xs text-[#9aa0a6] hover:bg-white/5"
           >
-            Edit
+            {copied ? '✓ Copied' : '📋 Copy'}
           </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void run(onDelete)}
-            className="rounded px-1.5 py-0.5 text-xs text-[#9aa0a6] hover:bg-white/5"
-          >
-            Delete
-          </button>
+          {canManage ? (
+            <>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setEditing((value) => !value)}
+                className="rounded px-1.5 py-0.5 text-xs text-[#9aa0a6] hover:bg-white/5"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void run(onDelete)}
+                className="rounded px-1.5 py-0.5 text-xs text-[#9aa0a6] hover:bg-white/5"
+              >
+                Delete
+              </button>
+            </>
+          ) : null}
         </>
-      ) : null}
+      ) : (
+        <>
+          {REACTION_EMOJI.map((emoji) => {
+            const reaction = message.reactions?.find(
+              (entry) => entry.emoji === emoji,
+            );
+            if (!reaction) return null;
+            return (
+              <button
+                key={emoji}
+                type="button"
+                disabled={busy}
+                onClick={() => void run(() => onReact(emoji))}
+                className="rounded-full border border-white/10 px-2 py-0.5 text-xs hover:border-[#e8571e]"
+              >
+                {emoji} {reaction.count}
+              </button>
+            );
+          })}
+        </>
+      )}
       {editing ? (
         <div className="mt-1 flex w-full gap-2">
           <input
@@ -472,11 +552,14 @@ function FirstRunRail() {
 export function ChatTranscript({
   messages,
   isStreaming,
+  isTyping,
+  typingNames,
   onSuggestion,
   currentUserId,
   onEditMessage,
   onDeleteMessage,
   onReact,
+  onReply,
   conversationId,
   onEmbedAction,
   embedBusy,
@@ -487,11 +570,14 @@ export function ChatTranscript({
 }: {
   messages: ChatMessage[];
   isStreaming: boolean;
+  isTyping: boolean;
+  typingNames: string[];
   onSuggestion: (prompt: string) => void;
   currentUserId: string | null;
   onEditMessage: (id: string, content: string) => Promise<void>;
   onDeleteMessage: (id: string) => Promise<void>;
   onReact: (id: string, emoji: string) => Promise<void>;
+  onReply?: (messageId: string) => void;
   conversationId: string;
   onEmbedAction?: (
     embed: ChatEmbed,
@@ -555,7 +641,12 @@ export function ChatTranscript({
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <div
+      className="mx-auto w-full max-w-3xl"
+      role="log"
+      aria-label="Conversation messages"
+      aria-relevant="additions text"
+    >
       {messages.map((message, index) => {
         if (message.sender === "system") {
           if (message.embed) {
@@ -791,6 +882,7 @@ export function ChatTranscript({
                 onEdit={(content) => onEditMessage(message.id, content)}
                 onDelete={() => onDeleteMessage(message.id)}
                 onReact={(emoji) => onReact(message.id, emoji)}
+                onReply={onReply}
               />
             </div>
 
@@ -810,6 +902,17 @@ export function ChatTranscript({
         );
       })}
 
+      {!isStreaming && isTyping && typingNames.length > 0 ? (
+        <div className="mt-5 flex gap-3">
+          <BrandForgeMark />
+          <p className="bf-streaming-state" role="status">
+            <span className="bf-streaming-dot" aria-hidden="true" />
+            {typingNames.length === 1
+              ? `${typingNames[0]} is typing…`
+              : `${typingNames.length} people are typing…`}
+          </p>
+        </div>
+      ) : null}
       {isStreaming && !messages.some((message) => message.streaming) ? (
         <div className="mt-5 flex gap-3">
           <BrandForgeMark />

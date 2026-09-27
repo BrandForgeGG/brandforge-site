@@ -8,31 +8,27 @@ const STEPS = [
     body: 'BrandForge asks the sharp questions and turns your answers into a structured project: requirements, milestones, estimate.',
   },
   {
-    title: 'Get a human proposal',
-    body: 'A BrandForge specialist joins the same chat with fixed scope, a fixed price and a timeline.',
-  },
-  {
-    title: 'Fund it, then approve it',
-    body: 'You fund the project in crypto to the BrandForge escrow wallet. Our team verifies the transfer on-chain, holds the funds, and releases each milestone payment only when you approve the delivered work.',
+    title: 'Get a proposal, fund, and approve',
+    body: 'A specialist joins with fixed scope, price, and timeline. You fund in crypto to the BrandForge escrow wallet, verified on-chain, and milestone payments release only after you approve the delivered work.',
   },
 ];
 
 const SERVICES = [
   {
     name: 'Design',
-    body: 'Brand identity, landing pages, full UI/UX, motion and video content.',
+    body: 'Brand identity, landing pages, UI/UX, motion, and video.',
   },
   {
     name: 'Development',
-    body: 'Websites, web apps and mobile apps, integrations, AI features end to end.',
+    body: 'Websites, web and mobile apps, integrations, AI features.',
   },
   {
     name: 'Reverse engineering',
-    body: 'APIs, protocols and integrations others said were impossible — mapped and built on.',
+    body: 'APIs, protocols, and integrations others said were impossible — mapped and built.',
   },
   {
     name: 'Marketing',
-    body: 'AI-assisted content, SEO, social growth and campaign launches.',
+    body: 'AI-assisted content, SEO, social growth, and campaigns.',
   },
 ];
 
@@ -79,15 +75,6 @@ export function LandingSections() {
                 <p className="text-sm leading-relaxed text-[#9aa0a6]">{service.body}</p>
               </div>
             ))}
-          </div>
-
-          <div className="mt-6 rounded-2xl border border-[#5aa578]/30 bg-[#5aa578]/10 p-6">
-            <p className="text-sm leading-relaxed text-[#d9f7ea]">
-              <span className="font-semibold">Admin-verified crypto escrow.</span> You pay in crypto
-              to a wallet held by BrandForge. Our team confirms your transfer on-chain and releases
-              funds to the specialist only after you approve the delivered work — you never pay
-              upfront for promises.
-            </p>
           </div>
         </div>
       </section>

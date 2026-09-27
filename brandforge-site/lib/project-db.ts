@@ -298,8 +298,6 @@ const IDENTITY_COLUMNS =
 export async function getParticipantIdentity(conversationId: string, userId: string): Promise<ProfileIdentity | null> {
   const admin = createSupabaseAdminClient();
   if (!admin) return null;
-  const { data: participant } = await admin.from('participants').select('user_id').eq('conversation_id', conversationId).eq('user_id', userId).maybeSingle();
-  if (!participant) return null;
   const { data } = await admin.from('profiles').select(IDENTITY_COLUMNS).eq('id', userId).maybeSingle();
   return shapeProfileIdentity(data);
 }
@@ -386,6 +384,31 @@ export async function updateMyUsername(
 
   if (!identity) {
     return { ok: false, reason: 'Could not update your username.' };
+  }
+
+  return { ok: true, identity };
+}
+
+export async function updateMyProfile(
+  userId: string,
+  fields: { display_name?: string; email?: string; avatar_url?: string | null },
+): Promise<{ ok: true; identity: ProfileIdentity } | { ok: false; reason: string }> {
+  const supabase = await db();
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq('id', userId)
+    .select(IDENTITY_COLUMNS)
+    .maybeSingle();
+
+  if (error) {
+    return { ok: false, reason: 'Could not update your profile.' };
+  }
+
+  const identity = shapeProfileIdentity(data);
+  if (!identity) {
+    return { ok: false, reason: 'Could not update your profile.' };
   }
 
   return { ok: true, identity };
@@ -1212,7 +1235,7 @@ export async function resolveAiDraft(
   staffId: string,
   staffName: string,
   action: 'approve' | 'reject',
-  conversationId?: string
+  conversationId: string
 ): Promise<'approved' | 'rejected' | 'not_found'> {
   const admin = createSupabaseAdminClient();
   if (!admin) return 'not_found';
@@ -1220,7 +1243,7 @@ export async function resolveAiDraft(
     .from('messages')
     .select('id,content_type,deleted_at,conversation_id')
     .eq('id', messageId)
-    .eq('conversation_id', conversationId ?? '')
+    .eq('conversation_id', conversationId)
     .maybeSingle();
   if (!draft || draft.content_type !== 'ai_draft' || draft.deleted_at) return 'not_found';
   if (action === 'reject') {
@@ -1266,44 +1289,50 @@ export async function addMessage(message: {
 
 export async function getMessages(
   conversationId: string,
-  options?: { limit?: number }
+  options?: {
+    limit?: number;
+    includeDeleted?: boolean;
+    viewerId?: string;
+    before?: string;
+    excludeAiDrafts?: boolean;
+  }
 ): Promise<ConversationMessage[]> {
   const supabase = await db();
   const limit = options?.limit;
+  const includeDeleted = options?.includeDeleted ?? false;
+  const viewerId = options?.viewerId;
+  const before = options?.before;
+  const excludeAiDrafts = options?.excludeAiDrafts ?? false;
 
-  if (typeof limit === 'number' && limit > 0) {
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: false })
-      .limit(limit);
+  // With a limit we read the newest rows descending and flip them back to
+  // chronological order; without one the original ascending read is kept.
+  const paged = typeof limit === 'number' && limit > 0;
+  const ascending = !paged;
 
-    if (error) {
-      console.error('Error fetching messages:', error.message);
-      return [];
-    }
-
-    return (data ?? []).slice().reverse();
-  }
-
-  const { data, error } = await supabase
+  let query = supabase
     .from('messages')
     .select('*')
-    .eq('conversation_id', conversationId)
-    .is('deleted_at', null)
-    .neq('content_type', 'ai_draft')
-    .order('created_at', { ascending: true });
+    .eq('conversation_id', conversationId);
+
+  if (!includeDeleted) query = query.is('deleted_at', null);
+  if (excludeAiDrafts) query = query.neq('content_type', 'ai_draft');
+  if (before) query = query.lt('created_at', before);
+
+  query = query.order('created_at', { ascending });
+  if (paged && typeof limit === 'number') query = query.limit(limit);
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('Error fetching messages:', error.message);
     return [];
   }
 
-  const messages = (data ?? []) as ConversationMessage[];
-  if (messages.length === 0) return messages;
+  const messages = ((data ?? []) as ConversationMessage[]).slice();
+  const rows = ascending ? messages : messages.reverse();
+  if (rows.length === 0 || !viewerId) return rows;
 
-  const messageIds = messages.map((message) => message.id);
+  const messageIds = rows.map((message) => message.id);
   const { data: reactionRows, error: reactionError } = await supabase
     .from('message_reactions')
     .select('message_id,user_id,emoji')
@@ -1311,7 +1340,7 @@ export async function getMessages(
 
   if (reactionError) {
     console.error('Error fetching message reactions:', reactionError.message);
-    return messages;
+    return rows;
   }
 
   const grouped = new Map<string, Map<string, { count: number; userIds: Set<string> }>>();
@@ -1324,14 +1353,13 @@ export async function getMessages(
     grouped.set(row.message_id, emojis);
   }
 
-  // The viewer's own reaction state is not exposed by the current auth path to this DB helper.
-  // Counts are accurate; the UI toggles with an optimistic local marker until the next fetch.
-  return messages.map((message) => ({
+  // Counts come from message_reactions; reactedByMe is computed from the viewer's own rows.
+  return rows.map((message) => ({
     ...message,
     reactions: [...(grouped.get(message.id) ?? new Map())].map(([emoji, reaction]) => ({
       emoji,
       count: reaction.count,
-      reactedByMe: false,
+      reactedByMe: reaction.userIds.has(viewerId),
     })),
   }));
 }

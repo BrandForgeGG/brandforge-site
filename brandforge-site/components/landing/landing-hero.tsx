@@ -156,11 +156,7 @@ export function LandingHero() {
               </a>
             </div>
           </div>
-        ) : (
-          <p className="mt-4 text-center text-[11px] uppercase tracking-[0.2em] text-[#6f757b]">
-            One chat · one project · humans ship it
-          </p>
-        )}
+        ) : null}
       </div>
     </section>
   );

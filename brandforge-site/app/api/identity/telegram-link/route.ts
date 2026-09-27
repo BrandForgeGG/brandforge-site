@@ -32,6 +32,13 @@ export async function POST(request: NextRequest) {
       token,
     );
 
+    if (!deepLink) {
+      return NextResponse.json(
+        { error: 'Telegram bot is not configured yet. Please try again later.' },
+        { status: 503 },
+      );
+    }
+
     return NextResponse.json({ deepLink, expiresInSeconds: LINK_TOKEN_TTL_SECONDS });
   } catch (error) {
     console.error('Telegram link error:', error);

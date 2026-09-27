@@ -131,7 +131,8 @@ export function createLinkToken(randomValues) {
       out += randomValues[i];
       continue;
     }
-    out += TOKEN_ALPHABET[Math.floor(Math.random() * TOKEN_ALPHABET.length)];
+    const randomBytes = crypto.randomBytes(1);
+    out += TOKEN_ALPHABET[randomBytes[0] % TOKEN_ALPHABET.length];
   }
 
   return out;

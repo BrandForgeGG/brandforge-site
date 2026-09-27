@@ -91,10 +91,8 @@ export function ProjectContextPanel({
   onProposalAction,
   onSubmitPayment,
   onPaymentAction,
-  onTaskAction,
-  aiDrafts,
-  onResolveDraft,
-}: {
+   onTaskAction,
+ }: {
   state: ClientProjectState | null;
   proposal: ProposalSummary | null;
   agreement: AgreementSummary | null;
@@ -117,10 +115,8 @@ export function ProjectContextPanel({
     taskId: string,
     payload: { action?: string; status?: string; assigneeId?: string; dueDate?: string | null }
   ) => void;
-  aiDrafts: { id: string; content: string; created_at: string | null }[];
-  onResolveDraft: (id: string, action: 'approve' | 'reject') => void;
 }) {
-  const discovery = state?.discovery;
+   const discovery = state?.discovery;
   const canRequestReview =
     state?.status === 'DISCOVERY' && (discovery?.completeness ?? 0) >= DISCOVERY_THRESHOLD;
 
@@ -142,7 +138,8 @@ export function ProjectContextPanel({
   }, [taskSignature]);
 
   const taskControlsDisabled = (taskId: string) =>
-    busyAction !== null || (taskBusyId !== null && taskBusyId !== `task-${taskId}`);
+    (busyAction !== null && busyAction.startsWith('task-')) ||
+    (taskBusyId !== null && taskBusyId !== `task-${taskId}`);
   const runTaskAction = (
     taskId: string,
     payload: { action?: string; status?: string; assigneeId?: string; dueDate?: string | null }
@@ -404,22 +401,7 @@ export function ProjectContextPanel({
         </div>
 
         <div className="bf-panel-section">
-          <p className="bf-section-label">AI drafts</p>
-          <div className="bf-panel-card bf-panel-card-alert">
-            {aiDrafts.length > 0 ? aiDrafts.map((draft) => (
-              <div key={draft.id} className="border-b border-white/10 py-2 last:border-0">
-                <p className="whitespace-pre-wrap text-xs leading-relaxed text-[#ece7de]">{draft.content}</p>
-                <div className="mt-2 flex gap-1.5">
-                  <button type="button" onClick={() => onResolveDraft(draft.id, 'approve')} disabled={busyAction !== null} className="rounded-lg bg-[#5aa578] px-2 py-1 text-[10px] font-semibold text-[#14171a] disabled:opacity-60">Approve</button>
-                  <button type="button" onClick={() => onResolveDraft(draft.id, 'reject')} disabled={busyAction !== null} className="rounded-lg border border-white/10 px-2 py-1 text-[10px] text-[#9aa0a6] disabled:opacity-60">Reject</button>
-                </div>
-              </div>
-            )) : <p className="text-xs text-[#9aa0a6]">No AI drafts waiting for review.</p>}
-          </div>
-        </div>
-
-        <div className="bf-panel-section">
-          <p className="bf-section-label">Tasks</p>
+           <p className="bf-section-label">Tasks</p>
           {state ? (() => {
             const progress = summarizeTaskProgress(state.tasks);
             // next action is rendered from the shared helper below

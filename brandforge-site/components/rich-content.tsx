@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { parseMarkdown, type MarkdownInline, type MarkdownToken } from '@/lib/markdown';
 
 // Renders the safe token tree from lib/markdown.js as React elements. Text nodes are
@@ -69,6 +70,6 @@ function renderToken(token: MarkdownToken, index: number) {
 }
 
 export function RichContent({ content }: { content: string }) {
-  const tokens = parseMarkdown(content);
+  const tokens = useMemo(() => parseMarkdown(content), [content]);
   return <div className="bf-msg-prose">{tokens.map((token, index) => renderToken(token, index))}</div>;
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
-import { getMyIdentity, updateMyUsername } from '@/lib/project-db';
+import { supabase } from '@/lib/supabase';
+import { getMyIdentity, updateMyProfile } from '@/lib/project-db';
 import { validateUsername } from '@/lib/identity';
 
 export const dynamic = 'force-dynamic';
@@ -22,17 +23,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ identity });
+    return NextResponse.json({
+      identity,
+      telegram_connected: Boolean(identity.telegramChatId),
+    });
   } catch (error) {
     console.error('Identity API error:', error);
     return NextResponse.json({ error: 'Failed to load identity' }, { status: 500 });
   }
 }
 
-// Sets the caller's own username. Uniqueness is enforced twice on purpose: the pure validator
-// rejects malformed handles before we touch the database, and the RLS policy added in migration
-// 0009 re-checks it at the row level, so a race between two members picking the same handle
-// still fails closed with a founder-readable message rather than a duplicate.
+// Updates the caller's own profile fields: username, display_name, email, avatar_url, password.
 export async function PATCH(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser(request);
@@ -41,22 +42,54 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const body = (await request.json().catch(() => ({}))) as { username?: unknown };
-    const validation = validateUsername(body.username);
+    const body = (await request.json().catch(() => ({}))) as {
+      username?: unknown;
+      display_name?: unknown;
+      email?: unknown;
+      avatar_url?: unknown;
+      password?: unknown;
+    };
 
-    if (!validation.ok) {
-      return NextResponse.json({ error: validation.reason }, { status: 400 });
+    const updates: Record<string, unknown> = {};
+
+    if (body.username !== undefined) {
+      const validation = validateUsername(body.username);
+      if (!validation.ok) {
+        return NextResponse.json({ error: validation.reason }, { status: 400 });
+      }
+      updates.username = validation.username;
     }
 
-    const result = await updateMyUsername(user.id, validation.username);
-
-    if (!result.ok) {
-      return NextResponse.json({ error: result.reason }, { status: 400 });
+    if (body.display_name !== undefined && typeof body.display_name === 'string') {
+      updates.display_name = body.display_name.trim() || null;
     }
 
-    return NextResponse.json({ identity: result.identity });
+    if (body.email !== undefined && typeof body.email === 'string') {
+      updates.email = body.email.trim() || null;
+    }
+
+    if (body.avatar_url !== undefined) {
+      updates.avatar_url = body.avatar_url ?? null;
+    }
+
+    if (body.password !== undefined && typeof body.password === 'string' && body.password.length > 0) {
+      const { error: pwdError } = await supabase.auth.updateUser({ password: body.password });
+      if (pwdError) {
+        return NextResponse.json({ error: pwdError.message }, { status: 400 });
+      }
+    }
+
+    if (Object.keys(updates).length > 0) {
+      const result = await updateMyProfile(user.id, updates as { display_name?: string; email?: string; avatar_url?: string | null; username?: string });
+      if (!result.ok) {
+        return NextResponse.json({ error: result.reason }, { status: 400 });
+      }
+      return NextResponse.json({ identity: result.identity });
+    }
+
+    return NextResponse.json({ identity: await getMyIdentity(user.id) });
   } catch (error) {
-    console.error('Username update error:', error);
-    return NextResponse.json({ error: 'Failed to update username' }, { status: 500 });
+    console.error('Profile update error:', error);
+    return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
   }
 }

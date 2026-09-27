@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  CHAT_TASK_STATUSES,
   addMessage,
   assignTask,
   canAccessConversation,
@@ -43,11 +42,10 @@ export async function PATCH(request: NextRequest) {
 
     const body = await request.json().catch(() => ({}));
     const taskId = String(body.taskId ?? '').trim();
-    const status = String(body.status ?? '').trim();
     const action = String(body.action ?? '').trim();
     const assigneeName = String(body.assigneeName ?? '').trim();
     const assigneeId = String(body.assigneeId ?? '').trim();
-    const dueDateInput = body.dueDate === null ? null : String(body.dueDate ?? '').trim();
+    const dueDateInput = body.dueDate === undefined ? undefined : body.dueDate === null ? null : String(body.dueDate ?? '').trim();
 
     if (!taskId) {
       return NextResponse.json({ error: 'taskId is required' }, { status: 400 });
@@ -139,14 +137,8 @@ export async function PATCH(request: NextRequest) {
       updatedTask = claimed;
     } else {
       const currentStatus = String(task.status ?? 'TODO');
-      const requested =
+      const target =
         action === 'advance' ? nextTaskStatusFor(currentStatus, staff, conversationStatus) : null;
-      const explicit = CHAT_TASK_STATUSES.includes(status as never)
-        ? (status as (typeof CHAT_TASK_STATUSES)[number])
-        : null;
-
-      // An explicit status is honoured only when it equals the step this role may take.
-      const target = requested ?? explicit;
 
       if (!target || target === currentStatus) {
         return NextResponse.json(
@@ -173,7 +165,7 @@ export async function PATCH(request: NextRequest) {
               updatedTask.assignee_name ? ` (${updatedTask.assignee_name})` : ''
             }`;
 
-    await addMessage({
+    const systemMessage = await addMessage({
       conversation_id: conversationId,
       sender_type: isFounder ? 'user' : 'human_operator',
       sender_id: user.id,
@@ -181,6 +173,10 @@ export async function PATCH(request: NextRequest) {
       content: line,
       content_type: 'system',
     });
+
+    if (!systemMessage) {
+      console.error('Failed to add system message for task update:', taskId);
+    }
 
     // Delivered work is the one transition the founder must not miss — they hold the approval.
     if (updatedTask.status === 'REVIEW') {

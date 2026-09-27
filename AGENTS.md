@@ -71,7 +71,7 @@ BrandForge/
   Unauthenticated `POST /api/conversations` correctly returns 401; signed-in chat
   must not.
 - Secrets live only in `brandforge-site/.env.local` (gitignored): `SUPABASE_SERVICE_ROLE_KEY`,
-  `SUPABASE_SECRET_KEY`. Never commit or paste them again.
+  `SUPABASE_SECRET_KEY`, `RESEND_API_KEY`. Never commit or paste them again.
 - Known accounts:
   - `brandforge.gg@gmail.com` — admin/founder (describes projects, approves delivered work).
   - `mxstermind.com@gmail.com` — operator (staff inbox, joins founder chats, posts, moves tasks).

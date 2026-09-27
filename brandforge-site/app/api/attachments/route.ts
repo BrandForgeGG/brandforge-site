@@ -5,6 +5,10 @@ import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+// Uploads always create `conversation-<uuid>/<userId>/<uuid>-<name>` (see
+// uploadConversationAttachment). Reject anything else, including `..` segments,
+// so a crafted path cannot reach outside the authorized conversation prefix.
+const ATTACHMENT_PATH = /^conversation-[0-9a-f-]{36}\/[0-9a-f-]{36}\/[a-z0-9][a-z0-9._-]*$/i;
 const ALLOWED_TYPES = new Set([
   'image/png', 'image/jpeg', 'image/webp', 'application/pdf', 'text/plain',
   'application/json', 'application/zip', 'text/csv', 'audio/webm', 'audio/ogg', 'audio/mpeg', 'audio/mp4',
@@ -15,7 +19,11 @@ export async function GET(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   const path = request.nextUrl.searchParams.get('path') ?? '';
   const match = path.match(/^conversation-([0-9a-f-]{36})\//i);
-  if (!match || !(await canAccessConversation(user.id, match[1], { allowStaff: true }))) {
+  if (
+    !ATTACHMENT_PATH.test(path) ||
+    !match ||
+    !(await canAccessConversation(user.id, match[1], { allowStaff: true }))
+  ) {
     return NextResponse.json({ error: 'Attachment not found' }, { status: 404 });
   }
   const data = await downloadConversationAttachment(path);
