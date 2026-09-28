@@ -295,6 +295,8 @@ Closed testing runs two accounts:
     **Applied to production 2026-09-28.**
 16. `supabase/migrations/0016_grant_rpc_execute.sql` — restores `EXECUTE` on the 0014/0015 RPCs for
     `authenticated`, the user-session client that actually calls them (0014/0015 had revoked it,
-    which emptied the sidebar until the code bridge landed). **Not yet applied — run it.** Until
-    then the app bridges denied calls through the service role and logs a warning naming this file.
+    which emptied the sidebar until the code bridge landed). **Applied to production 2026-09-28**
+    (verified: session-client RPC calls return 200/204, `has_function_privilege` true for all
+    three). The `rpcForCaller` service-role bridge stays in code as resilience and now stays
+    silent.
 

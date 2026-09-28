@@ -110,9 +110,9 @@ BrandForge/
   `EXECUTE` from `authenticated`, but routes call those RPCs through the **user-session**
   client (`db()`) → `42501 permission denied` → recents rendered `[]` (AI draft saves hit the
   same wall). `rpcForCaller` in `lib/project-db.ts` now bridges a 42501 through the service
-  role and warns. **Pending: founder must run `0016_grant_rpc_execute.sql`** (restores the
-  grant, RLS path resumes, bridge warns go quiet). Probe lesson: a fresh-user sidebar probe
-  can't see this bug — probe with a conversation the user owns.
+  role and warns. **`0016_grant_rpc_execute.sql` applied** (same day) — session-client RPC
+  calls verified 200/204 on the RLS path, bridge stays as silent resilience. Probe lesson: a
+  fresh-user sidebar probe can't see this bug — probe with a conversation the user owns.
 
 
 - **Open auth**: any Google account can sign in (login allowlist removed). Staff/admin access
@@ -131,9 +131,8 @@ BrandForge/
 - Known accounts:
   - `brandforge.gg@gmail.com` — admin/founder (describes projects, approves delivered work).
   - `mxstermind.com@gmail.com` — operator (staff inbox, joins founder chats, posts, moves tasks).
-- Required migrations: `0001_chat_first_rls.sql` … `0015_conversation_summaries.sql` — **all
+- Required migrations: `0001_chat_first_rls.sql` … `0016_grant_rpc_execute.sql` — **all
   applied** in prod (0006 run 2026-09-22 via Supabase Management API; 0007–0012 verified live by
-  column/table probe 2026-09-28; 0013–0015 run 2026-09-28 via the SQL editor). 
-  `0016_grant_rpc_execute.sql` is **written but pending** — until it runs, `rpcForCaller` bridges
-  denied RPC calls through the service role (see the regression note above). Supabase PAT for
+  column/table probe 2026-09-28; 0013–0016 run 2026-09-28 via the SQL editor; 0016 verified by
+  `has_function_privilege` + session-client RPC probes). Supabase PAT for
   future SQL runs is not stored here — ask the operator or use the SQL editor.
