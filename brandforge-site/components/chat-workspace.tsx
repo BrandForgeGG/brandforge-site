@@ -213,67 +213,6 @@ export function ChatWorkspace() {
   // Rows already rendered, so a pushed row can never duplicate one the poll just delivered.
   const seenMessageIdsRef = useRef<Set<string>>(new Set());
 
-  const handleLiveMessage = useCallback(
-    (row: {
-      id: string;
-      sender_type: string;
-      content: string;
-      content_type: string | null;
-      created_at: string | null;
-    }) => {
-      if (seenMessageIdsRef.current.has(row.id)) {
-        return;
-      }
-      seenMessageIdsRef.current.add(row.id);
-
-      const incoming = toChatMessage({
-        id: row.id,
-        sender_type: row.sender_type,
-        content: row.content,
-        content_type: row.content_type,
-        created_at: row.created_at,
-      });
-
-      // While our own turn is streaming, the assistant bubble is already on screen. The real
-      // row arrives over this same channel once the AI finishes, so accepting it now would show
-      // the answer twice. The post-turn refreshMessages() picks it up instead.
-      if (isStreaming && incoming.sender === "ai") {
-        return;
-      }
-
-      setMessages((current) =>
-        current.some((entry) => entry.id === incoming.id)
-          ? current
-          : [...current, incoming],
-      );
-
-      // A colleague's new row follows the reader only when they were already at the end; the
-      // call is a no-op scroll when the row turned out to be a duplicate the poll delivered.
-      scrollToBottom();
-    },
-    [isStreaming, scrollToBottom],
-  );
-
-  useRealtimeMessages(conversationId, handleLiveMessage, (event, row) => {
-    if (event === "deleted") {
-      seenMessageIdsRef.current.delete(row.id);
-      setMessages((current) =>
-        current.filter((message) => message.id !== row.id),
-      );
-      return;
-    }
-    setMessages((current) =>
-      current.map((message) =>
-        message.id === row.id
-          ? {
-              ...message,
-              content: row.content,
-              editedAt: row.edited_at ?? message.editedAt,
-            }
-          : message,
-      ),
-    );
-  });
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [attachment, setAttachment] = useState<File | null>(null);
   // Real upload state: "Uploading…" only while the POST is actually in flight.
@@ -545,6 +484,88 @@ export function ChatWorkspace() {
       setTaskParticipants([]);
     }
   }, []);
+
+  // A pushed row reaches the open tab here. Defined after the refreshers on purpose: a
+  // system row is a status moment (proposal sent, review receipt, funding) and the strips
+  // keyed off conversation status only learn about it from a fresh state fetch.
+  const handleLiveMessage = useCallback(
+    (row: {
+      id: string;
+      sender_type: string;
+      content: string;
+      content_type: string | null;
+      created_at: string | null;
+    }) => {
+      if (seenMessageIdsRef.current.has(row.id)) {
+        return;
+      }
+      seenMessageIdsRef.current.add(row.id);
+
+      const incoming = toChatMessage({
+        id: row.id,
+        sender_type: row.sender_type,
+        content: row.content,
+        content_type: row.content_type,
+        created_at: row.created_at,
+      });
+
+      // While our own turn is streaming, the assistant bubble is already on screen. The real
+      // row arrives over this same channel once the AI finishes, so accepting it now would show
+      // the answer twice. The post-turn refreshMessages() picks it up instead.
+      if (isStreaming && incoming.sender === "ai") {
+        return;
+      }
+
+      setMessages((current) =>
+        current.some((entry) => entry.id === incoming.id)
+          ? current
+          : [...current, incoming],
+      );
+
+      // A colleague's new row follows the reader only when they were already at the end; the
+      // call is a no-op scroll when the row turned out to be a duplicate the poll delivered.
+      scrollToBottom();
+
+      // The row above is only half the moment: the waiting/proposal strips key off
+      // conversation status and the card's actions off artifacts, both separate fetches.
+      // Reload them so an open tab flips the moment a proposal arrives, without the
+      // reader refreshing the page.
+      if (row.content_type === "system") {
+        void refreshState(conversationId);
+        void refreshArtifacts(conversationId);
+        void refreshMessages(conversationId);
+      }
+    },
+    [
+      conversationId,
+      isStreaming,
+      refreshArtifacts,
+      refreshMessages,
+      refreshState,
+      scrollToBottom,
+    ],
+  );
+
+  useRealtimeMessages(conversationId, handleLiveMessage, (event, row) => {
+    if (event === "deleted") {
+      seenMessageIdsRef.current.delete(row.id);
+      setMessages((current) =>
+        current.filter((message) => message.id !== row.id),
+      );
+      return;
+    }
+    setMessages((current) =>
+      current.map((message) =>
+        message.id === row.id
+          ? {
+              ...message,
+              content: row.content,
+              editedAt: row.edited_at ?? message.editedAt,
+            }
+          : message,
+      ),
+    );
+  });
 
   // One turn: stream the answer, then reload from the database so the transcript and the
   // sidebar show persisted rows rather than client-side guesses.

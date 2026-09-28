@@ -9,6 +9,7 @@
 
 import { createSupabaseServerClient } from './supabase/server';
 import { createSupabaseAdminClient } from './supabase/admin';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { track } from './funnel.js';
 import { notifyDiscordDiscovery } from './discord';
 import { notifyUser } from './notify';
@@ -1140,19 +1141,38 @@ export async function updateConversationStatus(
   conversationId: string,
   status: string
 ): Promise<boolean> {
-  const supabase = await db();
+  const runUpdate = async (client: SupabaseClient) =>
+    client
+      .from('conversations')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', conversationId)
+      .or(`status.is.null,status.neq.${status}`)
+      .select('id, title')
+      .maybeSingle();
 
   // Only a real transition writes: the or() filter matches rows that are not
   // already in the target state (a null status counts as "somewhere else"), and
   // select() hands the row back so the discovery notifier can name the project.
   // Repeated tool calls and idempotent retries update nothing and notify nobody.
-  const { data, error } = await supabase
-    .from('conversations')
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq('id', conversationId)
-    .or(`status.is.null,status.neq.${status}`)
-    .select('id, title')
-    .maybeSingle();
+  let result = await runUpdate(await db());
+
+  // Staff transitions run under a session with no UPDATE policy on conversations: an
+  // operator sending a proposal moves the row to PROPOSED, and the founder's owner-only
+  // policy denies it. Bridge the permission denial through the service role — the route
+  // already authorized the caller (same contract as rpcForCaller).
+  if (result.error && result.error.code === '42501') {
+    console.warn(
+      `[status] ${conversationId}: session client denied conversation update (status=${status}) — bridging via service role`
+    );
+    const admin = createSupabaseAdminClient();
+    if (!admin) {
+      console.error('Error updating conversation status: service role client not configured');
+      return false;
+    }
+    result = await runUpdate(admin);
+  }
+
+  const { data, error } = result;
 
   if (error) {
     console.error('Error updating conversation status:', error.message);
@@ -1422,13 +1442,32 @@ export async function addMessage(message: {
   content_type?: string;
   artifact_data?: Record<string, unknown> | null;
 }): Promise<string | null> {
-  const supabase = await db();
+  const runInsert = async (client: SupabaseClient) =>
+    client
+      .from('messages')
+      .insert(message)
+      .select('id')
+      .maybeSingle();
 
-  const { data, error } = await supabase
-    .from('messages')
-    .insert(message)
-    .select('id')
-    .maybeSingle();
+  let result = await runInsert(await db());
+
+  // Product-authored receipts must land even when the caller has no INSERT policy: an
+  // operator sending a proposal is not yet a participant, so the proposal card would
+  // silently vanish. Human chat never bridges — routes gate humans and RLS stays the
+  // authority for anything a person typed.
+  if (result.error && result.error.code === '42501' && message.content_type === 'system') {
+    console.warn(
+      `[message] system receipt for ${message.conversation_id}: session client denied insert — bridging via service role`
+    );
+    const admin = createSupabaseAdminClient();
+    if (!admin) {
+      console.error('Error adding message: service role client not configured');
+      return null;
+    }
+    result = await runInsert(admin);
+  }
+
+  const { data, error } = result;
 
   if (error) {
     console.error('Error adding message:', error.message);
