@@ -192,7 +192,7 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error('Task action API error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to update task' },
+      { error: 'Failed to update task' },
       { status: 500 }
     );
   }

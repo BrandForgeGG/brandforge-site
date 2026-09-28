@@ -74,7 +74,7 @@ function FunnelColumn({
               <div className="flex items-baseline justify-between gap-3">
                 <span className="text-sm text-[#ece7de]">{LABELS[step] ?? step}</span>
                 {/* An explicit zero matters: a step with no data is not the same as a missing step. */}
-                <span className={`font-mono text-sm ${count === 0 ? 'text-[#6f757b]' : 'text-[#ece7de]'}`}>
+                <span className={`font-mono text-sm ${count === 0 ? 'text-[#8f959b]' : 'text-[#ece7de]'}`}>
                   {count}
                 </span>
               </div>
@@ -151,7 +151,7 @@ export default function AdminFunnelPage() {
           <h2 className="font-serif text-2xl text-[#ece7de]">Not available</h2>
           <p className="mt-2 text-sm leading-relaxed text-[#9aa0a6]">{error}</p>
           {error.includes('not available') ? (
-            <p className="mt-3 text-sm leading-relaxed text-[#6f757b]">
+            <p className="mt-3 text-sm leading-relaxed text-[#8f959b]">
               This usually means migration <code className="font-mono">0012_funnel_events.sql</code> has
               not been applied to the database yet. Until it is, these numbers stay at zero on purpose
               rather than being estimated.
@@ -167,7 +167,7 @@ export default function AdminFunnelPage() {
                 ? 'No events recorded yet.'
                 : `${total.toLocaleString()} event${total === 1 ? '' : 's'} recorded between ${first ?? '?'} and ${last ?? '?'}.`}
             </p>
-            <p className="mt-2 text-xs leading-relaxed text-[#6f757b]">
+            <p className="mt-2 text-xs leading-relaxed text-[#8f959b]">
               These are counts of real recorded events, not projections and not modelled figures. Treat
               small numbers as directional only — they are not a growth rate, and there is no
               denominator to divide by yet.

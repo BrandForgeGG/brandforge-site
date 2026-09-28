@@ -671,6 +671,17 @@ export function ChatWorkspace() {
               );
               // Conditional on purpose: never pull a reader back down mid-answer.
               scrollToBottom();
+            } else if (payload.type === "discard") {
+              // Tool-round scaffolding text the server retracted: it was never saved, so
+              // showing it would make the live transcript disagree with the database.
+              streamedText = "";
+              setMessages((prev) =>
+                prev.map((entry) =>
+                  entry.id === assistantMessageId
+                    ? { ...entry, content: "" }
+                    : entry,
+                ),
+              );
             } else if (payload.type === "state" && payload.state) {
               setState(payload.state);
             } else if (payload.type === "error") {
@@ -1648,7 +1659,7 @@ return (
                         <span className="block truncate text-sm text-[#ece7de]">
                           BrandForge AI
                         </span>
-                        <span className="block text-[10px] uppercase tracking-[0.14em] text-[#6f757b]">
+                        <span className="block text-[10px] uppercase tracking-[0.14em] text-[#8f959b]">
                           Execution Assistant
                         </span>
                       </span>
@@ -1669,7 +1680,7 @@ return (
                           <span className="block truncate text-sm text-[#ece7de]">
                             {person.displayName}
                           </span>
-                          <span className="block text-[10px] uppercase tracking-[0.14em] text-[#6f757b]">
+                          <span className="block text-[10px] uppercase tracking-[0.14em] text-[#8f959b]">
                             {formatRole(person.role)}
                           </span>
                         </span>
@@ -1752,7 +1763,7 @@ return (
                       value={inviteEmail}
                       onChange={(event) => setInviteEmail(event.target.value)}
                       placeholder="friend@example.com"
-                      className="min-w-0 flex-1 rounded-lg border border-white/15 bg-[#14171a] px-2 py-1.5 text-sm text-[#ece7de] placeholder:text-[#6f757b]"
+                      className="min-w-0 flex-1 rounded-lg border border-white/15 bg-[#14171a] px-2 py-1.5 text-sm text-[#ece7de] placeholder:text-[#8f959b]"
                     />
                     <button
                       type="button"
@@ -1814,7 +1825,7 @@ return (
                   </button>
                 ))}
               </div>
-              <p className="mt-5 text-[11px] uppercase tracking-[0.16em] text-[#6f757b]">
+              <p className="mt-5 text-[11px] uppercase tracking-[0.16em] text-[#8f959b]">
                 Tell me what is on your mind — your first message creates the
                 project
               </p>
@@ -2190,7 +2201,7 @@ return (
                   ) : null}
                 </div>
               </div>
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[#6f757b]">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[#8f959b]">
                 Enter to send
               </p>
             </div>

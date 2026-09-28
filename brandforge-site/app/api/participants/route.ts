@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Add participant API error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to add participant' },
+      { error: 'Failed to add participant' },
       { status: 500 }
     );
   }
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Get participants API error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to get participants' },
+      { error: 'Failed to get participants' },
       { status: 500 }
     );
   }

@@ -271,7 +271,7 @@ export default function SettingsPage() {
               <div className="min-w-0">
                 <p className="truncate text-base text-[#ece7de]">{profile.name}</p>
                 <p className="truncate text-sm text-[#9aa0a6]">{profile.email}</p>
-                <p className="mt-0.5 text-[10px] uppercase tracking-[0.15em] text-[#6f757b]">
+                <p className="mt-0.5 text-[10px] uppercase tracking-[0.15em] text-[#8f959b]">
                   {profile.role}
                 </p>
               </div>
@@ -298,9 +298,12 @@ export default function SettingsPage() {
                     id="settings-email"
                     type="email"
                     value={formEmail}
-                    onChange={(e) => setFormEmail(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-white/10 bg-[#14171a] px-3 py-2 text-sm text-[#ece7de] outline-none focus:border-[#e8571e]"
+                    disabled
+                    className="mt-1 w-full cursor-not-allowed rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#9aa0a6] outline-none"
                   />
+                  <p className="mt-1 text-xs text-[#8f959b]">
+                    Your sign-in email comes from Google and cannot be changed here.
+                  </p>
                 </div>
                 <div>
                   <label className="text-sm text-[#9aa0a6]" htmlFor="settings-username">

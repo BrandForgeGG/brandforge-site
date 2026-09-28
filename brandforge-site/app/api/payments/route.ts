@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Submit payment API error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to submit payment' },
+      { error: 'Failed to submit payment' },
       { status: 500 }
     );
   }
@@ -241,7 +241,7 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error('Manage payment API error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to manage payment' },
+      { error: 'Failed to manage payment' },
       { status: 500 }
     );
   }

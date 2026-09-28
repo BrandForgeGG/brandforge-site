@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Create agreement API error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create agreement' },
+      { error: 'Failed to create agreement' },
       { status: 500 }
     );
   }
@@ -270,7 +270,7 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error('Update agreement API error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to update agreement' },
+      { error: 'Failed to update agreement' },
       { status: 500 }
     );
   }
@@ -307,7 +307,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Get agreement API error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to get agreement' },
+      { error: 'Failed to get agreement' },
       { status: 500 }
     );
   }

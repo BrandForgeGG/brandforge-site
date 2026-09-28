@@ -190,7 +190,7 @@ export default function ApplyPage() {
 
           {application.status === 'pending' ? (
             <div className="mt-5 rounded-xl border border-white/10 bg-[#14171a] p-4">
-              <p className="text-xs uppercase tracking-[0.15em] text-[#6f757b]">What happens next</p>
+              <p className="text-xs uppercase tracking-[0.15em] text-[#8f959b]">What happens next</p>
               <ol className="mt-3 space-y-3">
                 {NEXT_STEPS.map((step, index) => (
                   <li key={step.title} className="flex gap-3">
@@ -207,7 +207,7 @@ export default function ApplyPage() {
                   </li>
                 ))}
               </ol>
-              <p className="mt-4 border-t border-white/10 pt-3 text-xs leading-relaxed text-[#6f757b]">
+              <p className="mt-4 border-t border-white/10 pt-3 text-xs leading-relaxed text-[#8f959b]">
                 This page always shows your current status — reload it any time to check whether your
                 application has been accepted or declined. You do not need to email us to follow up.
               </p>
@@ -216,7 +216,7 @@ export default function ApplyPage() {
 
           {application.status === 'accepted' ? (
             <div className="mt-5 rounded-xl border border-white/10 bg-[#14171a] p-4">
-              <p className="text-xs uppercase tracking-[0.15em] text-[#6f757b]">Your next step</p>
+              <p className="text-xs uppercase tracking-[0.15em] text-[#8f959b]">Your next step</p>
               <ol className="mt-3 space-y-3">
                 <li className="flex gap-3">
                   <span aria-hidden="true" className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/15 text-[10px] font-semibold text-[#9aa0a6]">1</span>
@@ -235,7 +235,7 @@ export default function ApplyPage() {
           ) : null}
 
           <div className="mt-5 rounded-xl border border-white/10 bg-[#14171a] p-4">
-            <p className="text-xs uppercase tracking-[0.15em] text-[#6f757b]">Your note</p>
+            <p className="text-xs uppercase tracking-[0.15em] text-[#8f959b]">Your note</p>
             <p className="mt-2 whitespace-pre-wrap text-sm text-[#ece7de]">
               {application.message}
             </p>
@@ -273,7 +273,7 @@ export default function ApplyPage() {
           <div>
             <label
               htmlFor="apply-message"
-              className="block text-xs uppercase tracking-[0.15em] text-[#6f757b]"
+              className="block text-xs uppercase tracking-[0.15em] text-[#8f959b]"
             >
               How you work
             </label>
@@ -284,7 +284,7 @@ export default function ApplyPage() {
               rows={6}
               maxLength={4000}
               placeholder="What you build, how you deliver, links to work…"
-              className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-[#14171a] px-4 py-3 text-sm text-[#ece7de] placeholder-[#6f757b] outline-none transition focus:border-[#e8571e]"
+              className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-[#14171a] px-4 py-3 text-sm text-[#ece7de] placeholder-[#8f959b] outline-none transition focus:border-[#e8571e]"
             />
           </div>
 

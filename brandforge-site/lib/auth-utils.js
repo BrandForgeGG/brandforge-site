@@ -39,9 +39,35 @@ function resolveSiteUrl(customSiteUrl) {
   return base.replace(/\/$/, '');
 }
 
+// Only same-site absolute paths may round-trip through ?next=. A bare startsWith('/') check
+// is NOT enough: '//evil.com' and '/\evil.com' are protocol-relative URLs that a browser
+// resolves to another origin, turning the post-sign-in redirect into an open redirect
+// (phishing straight out of a fresh login). Reject those, then re-parse against the known
+// origin and require the origin to survive — belt and braces for URL parser quirks.
+function sanitizeNextPath(raw, siteOrigin) {
+  if (typeof raw !== 'string' || !raw.startsWith('/')) return '/chat';
+  if (raw.startsWith('//') || raw.startsWith('/\\')) return '/chat';
+
+  const base = (() => {
+    try {
+      return siteOrigin ? new URL(siteOrigin).origin : 'http://localhost:3000';
+    } catch {
+      return 'http://localhost:3000';
+    }
+  })();
+
+  try {
+    const parsed = new URL(raw, base);
+    if (parsed.origin !== base) return '/chat';
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return '/chat';
+  }
+}
+
 function buildOAuthRedirectUrl(nextPath = '/chat', customSiteUrl) {
-  const safeNextPath = nextPath && nextPath.startsWith('/') ? nextPath : '/chat';
   const siteUrl = resolveSiteUrl(customSiteUrl);
+  const safeNextPath = sanitizeNextPath(nextPath, siteUrl);
   const url = new URL('/auth/callback', siteUrl);
   url.searchParams.set('next', safeNextPath);
   return url.toString();
@@ -51,5 +77,6 @@ module.exports = {
   isValidEmail,
   getAuthErrorMessage,
   resolveSiteUrl,
+  sanitizeNextPath,
   buildOAuthRedirectUrl,
 };

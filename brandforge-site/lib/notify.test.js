@@ -159,3 +159,24 @@ test('notify is a silent no-op without env so dev and CI stay quiet', async () =
   const result = await notify('payment_verified', {}, { env: {} });
   assert.deepEqual(result, { sent: false, reason: 'not_configured' });
 });
+
+test('invite_sent reports the invite to the team chat', () => {
+  const text = buildMessage('invite_sent', {
+    email: 'newbie@example.com',
+    conversationId: 'c-123',
+    invitedBy: 'founder@brandforge.gg',
+  });
+  assert.ok(text.includes('newbie@example.com'));
+  assert.ok(text.includes('founder@brandforge.gg'));
+});
+
+test('notify(object) is an unknown event — the signature is (event, details)', async () => {
+  // Regression for the invite route, which once passed a details object as the first
+  // argument and silently no-op'd every invite notification.
+  const result = await notify(
+    { event: 'invite_sent', email: 'x@example.com' },
+    {},
+    { env: ENV, fetchImpl: okFetch({}) },
+  );
+  assert.deepEqual(result, { sent: false, reason: 'unknown_event' });
+});

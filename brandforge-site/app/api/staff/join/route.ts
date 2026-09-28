@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Staff join API error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to join' },
+      { error: 'Failed to join' },
       { status: 500 }
     );
   }

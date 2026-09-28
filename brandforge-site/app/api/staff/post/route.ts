@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Staff post API error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to post message' },
+      { error: 'Failed to post message' },
       { status: 500 }
     );
   }

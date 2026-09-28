@@ -5,6 +5,7 @@ const {
   isValidEmail,
   getAuthErrorMessage,
   resolveSiteUrl,
+  sanitizeNextPath,
   buildOAuthRedirectUrl,
 } = require('./auth-utils.js');
 
@@ -30,6 +31,30 @@ test('resolveSiteUrl prefers the configured production URL and trims trailing sl
 
 test('buildOAuthRedirectUrl creates the correct callback route with the next param', () => {
   const redirectUrl = buildOAuthRedirectUrl('/chat', 'https://brandforge.gg/');
+  assert.equal(redirectUrl, 'https://brandforge.gg/auth/callback?next=%2Fchat');
+});
+
+test('sanitizeNextPath keeps genuine same-site paths, with query and hash', () => {
+  const origin = 'https://brandforge.gg';
+  assert.equal(sanitizeNextPath('/chat', origin), '/chat');
+  assert.equal(sanitizeNextPath('/chat?conversationId=abc', origin), '/chat?conversationId=abc');
+  assert.equal(sanitizeNextPath('/settings#email', origin), '/settings#email');
+});
+
+test('sanitizeNextPath rejects protocol-relative and backslash open redirects', () => {
+  const origin = 'https://brandforge.gg';
+  assert.equal(sanitizeNextPath('//evil.com', origin), '/chat');
+  assert.equal(sanitizeNextPath('/\\evil.com', origin), '/chat');
+  assert.equal(sanitizeNextPath('//evil.com/chat', origin), '/chat');
+  assert.equal(sanitizeNextPath('https://evil.com', origin), '/chat');
+  assert.equal(sanitizeNextPath('javascript:alert(1)', origin), '/chat');
+  assert.equal(sanitizeNextPath('', origin), '/chat');
+  assert.equal(sanitizeNextPath(null, origin), '/chat');
+  assert.equal(sanitizeNextPath(123, origin), '/chat');
+});
+
+test('buildOAuthRedirectUrl sanitises a hostile next before it reaches the callback', () => {
+  const redirectUrl = buildOAuthRedirectUrl('//evil.com', 'https://brandforge.gg');
   assert.equal(redirectUrl, 'https://brandforge.gg/auth/callback?next=%2Fchat');
 });
 

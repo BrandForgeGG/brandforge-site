@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { canAccessConversation, getConversation } from '@/lib/project-db';
 import { isValidEmail, resolveSiteUrl } from '@/lib/auth-utils';
+import { escapeHtml, oneLine } from '@/lib/html';
 import { notify } from '@/lib/notify';
 import { sendEmail } from '@/lib/email';
 
@@ -42,8 +43,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
     }
 
-    await notify({
-      event: 'invite_sent',
+    // Signature is notify(event, details) — an object here would be an unknown event
+    // and silently no-op, so the team never hears about invites.
+    await notify('invite_sent', {
       email: body.email.trim(),
       conversationId: body.conversationId,
       invitedBy: user.email ?? user.id,
@@ -53,13 +55,21 @@ export async function POST(request: NextRequest) {
     // and a provider hiccup must never turn into a 500 for the sender.
     const siteUrl = resolveSiteUrl();
     const chatUrl = `${siteUrl}/chat?conversationId=${encodeURIComponent(body.conversationId)}`;
-    const inviterName =
+    // Display name comes from Google metadata and the title from the founder — both are
+    // user-controlled, so they are escaped for the HTML body and flattened for the subject.
+    const inviterName = oneLine(
       (user.user_metadata?.full_name as string | undefined) ||
-      (user.user_metadata?.name as string | undefined) ||
-      user.email ||
-      'A BrandForge member';
-    const conversationTitle =
-      (conversation as { title?: string | null }).title || 'a project';
+        (user.user_metadata?.name as string | undefined) ||
+        user.email ||
+        'A BrandForge member',
+      80,
+    );
+    const conversationTitle = oneLine(
+      (conversation as { title?: string | null }).title || 'a project',
+      80,
+    );
+    const safeInviterName = escapeHtml(inviterName);
+    const safeConversationTitle = escapeHtml(conversationTitle);
 
     const emailResult = await sendEmail({
       to: body.email.trim(),
@@ -71,12 +81,12 @@ export async function POST(request: NextRequest) {
             <p style="color:#e8571e;text-transform:uppercase;letter-spacing:0.18em;font-size:11px;margin:0 0 16px">BrandForge</p>
             <h1 style="font-size:20px;color:#ece7de;margin:0 0 12px;font-weight:600">You have been invited to a project chat</h1>
             <p style="font-family:Arial,sans-serif;font-size:14px;color:#9aa0a6;line-height:1.6;margin:0 0 20px">
-              <strong style="color:#ece7de">${inviterName}</strong> invited you to collaborate on
-              <strong style="color:#ece7de">${conversationTitle}</strong>. Open the chat to see the
+              <strong style="color:#ece7de">${safeInviterName}</strong> invited you to collaborate on
+              <strong style="color:#ece7de">${safeConversationTitle}</strong>. Open the chat to see the
               brief, the proposal and the task board.
             </p>
-            <a href="${chatUrl}" style="display:inline-block;background:#e8571e;color:#14171a;font-family:Arial,sans-serif;font-weight:bold;font-size:14px;padding:12px 20px;border-radius:8px;text-decoration:none">Open the chat</a>
-            <p style="font-family:Arial,sans-serif;font-size:12px;color:#6f757b;margin:20px 0 0">
+            <a href="${escapeHtml(chatUrl)}" style="display:inline-block;background:#e8571e;color:#14171a;font-family:Arial,sans-serif;font-weight:bold;font-size:14px;padding:12px 20px;border-radius:8px;text-decoration:none">Open the chat</a>
+            <p style="font-family:Arial,sans-serif;font-size:12px;color:#8f959b;margin:20px 0 0">
               No account yet? Signing in with Google creates one for this address.
             </p>
           </div>

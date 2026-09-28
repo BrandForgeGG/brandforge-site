@@ -1,14 +1,16 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { sanitizeNextPath } from '@/lib/auth-utils';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
-  const nextParam = requestUrl.searchParams.get('next') ?? '/chat';
-  const next = nextParam.startsWith('/') ? nextParam : '/chat';
+  // Rejects protocol-relative (//evil.com) and backslash tricks — only same-site
+  // paths survive, otherwise /chat.
+  const next = sanitizeNextPath(requestUrl.searchParams.get('next'), requestUrl.origin);
   const errorParam = requestUrl.searchParams.get('error');
   const errorDescription = requestUrl.searchParams.get('error_description');
 

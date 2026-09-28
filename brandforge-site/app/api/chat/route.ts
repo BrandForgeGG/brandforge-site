@@ -304,7 +304,12 @@ export async function POST(request: NextRequest) {
             }
             return executeTool(conversationId, toolCall);
           },
-          { onDelta: (chunk) => send({ type: "delta", chunk }) },
+          {
+            onDelta: (chunk) => send({ type: "delta", chunk }),
+            // A tool round's prose is scaffolding — retract it instead of letting the
+            // founder watch text that a reload would erase (stream ≠ saved).
+            onDiscard: () => send({ type: "discard" }),
+          },
         );
 
         const content = answer.content.trim();
@@ -322,8 +327,13 @@ export async function POST(request: NextRequest) {
           if (assistantMessageId) {
             send({ type: "message", id: assistantMessageId });
           } else {
-            send({ type: "error", message: "The answer could not be saved. Please try again." });
+            // Field name matters: the client reads `error`.
+            send({ type: "error", error: "The answer could not be saved. Please try again." });
           }
+        } else {
+          // The model finished without an answer (empty final round). Fail loudly rather
+          // than leaving a blank assistant row that the refresh would silently drop.
+          send({ type: "error", error: "BrandForge AI returned an empty answer. Please try again." });
         }
 
         const discovery = await syncDiscoveryCompleteness(conversationId);

@@ -123,7 +123,7 @@ export function LandingHero() {
               onChange={(e) => setInput(e.target.value)}
               placeholder="What do you want to build?"
               rows={4}
-              className="w-full resize-none rounded-2xl border border-white/10 bg-[#1c2024] px-5 py-4 text-base text-[#ece7de] placeholder-[#6f757b] outline-none transition focus:border-[#e8571e] focus-visible:ring-2 focus-visible:ring-[#f6a07a] focus-visible:ring-offset-2 focus-visible:ring-offset-[#14171a]"
+              className="w-full resize-none rounded-2xl border border-white/10 bg-[#1c2024] px-5 py-4 text-base text-[#ece7de] placeholder-[#8f959b] outline-none transition focus:border-[#e8571e] focus-visible:ring-2 focus-visible:ring-[#f6a07a] focus-visible:ring-offset-2 focus-visible:ring-offset-[#14171a]"
             />
             <button
               type="submit"

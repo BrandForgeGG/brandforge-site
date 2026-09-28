@@ -187,7 +187,7 @@ export default function AdminApplicationsPage() {
       ) : null}
 
       <section>
-        <h2 className="text-xs uppercase tracking-[0.2em] text-[#6f757b]">
+        <h2 className="text-xs uppercase tracking-[0.2em] text-[#8f959b]">
           Pending ({pending.length})
         </h2>
 
@@ -203,7 +203,7 @@ export default function AdminApplicationsPage() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-[#ece7de]">{app.email}</p>
-                    <p className="text-xs text-[#6f757b]">
+                    <p className="text-xs text-[#8f959b]">
                       {new Date(app.created_at).toLocaleString()}
                     </p>
                   </div>
@@ -247,7 +247,7 @@ export default function AdminApplicationsPage() {
                     <div className="min-w-[240px] flex-1">
                       <label
                         htmlFor={`invite-${app.id}`}
-                        className="block text-xs uppercase tracking-[0.15em] text-[#6f757b]"
+                        className="block text-xs uppercase tracking-[0.15em] text-[#8f959b]"
                       >
                         Conversation
                       </label>
@@ -273,7 +273,7 @@ export default function AdminApplicationsPage() {
                     >
                       Send invite
                     </button>
-                    <p className="w-full text-xs text-[#6f757b]">
+                    <p className="w-full text-xs text-[#8f959b]">
                       Accept first — invite adds the specialist to the chat as an operator.
                     </p>
                   </div>
@@ -285,7 +285,7 @@ export default function AdminApplicationsPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="text-xs uppercase tracking-[0.2em] text-[#6f757b]">
+        <h2 className="text-xs uppercase tracking-[0.2em] text-[#8f959b]">
           Reviewed ({reviewed.length})
         </h2>
 
@@ -300,7 +300,7 @@ export default function AdminApplicationsPage() {
               >
                 <div>
                   <p className="text-sm text-[#ece7de]">{app.email}</p>
-                  <p className="text-xs text-[#6f757b]">
+                  <p className="text-xs text-[#8f959b]">
                     {app.message.slice(0, 120)}
                     {app.message.length > 120 ? '…' : ''}
                   </p>

@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Create proposal API error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create proposal' },
+      { error: 'Failed to create proposal' },
       { status: 500 }
     );
   }
@@ -188,7 +188,7 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error('Update proposal API error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to update proposal' },
+      { error: 'Failed to update proposal' },
       { status: 500 }
     );
   }
@@ -222,7 +222,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Get proposal API error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to get proposal' },
+      { error: 'Failed to get proposal' },
       { status: 500 }
     );
   }

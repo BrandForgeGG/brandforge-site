@@ -96,7 +96,7 @@ export function FundingForm({
         onChange={(event) => setTxHash(event.target.value)}
         placeholder="Paste your transaction hash"
         disabled={disabled}
-        className="min-w-0 flex-1 rounded-lg border border-white/10 bg-[#14171a] px-3 py-1.5 text-xs text-[#ece7de] placeholder:text-[#6f757b] disabled:opacity-60"
+        className="min-w-0 flex-1 rounded-lg border border-white/10 bg-[#14171a] px-3 py-1.5 text-xs text-[#ece7de] placeholder:text-[#8f959b] disabled:opacity-60"
       />
       <button
         type="submit"
@@ -612,8 +612,13 @@ function MessageActions({
                 key={emoji}
                 type="button"
                 disabled={busy}
+                aria-pressed={reaction.reactedByMe}
                 onClick={() => void run(() => onReact(emoji))}
-                className="rounded-full border border-white/10 px-2 py-0.5 text-xs hover:border-[#e8571e]"
+                className={`rounded-full border px-2 py-0.5 text-xs ${
+                  reaction.reactedByMe
+                    ? "border-[#e8571e]/70 bg-[#e8571e]/15 text-[#f6a07a]"
+                    : "border-white/10 hover:border-[#e8571e]"
+                }`}
               >
                 {emoji} {reaction.count}
               </button>
@@ -685,8 +690,13 @@ function MessageActions({
                 key={emoji}
                 type="button"
                 disabled={busy}
+                aria-pressed={reaction.reactedByMe}
                 onClick={() => void run(() => onReact(emoji))}
-                className="rounded-full border border-white/10 px-2 py-0.5 text-xs hover:border-[#e8571e]"
+                className={`rounded-full border px-2 py-0.5 text-xs ${
+                  reaction.reactedByMe
+                    ? "border-[#e8571e]/70 bg-[#e8571e]/15 text-[#f6a07a]"
+                    : "border-white/10 hover:border-[#e8571e]"
+                }`}
               >
                 {emoji} {reaction.count}
               </button>
@@ -757,7 +767,7 @@ function FirstRunRail() {
               className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold ${
                 index === 0
                   ? "bg-[#e8571e] text-[#14171a]"
-                  : "border border-white/15 text-[#6f757b]"
+                  : "border border-white/15 text-[#8f959b]"
               }`}
             >
               {index + 1}
@@ -771,7 +781,7 @@ function FirstRunRail() {
               <span className="sr-only">(current stage)</span>
             ) : null}
           </div>
-          <p className="mt-1.5 text-[11px] leading-relaxed text-[#6f757b]">
+          <p className="mt-1.5 text-[11px] leading-relaxed text-[#8f959b]">
             {stage.hint}
           </p>
         </li>
@@ -847,7 +857,7 @@ export function ChatTranscript({
           Share the problem and who it is for, and I will turn it into
           requirements you can correct as we talk.
         </p>
-        <p className="mt-3 max-w-xl text-xs leading-relaxed text-[#6f757b]">
+        <p className="mt-3 max-w-xl text-xs leading-relaxed text-[#8f959b]">
           Your first message creates the project. A BrandForge specialist then
           reviews it in this same chat and sends a priced proposal you can
           accept, decline, or send back with changes. Nothing is charged before
@@ -858,7 +868,7 @@ export function ChatTranscript({
         <FirstRunRail />
 
         <div className="mt-8 flex w-full max-w-2xl flex-col gap-2">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-[#6f757b]">
+          <p className="text-[10px] uppercase tracking-[0.18em] text-[#8f959b]">
             Or start from an example
           </p>
           <div className="flex flex-col gap-2">
@@ -967,7 +977,7 @@ export function ChatTranscript({
                     {authorName}
                   </span>
                   {roleLabel ? (
-                    <span className="text-[10px] uppercase tracking-[0.14em] text-[#6f757b]">
+                    <span className="text-[10px] uppercase tracking-[0.14em] text-[#8f959b]">
                       {roleLabel}
                     </span>
                   ) : null}

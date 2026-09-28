@@ -321,6 +321,10 @@ body {
 .bf-composer-input {
   width: 100%;
   min-height: 4.5rem;
+  /* Cap the growth: without a ceiling a long pasted brief expands the composer until
+     the transcript is pushed off screen. Past the cap the box scrolls instead. */
+  max-height: 10rem;
+  overflow-y: auto;
   resize: none;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
@@ -552,7 +556,7 @@ body {
 }
 
 .bf-input::placeholder {
-  color: #6f757b;
+  color: #8f959b;
 }
 
 @media (max-width: 640px) {

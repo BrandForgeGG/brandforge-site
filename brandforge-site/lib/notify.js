@@ -51,6 +51,9 @@ function buildMessage(event, details = {}) {
     case 'application_submitted':
       return `New operator application from ${clip(details.email) || 'unknown'}. Review it at /admin/applications.`;
 
+    case 'invite_sent':
+      return `Invite sent to ${clip(details.email) || 'unknown'} by ${clip(details.invitedBy) || 'someone'} for a project chat.`;
+
     case 'proposal_sent': {
       const parts = [`Proposal sent to the founder: "${clip(details.title)}"`];
       const price = money(details.totalAmount, details.currency);

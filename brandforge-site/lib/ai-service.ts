@@ -250,6 +250,10 @@ export interface StreamResult {
 
 export interface StreamHandlers {
   onDelta?: (chunk: string) => void;
+  // Fired when a tool round's streamed prose must be retracted: that text is scaffolding
+  // (it never gets saved), so the client has to drop it or the live transcript would
+  // disagree with the database after a reload.
+  onDiscard?: () => void;
 }
 
 function toOpenRouterTool(tool: Tool) {
@@ -437,10 +441,24 @@ export class BrandForgeAIService {
     const maxIterations = 6;
 
     for (let iteration = 0; iteration < maxIterations; iteration++) {
-      const result = await this.streamChat(conversation, handlers);
+      let roundText = '';
+      const result = await this.streamChat(conversation, {
+        ...handlers,
+        onDelta: (chunk: string) => {
+          roundText += chunk;
+          handlers.onDelta?.(chunk);
+        },
+      });
 
       if (!result.tool_calls || result.tool_calls.length === 0) {
         return { role: 'assistant', content: result.content };
+      }
+
+      // Only the final round (no tool calls) is ever saved. If a tool round streamed any
+      // prose, retract it now — the model is re-answering with the tool results, and what
+      // the founder just watched would otherwise vanish on the next reload.
+      if (roundText) {
+        handlers.onDiscard?.();
       }
 
       conversation.push({

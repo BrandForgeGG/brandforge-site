@@ -318,7 +318,7 @@ onMobileClose,
                     "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-semibold transition " +
                     (isActive
                       ? "bg-white/10 text-[#ece7de]"
-                      : "text-[#6f757b] hover:bg-white/5 hover:text-[#ece7de]")
+                      : "text-[#8f959b] hover:bg-white/5 hover:text-[#ece7de]")
                   }
                 >
                   {isStaff && conversation.isUnseen ? (
@@ -362,7 +362,7 @@ onMobileClose,
               <p className="bf-rail-section-label">Recents</p>
 
               {recents.length === 0 ? (
-                <p className="text-xs leading-relaxed text-[#6f757b]">
+                <p className="text-xs leading-relaxed text-[#8f959b]">
                   Your first chat appears here the moment you send a message -
                   just start typing in the message box.
                 </p>
@@ -475,7 +475,7 @@ onMobileClose,
                     @{account.username}
                   </p>
                 ) : null}
-                <p className="truncate text-[10px] uppercase tracking-[0.15em] text-[#6f757b]">
+                <p className="truncate text-[10px] uppercase tracking-[0.15em] text-[#8f959b]">
                   {account ? account.role : "Signed in"}
                 </p>
               </div>
@@ -490,16 +490,14 @@ onMobileClose,
                   Settings
                 </Link>
 <div className="border-t border-white/10 pt-2">
-                   <p className="px-3 py-1 text-[10px] uppercase tracking-[0.15em] text-[#6f757b]">
+                   <p className="px-3 py-1 text-[10px] uppercase tracking-[0.15em] text-[#8f959b]">
                      Learn more
                    </p>
                   {[
                     { label: 'About BrandForge', href: '/about' },
-                    { label: 'Usage Policy', href: '/usage-policy' },
                     { label: 'Privacy Policy', href: '/privacy' },
                     { label: 'Terms of Service', href: '/terms' },
-                    { label: 'Your Privacy Choices', href: '/privacy-choices' },
-                    { label: 'Payments', href: '/payments' },
+                    { label: 'Payments & refunds', href: '/refunds' },
                   ].map((item) => (
                     <Link
                       key={item.label}

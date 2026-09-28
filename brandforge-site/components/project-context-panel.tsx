@@ -274,7 +274,7 @@ export function ProjectContextPanel({
                 <span className="bf-stack-item bf-stack-ai" aria-hidden="true">B</span>
                 <span className="min-w-0">
                   <span className="block truncate text-xs text-[#ece7de]">BrandForge AI</span>
-                  <span className="block text-[10px] uppercase tracking-[0.14em] text-[#6f757b]">Execution Assistant</span>
+                  <span className="block text-[10px] uppercase tracking-[0.14em] text-[#8f959b]">Execution Assistant</span>
                 </span>
               </li>
               {participants.map((person) => (
@@ -284,7 +284,7 @@ export function ProjectContextPanel({
                   </span>
                   <span className="min-w-0">
                     <span className="block truncate text-xs text-[#ece7de]">{person.displayName}</span>
-                    <span className="block text-[10px] uppercase tracking-[0.14em] text-[#6f757b]">{formatRole(person.role)}</span>
+                    <span className="block text-[10px] uppercase tracking-[0.14em] text-[#8f959b]">{formatRole(person.role)}</span>
                   </span>
                 </li>
               ))}
@@ -348,7 +348,7 @@ export function ProjectContextPanel({
             <ul className="space-y-1">
               {(discovery?.checklist ?? []).map((step) => (
                 <li key={step.key} className="flex items-center gap-2 text-xs">
-                  <span className={step.met ? 'text-[#5aa578]' : 'text-[#6f757b]'}>
+                  <span className={step.met ? 'text-[#5aa578]' : 'text-[#8f959b]'}>
                     {step.met ? '✓' : '○'}
                   </span>
                   <span className={step.met ? 'text-[#ece7de]' : 'text-[#9aa0a6]'}>{step.label}</span>
@@ -395,7 +395,7 @@ export function ProjectContextPanel({
                     </li>
                   ))}
                 </ul>
-                <p className="mt-2 text-[10px] uppercase tracking-[0.15em] text-[#6f757b]">
+                <p className="mt-2 text-[10px] uppercase tracking-[0.15em] text-[#8f959b]">
                   AI-suggested · not final
                 </p>
               </>
@@ -600,7 +600,7 @@ export function ProjectContextPanel({
                       </span>
                     </div>
                     {payment.tx_hash ? (
-                      <p className="mt-0.5 truncate text-[10px] text-[#6f757b]">
+                      <p className="mt-0.5 truncate text-[10px] text-[#8f959b]">
                         tx {shortHash(payment.tx_hash)}
                         {payment.network ? ` · ${payment.network}` : ''}
                       </p>
@@ -631,7 +631,7 @@ export function ProjectContextPanel({
                   delivery as soon as it is verified.
                 </p>
                 {submittedTx ? (
-                  <p className="mt-1 break-all font-mono text-[10px] text-[#6f757b]">{submittedTx}</p>
+                  <p className="mt-1 break-all font-mono text-[10px] text-[#8f959b]">{submittedTx}</p>
                 ) : null}
                 {isStaff ? (
                   <div className="mt-3 space-y-2">
@@ -648,7 +648,7 @@ export function ProjectContextPanel({
                       value={rejectNote}
                       onChange={(event) => setRejectNote(event.target.value)}
                       placeholder="Reason if the transfer does not check out"
-                      className="w-full rounded-md border border-white/10 bg-[#14171a] px-2 py-1.5 text-[11px] text-[#ece7de] outline-none transition placeholder:text-[#6f757b] focus:border-red-500/50"
+                      className="w-full rounded-md border border-white/10 bg-[#14171a] px-2 py-1.5 text-[11px] text-[#ece7de] outline-none transition placeholder:text-[#8f959b] focus:border-red-500/50"
                     />
                     <button
                       type="button"
@@ -708,7 +708,7 @@ export function ProjectContextPanel({
                     value={txInput}
                     onChange={(event) => setTxInput(event.target.value)}
                     placeholder="Paste the transaction hash"
-                    className="mt-1 w-full rounded-md border border-white/10 bg-[#14171a] px-2 py-1.5 font-mono text-[11px] text-[#ece7de] outline-none transition placeholder:text-[#6f757b] focus:border-[#e8571e]"
+                    className="mt-1 w-full rounded-md border border-white/10 bg-[#14171a] px-2 py-1.5 font-mono text-[11px] text-[#ece7de] outline-none transition placeholder:text-[#8f959b] focus:border-[#e8571e]"
                   />
                   <button
                     type="submit"
@@ -717,7 +717,7 @@ export function ProjectContextPanel({
                   >
                     {busyAction === 'fund' ? 'Submitting…' : 'Submit payment for verification'}
                   </button>
-                  <p className="mt-1.5 text-[10px] leading-relaxed text-[#6f757b]">
+                  <p className="mt-1.5 text-[10px] leading-relaxed text-[#8f959b]">
                     BrandForge verifies the transfer on-chain before marking the project funded.
                   </p>
                 </form>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { recordFunnelEvent, isAdminAccount, getFunnelSummary } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { FUNNEL_EVENTS } from '@/lib/funnel.js';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,8 +14,38 @@ export const dynamic = 'force-dynamic';
 //
 // It is deliberately unauthenticated for anonymous events (landing_viewed, signin_started,
 // apply_started) — a signed-in user is only ever recorded as a boolean, never by id.
+//
+// Because it is unauthenticated it is also the one public write endpoint, so it carries the
+// boring abuse controls: a body-size cap, a per-IP rate limit (dropped events are still ok:true —
+// analytics must fail quietly), and a strict visitor-id shape so nobody can stuff PII into the
+// visitor_id column. Properties are allowlisted and clipped in lib/funnel.js.
+
+const MAX_BODY_BYTES = 8_192;
+const RATE_LIMIT = { limit: 30, windowMs: 60_000 };
+
+// The client's visitor id is a random UUID (crypto.randomUUID) with a short v-<base36> fallback
+// for browsers without it. Anything else is not a visitor id — reject rather than store.
+const VISITOR_ID_PATTERN = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|v-[0-9a-z]{1,16}-[0-9a-z]{1,16})$/i;
+
+function clientIp(request: NextRequest): string {
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) {
+    const first = forwarded.split(',')[0]?.trim();
+    if (first) return first;
+  }
+  return request.headers.get('x-real-ip')?.trim() || 'unknown';
+}
 
 export async function POST(request: NextRequest) {
+  const contentLength = Number(request.headers.get('content-length') ?? '0');
+  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+    return NextResponse.json({ ok: true });
+  }
+
+  if (!checkRateLimit(`funnel:${clientIp(request)}`, RATE_LIMIT).allowed) {
+    return NextResponse.json({ ok: true });
+  }
+
   let body: { event?: unknown; visitorId?: unknown; properties?: unknown } = {};
 
   try {
@@ -40,9 +71,14 @@ export async function POST(request: NextRequest) {
     signedIn = false;
   }
 
+  const visitorId =
+    typeof body.visitorId === 'string' && VISITOR_ID_PATTERN.test(body.visitorId)
+      ? body.visitorId
+      : '';
+
   await recordFunnelEvent(event, {
     signedIn,
-    visitorId: typeof body.visitorId === 'string' ? body.visitorId : '',
+    visitorId,
     properties:
       body.properties && typeof body.properties === 'object' && !Array.isArray(body.properties)
         ? (body.properties as Record<string, unknown>)
