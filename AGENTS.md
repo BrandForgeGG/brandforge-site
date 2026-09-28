@@ -196,6 +196,15 @@ BrandForge/
   (out named in chat)→post→403. Hotfix branched off prod (counter round still needs 0017);
   merged back into `main` (route PATCH conflict resolved keeping both counter lines and the
   out-note, 223/223).
+- **Minimalist project panel (2026-09-29, committed `f937773`, NOT yet deployed — ships with
+  the 0017-gated release)**: founder feedback on the panel paste — AI exhaust, not insight.
+  Fixed: doubled "Project pulse" title removed; requirements and the task list collapse behind
+  expanders (counts + delivery progress stay visible); the proposal block is a compact priced
+  summary (title, total + weeks, status sentence, counter terms) with an "Answer in chat"
+  button instead of a second set of Accept/Counter/Decline — the chat card is the decision
+  surface, panel included. New "Talk to humans" footer links Discord + Telegram group/channel
+  (`lib/community.js`, new `community.d.ts`). Every control kept (staff task/payment controls
+  intact inside expanders); net −98 lines. 223/223, tsc/eslint/build green.
 - **Empty-sidebar regression fixed (2026-09-28, deployed `f7691b2`)**: 0014/0015 revoked
   `EXECUTE` from `authenticated`, but routes call those RPCs through the **user-session**
   client (`db()`) → `42501 permission denied` → recents rendered `[]` (AI draft saves hit the
