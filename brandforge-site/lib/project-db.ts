@@ -625,6 +625,26 @@ async function readClient(asStaff?: boolean): Promise<ProjectDbClient> {
   return db();
 }
 
+// Call one of the 0014/0015 RPCs as the signed-in caller (db(), RLS enforced).
+// If the session client is missing EXECUTE (migration 0016_grant_rpc_execute.sql
+// not applied yet, or grants drifted), Postgres answers 42501 — bridge the same
+// call through the service role, which the route has already authorized (the
+// getFunnelSummary pattern), and log loudly so the grant gap never hides.
+async function rpcForCaller(name: string, args: Record<string, unknown>) {
+  const supabase = await db();
+  const result = await supabase.rpc(name, args);
+  if (!result.error || (result.error as { code?: string }).code !== '42501') {
+    return result;
+  }
+
+  console.warn(
+    `[rpc] ${name}: permission denied for the session client — bridging via service role (apply migration 0016_grant_rpc_execute.sql)`
+  );
+  const admin = createSupabaseAdminClient();
+  if (!admin) return result;
+  return (await admin.rpc(name, args)) as typeof result;
+}
+
 // ---------- Project context ----------
 
 export async function getProjectContext(conversationId: string): Promise<ProjectContext | null> {
@@ -1064,9 +1084,7 @@ export async function getUserConversations(userId: string) {
 // staff presence. This side only presents — title fallbacks, truncation, the staff-name
 // fallback — and sorts by last activity, exactly like before.
 async function buildConversationSummaries(userId?: string): Promise<ConversationSummary[]> {
-  const supabase = await db();
-
-  const { data, error } = await supabase.rpc('get_conversation_summaries', {
+  const { data, error } = await rpcForCaller('get_conversation_summaries', {
     p_user_id: userId ?? null,
   });
 
@@ -1709,9 +1727,8 @@ export async function replaceDraftMilestones(
   // happen behind a conversation lock, so two concurrent AI passes serialize
   // instead of duplicating rows. All-or-nothing — on failure nothing was
   // written, so report the empty result the tool already understands.
-  const supabase = await db();
   try {
-    const { error } = await supabase.rpc('replace_draft_milestones', {
+    const { error } = await rpcForCaller('replace_draft_milestones', {
       p_conversation_id: conversationId,
       p_rows: rows,
     });
@@ -2184,9 +2201,8 @@ export async function replaceDraftTasks(
   // lock, so concurrent AI passes serialize. milestone_sequence resolves
   // against draft milestones only; a claimed or advanced task is never
   // touched because the SQL keeps only unassigned TODOs as drafts.
-  const supabase = await db();
   try {
-    const { error } = await supabase.rpc('replace_draft_tasks', {
+    const { error } = await rpcForCaller('replace_draft_tasks', {
       p_conversation_id: conversationId,
       p_rows: rows,
     });
