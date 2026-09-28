@@ -1156,13 +1156,27 @@ export async function updateConversationStatus(
   // Repeated tool calls and idempotent retries update nothing and notify nobody.
   let result = await runUpdate(await db());
 
-  // Staff transitions run under a session with no UPDATE policy on conversations: an
-  // operator sending a proposal moves the row to PROPOSED, and the founder's owner-only
-  // policy denies it. Bridge the permission denial through the service role — the route
-  // already authorized the caller (same contract as rpcForCaller).
-  if (result.error && result.error.code === '42501') {
+  // Two denial shapes: a denied INSERT raises 42501, but RLS on UPDATE just filters the
+  // row out — PostgREST answers "0 rows" with no error at all. The or() filter matches
+  // any existing row that is not already in the target state, so an empty result means
+  // either an idempotent retry (row already there) or the session has no UPDATE policy —
+  // an operator moving their own proposal to PROPOSED hits exactly that. Probe the row
+  // and bridge the write through the service role when it is a real denial (the route
+  // already authorized the caller; same contract as rpcForCaller).
+  if (result.error ? result.error.code === '42501' : result.data === null) {
+    const { data: current } = await (await db())
+      .from('conversations')
+      .select('status')
+      .eq('id', conversationId)
+      .maybeSingle();
+
+    if (!result.error && current?.status === status) {
+      // Idempotent retry: the row already sits in the target state. Update nothing.
+      return true;
+    }
+
     console.warn(
-      `[status] ${conversationId}: session client denied conversation update (status=${status}) — bridging via service role`
+      `[status] ${conversationId}: session client could not update the row (status=${status}) — bridging via service role`
     );
     const admin = createSupabaseAdminClient();
     if (!admin) {
