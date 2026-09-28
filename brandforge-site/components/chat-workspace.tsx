@@ -2249,13 +2249,24 @@ return (
             !isOwnConversation &&
             state?.status === "READY_FOR_REVIEW" ? (
               <div className="mb-2 rounded-xl border border-[#e8571e]/25 bg-[#1c2024] p-3">
+                {/* A plain div, deliberately NOT a <form>: this strip renders inside the
+                    composer <form> below and nested forms are invalid HTML — the browser
+                    drops the inner form tag, which turned Submit into a native GET
+                    navigation to bare /chat instead of the proposal POST. Enter in a
+                    single-line field still submits via onKeyDown; the textarea keeps
+                    its newlines. */}
                 {showProposalForm ? (
-                  <form
+                  <div
                     aria-label="Send proposal"
                     className="space-y-3"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      void handleSendProposal();
+                    onKeyDown={(event) => {
+                      if (
+                        event.key === "Enter" &&
+                        (event.target as HTMLElement | null)?.tagName === "INPUT"
+                      ) {
+                        event.preventDefault();
+                        void handleSendProposal();
+                      }
                     }}
                   >
                     <p className="bf-section-label">Team proposal</p>
@@ -2305,7 +2316,8 @@ return (
                     </div>
                     <div className="flex items-center gap-3">
                       <button
-                        type="submit"
+                        type="button"
+                        onClick={() => void handleSendProposal()}
                         disabled={proposalSending}
                         className="rounded-lg bg-[#e8571e] px-4 py-2 text-xs font-semibold text-[#14171a] disabled:opacity-60"
                       >
@@ -2319,7 +2331,7 @@ return (
                         Back
                       </button>
                     </div>
-                  </form>
+                  </div>
                 ) : (
                   <div
                     className="flex items-center gap-2 text-xs leading-relaxed text-[#f6d6c3]"
