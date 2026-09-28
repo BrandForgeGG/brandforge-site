@@ -86,8 +86,15 @@ async function sessionTokenFromRequest(request?: NextRequest): Promise<string | 
             `${g.label}=${g.pairs.filter((p: { name: string }) => isAuthCookieName(p.name)).length}/${g.pairs.length}`
         )
         .join(' ');
+      const authNames = [
+        ...new Set(
+          allPairs
+            .filter((p: { name: string }) => isAuthCookieName(p.name))
+            .map((p: { name: string }) => p.name)
+        ),
+      ].join(',');
       console.warn(
-        `[auth] no token extracted: ${report} fwdLen=${forwardedEffective?.length ?? 0}`
+        `[auth] no token extracted: ${report} fwdLen=${forwardedEffective?.length ?? 0} names=[${authNames}]`
       );
     }
   }

@@ -119,6 +119,75 @@ function combineAuthChunks(pairs) {
   return null;
 }
 
+// Every base-name's cookie payload as its own candidate (whole preferred over
+// chunks). A browser can hold auth cookies under more than one base name at
+// once — a stale generation or an old project ref that no Set-Cookie will ever
+// overwrite — and the first base's join may not even decode. Callers must try
+// candidates instead of trusting the first one.
+function combinedAuthCandidates(pairs) {
+  const bases = new Map();
+  for (const { name, value } of pairs) {
+    if (!isAuthCookieName(name)) continue;
+    const chunkMatch = name.match(/^(.*)\.(0|[1-9][0-9]*)$/);
+    const base = chunkMatch ? chunkMatch[1] : name;
+    let entry = bases.get(base);
+    if (!entry) {
+      entry = { whole: null, parts: new Map() };
+      bases.set(base, entry);
+    }
+    if (chunkMatch) entry.parts.set(Number(chunkMatch[2]), value);
+    else entry.whole = value;
+  }
+
+  const candidates = [];
+  for (const [base, entry] of bases) {
+    if (entry.whole) candidates.push({ base, value: entry.whole });
+    const parts = [];
+    for (let i = 0; ; i += 1) {
+      const part = entry.parts.get(i);
+      if (part === undefined) break;
+      parts.push(part);
+    }
+    if (parts.length > 0) candidates.push({ base, value: parts.join('') });
+  }
+  return candidates;
+}
+
+// The storage key base for the Supabase project this build talks to
+// (sb-<ref>-auth-token). Cookies under any other base are leftovers from an
+// earlier ref and must lose to the current one even when they sort first in
+// the header.
+function currentAuthBaseName() {
+  try {
+    const host = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').hostname;
+    const ref = host.split('.')[0];
+    return ref ? `sb-${ref}-auth-token` : null;
+  } catch {
+    return null;
+  }
+}
+
+// First session cookie that actually decodes into a session the caller can
+// use, with the current ref's cookies winning over any other base. Falls back
+// to another base's valid session when the current ref's cookie is missing or
+// corrupt.
+function pickSession(pairs, isValidSession) {
+  const current = currentAuthBaseName();
+  const candidates = combinedAuthCandidates(pairs).sort((a, b) => {
+    if (!current) return 0;
+    return Number(b.base === current) - Number(a.base === current);
+  });
+
+  let fallback = null;
+  for (const { base, value } of candidates) {
+    const session = decodeSessionJson(value);
+    if (!session || typeof session !== 'object' || !isValidSession(session)) continue;
+    if (current && base === current) return session;
+    if (!fallback) fallback = session;
+  }
+  return fallback;
+}
+
 function base64UrlToUtf8(str) {
   const normalized = str.replace(/-/g, '+').replace(/_/g, '/');
   const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
@@ -151,14 +220,13 @@ function decodeSessionJson(value) {
 // Access-token expiry is not checked here: knowing who you are ≠ holding a
 // live JWT. Middleware/getSession own refresh; this only answers "is there a user?".
 function sessionUserFromCookiePairs(pairs) {
-  const combined = combineAuthChunks(pairs);
-  if (!combined) return null;
-
-  const session = decodeSessionJson(combined);
-  if (!session || typeof session !== 'object') return null;
+  const session = pickSession(
+    pairs,
+    (s) => s.user && typeof s.user.id === 'string' && Boolean(s.user.id)
+  );
+  if (!session) return null;
 
   const user = session.user;
-  if (!user || typeof user.id !== 'string' || !user.id) return null;
 
   return {
     id: user.id,
@@ -172,11 +240,11 @@ function sessionUserFromCookiePairs(pairs) {
 
 // Pull the JWT candidate out of parsed cookie pairs (null when there is none).
 function tokenFromPairs(pairs) {
-  const combined = combineAuthChunks(pairs);
-  if (!combined) return null;
-  const session = decodeSessionJson(combined);
-  const token = session && typeof session.access_token === 'string' ? session.access_token : '';
-  return token || null;
+  const session = pickSession(
+    pairs,
+    (s) => typeof s.access_token === 'string' && Boolean(s.access_token)
+  );
+  return session ? session.access_token : null;
 }
 
 // x-forwarded-cookie is the middleware-rewritten Cookie header: the browser's
@@ -197,11 +265,8 @@ function sessionTokenFromSources(forwardedCookie, fallbackPairs) {
 // the cookie is absent or carries no expires_at field. Lets callers tell a
 // live JWT apart from a stale one without contacting the Auth server.
 function authCookieExpiresAt(pairs) {
-  const combined = combineAuthChunks(pairs);
-  if (!combined) return null;
-  const session = decodeSessionJson(combined);
-  if (!session || typeof session.expires_at !== 'number') return null;
-  return session.expires_at;
+  const session = pickSession(pairs, (s) => typeof s.expires_at === 'number');
+  return session ? session.expires_at : null;
 }
 
 module.exports = {
@@ -211,6 +276,7 @@ module.exports = {
   applyCookieUpdates,
   stripAuthCookieDeletions,
   combineAuthChunks,
+  combinedAuthCandidates,
   decodeSessionJson,
   sessionUserFromCookiePairs,
   tokenFromPairs,

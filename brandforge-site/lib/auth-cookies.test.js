@@ -235,3 +235,33 @@ test('authCookieExpiresAt reads the access-token expiry from the merged cookie',
     null,
   );
 });
+
+test('tokenFromPairs skips an undecodable stale base and returns the decodable session', () => {
+  const staleCorrupt = encodeBase64Cookie(staleSession).slice(0, 40);
+  const pairs = [
+    { name: 'sb-oldref-auth-token.0', value: staleCorrupt },
+    { name: 'sb-auth-token', value: encodeBase64Cookie(refreshedSession) },
+  ];
+  assert.equal(tokenFromPairs(pairs), refreshedSession.access_token);
+  assert.equal(
+    sessionUserFromCookiePairs(pairs).id,
+    refreshedSession.user.id,
+  );
+});
+
+test('tokenFromPairs prefers the current project ref over a stale base that sorts first', () => {
+  const prev = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://ylyyrwppzqjnxpskvqor.supabase.co';
+  try {
+    const pairs = [
+      { name: 'sb-oldref-auth-token', value: encodeBase64Cookie(staleSession) },
+      { name: 'sb-ylyyrwppzqjnxpskvqor-auth-token', value: encodeBase64Cookie(refreshedSession) },
+    ];
+    assert.equal(tokenFromPairs(pairs), refreshedSession.access_token);
+    assert.equal(sessionUserFromCookiePairs(pairs).id, refreshedSession.user.id);
+    assert.equal(authCookieExpiresAt(pairs), refreshedSession.expires_at);
+  } finally {
+    if (prev === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    else process.env.NEXT_PUBLIC_SUPABASE_URL = prev;
+  }
+});
