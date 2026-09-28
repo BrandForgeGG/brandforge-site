@@ -172,6 +172,18 @@ BrandForge/
   card landed, accept→invite→ACCEPTED all green (counter assertions fail as expected — that
   code is not on this deployment). Lesson: never nest `<form>`; grep `<form` nesting when a
   submit silently navigates.
+- **Proposal card shows the priced offer (2026-09-28, deployed `f33dc08`→prod
+  `dpl_CxFxyZKU8b5HYqjYYn1FQ3FB7jjT`)**: the card showed only the title plus the system
+  sentence ("Project action / zzz / BrandForge sent a proposal…"). Each proposal embed now
+  carries its own snapshot (`totalAmount/currency/weeksMin/weeksMax/scope`, plus counter
+  terms when they exist) written by the proposals route at send and answer time, validated
+  on parse (`parseChatEmbed` in `lib/message-actions.js`, hostile shapes dropped/clipped),
+  and the card renders it: "Proposal" eyebrow, serif title, price + timeline, status pill
+  (orange while open, green accepted), counter box, scrollable scope excerpt. Old cards
+  without the snapshot fall back to the message text. Hotfix branched off prod so the
+  counter round (needs 0017) stays out; merged back into `main` (auto-merged clean,
+  223/223). The founder's live "zzz" test card was backfilled from its proposal row so the
+  new design shows immediately.
 - **Empty-sidebar regression fixed (2026-09-28, deployed `f7691b2`)**: 0014/0015 revoked
   `EXECUTE` from `authenticated`, but routes call those RPCs through the **user-session**
   client (`db()`) → `42501 permission denied` → recents rendered `[]` (AI draft saves hit the
