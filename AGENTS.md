@@ -118,6 +118,17 @@ BrandForge/
   proposal → pre-accept 403s → accept → auto-join → post-accept 200s, all green (209/209 tests).
   `TELEGRAM_CHAT_ID`/`BOT_TOKEN` are set in Vercel (values masked to us; bot is admin in the
   team group) — if team-group messages are also missing, that value needs a human eyeball.
+- **Staff proposal composer (2026-09-28, deployed `960102d`→prod `dpl_FuPbvvYdTRcoSWcNsVVHjWCiFGVi`)**:
+  nothing in the product could *send* a proposal — the client only ever called GET/PATCH
+  (founder accept/decline); `POST /api/proposals` was API-only. `chat-workspace.tsx` now shows
+  staff a **Send proposal** strip above the composer while `state.status === READY_FOR_REVIEW`
+  (and the chat isn't their own) with the form fields title / technical approach / final quote
+  (EUR) / timeline (weeks) → `POST`, then refreshes state + messages + artifacts + recents.
+  Flow: operator opens brief chat → Send proposal → founder gets the card, `proposal_sent`
+  team-group ping, `proposal_ready` founder Telegram+email → accept auto-invites (previous
+  bullet). `changes_requested`/`declined` → status back to `READY_FOR_REVIEW` re-shows the
+  strip, so a revised proposal is the same path. 209/209 tests, tsc/eslint/build green;
+  post-deploy auth probe + pipeline e2e green.
 - **Empty-sidebar regression fixed (2026-09-28, deployed `f7691b2`)**: 0014/0015 revoked
   `EXECUTE` from `authenticated`, but routes call those RPCs through the **user-session**
   client (`db()`) → `42501 permission denied` → recents rendered `[]` (AI draft saves hit the
