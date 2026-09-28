@@ -27,6 +27,7 @@ import {
 } from '@/lib/money-authz.js';
 import { notify } from '@/lib/notify';
 import { notifyFounder } from '@/lib/stage-notify';
+import { postOpsEvent } from '@/lib/ops-events';
 
 export const dynamic = 'force-dynamic';
 
@@ -112,6 +113,14 @@ export async function POST(request: NextRequest) {
       artifact_data: { type: 'agreement', id: agreement.id, status: agreement.status },
     });
 
+    // Staff ops channel: terms proposed for this pair, priced (staff-only).
+    await postOpsEvent('contract_proposed', {
+      title: proposal.title,
+      totalAmount,
+      currency,
+      milestoneCount: schedule.milestones.length,
+    });
+
     return NextResponse.json({ success: true, agreement });
   } catch (error) {
     console.error('Create agreement API error:', error);
@@ -192,6 +201,12 @@ export async function PATCH(request: NextRequest) {
         });
         await notify('contract_signed', {});
         await notifyFounder(agreement.conversation_id, 'contract_signed', {});
+        // Staff-only: the public "matched and funded" line waits for escrow
+        // verification, so the public feed never claims funding prematurely.
+        await postOpsEvent('contract_signed', {
+          totalAmount: updated.total_amount,
+          currency: updated.currency,
+        });
       } else if (isOwner) {
         // Founder signed first: the team's accept is now the only thing left.
         await notify('contract_accepted', { side: 'founder' });

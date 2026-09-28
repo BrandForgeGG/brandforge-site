@@ -19,6 +19,7 @@ import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { canSetProposalStatus } from '@/lib/money-authz.js';
 import { notify, notifyUser } from '@/lib/notify';
 import { notifyFounder } from '@/lib/stage-notify';
+import { postOpsEvent, postPublicActivity } from '@/lib/ops-events';
 
 export const dynamic = 'force-dynamic';
 
@@ -129,6 +130,16 @@ export async function POST(request: NextRequest) {
         estimatedWeeksMin && estimatedWeeksMax
           ? `${estimatedWeeksMin}–${estimatedWeeksMax} weeks`
           : null,
+    });
+
+    // Staff ops channel: priced terms stay off the public feed by design.
+    await postOpsEvent('proposal_submitted', {
+      title,
+      totalAmount,
+      currency: 'EUR',
+      weeksMin: estimatedWeeksMin ?? null,
+      weeksMax: estimatedWeeksMax ?? null,
+      authorName,
     });
 
     return NextResponse.json({ success: true, proposal });
@@ -294,8 +305,15 @@ export async function PATCH(request: NextRequest) {
       if (status === 'accepted') {
         await updateConversationStatus(proposal.conversation_id, 'ACCEPTED');
         // The accept IS the invite: the proposal's author joins with a visible
-        // system line, so the founder sees exactly who won the work.
-        await inviteProposalAuthor(existing);
+        // system line, so the founder sees exactly who won the work. That same
+        // moment introduces founder and specialist, so it lands in the ops
+        // channel (names are staff-only) while the public feed gets one
+        // anonymized line.
+        const invited = await inviteProposalAuthor(existing);
+        await postOpsEvent('match_made', {
+          title: existing.title,
+          specialistName: invited?.displayName ?? undefined,
+        });
       } else if (status === 'changes_requested' || status === 'declined') {
         await updateConversationStatus(proposal.conversation_id, 'READY_FOR_REVIEW');
       }
@@ -316,6 +334,17 @@ export async function PATCH(request: NextRequest) {
         by: byFounder ? 'founder' : 'specialist',
       });
 
+      // Staff ops channel: counters and their round stay off the public feed.
+      await postOpsEvent('proposal_countered', {
+        title: existing.title,
+        totalAmount: counter.totalAmount,
+        currency,
+        weeksMin: counter.weeksMin,
+        weeksMax: counter.weeksMax,
+        by: byFounder ? 'founder' : 'specialist',
+        round: status === 'countered' ? 1 : 2,
+      });
+
       if (status === 'countered') {
         // The specialist's turn: ping the author's linked Telegram (skipped when they
         // countered their own proposal, which the matrix refuses anyway).
@@ -331,6 +360,22 @@ export async function PATCH(request: NextRequest) {
       }
     } else {
       await notify('proposal_answered', { title: existing.title, status });
+
+      // Ops routing: accepts are priced but staff-only; declines never go public.
+      if (status === 'accepted') {
+        await postOpsEvent('proposal_accepted', {
+          title: existing.title,
+          totalAmount: proposal.total_amount,
+          currency: proposal.currency ?? currency,
+        });
+        await postPublicActivity('match_made');
+      } else {
+        await postOpsEvent('proposal_declined', {
+          title: existing.title,
+          status,
+          declinesOut: outNote !== '',
+        });
+      }
 
       // The author waits on this answer personally: ping their linked Telegram
       // (skipped when they answered it themselves). Unlinked or unconfigured is

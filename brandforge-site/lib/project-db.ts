@@ -13,6 +13,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { track } from './funnel.js';
 import { notifyDiscordDiscovery } from './discord';
 import { notifyUser } from './notify';
+import { postOpsEvent, postPublicActivity } from './ops-events';
 import { headers } from 'next/headers';
 
 import { validateUsername } from '@/lib/identity';
@@ -1244,10 +1245,13 @@ export async function updateConversationStatus(
   // Journey gap #5: arrival at READY_FOR_REVIEW is the moment specialists must
   // see — post once into the Discord discovery channel, and DM every linked
   // operator on Telegram (best-effort, never fails the caller; both fire only
-  // when the row actually transitioned).
+  // when the row actually transitioned). The ops event layer mirrors the moment
+  // into the staff briefs channel plus one anonymized public line.
   if (data && status === 'READY_FOR_REVIEW') {
     await notifyDiscordDiscovery(conversationId, data.title);
     await notifyStaffBriefReady(conversationId, data.title);
+    await postOpsEvent('brief_posted', { title: data.title, conversationId });
+    await postPublicActivity('brief_posted');
   }
 
   return true;

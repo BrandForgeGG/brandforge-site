@@ -20,6 +20,7 @@ import {
 } from '@/lib/crypto-payments';
 import { notify } from '@/lib/notify';
 import { notifyFounder } from '@/lib/stage-notify';
+import { postOpsEvent, postPublicActivity } from '@/lib/ops-events';
 import { canSubmitFunding } from '@/lib/money-authz.js';
 
 export const dynamic = 'force-dynamic';
@@ -187,6 +188,14 @@ export async function PATCH(request: NextRequest) {
 
         await notifyFounder(agreement.conversation_id, 'funding_verified', {});
 
+        // Verified money is the moment the public feed may claim funding: the
+        // staff embed carries the amount, the public line stays outcome-only.
+        await postOpsEvent('escrow_funded', {
+          totalAmount: agreement.total_amount,
+          currency: agreement.currency,
+        });
+        await postPublicActivity('contract_funded');
+
         return NextResponse.json({ success: true });
       }
 
@@ -204,6 +213,9 @@ export async function PATCH(request: NextRequest) {
       await notify('payment_rejected', { note });
 
       await notifyFounder(agreement.conversation_id, 'funding_rejected', { note });
+
+      // Closest thing to a dispute signal pre-dispute: staff disputes channel.
+      await postOpsEvent('escrow_rejected', { note });
 
       return NextResponse.json({ success: true });
     }
@@ -244,6 +256,13 @@ export async function PATCH(request: NextRequest) {
         amount: released.amount,
         currency: released.currency,
       });
+
+      await postOpsEvent('milestone_released', {
+        title: released.title,
+        amount: released.amount,
+        currency: released.currency,
+      });
+      await postPublicActivity('milestone_released');
 
       return NextResponse.json({ success: true });
     }
