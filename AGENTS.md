@@ -70,6 +70,19 @@ BrandForge/
   on `/login` when refresh is auth-rejected (network/5xx/429 stay transient), and
   `getAuthenticatedUser` logs `[auth] getUser rejected: …` (message only) for the next
   log pull. Probe: zombie cookie → `/chat` 307 `/login`, `/login` renders.
+  **Round 3 (same day, root cause)**: extraction itself was blind to multi-base
+  cookies — `combineAuthChunks` returned only the first cookie base's join, so a
+  stale auth cookie (old generation / old project ref, never overwritten by any
+  Set-Cookie) that failed to decode shadowed the good current-ref one: middleware
+  `getSession` (single storage key) kept rendering the shell while every route got
+  `token === null` → silent 401. `lib/auth-cookies.js` now enumerates every base
+  (`combinedAuthCandidates`), validates decode per candidate with a per-consumer
+  predicate (`pickSession`), and prefers `sb-<current-ref>-auth-token`; the gate
+  and `authCookieExpiresAt` use the same pick. Failures log
+  `[auth] no token extracted: req=n/m fwd=n/m … names=[…]` (names/lengths only —
+  never values) so the next storm is readable in one log pull. 196/196 tests.
+  Known gap: `fetchAuthed`'s retry after a *successful* refresh does not re-check
+  401 (refresh-fail path does) — revisit if a new silent-storm shape appears.
 
 
 - **Open auth**: any Google account can sign in (login allowlist removed). Staff/admin access
