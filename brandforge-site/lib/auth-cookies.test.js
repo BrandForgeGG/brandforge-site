@@ -9,6 +9,7 @@ const {
   stripAuthCookieDeletions,
   tokenFromPairs,
   sessionTokenFromSources,
+  authCookieExpiresAt,
 } = require('./auth-cookies');
 
 test('parseCookieHeader splits and decodes pairs', () => {
@@ -215,4 +216,22 @@ test('sessionTokenFromSources rejoins chunked forwarded cookies', () => {
 test('sessionTokenFromSources returns null when no source holds a token', () => {
   assert.equal(sessionTokenFromSources(null, []), null);
   assert.equal(sessionTokenFromSources('', [{ name: 'theme', value: 'dark' }]), null);
+});
+
+test('authCookieExpiresAt reads the access-token expiry from the merged cookie', () => {
+  assert.equal(
+    authCookieExpiresAt(parseCookieHeader(cookieValueFor('sb-auth-token', staleSession))),
+    staleSession.expires_at,
+  );
+  assert.equal(
+    authCookieExpiresAt(parseCookieHeader(cookieValueFor('sb-auth-token', refreshedSession))),
+    refreshedSession.expires_at,
+  );
+  assert.equal(authCookieExpiresAt(parseCookieHeader('theme=dark')), null);
+  assert.equal(
+    authCookieExpiresAt([
+      { name: 'sb-auth-token', value: encodeBase64Cookie({ user: { id: 'u' } }) },
+    ]),
+    null,
+  );
 });

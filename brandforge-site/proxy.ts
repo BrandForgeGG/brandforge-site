@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import {
   applyCookieUpdates,
+  authCookieExpiresAt,
   sessionUserFromCookiePairs,
   stripAuthCookieDeletions,
 } from '@/lib/auth-cookies';
@@ -59,7 +60,20 @@ export default async function proxy(request: NextRequest) {
   // getSession() can miss under a refresh race while the browser still holds
   // auth cookies. Decode those cookies so API routes still get x-user-*.
   const cookieUser = sessionUserFromCookiePairs(originalCookies);
-  const user = session?.user ?? cookieUser;
+
+  // A cookie that decodes but whose access token is expired AND could not be
+  // refreshed (getSession() above returned no session) is a DEAD session: C1
+  // route gating rejects every API call with 401, so rendering the shell would
+  // park the user in a zombie app — worse, this gate would even bounce them
+  // back from /login into it. Expired + unrefreshable now means /login.
+  // Unknown expiry stays lenient (never lock out over a cookie-shape change),
+  // and an unexpired JWT keeps the old behaviour: a transient refresh miss
+  // under a rotation race must not sign anybody out (auto-signout bug).
+  const cookieExpiresAt = authCookieExpiresAt(originalCookies);
+  const cookieAlive =
+    cookieUser !== null &&
+    (cookieExpiresAt === null || cookieExpiresAt * 1000 > Date.now());
+  const user = session?.user ?? (cookieAlive ? cookieUser : null);
   const hasValidUser = Boolean(user);
 
   // Never wipe an existing browser session from middleware on a failed refresh —

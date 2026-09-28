@@ -193,6 +193,17 @@ function sessionTokenFromSources(forwardedCookie, fallbackPairs) {
   return tokenFromPairs(fallbackPairs);
 }
 
+// Access-token expiry (epoch seconds) from the merged auth cookie, or null when
+// the cookie is absent or carries no expires_at field. Lets callers tell a
+// live JWT apart from a stale one without contacting the Auth server.
+function authCookieExpiresAt(pairs) {
+  const combined = combineAuthChunks(pairs);
+  if (!combined) return null;
+  const session = decodeSessionJson(combined);
+  if (!session || typeof session.expires_at !== 'number') return null;
+  return session.expires_at;
+}
+
 module.exports = {
   parseCookieHeader,
   isAuthCookieName,
@@ -204,4 +215,5 @@ module.exports = {
   sessionUserFromCookiePairs,
   tokenFromPairs,
   sessionTokenFromSources,
+  authCookieExpiresAt,
 };

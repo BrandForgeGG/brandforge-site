@@ -116,6 +116,14 @@ export async function getAuthenticatedUser(request?: NextRequest): Promise<User 
 
   if (error || !user) {
     // Expired or forged. The client refreshes its token on the next auth call and retries.
+    // Log the reason (Supabase's message only — never the token) so a 401 storm in the
+    // Vercel logs says *why*: rejection here = the cookie held a token Auth no longer
+    // accepts; no such line at all = the cookie never yielded a token (extraction).
+    const status =
+      typeof (error as { status?: unknown } | null)?.status === 'number'
+        ? (error as { status: number }).status
+        : 'n/a';
+    console.warn(`[auth] getUser rejected: ${error?.message ?? 'no user returned'} (status ${status})`);
     return null;
   }
 

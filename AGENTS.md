@@ -64,6 +64,12 @@ BrandForge/
   in `createSupabaseServerClient.readCookies`; `lib/browser-auth.ts` `fetchAuthed` retries
   once after `refreshSession()` on 401 (chat-workspace, rail, settings, landing hero).
   Probes: fresh cookie 200, expired cookie 200 (rotated), no cookie 401.
+  **Round 2 (same day)**: a dead session (expired token + spent refresh token) kept the
+  zombie shell rendering `/chat` while APIs 401'd forever. `proxy.ts` now treats
+  expired+unrefreshable cookies as signed out (`authCookieExpiresAt`), `fetchAuthed` parks
+  on `/login` when refresh is auth-rejected (network/5xx/429 stay transient), and
+  `getAuthenticatedUser` logs `[auth] getUser rejected: …` (message only) for the next
+  log pull. Probe: zombie cookie → `/chat` 307 `/login`, `/login` renders.
 
 
 - **Open auth**: any Google account can sign in (login allowlist removed). Staff/admin access
