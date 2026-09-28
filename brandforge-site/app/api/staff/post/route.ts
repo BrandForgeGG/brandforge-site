@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { addMessage } from '@/lib/project-db';
-import { ensureStaffParticipant, requireStaffContext } from '@/lib/staff';
+import { canOperatorParticipate, ensureStaffParticipant, requireStaffContext } from '@/lib/staff';
 
 export const dynamic = 'force-dynamic';
 
-// Post into a founder's chat as a human operator.
+// Post into a founder's chat as a human operator. Same participation rule as join:
+// operators post once their proposal was accepted (admins anytime).
 export async function POST(request: NextRequest) {
   try {
     let body: { conversationId?: string; message?: string } = {};
@@ -25,6 +26,13 @@ export async function POST(request: NextRequest) {
 
     if (!message) {
       return NextResponse.json({ error: 'message is required' }, { status: 400 });
+    }
+
+    if (!(await canOperatorParticipate(context))) {
+      return NextResponse.json(
+        { error: 'You can post here once your proposal is accepted.' },
+        { status: 403 }
+      );
     }
 
     const joined = await ensureStaffParticipant(context);

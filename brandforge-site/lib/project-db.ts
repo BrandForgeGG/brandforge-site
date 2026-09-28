@@ -11,6 +11,7 @@ import { createSupabaseServerClient } from './supabase/server';
 import { createSupabaseAdminClient } from './supabase/admin';
 import { track } from './funnel.js';
 import { notifyDiscordDiscovery } from './discord';
+import { notifyUser } from './notify';
 import { headers } from 'next/headers';
 
 import { validateUsername } from '@/lib/identity';
@@ -607,6 +608,138 @@ export async function getFounderNotifyTargets(
   };
 }
 
+// Operator-facing discovery delivery targets: every linked staff member
+// (profiles.role operator or admin with a Telegram chat on the profile), minus the
+// conversation's own founder who wrote the brief. Staff rows are read with the
+// service role because the caller is whoever triggered the transition, not a
+// notify target (H7 allows the service role in this module only).
+export async function getStaffTelegramTargets(excludeUserId: string | null): Promise<string[]> {
+  const supabase = await readClient(true);
+
+  let query = supabase
+    .from('profiles')
+    .select('id, telegram_chat_id, role')
+    .in('role', ['operator', 'admin'])
+    .not('telegram_chat_id', 'is', null);
+  if (excludeUserId) {
+    query = query.neq('id', excludeUserId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error fetching staff telegram targets:', error.message);
+    return [];
+  }
+
+  return (data ?? [])
+    .map((row) => (row.telegram_chat_id === null || row.telegram_chat_id === undefined ? '' : String(row.telegram_chat_id)))
+    .filter((chatId) => chatId !== '');
+}
+
+// Journey spec: a finished brief reaches the team on both channels — the Discord
+// discovery embed (below) and a personal Telegram DM to every linked operator.
+// Best-effort like its Discord sibling: never throws, never fails the transition.
+export async function notifyStaffBriefReady(conversationId: string, title: string): Promise<void> {
+  try {
+    const ownerId = await getConversationOwnerId(conversationId);
+    const targets = await getStaffTelegramTargets(ownerId);
+    if (targets.length === 0) return;
+
+    await Promise.all(targets.map((chatId) => notifyUser(chatId, 'brief_ready', { title })));
+  } catch (error) {
+    console.error('notifyStaffBriefReady failed:', error instanceof Error ? error.message : error);
+  }
+}
+
+// Journey spec: operators enter a chat only through their own accepted proposal
+// (admins view every chat; operators get invited by the accept). Reads go through
+// the service role so a pre-join operator can check their own standing.
+export async function hasAcceptedProposalFrom(conversationId: string, userId: string): Promise<boolean> {
+  const supabase = await readClient(true);
+
+  const { data, error } = await supabase
+    .from('proposals')
+    .select('id')
+    .eq('conversation_id', conversationId)
+    .eq('created_by', userId)
+    .eq('status', 'accepted')
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error checking accepted proposal:', error.message);
+    return false;
+  }
+
+  return Boolean(data);
+}
+
+// The accept IS the invite: add the proposal's author (always staff, gated in
+// POST /api/proposals) to the conversation as an operator with a join line the
+// founder can see. Returns null when there is nothing to add.
+export async function inviteProposalAuthor(proposal: {
+  conversation_id: string;
+  created_by?: string | null;
+}): Promise<{ displayName: string; already: boolean } | null> {
+  const authorId = proposal.created_by ?? null;
+  if (!authorId) return null;
+
+  const ownerId = await getConversationOwnerId(proposal.conversation_id);
+  if (ownerId === authorId) return null;
+
+  const supabase = await readClient(true);
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('display_name, full_name, username, email')
+    .eq('id', authorId)
+    .maybeSingle();
+
+  const displayName =
+    (profile?.display_name && String(profile.display_name)) ||
+    (profile?.full_name && String(profile.full_name)) ||
+    (profile?.username && String(profile.username)) ||
+    (profile?.email && String(profile.email).split('@')[0]) ||
+    'The team';
+
+  const { data: existing } = await supabase
+    .from('participants')
+    .select('id')
+    .eq('conversation_id', proposal.conversation_id)
+    .eq('user_id', authorId)
+    .maybeSingle();
+
+  if (existing) {
+    return { displayName, already: true };
+  }
+
+  const { error: insertError } = await supabase.from('participants').upsert(
+    {
+      conversation_id: proposal.conversation_id,
+      user_id: authorId,
+      role: 'operator',
+      display_name: displayName,
+    },
+    { onConflict: 'conversation_id,user_id', ignoreDuplicates: true }
+  );
+
+  if (insertError) {
+    console.error('inviteProposalAuthor:', insertError.message);
+    return null;
+  }
+
+  await addMessage({
+    conversation_id: proposal.conversation_id,
+    sender_type: 'ai',
+    sender_name: 'BrandForge',
+    content: `${displayName} joined this conversation (their proposal was accepted).`,
+    content_type: 'system',
+  });
+
+  return { displayName, already: false };
+}
+
 // Some reads must work for BrandForge staff even though row level security only grants them
 // conversations, messages, project_context and tasks. Staff (profiles.role operator/admin) read
 // the founder-scoped tables - requirements, milestones, proposals, agreements, payments,
@@ -1027,10 +1160,12 @@ export async function updateConversationStatus(
   }
 
   // Journey gap #5: arrival at READY_FOR_REVIEW is the moment specialists must
-  // see — post once into the Discord discovery channel (best-effort, never
-  // fails the caller; fires only when the row actually transitioned).
+  // see — post once into the Discord discovery channel, and DM every linked
+  // operator on Telegram (best-effort, never fails the caller; both fire only
+  // when the row actually transitioned).
   if (data && status === 'READY_FOR_REVIEW') {
     await notifyDiscordDiscovery(conversationId, data.title);
+    await notifyStaffBriefReady(conversationId, data.title);
   }
 
   return true;

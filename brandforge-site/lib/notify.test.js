@@ -6,6 +6,7 @@ const assert = require('node:assert/strict');
 const {
   isNotifyConfigured,
   buildMessage,
+  buildPersonalMessage,
   sendTelegramMessage,
   notify,
 } = require('./notify.js');
@@ -73,6 +74,35 @@ test('buildMessage clips hostile input to one short line', () => {
   const message = buildMessage('task_review', { title: evil, assigneeName: 'x\ny' });
   assert.ok(!message.includes('\n'), 'no newlines should survive clipping');
   assert.ok(message.length < 600);
+});
+
+// ---------- personal (operator-facing) messages ----------
+
+test('buildPersonalMessage pings linked staff when a brief lands', () => {
+  const message = buildPersonalMessage('brief_ready', { title: 'Merchant Cash Advance CRM' });
+  assert.ok(message.includes('Merchant Cash Advance CRM'));
+  assert.ok(message.includes('staff inbox'));
+  assert.ok(!message.includes('\n'));
+});
+
+test('buildPersonalMessage covers every proposal answer an operator waits on', () => {
+  const accepted = buildPersonalMessage('proposal_answered', { title: 'Landing page', status: 'accepted' });
+  assert.ok(accepted.includes('accepted your proposal'));
+  assert.ok(accepted.includes('added to the chat'));
+
+  const changes = buildPersonalMessage('proposal_answered', { title: 'Landing page', status: 'changes_requested' });
+  assert.ok(changes.includes('requested changes'));
+
+  const declined = buildPersonalMessage('proposal_answered', { title: 'Landing page', status: 'declined' });
+  assert.ok(declined.includes('declined'));
+
+  const unknown = buildPersonalMessage('proposal_answered', { title: 'Landing page', status: 'reopened' });
+  assert.ok(unknown.includes('reopened'));
+});
+
+test('buildPersonalMessage returns null for unknown events', () => {
+  assert.equal(buildPersonalMessage('nope', {}), null);
+  assert.equal(buildPersonalMessage('', {}), null);
 });
 
 // ---------- sending ----------

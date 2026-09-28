@@ -10,10 +10,12 @@ import {
   isStaffAccount,
   recordFunnelEvent,
   updateConversationStatus,
+  inviteProposalAuthor,
+  getTelegramChatIdForUser,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { canSetProposalStatus } from '@/lib/money-authz.js';
-import { notify } from '@/lib/notify';
+import { notify, notifyUser } from '@/lib/notify';
 import { notifyFounder } from '@/lib/stage-notify';
 
 export const dynamic = 'force-dynamic';
@@ -183,11 +185,27 @@ export async function PATCH(request: NextRequest) {
 
       if (status === 'accepted') {
         await updateConversationStatus(proposal.conversation_id, 'ACCEPTED');
+        // The accept IS the invite: the proposal's author joins with a visible
+        // system line, so the founder sees exactly who won the work.
+        await inviteProposalAuthor(existing);
       } else if (status === 'changes_requested' || status === 'declined') {
         await updateConversationStatus(proposal.conversation_id, 'READY_FOR_REVIEW');
       }
 
       await notify('proposal_answered', { title: existing.title, status });
+
+      // The author waits on this answer personally: ping their linked Telegram
+      // (skipped when they answered it themselves). Unlinked or unconfigured is
+      // a silent no-op, and the send never blocks the answer itself.
+      if (existing.created_by && existing.created_by !== user.id) {
+        const authorChatId = await getTelegramChatIdForUser(existing.created_by);
+        if (authorChatId) {
+          await notifyUser(authorChatId, 'proposal_answered', {
+            title: existing.title,
+            status,
+          });
+        }
+      }
 
       if (status === 'accepted') {
         await recordFunnelEvent('proposal_accepted', {

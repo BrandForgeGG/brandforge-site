@@ -211,10 +211,30 @@ function buildPersonalMessage(event, details = {}) {
     case 'telegram_linked':
       return 'BrandForge: your Telegram is linked. You will get a ping here whenever something needs you.';
 
+    // Operator-facing events: the promise above is only true if something actually
+    // pings a linked staff member. A brief landing is the one moment they must act.
+    case 'brief_ready':
+      return `BrandForge: new brief ready for review: "${clip(details.title)}". Open your staff inbox.`;
+
+    case 'proposal_answered': {
+      const title = clip(details.title);
+      const status = clip(details.status);
+      if (status === 'accepted') {
+        return `BrandForge: the founder accepted your proposal "${title}". You have been added to the chat.`;
+      }
+      if (status === 'changes_requested') {
+        return `BrandForge: the founder requested changes to your proposal "${title}". Revise it from the staff inbox.`;
+      }
+      if (status === 'declined') {
+        return `BrandForge: the founder declined your proposal "${title}".`;
+      }
+      return `BrandForge: the founder answered your proposal "${title}": ${status || 'updated'}.`;
+    }
+
     default:
       return null;
+    }
   }
-}
 
 // Sends to one person. `chatId` comes from their own profile row (written by the bot deep-link
 // verifier), never from a request body, and an unlinked member is a silent no-op.

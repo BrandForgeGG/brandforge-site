@@ -6,6 +6,7 @@ import {
   getConversation,
   getParticipants,
   getProfileRole,
+  hasAcceptedProposalFrom,
 } from '@/lib/project-db';
 import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
 
@@ -18,6 +19,7 @@ export interface StaffContext {
   user: User;
   conversationId: string;
   role: 'founder' | 'operator' | 'builder' | 'observer';
+  profileRole: 'operator' | 'admin';
   displayName: string;
 }
 
@@ -80,8 +82,26 @@ export async function requireStaffContext(
     user,
     conversationId: trimmedId,
     role,
+    profileRole: profileRole as 'operator' | 'admin',
     displayName: getActorName(user),
   };
+}
+
+// Journey spec: an operator is in a chat because their proposal won it. Admins
+// view and join every chat; operators may read the inbox and send proposals
+// first, then participate only after their own proposal was accepted (the accept
+// auto-invites them, so this mostly covers legacy and manual attempts).
+export async function canOperatorParticipate(context: StaffContext): Promise<boolean> {
+  if (context.profileRole === 'admin' || context.role === 'founder') {
+    return true;
+  }
+
+  const participants = await getParticipants(context.conversationId, true);
+  if (participants.some((entry) => entry.user_id === context.user.id)) {
+    return true;
+  }
+
+  return hasAcceptedProposalFrom(context.conversationId, context.user.id);
 }
 
 // Adds the staff member to the conversation on first use (so the founder sees them arrive).
