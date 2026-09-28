@@ -141,24 +141,21 @@ BrandForge/
   system rows now also trigger `refreshState`/`refreshArtifacts` so an open founder tab flips
   the moment the status moves. E2E asserts `conversation PROPOSED after submit` + `proposal
   card landed in chat`. Lesson: UPDATE policies fail silently — probe the row, not the error.
-- **Proposal counter round (2026-09-28, code complete, BLOCKED on
-  `0017_proposal_counters.sql` being applied)**: full negotiation lifecycle from the spec —
-  founder accepts / **counters once** / declines from `pending`; specialist accepts the
-  counter, **counters back once** (`counter_back` = final offer) or declines; founder's
-  accept/decline closes it; `declined` at any point returns `READY_FOR_REVIEW` so a fresh
-  proposal can be written. Transition matrix in `canSetProposalStatus`
-  (`lib/money-authz.js`; owner lane wins over staff; invalid jumps → 409; no `currentStatus`
-  → legacy path). Counter terms (`counter_total_amount/weeks/note/round`, migration 0017) are
-  **promoted into `total_amount`/`estimated_weeks_*` on acceptance**, so agreement, escrow and
-  the `proposal_accepted` funnel price the final deal (funnel now reads the updated row).
-  UI: inline counter forms on the proposal card (`chat-transcript.tsx`, `counter`/
-  `counter_back` embed actions) and in the panel (founder "Counter offer" replaces "Request
-  changes"); `handleProposalAction` carries terms. Pings: team `proposal_countered`,
-  specialist personal `proposal_countered` (names the one-shot rule), founder
-  `counter_back_ready` Telegram+email (8th stage moment). 222/222 tests, tsc/eslint/build
-  green; extended e2e covers the whole round trip incl. four 409 refusals and the
-  promote-on-accept total. **Counter buttons 500 until 0017 runs** (accept path is
-  defensive against the missing columns).
+- **Proposal counter round (2026-09-28, deployed `main`→prod `dpl_FJTcbqBcpy6iGUmGb4nfGcwR14Xt`;
+  `0017_proposal_counters.sql` applied by the founder, columns verified live)**: full negotiation
+  lifecycle from the spec — founder accepts / **counters once** / declines from `pending`;
+  specialist accepts the counter, **counters back once** (`counter_back` = final offer) or
+  declines; founder's accept/decline closes it; `declined` at any point returns
+  `READY_FOR_REVIEW` so a fresh proposal can be written. Transition matrix in
+  `canSetProposalStatus` (`lib/money-authz.js`; owner lane wins over staff; invalid jumps →
+  409; no `currentStatus` → legacy path). Counter terms are **promoted into
+  `total_amount`/`estimated_weeks_*` on acceptance**, so agreement, escrow and the
+  `proposal_accepted` funnel price the final deal. UI: inline counter forms on the proposal
+  card and in the panel; `handleProposalAction` carries terms. Pings: team
+  `proposal_countered`, specialist personal `proposal_countered`, founder `counter_back_ready`
+  Telegram+email (8th stage moment). Full pipeline e2e green on prod incl. the counter round
+  trip (four 409 refusals incl. owner-counter_back-from-pending, promote-on-accept total 900,
+  funnel prices the promoted total); auth probe green.
 - **Proposal submit silently dead — nested form fixed (2026-09-28, deployed `0ab3567`→prod
   `dpl_BJ5mtXHnUspiuAkkXNhvbLWEofZH`)**: the "Submit proposal goes to bare /chat, nothing
   happens" report. The Send-proposal `<form>` rendered **inside** the composer `<form>`
@@ -196,8 +193,7 @@ BrandForge/
   (out named in chat)→post→403. Hotfix branched off prod (counter round still needs 0017);
   merged back into `main` (route PATCH conflict resolved keeping both counter lines and the
   out-note, 223/223).
-- **Minimalist project panel (2026-09-29, committed `f937773`, NOT yet deployed — ships with
-  the 0017-gated release)**: founder feedback on the panel paste — AI exhaust, not insight.
+- **Minimalist project panel (2026-09-29, shipped in the 0017 release `dpl_FJTcbqBcpy6iGUmGb4nfGcwR14Xt`)**: founder feedback on the panel paste — AI exhaust, not insight.
   Fixed: doubled "Project pulse" title removed; requirements and the task list collapse behind
   expanders (counts + delivery progress stay visible); the proposal block is a compact priced
   summary (title, total + weeks, status sentence, counter terms) with an "Answer in chat"
@@ -233,7 +229,7 @@ BrandForge/
 - Required migrations: `0001_chat_first_rls.sql` … `0016_grant_rpc_execute.sql` — **all
   applied** in prod (0006 run 2026-09-22 via Supabase Management API; 0007–0012 verified live by
   column/table probe 2026-09-28; 0013–0016 run 2026-09-28 via the SQL editor; 0016 verified by
-  `has_function_privilege` + session-client RPC probes). **`0017_proposal_counters.sql` is
-  written but NOT yet applied** — the proposal counter round stays inert until the founder
-  runs it in the SQL editor (accept path tolerates its absence). Supabase PAT for
+  `has_function_privilege` + session-client RPC probes). **`0017_proposal_counters.sql`
+  applied 2026-09-29** (founder ran it in the SQL editor; all five columns verified readable
+  via REST before the release deploy). Supabase PAT for
   future SQL runs is not stored here — ask the operator or use the SQL editor.
