@@ -140,6 +140,14 @@ export function ChatWorkspace() {
   const [telegramBotUrl, setTelegramBotUrl] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [showInviteForm, setShowInviteForm] = useState(false);
+  // Staff proposal composer: the send side of POST /api/proposals. Opens from the
+  // "Brief ready" strip above the composer while the conversation waits for review.
+  const [showProposalForm, setShowProposalForm] = useState(false);
+  const [proposalTitle, setProposalTitle] = useState("");
+  const [proposalScope, setProposalScope] = useState("");
+  const [proposalQuote, setProposalQuote] = useState("");
+  const [proposalWeeks, setProposalWeeks] = useState("");
+  const [proposalSending, setProposalSending] = useState(false);
 
   // --- Live layer (Realtime) -------------------------------------------------------
   // Self identity for presence/typing. Deliberately the *display* name, never the email, and
@@ -347,6 +355,12 @@ export function ChatWorkspace() {
     setBusyAction(null);
     setShowInviteForm(false);
     setInviteEmail("");
+    setShowProposalForm(false);
+    setProposalTitle("");
+    setProposalScope("");
+    setProposalQuote("");
+    setProposalWeeks("");
+    setProposalSending(false);
     setHeaderMenuOpen(false);
     setAttachMenuOpen(false);
     setCommandsOpen(false);
@@ -1240,6 +1254,81 @@ export function ChatWorkspace() {
     }
   }, [conversationId, inviteEmail]);
 
+  const handleSendProposal = useCallback(async () => {
+    if (!conversationId || proposalSending) return;
+
+    const title = proposalTitle.trim();
+    const scope = proposalScope.trim();
+    const quote = Number(proposalQuote);
+    const weeks = Number(proposalWeeks);
+
+    if (!title || !scope) {
+      setError("Add a title and the technical approach before submitting.");
+      return;
+    }
+    if (!Number.isFinite(quote) || quote < 1) {
+      setError("The final quote must be at least 1 EUR.");
+      return;
+    }
+    if (!Number.isFinite(weeks) || weeks < 1) {
+      setError("The timeline must be at least 1 week.");
+      return;
+    }
+
+    setProposalSending(true);
+    setError(null);
+
+    try {
+      const response = await fetchAuthed("/api/proposals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId,
+          title,
+          scope,
+          totalAmount: quote,
+          estimatedWeeksMin: Math.floor(weeks),
+          estimatedWeeksMax: Math.floor(weeks),
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || "The proposal could not be sent");
+      }
+
+      setShowProposalForm(false);
+      setProposalTitle("");
+      setProposalScope("");
+      setProposalQuote("");
+      setProposalWeeks("");
+
+      await Promise.all([
+        refreshState(conversationId),
+        refreshMessages(conversationId),
+        refreshArtifacts(conversationId),
+        loadRecents(),
+      ]);
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "The proposal could not be sent",
+      );
+    } finally {
+      setProposalSending(false);
+    }
+  }, [
+    conversationId,
+    loadRecents,
+    proposalQuote,
+    proposalScope,
+    proposalSending,
+    proposalTitle,
+    proposalWeeks,
+    refreshArtifacts,
+    refreshMessages,
+    refreshState,
+  ]);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadIdentity();
@@ -2062,6 +2151,102 @@ return (
                   Brief with the team — waiting for review. Keep adding context here;
                   they reply in this chat.
                 </span>
+              </div>
+            ) : null}
+            {/* Staff send side of the proposal flow: brief is waiting, an operator
+                writes the offer here (POST /api/proposals). Admins see it in any chat;
+                operators see it while the brief waits, before their invite lands. */}
+            {railMeta.isStaff &&
+            !isOwnConversation &&
+            state?.status === "READY_FOR_REVIEW" ? (
+              <div className="mb-2 rounded-xl border border-[#e8571e]/25 bg-[#1c2024] p-3">
+                {showProposalForm ? (
+                  <form
+                    aria-label="Send proposal"
+                    className="space-y-3"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void handleSendProposal();
+                    }}
+                  >
+                    <p className="bf-section-label">Team proposal</p>
+                    <input
+                      type="text"
+                      value={proposalTitle}
+                      onChange={(event) => setProposalTitle(event.target.value)}
+                      placeholder="Proposal title, e.g. CRM dashboard build"
+                      maxLength={160}
+                      className="w-full rounded-lg border border-white/15 bg-[#14171a] px-3 py-2 text-sm text-[#ece7de] placeholder:text-[#8f959b]"
+                    />
+                    <textarea
+                      value={proposalScope}
+                      onChange={(event) => setProposalScope(event.target.value)}
+                      placeholder="Outline your technical stack, architecture, and implementation strategy…"
+                      rows={4}
+                      maxLength={4000}
+                      className="w-full resize-y rounded-lg border border-white/15 bg-[#14171a] px-3 py-2 text-sm leading-relaxed text-[#ece7de] placeholder:text-[#8f959b]"
+                    />
+                    <div className="flex gap-3">
+                      <label className="flex-1 text-[10px] uppercase tracking-[0.14em] text-[#8f959b]">
+                        Final quote (EUR)
+                        <input
+                          type="number"
+                          min={1}
+                          step="1"
+                          inputMode="decimal"
+                          value={proposalQuote}
+                          onChange={(event) => setProposalQuote(event.target.value)}
+                          placeholder="18500"
+                          className="mt-1 w-full rounded-lg border border-white/15 bg-[#14171a] px-3 py-2 text-sm text-[#ece7de] placeholder:text-[#8f959b]"
+                        />
+                      </label>
+                      <label className="flex-1 text-[10px] uppercase tracking-[0.14em] text-[#8f959b]">
+                        Timeline (weeks)
+                        <input
+                          type="number"
+                          min={1}
+                          step="1"
+                          inputMode="numeric"
+                          value={proposalWeeks}
+                          onChange={(event) => setProposalWeeks(event.target.value)}
+                          placeholder="6"
+                          className="mt-1 w-full rounded-lg border border-white/15 bg-[#14171a] px-3 py-2 text-sm text-[#ece7de] placeholder:text-[#8f959b]"
+                        />
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="submit"
+                        disabled={proposalSending}
+                        className="rounded-lg bg-[#e8571e] px-4 py-2 text-xs font-semibold text-[#14171a] disabled:opacity-60"
+                      >
+                        {proposalSending ? "Sending…" : "Submit proposal"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowProposalForm(false)}
+                        className="text-xs text-[#9aa0a6] hover:text-[#ece7de]"
+                      >
+                        Back
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div
+                    className="flex items-center gap-2 text-xs leading-relaxed text-[#f6d6c3]"
+                    role="status"
+                  >
+                    <span className="bf-status-dot" aria-hidden="true" />
+                    <span>Brief ready for review. Send your proposal to the founder.</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowProposalForm(true)}
+                      className="ml-auto shrink-0 rounded-lg bg-[#e8571e] px-3 py-1.5 text-xs font-semibold text-[#14171a]"
+                    >
+                      Send proposal
+                    </button>
+                  </div>
+                )}
               </div>
             ) : null}
             <input
