@@ -14,6 +14,7 @@ import {
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { canSetProposalStatus } from '@/lib/money-authz.js';
 import { notify } from '@/lib/notify';
+import { notifyFounder } from '@/lib/stage-notify';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,6 +82,18 @@ export async function POST(request: NextRequest) {
     });
 
     await notify('proposal_sent', {
+      title,
+      totalAmount,
+      currency: 'EUR',
+      weeks:
+        estimatedWeeksMin && estimatedWeeksMax
+          ? `${estimatedWeeksMin}–${estimatedWeeksMax} weeks`
+          : null,
+    });
+
+    // The offer must reach the founder even when Telegram is unlinked: email +
+    // linked Telegram ping, best-effort, never blocks the proposal itself.
+    await notifyFounder(conversationId, 'proposal_ready', {
       title,
       totalAmount,
       currency: 'EUR',

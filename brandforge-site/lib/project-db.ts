@@ -572,6 +572,40 @@ export async function getTelegramChatIdForUser(userId: string): Promise<string |
   return String(data.telegram_chat_id);
 }
 
+export interface FounderNotifyTargets {
+  email: string | null;
+  telegramChatId: string | null;
+}
+
+// Where the conversation's owner (the founder) can be reached for
+// member-facing stage notifications: their stored email plus their linked
+// Telegram chat, fetched in one query. Either side may be null — unlinked
+// Telegram or a missing email is a delivery miss, never an error.
+export async function getFounderNotifyTargets(
+  conversationId: string
+): Promise<FounderNotifyTargets> {
+  const empty: FounderNotifyTargets = { email: null, telegramChatId: null };
+  const ownerId = await getConversationOwnerId(conversationId);
+  if (!ownerId) return empty;
+
+  const supabase = await db();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('email, telegram_chat_id')
+    .eq('id', ownerId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching founder notify targets:', error.message);
+    return empty;
+  }
+
+  return {
+    email: data?.email ? String(data.email) : null,
+    telegramChatId: data?.telegram_chat_id ? String(data.telegram_chat_id) : null,
+  };
+}
+
 // Some reads must work for BrandForge staff even though row level security only grants them
 // conversations, messages, project_context and tasks. Staff (profiles.role operator/admin) read
 // the founder-scoped tables - requirements, milestones, proposals, agreements, payments,

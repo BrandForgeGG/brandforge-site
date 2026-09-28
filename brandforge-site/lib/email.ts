@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { buildStageEmail } from './stage-emails';
 
 // Transactional email via Resend. The API key lives only in env
 // (`.env.local` locally, Vercel project env in production) — never in source.
@@ -66,4 +67,27 @@ export async function sendEmail(
       error: cause instanceof Error ? cause.message : 'Email failed to send',
     };
   }
+}
+
+// Stage-transition email (proposal ready, contract signed, funding verified,
+// work delivered, payment released): build the template, then send. Like every
+// notify path it is best-effort — no recipient or unknown event is a silent
+// skip, never a throw.
+export async function sendStageEmail(
+  event: string,
+  to: string | null | undefined,
+  details: Record<string, unknown> = {}
+): Promise<SendEmailResult> {
+  const recipient = (to ?? '').trim();
+  if (!recipient) return { ok: false, error: 'No recipient', skipped: true };
+
+  const template = buildStageEmail(event, details);
+  if (!template) return { ok: false, error: 'Unknown stage event', skipped: true };
+
+  return sendEmail({
+    to: recipient,
+    subject: template.subject,
+    text: template.text,
+    html: template.html,
+  });
 }

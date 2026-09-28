@@ -14,6 +14,7 @@ import {
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { notify } from '@/lib/notify';
+import { notifyFounder } from '@/lib/stage-notify';
 import { normalizeTaskDueDate } from '@/lib/task-board';
 
 export const dynamic = 'force-dynamic';
@@ -174,6 +175,10 @@ export async function PATCH(request: NextRequest) {
     // Delivered work is the one transition the founder must not miss — they hold the approval.
     if (updatedTask.status === 'REVIEW') {
       await notify('task_review', {
+        title: updatedTask.title,
+        assigneeName: updatedTask.assignee_name,
+      });
+      await notifyFounder(conversationId, 'milestone_ready', {
         title: updatedTask.title,
         assigneeName: updatedTask.assignee_name,
       });

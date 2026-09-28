@@ -19,6 +19,7 @@ import {
   normalizeTxHash,
 } from '@/lib/crypto-payments';
 import { notify } from '@/lib/notify';
+import { notifyFounder } from '@/lib/stage-notify';
 import { canSubmitFunding } from '@/lib/money-authz.js';
 
 export const dynamic = 'force-dynamic';
@@ -184,6 +185,8 @@ export async function PATCH(request: NextRequest) {
 
         await notify('payment_verified', {});
 
+        await notifyFounder(agreement.conversation_id, 'funding_verified', {});
+
         return NextResponse.json({ success: true });
       }
 
@@ -199,6 +202,8 @@ export async function PATCH(request: NextRequest) {
       );
 
       await notify('payment_rejected', { note });
+
+      await notifyFounder(agreement.conversation_id, 'funding_rejected', { note });
 
       return NextResponse.json({ success: true });
     }
@@ -229,6 +234,12 @@ export async function PATCH(request: NextRequest) {
       });
 
       await notify('payment_released', {
+        title: released.title,
+        amount: released.amount,
+        currency: released.currency,
+      });
+
+      await notifyFounder(released.conversation_id, 'payment_released', {
         title: released.title,
         amount: released.amount,
         currency: released.currency,

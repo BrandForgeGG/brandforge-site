@@ -15,7 +15,6 @@ import {
   addMessage,
   isStaffAccount,
   recordFunnelEvent,
-  getTelegramChatIdForUser,
   type Milestone,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
@@ -26,7 +25,8 @@ import {
   canAcceptAgreement,
   reconcileSchedule,
 } from '@/lib/money-authz.js';
-import { notify, notifyUser } from '@/lib/notify';
+import { notify } from '@/lib/notify';
+import { notifyFounder } from '@/lib/stage-notify';
 
 export const dynamic = 'force-dynamic';
 
@@ -191,16 +191,14 @@ export async function PATCH(request: NextRequest) {
           properties: { total_amount: Number(updated.total_amount) || 0, stage: 'agree' },
         });
         await notify('contract_signed', {});
+        await notifyFounder(agreement.conversation_id, 'contract_signed', {});
       } else if (isOwner) {
         // Founder signed first: the team's accept is now the only thing left.
         await notify('contract_accepted', { side: 'founder' });
       } else {
-        // Team signed first: nag the founder personally if they linked Telegram
-        // (unlinked is a silent no-op by design).
-        const founderChatId = ownerId ? await getTelegramChatIdForUser(ownerId) : null;
-        if (founderChatId) {
-          await notifyUser(founderChatId, 'contract_accepted', { side: 'team' });
-        }
+        // Team signed first: nag the founder personally — linked Telegram and/or
+        // email, whichever they have (unlinked on both is a silent no-op).
+        await notifyFounder(agreement.conversation_id, 'contract_accepted', { side: 'team' });
       }
 
       return NextResponse.json({ success: true, agreement: updated, bothSigned });
