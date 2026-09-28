@@ -159,6 +159,19 @@ BrandForge/
   green; extended e2e covers the whole round trip incl. four 409 refusals and the
   promote-on-accept total. **Counter buttons 500 until 0017 runs** (accept path is
   defensive against the missing columns).
+- **Proposal submit silently dead — nested form fixed (2026-09-28, deployed `0ab3567`→prod
+  `dpl_BJ5mtXHnUspiuAkkXNhvbLWEofZH`)**: the "Submit proposal goes to bare /chat, nothing
+  happens" report. The Send-proposal `<form>` rendered **inside** the composer `<form>`
+  (`chat-workspace.tsx`) — nested forms are invalid HTML, the browser drops the inner form
+  tag, so Submit fell through to a native GET navigation to bare `/chat`: no React handler,
+  no POST (zero proposal POSTs in every log window, zero rows ever — the click never left
+  the browser). The strip is now a plain `<div>` with an explicit button `onClick` (Enter in
+  single-line fields submits via `onKeyDown`; the textarea keeps newlines). Hotfix branched
+  off the deployed commit so the undeployed counter round (needs 0017) stays out of prod;
+  merged back into `main` afterwards. E2E on the hotfix deploy: proposal POST 200, PROPOSED,
+  card landed, accept→invite→ACCEPTED all green (counter assertions fail as expected — that
+  code is not on this deployment). Lesson: never nest `<form>`; grep `<form` nesting when a
+  submit silently navigates.
 - **Empty-sidebar regression fixed (2026-09-28, deployed `f7691b2`)**: 0014/0015 revoked
   `EXECUTE` from `authenticated`, but routes call those RPCs through the **user-session**
   client (`db()`) → `42501 permission denied` → recents rendered `[]` (AI draft saves hit the
