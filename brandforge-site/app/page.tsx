@@ -12,8 +12,25 @@ export const metadata = {
 };
 
 export default function Home() {
+  const organization = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'BrandForge',
+    url: 'https://brandforge.gg',
+    description:
+      'Chat-first studio: describe your project, get a human-vetted proposal, fund admin-verified crypto escrow, approve every milestone.',
+    sameAs: [
+      'https://discord.gg/GSKHXkUY85',
+      'https://t.me/BrandForge_gg',
+      'https://github.com/BrandForgeGG',
+    ],
+  };
   return (
     <div className="bf-page">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }}
+      />
       <BetaBanner />
       <LandingNav />
       <main>

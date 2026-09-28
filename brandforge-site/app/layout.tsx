@@ -33,6 +33,14 @@ export const metadata: Metadata = {
       },
     ],
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "BrandForge - Chat-first studio for founders",
+    description:
+      "Describe your project in a chat, get a human-vetted proposal, fund it with admin-verified crypto escrow.",
+    images: ["/twitter-card.png"],
+  },
+  themeColor: "#111417",
 };
 
 export default function RootLayout({
