@@ -174,6 +174,15 @@ BrandForge/
   weekly digests need an aggregation cron (phase 2). E2E ALL PASS (27/27) + auth probe green
   on the deploy. Founder setup still open: create the Discord channels/webhooks + GitHub
   webhook (checklist in the 2026-09-29 report).
+- **Weekly digest live as a manual trigger (2026-09-29, deployed `main`→prod
+  `dpl_6D33yezecq44s6G2KMNn2pH44FtG`)**: phase 2 of the webhook spec as code —
+  `lib/digest.js` (pure weekly text from counts, numbers only, honest quiet-week line),
+  `getWeeklyStats` in project-db (service-role counts: conversations posted,
+  `proposal_accepted`, `funding_verified`, `payment_released`), `postLiveMessage` in
+  ops-events, and admin-only GET preview + POST-to-live-feed at `app/api/ops/digest`
+  (401/403 enforced; dormant without `DISCORD_LIVE_URL`). Verified live with a probe
+  admin: real numbers back (`5 posted, 1 matched, 0 funded, 0 shipped`), operator 403.
+  244/244 tests. Cron wiring left for when the founder wants it automatic.
 - **Proposal submit silently dead — nested form fixed (2026-09-28, deployed `0ab3567`→prod
   `dpl_BJ5mtXHnUspiuAkkXNhvbLWEofZH`)**: the "Submit proposal goes to bare /chat, nothing
   happens" report. The Send-proposal `<form>` rendered **inside** the composer `<form>`
