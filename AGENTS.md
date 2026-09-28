@@ -183,6 +183,11 @@ BrandForge/
   (401/403 enforced; dormant without `DISCORD_LIVE_URL`). Verified live with a probe
   admin: real numbers back (`5 posted, 1 matched, 0 funded, 0 shipped`), operator 403.
   244/244 tests. Cron wiring left for when the founder wants it automatic.
+- **Channel routing matches the founder's Discord (2026-09-29, deployed `main`→prod
+  `dpl_8BqqwY2x67hiqX4bi1Q1GxSmoMkZ`)**: `match_made` staff embeds route to a dedicated
+  `matches` kind (`DISCORD_OPS_MATCHES_URL`, footer `ops-matches`) and public milestone
+  lines prefer `DISCORD_MILESTONE_URL` over the live feed. 245/245, auth probe green.
+  Founder wiring (env values) still open — webhook secrets must never enter the repo.
 - **Proposal submit silently dead — nested form fixed (2026-09-28, deployed `0ab3567`→prod
   `dpl_BJ5mtXHnUspiuAkkXNhvbLWEofZH`)**: the "Submit proposal goes to bare /chat, nothing
   happens" report. The Send-proposal `<form>` rendered **inside** the composer `<form>`
