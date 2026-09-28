@@ -17,7 +17,23 @@ export type ChatEmbedAction =
   | "edit_contract";
 
 export type ChatEmbed =
-  | { type: "proposal"; proposalId: string; status: string; title?: string }
+  | {
+      type: "proposal";
+      proposalId: string;
+      status: string;
+      title?: string;
+      /** Priced-offer snapshot written by the proposals route; absent on old cards. */
+      totalAmount?: number;
+      currency?: string;
+      weeksMin?: number | null;
+      weeksMax?: number | null;
+      scope?: string | null;
+      counterTotalAmount?: number;
+      counterWeeksMin?: number;
+      counterWeeksMax?: number;
+      counterRound?: number;
+      counterNote?: string | null;
+    }
   | { type: "agreement"; agreementId: string; status: string }
   | { type: "review_request"; conversationId: string; percent?: number; complete?: boolean }
   | {
@@ -190,13 +206,108 @@ function SystemEmbedCard({
     </span>
   );
 
+  // Short status word for a proposal card. The panel carries the full sentence;
+  // the card only needs the state at a glance.
+  const proposalStatusLabel = (status?: string): string | null => {
+    switch (status) {
+      case "pending":
+        return "Awaiting decision";
+      case "countered":
+        return "Countered";
+      case "counter_back":
+        return "Final offer";
+      case "accepted":
+        return "Accepted";
+      case "declined":
+        return "Declined";
+      case "changes_requested":
+        return "Changes requested";
+      case "expired":
+        return "Expired";
+      default:
+        return null;
+    }
+  };
+
+  const proposalStatusTone =
+    embed.type === "proposal" && embed.status === "accepted"
+      ? "rounded-full border border-[#5aa578]/30 bg-[#5aa578]/10 px-2.5 py-0.5 text-[11px] text-[#d9f7ea]"
+      : embed.type === "proposal" &&
+          (embed.status === "pending" ||
+            embed.status === "countered" ||
+            embed.status === "counter_back")
+        ? "rounded-full border border-[#e8571e]/40 bg-[#e8571e]/10 px-2.5 py-0.5 text-[11px] text-[#f6d6c3]"
+        : "rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[11px] text-[#9aa0a6]";
+
   return (
     <div className="mt-4 flex justify-center">
       <div className="w-full max-w-xl rounded-2xl border border-[#e8571e]/30 bg-[#1c2024] p-4 text-left">
         <p className="text-[10px] uppercase tracking-[0.18em] text-[#b8763b]">
-          {embed.type === "agreement" ? "Contract" : "Project action"}
+          {embed.type === "agreement"
+            ? "Contract"
+            : embed.type === "proposal"
+              ? "Proposal"
+              : "Project action"}
         </p>
-        <p className="mt-1 font-medium text-[#ece7de]">{title}</p>
+        <p
+          className={
+            embed.type === "proposal"
+              ? "mt-1 font-serif text-lg text-[#ece7de]"
+              : "mt-1 font-medium text-[#ece7de]"
+          }
+        >
+          {title}
+        </p>
+
+        {/* The priced offer itself: total, timeline, state, scope — everything the
+            founder needs to decide without opening the panel. Old cards predate the
+            snapshot and fall back to the message text below. */}
+        {embed.type === "proposal" ? (
+          <div className="mt-1">
+            {typeof embed.totalAmount === "number" ? (
+              <p className="mt-1 text-lg text-[#ece7de]">
+                {embed.currency || "EUR"}{" "}
+                {embed.totalAmount.toLocaleString("en-US")}
+                {(embed.weeksMin ?? embed.weeksMax) != null ? (
+                  <span className="ml-2 align-middle text-xs font-normal text-[#9aa0a6]">
+                    {embed.weeksMin ?? "?"}–{embed.weeksMax ?? "?"} weeks
+                  </span>
+                ) : null}
+              </p>
+            ) : null}
+            {proposalStatusLabel(embed.status) ? (
+              <div className="mt-2">
+                <span className={proposalStatusTone}>
+                  {proposalStatusLabel(embed.status)}
+                </span>
+              </div>
+            ) : null}
+            {(embed.counterRound === 1 || embed.counterRound === 2) &&
+            typeof embed.counterTotalAmount === "number" ? (
+              <div className="mt-2 rounded-lg border border-[#e8571e]/25 bg-[#14171a] px-3 py-2">
+                <p className="text-[11px] text-[#f6d6c3]">
+                  {embed.counterRound === 1 ? "Counter" : "Final counter"}
+                  {" · "}
+                  {embed.currency || "EUR"}{" "}
+                  {embed.counterTotalAmount.toLocaleString("en-US")}
+                  {(embed.counterWeeksMin ?? embed.counterWeeksMax) != null
+                    ? ` · ${embed.counterWeeksMin ?? "?"}–${embed.counterWeeksMax ?? "?"} weeks`
+                    : ""}
+                </p>
+                {embed.counterNote ? (
+                  <p className="mt-1 text-[11px] text-[#9aa0a6]">
+                    {embed.counterNote}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+            {embed.scope ? (
+              <div className="mt-2 max-h-28 overflow-y-auto whitespace-pre-wrap rounded-xl border border-white/10 bg-[#14171a] p-3 text-xs leading-relaxed text-[#9aa0a6]">
+                {embed.scope}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         {/* Brief receipt: how shaped the handoff was, and the honest waiting state. */}
         {embed.type === "review_request" && typeof embed.percent === "number" ? (

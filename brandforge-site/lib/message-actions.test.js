@@ -66,6 +66,73 @@ assert.deepEqual(parseChatEmbed({ type: 'review_request', id: 'c1', percent: 'hi
   assert.equal(parseChatEmbed({ path: 'a/b.png', name: 'b.png', size: 1, contentType: 'image/png' }), null);
 });
 
+test('parseChatEmbed carries the proposal priced-offer snapshot and drops junk', () => {
+  assert.deepEqual(
+    parseChatEmbed({
+      type: 'proposal',
+      id: 'p1',
+      status: 'pending',
+      title: 'CRM build',
+      totalAmount: 18500,
+      currency: 'EUR',
+      weeksMin: 5,
+      weeksMax: 6,
+      scope: 'React dashboard, Postgres, auth.',
+    }),
+    {
+      type: 'proposal',
+      proposalId: 'p1',
+      status: 'pending',
+      title: 'CRM build',
+      totalAmount: 18500,
+      currency: 'EUR',
+      weeksMin: 5,
+      weeksMax: 6,
+      scope: 'React dashboard, Postgres, auth.',
+    }
+  );
+  // Counter snapshot passes through only with a real round number.
+  assert.deepEqual(
+    parseChatEmbed({
+      type: 'proposal',
+      id: 'p1',
+      status: 'counter_back',
+      counterTotalAmount: 16000,
+      counterWeeksMin: 4,
+      counterWeeksMax: 5,
+      counterRound: 2,
+      counterNote: 'Final offer.',
+    }),
+    {
+      type: 'proposal',
+      proposalId: 'p1',
+      status: 'counter_back',
+      counterTotalAmount: 16000,
+      counterWeeksMin: 4,
+      counterWeeksMax: 5,
+      counterRound: 2,
+      counterNote: 'Final offer.',
+    }
+  );
+  // Hostile shapes never reach the card: non-numbers dropped, strings clipped.
+  const hostile = parseChatEmbed({
+    type: 'proposal',
+    id: 'p1',
+    status: 'pending',
+    totalAmount: 'lots',
+    currency: 'EUR-TOO-LONG-STRING',
+    scope: 42,
+    counterRound: 9,
+    counterTotalAmount: NaN,
+  });
+  assert.deepEqual(hostile, {
+    type: 'proposal',
+    proposalId: 'p1',
+    status: 'pending',
+    currency: 'EUR-TOO-',
+  });
+});
+
 test('insertComposerCommand preserves the existing draft', () => {
   assert.equal(insertComposerCommand('', '/progress'), '/progress ');
   assert.equal(insertComposerCommand('we need a landing page', '/review'), 'we need a landing page /review ');

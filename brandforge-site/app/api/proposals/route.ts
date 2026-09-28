@@ -74,7 +74,19 @@ export async function POST(request: NextRequest) {
       sender_name: 'BrandForge',
       content: `BrandForge sent a proposal: ${title}. Accept it here in the chat, or open the project panel to read the full scope.`,
       content_type: 'system',
-      artifact_data: { type: 'proposal', id: proposal.id, status: proposal.status, title },
+      // The card carries its own priced-offer snapshot so it renders the price,
+      // timeline and scope without another fetch — and keeps showing them forever.
+      artifact_data: {
+        type: 'proposal',
+        id: proposal.id,
+        status: proposal.status,
+        title,
+        totalAmount,
+        currency: 'EUR',
+        weeksMin: estimatedWeeksMin ?? null,
+        weeksMax: estimatedWeeksMax ?? null,
+        scope: scope ?? null,
+      },
     });
 
     // Recorded server-side at the moment the proposal actually exists.
@@ -239,7 +251,19 @@ export async function PATCH(request: NextRequest) {
         sender_name: 'BrandForge',
         content: statusLine,
         content_type: 'system',
-        artifact_data: { type: 'proposal', id: proposalId, status },
+        // Same snapshot as the send card, read from the updated row so an accepted
+        // card keeps showing the settled terms.
+        artifact_data: {
+          type: 'proposal',
+          id: proposalId,
+          status,
+          title: existing.title,
+          totalAmount: proposal.total_amount,
+          currency: proposal.currency ?? existing.currency ?? 'EUR',
+          weeksMin: proposal.estimated_weeks_min,
+          weeksMax: proposal.estimated_weeks_max,
+          scope: existing.scope ?? null,
+        },
       });
     }
 
