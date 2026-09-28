@@ -82,7 +82,40 @@ function parseChatEmbed(artifactData) {
 
   if (type === 'proposal' && id) {
     const title = typeof artifactData.title === 'string' ? artifactData.title : undefined;
-    return { type, proposalId: id, status, ...(title ? { title } : {}) };
+    // Priced-offer snapshot (written by the proposals route): each card carries its own
+    // facts so an old card keeps showing what was offered even after later counters move
+    // the row on. Anything absent falls back to the message text in the transcript.
+    const num = (value) => (Number.isFinite(value) ? value : undefined);
+    const str = (value, max) => (typeof value === 'string' && value ? value.slice(0, max) : undefined);
+    const totalAmount = num(artifactData.totalAmount);
+    const currency = str(artifactData.currency, 8);
+    const weeksMin = num(artifactData.weeksMin);
+    const weeksMax = num(artifactData.weeksMax);
+    const scope = str(artifactData.scope, 4000);
+    const counterTotalAmount = num(artifactData.counterTotalAmount);
+    const counterWeeksMin = num(artifactData.counterWeeksMin);
+    const counterWeeksMax = num(artifactData.counterWeeksMax);
+    const counterNote = str(artifactData.counterNote, 1000);
+    const counterRound =
+      artifactData.counterRound === 1 || artifactData.counterRound === 2
+        ? artifactData.counterRound
+        : undefined;
+    return {
+      type,
+      proposalId: id,
+      status,
+      ...(title ? { title } : {}),
+      ...(totalAmount !== undefined ? { totalAmount } : {}),
+      ...(currency ? { currency } : {}),
+      ...(weeksMin !== undefined ? { weeksMin } : {}),
+      ...(weeksMax !== undefined ? { weeksMax } : {}),
+      ...(scope ? { scope } : {}),
+      ...(counterTotalAmount !== undefined ? { counterTotalAmount } : {}),
+      ...(counterWeeksMin !== undefined ? { counterWeeksMin } : {}),
+      ...(counterWeeksMax !== undefined ? { counterWeeksMax } : {}),
+      ...(counterNote ? { counterNote } : {}),
+      ...(counterRound !== undefined ? { counterRound } : {}),
+    };
   }
   if (type === 'agreement' && id) return { type, agreementId: id, status };
   if (type === 'funding' && id) {
