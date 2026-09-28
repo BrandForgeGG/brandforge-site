@@ -32,7 +32,7 @@ const KIND_BY_EVENT = {
   proposal_accepted: 'proposals',
   proposal_declined: 'proposals',
   proposal_countered: 'proposals',
-  match_made: 'proposals',
+  match_made: 'matches',
   contract_proposed: 'contracts',
   contract_signed: 'contracts',
   escrow_funded: 'contracts',
@@ -138,7 +138,7 @@ function buildOpsEmbed(event, details = {}) {
         title: `Matched: ${title}`,
         description: `${clip(details.specialistName, 80) || 'The specialist'} joined the chat — founder and specialist are now introduced.`,
         color: GREEN,
-        footer: footer('proposals'),
+        footer: footer('matches'),
       };
 
     case 'contract_proposed':
@@ -270,12 +270,17 @@ async function postOpsEvent(event, details = {}, opts = {}) {
 /**
  * Post an anonymized public line. Events without a public template (rejections,
  * counters, disputes, money) resolve to { sent: false, reason: 'not_public' }.
+ * Milestone shipments prefer the dedicated milestones channel when configured,
+ * everything else shares the live feed.
  */
 async function postPublicActivity(event, opts = {}) {
   const { env = process.env, fetchImpl = fetch } = opts;
   const text = buildPublicPost(event);
   if (!text) return { sent: false, reason: 'not_public' };
-  const webhookUrl = env.DISCORD_LIVE_URL;
+  const webhookUrl =
+    event === 'milestone_released' && env.DISCORD_MILESTONE_URL
+      ? env.DISCORD_MILESTONE_URL
+      : env.DISCORD_LIVE_URL;
   if (!webhookUrl) return { sent: false, reason: 'not_configured' };
   try {
     return await postJson(

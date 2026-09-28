@@ -122,6 +122,9 @@ test('ops webhook resolution prefers kind, then base, then skips', () => {
   // belong in the specialists' briefs feed.
   assert.equal(opsWebhookUrl('proposals', { DISCORD_WEBHOOK_URL: 'legacy' }), null);
   assert.equal(opsWebhookUrl('proposals', {}), null);
+  // Matches have their own channel per the spec (identities cross there).
+  assert.equal(opsWebhookUrl('matches', { DISCORD_OPS_MATCHES_URL: 'm', DISCORD_OPS_URL: 'base' }), 'm');
+  assert.equal(opsWebhookUrl('matches', { DISCORD_OPS_URL: 'base' }), 'base');
 });
 
 // ---------- sending ----------
@@ -198,6 +201,22 @@ test('postPublicActivity posts content-only lines and refuses private events', a
     reason: 'not_configured',
   });
   assert.equal(called, false);
+});
+
+test('milestone shipments prefer the milestones channel, else the live feed', async () => {
+  const captured = {};
+  await postPublicActivity('milestone_released', {
+    env: { DISCORD_MILESTONE_URL: 'https://discord/mile', DISCORD_LIVE_URL: 'https://discord/live' },
+    fetchImpl: okFetch(captured),
+  });
+  assert.equal(captured.url, 'https://discord/mile');
+
+  const captured2 = {};
+  await postPublicActivity('milestone_released', {
+    env: { DISCORD_LIVE_URL: 'https://discord/live' },
+    fetchImpl: okFetch(captured2),
+  });
+  assert.equal(captured2.url, 'https://discord/live');
 });
 
 test('postDevLog stays quiet without a dev-log webhook', async () => {
