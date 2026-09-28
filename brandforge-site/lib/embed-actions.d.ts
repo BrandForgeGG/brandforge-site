@@ -2,6 +2,7 @@
 
 export type EmbedActionName =
   | 'accept'
+  | 'decline'
   | 'details'
   | 'submit_funding'
   | 'accept_contract'

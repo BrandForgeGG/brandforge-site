@@ -8,6 +8,7 @@ import { RichContent } from "@/components/rich-content";
 
 export type ChatEmbedAction =
   | "accept"
+  | "decline"
   | "details"
   | "submit_funding"
   | "accept_contract"

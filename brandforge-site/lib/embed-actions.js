@@ -71,7 +71,11 @@ function embedActions({ embed, canDecide, isStaff = false, contract = null } = {
   }
 
   if (embed.type === 'proposal') {
-    return [{ action: 'accept', label: 'Accept proposal' }, DETAILS];
+    return [
+      { action: 'accept', label: 'Accept proposal' },
+      { action: 'decline', label: 'Decline' },
+      DETAILS,
+    ];
   }
 
   if (embed.type === 'funding') {

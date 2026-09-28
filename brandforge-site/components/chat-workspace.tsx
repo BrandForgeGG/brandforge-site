@@ -2012,6 +2012,7 @@ return (
                   return;
                 }
                 if (action === "accept") void handleProposalAction("accept");
+                if (action === "decline") void handleProposalAction("decline");
                 if (action === "accept_contract" && embed.type === "agreement") {
                   void handleContractAction("accept_contract", embed.agreementId);
                   return;

@@ -8,9 +8,9 @@ const actions = (embed, canDecide) => embedActions({ embed, canDecide }).map((a)
 const proposalPending = { type: 'proposal', proposalId: 'p1', status: 'pending' };
 const fundingWaiting = { type: 'funding', agreementId: 'a1', status: 'pending_funding' };
 
-test('proposal card: the owner gets accept plus details', () => {
-  assert.deepEqual(actions(proposalPending, true), ['accept', 'details']);
-  assert.deepEqual(labels(proposalPending, true), ['Accept proposal', 'View details']);
+test('proposal card: the owner gets accept and decline plus details', () => {
+  assert.deepEqual(actions(proposalPending, true), ['accept', 'decline', 'details']);
+  assert.deepEqual(labels(proposalPending, true), ['Accept proposal', 'Decline', 'View details']);
 });
 
 test('proposal card: a non-owner sees read-only context, never a dead control', () => {
