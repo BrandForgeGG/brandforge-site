@@ -184,6 +184,18 @@ BrandForge/
   counter round (needs 0017) stays out; merged back into `main` (auto-merged clean,
   223/223). The founder's live "zzz" test card was backfilled from its proposal row so the
   new design shows immediately.
+- **Specialist credited + card decline + two-declines-out (2026-09-28, deployed `4a2d1e3`→prod
+  `dpl_BPKDcU63R3pHQL4HLGxF5EV9UsaX`)**: founder feedback on the live card — (1) it spoke as
+  "BrandForge sent a proposal" while Mxstermind sent it: the send line now names the author
+  (`getProfileDisplayName`, service-role read, "The team" fallback); (2) the card offered no
+  Decline: owner pending cards now show Accept + Decline + details (wired through the embed
+  dispatch); (3) new rule — **two founder declines on one brief and that author is out**:
+  `countDeclinedProposals` (service-role exact count, no schema change) gates POST with 403
+  past two declines and names the out in the second decline's chat line; the brief itself
+  stays open for other specialists. Verified live with probe users: post→decline→post→decline
+  (out named in chat)→post→403. Hotfix branched off prod (counter round still needs 0017);
+  merged back into `main` (route PATCH conflict resolved keeping both counter lines and the
+  out-note, 223/223).
 - **Empty-sidebar regression fixed (2026-09-28, deployed `f7691b2`)**: 0014/0015 revoked
   `EXECUTE` from `authenticated`, but routes call those RPCs through the **user-session**
   client (`db()`) → `42501 permission denied` → recents rendered `[]` (AI draft saves hit the

@@ -676,6 +676,54 @@ export async function hasAcceptedProposalFrom(conversationId: string, userId: st
   return Boolean(data);
 }
 
+// Display name for system lines that name a human ("Mxstermind sent a proposal").
+// Service-role read so it works in any route regardless of caller RLS visibility.
+export async function getProfileDisplayName(userId: string | null | undefined): Promise<string> {
+  if (!userId) return 'The team';
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return 'The team';
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('display_name, full_name, username, email')
+    .eq('id', userId)
+    .maybeSingle();
+
+  return (
+    (profile?.display_name && String(profile.display_name)) ||
+    (profile?.full_name && String(profile.full_name)) ||
+    (profile?.username && String(profile.username)) ||
+    (profile?.email && String(profile.email).split('@')[0]) ||
+    'The team'
+  );
+}
+
+// Two-declines-out rule: how many of this author's proposals on this conversation the
+// founder has declined. Counted service-side so the POST gate and the PATCH message
+// always agree, with no new column to migrate.
+export async function countDeclinedProposals(
+  conversationId: string,
+  authorId: string | null | undefined
+): Promise<number> {
+  if (!conversationId || !authorId) return 0;
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return 0;
+
+  const { count, error } = await supabase
+    .from('proposals')
+    .select('id', { count: 'exact', head: true })
+    .eq('conversation_id', conversationId)
+    .eq('created_by', authorId)
+    .eq('status', 'declined');
+
+  if (error) {
+    console.error('Error counting declined proposals:', error.message);
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
 // The accept IS the invite: add the proposal's author (always staff, gated in
 // POST /api/proposals) to the conversation as an operator with a join line the
 // founder can see. Returns null when there is nothing to add.

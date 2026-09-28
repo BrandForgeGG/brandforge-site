@@ -12,6 +12,8 @@ import {
   updateConversationStatus,
   inviteProposalAuthor,
   getTelegramChatIdForUser,
+  getProfileDisplayName,
+  countDeclinedProposals,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { canSetProposalStatus } from '@/lib/money-authz.js';
@@ -51,6 +53,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Two-declines-out: the founder declined this author twice on this brief, so the
+    // author is out — another specialist may still propose.
+    const priorDeclines = await countDeclinedProposals(conversationId, user.id);
+    if (priorDeclines >= 2) {
+      return NextResponse.json(
+        { error: 'The founder declined two of your proposals on this brief — you are out. Another specialist may still propose.' },
+        { status: 403 }
+      );
+    }
+
+    const authorName = await getProfileDisplayName(user.id);
+
     const proposal = await createProposal({
       conversation_id: conversationId,
       title,
@@ -72,7 +86,7 @@ export async function POST(request: NextRequest) {
       conversation_id: conversationId,
       sender_type: 'ai',
       sender_name: 'BrandForge',
-      content: `BrandForge sent a proposal: ${title}. Accept it here in the chat, or open the project panel to read the full scope.`,
+      content: `${authorName} sent a proposal: ${title}. Accept it here in the chat, or open the project panel to read the full scope.`,
       content_type: 'system',
       // The card carries its own priced-offer snapshot so it renders the price,
       // timeline and scope without another fetch — and keeps showing them forever.
@@ -228,6 +242,17 @@ export async function PATCH(request: NextRequest) {
     const counter = terms.counter;
     const currency = existing.currency ?? 'EUR';
 
+    // Two-declines-out, counted after the update so the just-written decline is
+    // included. The brief itself stays open: another specialist may still propose.
+    let outNote = '';
+    if (status === 'declined' && existing.created_by && proposal.conversation_id) {
+      const declines = await countDeclinedProposals(proposal.conversation_id, existing.created_by);
+      if (declines >= 2) {
+        const outName = await getProfileDisplayName(existing.created_by);
+        outNote = ` That is two declines. ${outName} is out of this brief.`;
+      }
+    }
+
     // The decision lives in the same chat as the proposal. Counters never move the
     // conversation status: the deal is still being negotiated.
     const statusLine = isCounter
@@ -239,9 +264,7 @@ export async function PATCH(request: NextRequest) {
         : status === 'changes_requested'
           ? 'The founder requested changes to the proposal. BrandForge will revise it here.'
           : status === 'declined'
-            ? byFounder
-              ? 'The founder declined the proposal.'
-              : 'The specialist declined the proposal.'
+            ? `${byFounder ? 'The founder declined the proposal.' : 'The specialist declined the proposal.'}${outNote}`
             : null;
 
     if (statusLine && proposal.conversation_id) {
