@@ -58,7 +58,7 @@ Every feature gets checked against this map before it is built.
   **derived server-side from the accepted proposal** (H3), the payment schedule is reconciled so
   `sum(payments) = total` exactly, and the "awaiting funding" system line lands in chat.
 - **Founder sees:** agreement card + payment schedule; the escrow instructions.
-- **Contract card (built 2026-09-28, needs migration 0013):** the agreement card in the
+- **Contract card (built 2026-09-28, migration 0013 applied):** the agreement card in the
   transcript is the **signature surface** — both sides read the exact terms, may edit them
   inline (a revision clears both signatures), and press *Accept contract*. Each accept is
   timestamped on the agreement row (`founder_accepted_at` / `team_accepted_at`); when both

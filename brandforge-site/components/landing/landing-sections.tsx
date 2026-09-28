@@ -8,8 +8,12 @@ const STEPS = [
     body: 'BrandForge asks the sharp questions and turns your answers into a structured project: requirements, milestones, estimate.',
   },
   {
-    title: 'Get a proposal, fund, and approve',
-    body: 'A specialist joins with fixed scope, price, and timeline. You fund in crypto to the BrandForge escrow wallet, verified on-chain, and milestone payments release only after you approve the delivered work.',
+    title: 'Sign the contract in chat',
+    body: 'A specialist joins with fixed scope, price, and timeline. You edit the terms side by side, and both sides accept with one tap.',
+  },
+  {
+    title: 'Fund escrow, approve the work',
+    body: 'You send the total to the BrandForge escrow wallet and paste the transaction hash, which we verify on-chain. Payments release only after you approve the delivered work.',
   },
 ];
 

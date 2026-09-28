@@ -24,7 +24,7 @@ export type ChatEmbed =
       status?: string;
     };
 
-/** The contract row as the card sees it — signature columns optional until migration 0013. */
+/** The contract row as the card sees it, including the 0013 signature columns. */
 export type ContractSummary = {
   id: string;
   terms: string;

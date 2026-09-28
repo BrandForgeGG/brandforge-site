@@ -168,8 +168,8 @@ Weighted, deterministic (`lib/discovery.js`): project name 10, problem statement
   ACCEPTED/ACTIVE/COMPLETED). Every transition also posts into the chat. Staff can assign any task
   to someone in the chat (`action=assign`, assignee must be a participant) and set or clear a due
   date (`action=schedule`, `YYYY-MM-DD`, stored as midnight UTC); both post a system line into the
-  chat. Needs migration `0008_task_due_dates_and_assignees.sql` for `tasks.due_date`/`assignee_id`
-  (**not yet applied to production**). File attachments are now available in chat: private, conversation-scoped uploads up to 10 MB with image/PDF/text/JSON/CSV/ZIP support; downloads require conversation access.
+  chat. The `tasks.due_date`/`tasks.assignee_id` columns come from migration 0008 (applied).
+  File attachments are now available in chat: private, conversation-scoped uploads up to 10 MB with image/PDF/text/JSON/CSV/ZIP support; downloads require conversation access.
 - Funding is admin-verified crypto escrow, not a payment provider: the founder sends the
   agreement total in crypto to the BrandForge deposit wallet and pastes the transaction hash in
   the project panel (`POST /api/payments`); staff verify the transfer on-chain
@@ -268,7 +268,7 @@ Closed testing runs two accounts:
    from `profiles.role` (`admin` / `operator`) instead of an email allowlist.
 7. `supabase/migrations/0007_admin_crypto_escrow.sql` — funding evidence columns on `payments`
    (`tx_hash`, `network`, `submitted_at`) and read-only RLS on proposals, agreements and
-   payments. **Not yet applied to production** — run it together with the escrow deploy.
+   payments. **Applied to production** (verified live: `payments.tx_hash` queries).
 8. `supabase/migrations/0008_task_due_dates_and_assignees.sql` — idempotent `tasks.due_date`
    (`timestamptz`) + `tasks.assignee_id` for the task-board due dates and assignee picker.
 9. `supabase/migrations/0009_identity_display_ids_and_usernames.sql` — per-person display IDs,
@@ -277,4 +277,24 @@ Closed testing runs two accounts:
     to Supabase Realtime for live message delivery, presence, typing signals, and the staff-joined
     marker. **Applied to production on 2026-09-25.** Polling remains the fallback when Realtime is
     unavailable.
+11. `supabase/migrations/0011_rich_messages.sql` — editable human messages (`messages.edited_at`,
+    tombstone `messages.deleted_at`) plus the `message_reactions` table with member-scoped
+    read/add/own-remove policies. **Applied to production** (verified live: columns + table query).
+12. `supabase/migrations/0012_funnel_events.sql` — privacy-preserving funnel events: no user id or
+    email column, random first-party `visitor_id`, allowlisted primitive properties, API-only
+    writes through the service role. **Applied to production** (verified live: `funnel_events`
+    queries).
+13. `supabase/migrations/0013_contract_signature.sql` — two-sided contract signatures on
+    `agreements` (`founder_accepted_at`, `team_accepted_at`, `terms_updated_at`,
+    `terms_updated_by`) backing the in-chat signature surface. **Applied to production 2026-09-28.**
+14. `supabase/migrations/0014_replace_draft_atomic.sql` — transactional `replace_draft_milestones`
+    and `replace_draft_tasks` RPCs behind a conversation-row lock: one rewrite per AI pass,
+    all-or-nothing, claimed or advanced tasks never touched. **Applied to production 2026-09-28.**
+15. `supabase/migrations/0015_conversation_summaries.sql` — `get_conversation_summaries(p_user_id)`
+    RPC replacing the sidebar's four queries with one (counts, previews, staff-first-seen).
+    **Applied to production 2026-09-28.**
+16. `supabase/migrations/0016_grant_rpc_execute.sql` — restores `EXECUTE` on the 0014/0015 RPCs for
+    `authenticated`, the user-session client that actually calls them (0014/0015 had revoked it,
+    which emptied the sidebar until the code bridge landed). **Not yet applied — run it.** Until
+    then the app bridges denied calls through the service role and logs a warning naming this file.
 

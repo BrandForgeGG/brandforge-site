@@ -38,7 +38,7 @@ BrandForge/
   out/, *.html                   <- older static marketing pages (reference only)
 ```
 
-## Current state (2026-09-22)
+## Current state (2026-09-28)
 
 - Live: https://brandforge.gg (Vercel, `brandforge-site` production).
 - Chat-first product: landing -> chat -> AI-structured project -> human proposal -> escrow.
@@ -131,7 +131,9 @@ BrandForge/
 - Known accounts:
   - `brandforge.gg@gmail.com` — admin/founder (describes projects, approves delivered work).
   - `mxstermind.com@gmail.com` — operator (staff inbox, joins founder chats, posts, moves tasks).
-- Required migrations: `0001_chat_first_rls.sql` … `0006_open_auth_roles.sql` — **all applied**
-  in prod (0006 run 2026-09-22 via Supabase Management API; verified table, functions, policies,
-  role seeds). Supabase PAT for future SQL runs is not stored here — ask the operator or use the
-  SQL editor.
+- Required migrations: `0001_chat_first_rls.sql` … `0015_conversation_summaries.sql` — **all
+  applied** in prod (0006 run 2026-09-22 via Supabase Management API; 0007–0012 verified live by
+  column/table probe 2026-09-28; 0013–0015 run 2026-09-28 via the SQL editor). 
+  `0016_grant_rpc_execute.sql` is **written but pending** — until it runs, `rpcForCaller` bridges
+  denied RPC calls through the service role (see the regression note above). Supabase PAT for
+  future SQL runs is not stored here — ask the operator or use the SQL editor.
