@@ -156,6 +156,24 @@ BrandForge/
   Telegram+email (8th stage moment). Full pipeline e2e green on prod incl. the counter round
   trip (four 409 refusals incl. owner-counter_back-from-pending, promote-on-accept total 900,
   funnel prices the promoted total); auth probe green.
+- **Ops webhook layer live, dormant until wired (2026-09-29, deployed `main`→prod
+  `dpl_CLbMAZ7hznuXsYQTuUpReHup7EWD`)**: implements the negotiation/webhook spec as code.
+  `lib/ops-events.js` (+14 tests → 239/239): staff embeds for brief/proposal/counter/match/
+  contract/escrow/milestone moments routed per kind (`DISCORD_OPS_<KIND>_URL` →
+  `DISCORD_OPS_URL`, deliberately NO fallback into the legacy discovery channel), plus
+  anonymized public posts for exactly four growth-safe events (brief posted, match made,
+  funded, milestone shipped — rejections/counters/amounts never leave staff channels).
+  Wired at every site: brief transition, proposal send/answer/counters, invite-as-introduction,
+  agreement create/sign, funding verify/reject/release — all best-effort, never block routes.
+  `app/api/webhooks/github` (HMAC-verified, 404 without `GITHUB_WEBHOOK_SECRET`): stable
+  releases + `public-changelog`-labeled merges → `#dev-log`. Spec notes: `counter_round`
+  IS the negotiation_round (0/1/2, matrix-enforced, no new column); decline reopens the
+  brief (closure is per-specialist via two-declines-out, not per-brief); no matching engine
+  (broadcast model, no brief.matched events); public "matched and funded" fires at escrow
+  verification, not signing; no dispute model yet (only funding-rejected routes to disputes);
+  weekly digests need an aggregation cron (phase 2). E2E ALL PASS (27/27) + auth probe green
+  on the deploy. Founder setup still open: create the Discord channels/webhooks + GitHub
+  webhook (checklist in the 2026-09-29 report).
 - **Proposal submit silently dead — nested form fixed (2026-09-28, deployed `0ab3567`→prod
   `dpl_BJ5mtXHnUspiuAkkXNhvbLWEofZH`)**: the "Submit proposal goes to bare /chat, nothing
   happens" report. The Send-proposal `<form>` rendered **inside** the composer `<form>`
