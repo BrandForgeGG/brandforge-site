@@ -100,17 +100,20 @@ Every feature gets checked against this map before it is built.
    the agreement card in the chat now shows the contract text, both signature badges, inline
    *Edit terms* (clears both signatures) and per-side *Accept contract*, with a server-side
    409 before funding, a `contract_signed` funnel event, and pings to the waiting side.
-   Requires `supabase/migrations/0013_contract_signature.sql` — until it is applied the card
-   stays read-only by design.
+   `supabase/migrations/0013_contract_signature.sql` **applied 2026-09-28** — signing is live
+   in production.
 2. ~~**Brief lock UX**~~ — **built** (2026-09-28): soft lock. The review card shows brief
    completeness + a waiting bar sits above the composer ("Brief with the team — waiting for
    review"); the handoff fires once (server 409 on re-send, client notice), chat stays open
    so context keeps flowing.
 3. **Beta banner** — **built** (2026-09-28): "Open beta · Real specialists are online" strip
    on landing, chat, and every app page.
-4. **Notification coverage** — Telegram/Discord/email at stage transitions (invite email live;
-   Telegram link works via paste-code; contract-signed and contract-accepted pings live;
-   proposal/funding pings live; **email stage templates pending**).
+4. ~~**Notification coverage**~~ — **built** (2026-09-28): `notifyFounder` reaches the founder
+   on both channels for every stage that needs them — proposal ready, contract accepted by
+   team, contract signed, funding verified/rejected, work delivered, payment released —
+   linked Telegram *and* email. Emails send from `hello@brandforge.gg` (Resend domain
+   verified; sender test `01a0e786`); templates in `lib/stage-emails.js`, delivery in
+   `lib/stage-notify.ts`. Invite email + paste-code Telegram linking were already live.
 5. **Developer discovery** — when a project reaches `READY_FOR_REVIEW`, notify specialists so
    proposals happen fast (stage 2 → 3 latency).
 6. ~~**Post-login resume**~~ — **built** (2026-09-28): the hero's typed idea survives the Google
