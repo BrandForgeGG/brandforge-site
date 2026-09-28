@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { buildProjectPulse, describeAgreementStatus, describeNextDeliveryAction, describePaymentStatus, describeProposalStatus, isTaskOverdue, summarizeTaskProgress } from '@/lib/task-board';
+import { COMMUNITY_LINKS } from '@/lib/community';
 import { avatarTone, formatRole, initialsFor } from '@/lib/identity-display';
 import type { ClientProjectState } from '@/lib/conversation-state';
 import { DISCOVERY_THRESHOLD } from '@/lib/discovery';
@@ -106,11 +107,10 @@ export function ProjectContextPanel({
   files,
   onClose,
   onRequestReview,
-  onProposalAction,
   onSubmitPayment,
   onPaymentAction,
    onTaskAction,
- }: {
+  }: {
   state: ClientProjectState | null;
   proposal: ProposalSummary | null;
   agreement: AgreementSummary | null;
@@ -122,10 +122,6 @@ export function ProjectContextPanel({
   files: { name: string; size: number; contentType: string; path: string }[];
   onClose: () => void;
   onRequestReview: () => void;
-  onProposalAction: (
-    action: 'accept' | 'decline' | 'counter',
-    terms?: { totalAmount: number; weeksMin: number; weeksMax: number; note?: string | null },
-  ) => void;
   onSubmitPayment: (txHash: string) => void;
   onPaymentAction: (payload: {
     action: 'verify' | 'reject' | 'release';
@@ -143,19 +139,6 @@ export function ProjectContextPanel({
 
   const [txInput, setTxInput] = useState('');
   const [rejectNote, setRejectNote] = useState('');
-  // Counter offer form (founder side): opens inside the proposal card while the offer
-  // is still on the table for them.
-  const [countering, setCountering] = useState(false);
-  const [counterAmount, setCounterAmount] = useState('');
-  const [counterWeeks, setCounterWeeks] = useState('');
-  const [counterNote, setCounterNote] = useState('');
-  const counterAmountValue = Math.floor(Number(counterAmount));
-  const counterWeeksValue = Math.floor(Number(counterWeeks));
-  const counterValid =
-    Number.isFinite(counterAmountValue) &&
-    counterAmountValue >= 1 &&
-    Number.isFinite(counterWeeksValue) &&
-    counterWeeksValue >= 1;
   // Task actions are independent: each row locks only itself, so assigning one task never
   // freezes the rest of the panel. The row unlocks when fresh state arrives after the action.
   const [taskBusyId, setTaskBusyId] = useState<string | null>(null);
@@ -207,6 +190,7 @@ export function ProjectContextPanel({
   };
 
   const projectPulse = buildProjectPulse({ state, proposal, agreement, tasks: state?.tasks ?? [] });
+  const taskProgress = state ? summarizeTaskProgress(state.tasks) : null;
   const submittedNetwork = payments.find((payment) => payment.network)?.network ?? null;
 
   // "What happens next?" - the next delivery task, else the first unmet discovery step,
@@ -244,7 +228,6 @@ export function ProjectContextPanel({
         <div className="bf-panel-section">
           <p className="bf-section-label">Project pulse</p>
           <div className="bf-panel-card bf-panel-card-emphasis">
-            <p className="text-xs text-[#ece7de]">Project pulse</p>
             <div className="grid gap-2">
               {projectPulse.map((item) => (
                 <div key={item.key} className="flex items-start justify-between gap-3 text-xs">
@@ -276,21 +259,23 @@ export function ProjectContextPanel({
         <div className="bf-panel-section">
           <p className="bf-section-label">Requirements</p>
           <div className="bf-panel-card">
-            <p className="text-sm text-[#ece7de]">
-              {state ? state.requirementsCount : 0}
-              <span className="text-[#9aa0a6]"> captured</span>
-            </p>
             {state && state.requirements.length > 0 ? (
-              <ul className="mt-2 space-y-1">
-                {state.requirements.slice(-5).map((requirement) => (
-                  <li key={requirement.id} className="flex items-start gap-2 text-xs">
-                    <span className="text-[#5aa578]" aria-hidden="true">✓</span>
-                    <span className="min-w-0 text-[#9aa0a6]">{requirement.title}</span>
-                  </li>
-                ))}
-              </ul>
+              <details>
+                <summary className="cursor-pointer text-sm text-[#ece7de]">
+                  {state.requirementsCount}
+                  <span className="text-[#9aa0a6]"> captured</span>
+                </summary>
+                <ul className="mt-2 space-y-1">
+                  {state.requirements.slice(-5).map((requirement) => (
+                    <li key={requirement.id} className="flex items-start gap-2 text-xs">
+                      <span className="text-[#5aa578]" aria-hidden="true">✓</span>
+                      <span className="min-w-0 text-[#9aa0a6]">{requirement.title}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
             ) : (
-              <p className="mt-1 text-xs text-[#9aa0a6]">Nothing captured yet.</p>
+              <p className="text-xs text-[#9aa0a6]">Nothing captured yet.</p>
             )}
           </div>
         </div>
@@ -436,26 +421,26 @@ export function ProjectContextPanel({
 
         <div className="bf-panel-section">
            <p className="bf-section-label">Tasks</p>
-          {state ? (() => {
-            const progress = summarizeTaskProgress(state.tasks);
-            // next action is rendered from the shared helper below
-            return (
-              <div className="mb-3 bf-panel-card bf-panel-card-emphasis">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-[#ece7de]">Delivery progress</span>
-                  <span className="text-[#5aa578]">{progress.done}/{progress.total} complete</span>
-                </div>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-                  <div className="h-full rounded-full bg-[#5aa578] transition-all" style={{ width: `${progress.percent}%` }} />
-                </div>
-                <p className="mt-1 text-[10px] text-[#9aa0a6]">{progress.inProgress} in progress · {progress.review} awaiting review · {progress.queued} queued{progress.overdue ? ` · ${progress.overdue} overdue` : ''}</p>
-                {describeNextDeliveryAction(state.tasks)}
+          {taskProgress && state ? (
+            <div className="mb-3 bf-panel-card bf-panel-card-emphasis">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[#ece7de]">Delivery progress</span>
+                <span className="text-[#5aa578]">{taskProgress.done}/{taskProgress.total} complete</span>
               </div>
-            );
-          })() : null}
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                <div className="h-full rounded-full bg-[#5aa578] transition-all" style={{ width: `${taskProgress.percent}%` }} />
+              </div>
+              <p className="mt-1 text-[10px] text-[#9aa0a6]">{taskProgress.inProgress} in progress · {taskProgress.review} awaiting review · {taskProgress.queued} queued{taskProgress.overdue ? ` · ${taskProgress.overdue} overdue` : ''}</p>
+              {describeNextDeliveryAction(state.tasks)}
+            </div>
+          ) : null}
           <div className="bf-panel-card">
             {state && state.tasks.length > 0 ? (
-              <ul className="space-y-2">
+              <details>
+                <summary className="cursor-pointer text-xs text-[#ece7de]">
+                  {state.tasks.length} tasks · {taskProgress?.done ?? 0}/{taskProgress?.total ?? 0} complete
+                </summary>
+                <ul className="mt-2 space-y-2">
                 {state.tasks.map((task) => {
                   const statusLabel =
                     task.status === 'DONE'
@@ -537,7 +522,8 @@ export function ProjectContextPanel({
                     </li>
                   );
                 })}
-              </ul>
+                </ul>
+              </details>
             ) : (
               <p className="text-sm text-[#9aa0a6]">No tasks yet.</p>
             )}
@@ -567,151 +553,34 @@ export function ProjectContextPanel({
           <div className="mb-6 rounded-xl border border-[#e8571e]/30 bg-[#1c2024] p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-[#b8763b]">BrandForge proposal</p>
             <h3 className="mt-1 font-serif text-base text-[#ece7de]">{proposal.title}</h3>
-            {proposal.scope ? (
-              <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-[#9aa0a6]">{proposal.scope}</p>
-            ) : null}
-            <p className="mt-3 text-lg text-[#ece7de]">
+            <p className="mt-2 text-lg text-[#ece7de]">
               {money(proposal.total_amount, proposal.currency)}
+              <span className="ml-2 align-middle text-xs font-normal text-[#9aa0a6]">
+                {proposal.estimated_weeks_min ?? '?'}–{proposal.estimated_weeks_max ?? '?'} weeks
+              </span>
             </p>
             <p className="mt-1 text-xs text-[#b8763b]">{describeProposalStatus(proposal.status)}</p>
-            <p className="mt-1 text-xs text-[#9aa0a6]">
-              {proposal.estimated_weeks_min ?? '?'}–{proposal.estimated_weeks_max ?? '?'} weeks delivery
-            </p>
             {typeof proposal.counter_round === 'number' && proposal.counter_round >= 1 ? (
-              <div className="mt-2 rounded-lg border border-[#e8571e]/25 bg-[#14171a] px-3 py-2">
-                <p className="text-[11px] text-[#f6d6c3]">
-                  {proposal.counter_round === 1 ? 'Your counter' : 'Final offer from the specialist'}
-                  {' · '}
-                  {money(proposal.counter_total_amount, proposal.currency)}
-                  {' · '}
-                  {proposal.counter_weeks_min ?? '?'}–{proposal.counter_weeks_max ?? '?'} weeks
-                </p>
-                {proposal.counter_note ? (
-                  <p className="mt-1 text-[11px] text-[#9aa0a6]">{proposal.counter_note}</p>
-                ) : null}
-              </div>
+              <p className="mt-1 text-[11px] text-[#f6d6c3]">
+                {proposal.counter_round === 1 ? 'Your counter' : 'Final offer from the specialist'}
+                {' · '}
+                {money(proposal.counter_total_amount, proposal.currency)}
+                {' · '}
+                {proposal.counter_weeks_min ?? '?'}–{proposal.counter_weeks_max ?? '?'} weeks
+              </p>
             ) : null}
-            {proposal.status === 'pending' || proposal.status === 'counter_back' ? (
-              <div className="mt-3 space-y-2">
-                <button
-                type="button"
-                onClick={() => onProposalAction('accept')}
-                disabled={busyAction !== null}
-                className="w-full rounded-lg bg-[#5aa578] px-3 py-2 text-xs font-semibold text-[#14171a] transition hover:opacity-95 disabled:opacity-60"
-              >
-                {proposal.status === 'counter_back'
-                  ? 'Accept counter offer and continue to funding'
-                  : 'Accept proposal and continue to funding'}
-              </button>
-              {proposal.status === 'pending' ? (
-                <button
-                  type="button"
-                  onClick={() => setCountering(true)}
-                  disabled={busyAction !== null}
-                  className="w-full rounded-lg border border-[#e8571e]/40 px-3 py-2 text-xs font-semibold text-[#f6d6c3] transition hover:border-[#e8571e] disabled:opacity-60"
-                >
-                  Counter offer
-                </button>
-              ) : null}
+            {proposal.status === 'pending' || proposal.status === 'countered' || proposal.status === 'counter_back' ? (
               <button
                 type="button"
-                onClick={() => onProposalAction('decline')}
-                disabled={busyAction !== null}
-                className="w-full rounded-lg border border-white/10 px-3 py-2 text-xs text-[#9aa0a6] transition hover:border-red-500/40 hover:text-red-200 disabled:opacity-60"
+                onClick={onClose}
+                className="mt-3 w-full rounded-lg border border-[#e8571e]/40 px-3 py-2 text-xs font-semibold text-[#f6d6c3] transition hover:border-[#e8571e]"
               >
-                Decline
+                {proposal.status === 'counter_back'
+                  ? 'Answer the counter in chat'
+                  : proposal.status === 'countered'
+                    ? 'View in chat'
+                    : 'Review and answer in chat'}
               </button>
-            </div>
-            ) : null}
-            {proposal.status === 'countered' ? (
-              <div className="mt-3 space-y-2">
-                <p className="text-[11px] leading-relaxed text-[#9aa0a6]">
-                  Waiting for the specialist to accept or counter back. Decline only if the
-                  talks are stuck.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => onProposalAction('decline')}
-                  disabled={busyAction !== null}
-                  className="w-full rounded-lg border border-white/10 px-3 py-2 text-xs text-[#9aa0a6] transition hover:border-red-500/40 hover:text-red-200 disabled:opacity-60"
-                >
-                  Decline
-                </button>
-              </div>
-            ) : null}
-            {countering ? (
-              <div className="mt-3 space-y-2 rounded-xl border border-[#e8571e]/30 bg-[#14171a] p-3">
-                <div className="flex gap-2">
-                  <label className="sr-only" htmlFor={`counter-amount-${proposal.id}`}>
-                    Total amount in EUR
-                  </label>
-                  <input
-                    id={`counter-amount-${proposal.id}`}
-                    value={counterAmount}
-                    onChange={(event) => setCounterAmount(event.target.value)}
-                    inputMode="numeric"
-                    placeholder="Total (EUR)"
-                    disabled={busyAction !== null}
-                    className="w-28 rounded-lg border border-white/10 bg-[#1c2024] px-3 py-1.5 text-xs text-[#ece7de] placeholder:text-[#8f959b] focus:border-[#e8571e] focus:outline-none disabled:opacity-60"
-                  />
-                  <label className="sr-only" htmlFor={`counter-weeks-${proposal.id}`}>
-                    Timeline in weeks
-                  </label>
-                  <input
-                    id={`counter-weeks-${proposal.id}`}
-                    value={counterWeeks}
-                    onChange={(event) => setCounterWeeks(event.target.value)}
-                    inputMode="numeric"
-                    placeholder="Weeks"
-                    disabled={busyAction !== null}
-                    className="w-24 rounded-lg border border-white/10 bg-[#1c2024] px-3 py-1.5 text-xs text-[#ece7de] placeholder:text-[#8f959b] focus:border-[#e8571e] focus:outline-none disabled:opacity-60"
-                  />
-                </div>
-                <label className="sr-only" htmlFor={`counter-note-${proposal.id}`}>
-                  Note
-                </label>
-                <input
-                  id={`counter-note-${proposal.id}`}
-                  value={counterNote}
-                  onChange={(event) => setCounterNote(event.target.value)}
-                  placeholder="Note (optional)"
-                  maxLength={1000}
-                  disabled={busyAction !== null}
-                  className="w-full rounded-lg border border-white/10 bg-[#1c2024] px-3 py-1.5 text-xs text-[#ece7de] placeholder:text-[#8f959b] focus:border-[#e8571e] focus:outline-none disabled:opacity-60"
-                />
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    disabled={busyAction !== null || !counterValid}
-                    onClick={() => {
-                      onProposalAction('counter', {
-                        totalAmount: counterAmountValue,
-                        weeksMin: counterWeeksValue,
-                        weeksMax: counterWeeksValue,
-                        note: counterNote.trim() || null,
-                      });
-                      setCountering(false);
-                      setCounterAmount('');
-                      setCounterWeeks('');
-                      setCounterNote('');
-                    }}
-                    className="rounded-lg bg-[#e8571e] px-3 py-1.5 text-xs font-semibold text-[#14171a] disabled:opacity-60"
-                  >
-                    Send counter offer
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCountering(false)}
-                    className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[#ece7de]"
-                  >
-                    Cancel
-                  </button>
-                </div>
-                <p className="text-[10px] leading-relaxed text-[#9aa0a6]">
-                  The specialist can accept this or counter back once. After that you make
-                  the final call.
-                </p>
-              </div>
             ) : null}
           </div>
         ) : null}
@@ -873,6 +742,27 @@ export function ProjectContextPanel({
             {busyAction === 'review' ? 'Sending…' : 'Send to BrandForge review'}
           </button>
         ) : null}
+
+        <div className="bf-panel-section">
+          <p className="bf-section-label">Talk to humans</p>
+          <div className="bf-panel-card">
+            <ul className="space-y-1.5">
+              {[COMMUNITY_LINKS.discord, COMMUNITY_LINKS.telegramGroup, COMMUNITY_LINKS.telegramChannel].map((link) => (
+                <li key={link.href}>
+                  <a
+                    href={link.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block text-xs text-[#ece7de] transition hover:text-[#e8571e]"
+                  >
+                    {link.label}
+                    <span className="block text-[10px] font-normal text-[#9aa0a6]">{link.description}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
           </div>
         </details>
       </div>

@@ -2509,9 +2509,6 @@ return (
           onRequestReview={() => {
             void handleRequestReview();
           }}
-          onProposalAction={(action, terms) => {
-            void handleProposalAction(action, terms);
-          }}
           onSubmitPayment={(txHash) => {
             void handleSubmitPayment(txHash);
           }}
