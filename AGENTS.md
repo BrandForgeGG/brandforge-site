@@ -106,6 +106,18 @@ BrandForge/
   `buildConversationSummaries` to the 0015 one-query RPC (presentation stays in
   JS). Migrations applied by the founder; validated on PGlite (30 checks) and in
   prod (RPC keys + authenticated route). 206/206 tests.
+- **Operator pipeline closed (2026-09-28, deployed `28a5ef1`→prod)**: briefs now reach the team
+  on **both** channels — Discord discovery embed + a personal Telegram DM to every linked
+  staff account (`brief_ready` in `lib/notify.js`, `notifyStaffBriefReady` in `project-db`,
+  fired from `updateConversationStatus`; founder excluded). Proposal answers ping the author's
+  linked Telegram too (`proposal_answered`). Accepting a proposal **is the invite**:
+  `inviteProposalAuthor` auto-adds the author with a visible join line, and `staff/join` +
+  `staff/post` now 403 operators until their own proposal is accepted (`canOperatorParticipate`;
+  admins unaffected). Note: the linked-account promise had zero operator events behind it before
+  this — that was the "operator gets no notifications" report. E2E probe: request-review →
+  proposal → pre-accept 403s → accept → auto-join → post-accept 200s, all green (209/209 tests).
+  `TELEGRAM_CHAT_ID`/`BOT_TOKEN` are set in Vercel (values masked to us; bot is admin in the
+  team group) — if team-group messages are also missing, that value needs a human eyeball.
 - **Empty-sidebar regression fixed (2026-09-28, deployed `f7691b2`)**: 0014/0015 revoked
   `EXECUTE` from `authenticated`, but routes call those RPCs through the **user-session**
   client (`db()`) → `42501 permission denied` → recents rendered `[]` (AI draft saves hit the
