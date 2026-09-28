@@ -106,6 +106,13 @@ BrandForge/
   `buildConversationSummaries` to the 0015 one-query RPC (presentation stays in
   JS). Migrations applied by the founder; validated on PGlite (30 checks) and in
   prod (RPC keys + authenticated route). 206/206 tests.
+- **Empty-sidebar regression fixed (2026-09-28, deployed `f7691b2`)**: 0014/0015 revoked
+  `EXECUTE` from `authenticated`, but routes call those RPCs through the **user-session**
+  client (`db()`) → `42501 permission denied` → recents rendered `[]` (AI draft saves hit the
+  same wall). `rpcForCaller` in `lib/project-db.ts` now bridges a 42501 through the service
+  role and warns. **Pending: founder must run `0016_grant_rpc_execute.sql`** (restores the
+  grant, RLS path resumes, bridge warns go quiet). Probe lesson: a fresh-user sidebar probe
+  can't see this bug — probe with a conversation the user owns.
 
 
 - **Open auth**: any Google account can sign in (login allowlist removed). Staff/admin access
