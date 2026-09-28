@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import type { User } from '@supabase/supabase-js';
 import { headers } from 'next/headers';
 import crypto from 'node:crypto';
-import { parseCookieHeader, sessionTokenFromSources } from './auth-cookies';
+import { parseCookieHeader, sessionTokenFromSources, isAuthCookieName } from './auth-cookies';
 
 // Server-side Supabase access for API routes.
 //
@@ -31,36 +31,25 @@ import { parseCookieHeader, sessionTokenFromSources } from './auth-cookies';
 
 export { createSupabaseServerClient };
 
-function pairsFromRequest(request?: NextRequest): ReturnType<typeof parseCookieHeader> {
-  const pairs: ReturnType<typeof parseCookieHeader> = [];
-  if (!request) return pairs;
+async function sessionTokenFromRequest(request?: NextRequest): Promise<string | null> {
+  // Each cookie source stays labelled so a null extraction can report what the
+  // function actually saw instead of failing silently (the live 401 storm made
+  // extraction-vs-refresh failures indistinguishable in the logs).
+  const groups: { label: string; pairs: ReturnType<typeof parseCookieHeader> }[] = [];
 
   try {
-    pairs.push(...request.cookies.getAll());
+    if (request) groups.push({ label: 'req', pairs: request.cookies.getAll() });
   } catch {
     // fall through to header sources
   }
 
-  const forwarded = request.headers.get('x-forwarded-cookie');
-  if (forwarded) pairs.push(...parseCookieHeader(forwarded));
+  const forwarded =
+    request?.headers.get('x-forwarded-cookie') ??
+    null;
+  if (forwarded) groups.push({ label: 'fwd', pairs: parseCookieHeader(forwarded) });
 
-  const raw = request.headers.get('cookie');
-  if (raw) pairs.push(...parseCookieHeader(raw));
-
-  return pairs;
-}
-
-function pairsFromHeaderStore(h: Headers): ReturnType<typeof parseCookieHeader> {
-  const pairs: ReturnType<typeof parseCookieHeader> = [];
-  const forwarded = h.get('x-forwarded-cookie');
-  if (forwarded) pairs.push(...parseCookieHeader(forwarded));
-  const raw = h.get('cookie');
-  if (raw) pairs.push(...parseCookieHeader(raw));
-  return pairs;
-}
-
-async function sessionTokenFromRequest(request?: NextRequest): Promise<string | null> {
-  const pairs = pairsFromRequest(request);
+  const raw = request?.headers.get('cookie');
+  if (raw) groups.push({ label: 'raw', pairs: parseCookieHeader(raw) });
 
   let headerStore: Headers | null = null;
   try {
@@ -68,26 +57,42 @@ async function sessionTokenFromRequest(request?: NextRequest): Promise<string | 
   } catch {
     headerStore = null;
   }
-  if (headerStore) pairs.push(...pairsFromHeaderStore(headerStore));
+  if (headerStore) {
+    const hfwd = headerStore.get('x-forwarded-cookie');
+    if (hfwd) groups.push({ label: 'hfwd', pairs: parseCookieHeader(hfwd) });
+    const hraw = headerStore.get('cookie');
+    if (hraw) groups.push({ label: 'hraw', pairs: parseCookieHeader(hraw) });
+  }
 
-  let storePairs: ReturnType<typeof parseCookieHeader> = [];
   try {
     const { cookies } = await import('next/headers');
-    storePairs = (await cookies()).getAll();
+    groups.push({ label: 'store', pairs: (await cookies()).getAll() });
   } catch {
     // no cookie store — fall through
   }
-  pairs.push(...storePairs);
 
-  // Middleware-rewritten cookies first: they carry any refresh this request's
-  // middleware pass already performed, while the raw Cookie header / cookies()
-  // store still hold the pre-refresh (possibly expired) token.
-  const forwarded =
-    request?.headers.get('x-forwarded-cookie') ??
-    headerStore?.get('x-forwarded-cookie') ??
-    null;
+  const forwardedEffective =
+    forwarded ?? headerStore?.get('x-forwarded-cookie') ?? null;
+  const allPairs = groups.flatMap((g) => g.pairs);
 
-  return sessionTokenFromSources(forwarded, pairs);
+  const token = sessionTokenFromSources(forwardedEffective, allPairs);
+
+  if (!token) {
+    const anyContent = groups.some((g) => g.pairs.length > 0);
+    if (anyContent || forwardedEffective) {
+      const report = groups
+        .map(
+          (g) =>
+            `${g.label}=${g.pairs.filter((p: { name: string }) => isAuthCookieName(p.name)).length}/${g.pairs.length}`
+        )
+        .join(' ');
+      console.warn(
+        `[auth] no token extracted: ${report} fwdLen=${forwardedEffective?.length ?? 0}`
+      );
+    }
+  }
+
+  return token;
 }
 
 // Verified-token cache: token hash -> user. Bounded; cleared wholesale past the cap
