@@ -75,6 +75,22 @@ function buildStageEmail(event, details = {}) {
       return { subject, text: `${paragraphs.join('\n\n')}\n\n${chatUrl || ''}`.trim(), html: card('Proposal', 'Your proposal is ready', paragraphs, open, chatUrl) };
     }
 
+    case 'counter_back_ready': {
+      const price = money(details.totalAmount, details.currency);
+      const weeks = line(details.weeks, 40);
+      const facts = [price, weeks].filter(Boolean).join(' · ');
+      const subject = title ? `Counter offer on ${title}` : 'A counter offer is waiting for you';
+      const paragraphs = [
+        title
+          ? `The specialist countered back on "${title}".`
+          : 'The specialist countered back on your project.',
+        facts
+          ? `${facts}. This is the final offer: accept it or decline in the chat and the deal closes.`
+          : 'This is the final offer: accept it or decline in the chat and the deal closes.',
+      ];
+      return { subject, text: `${paragraphs.join('\n\n')}\n\n${chatUrl || ''}`.trim(), html: card('Proposal', 'Counter offer received', paragraphs, open, chatUrl) };
+    }
+
     case 'contract_accepted':
       // side 'founder' means the founder already signed — nothing to nag about.
       if (details.side !== 'team') return null;

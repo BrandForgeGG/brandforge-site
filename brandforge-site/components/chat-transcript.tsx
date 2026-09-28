@@ -8,6 +8,9 @@ import { RichContent } from "@/components/rich-content";
 
 export type ChatEmbedAction =
   | "accept"
+  | "decline"
+  | "counter"
+  | "counter_back"
   | "details"
   | "submit_funding"
   | "accept_contract"
@@ -133,6 +136,19 @@ function SystemEmbedCard({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
+  // Counter round: the form opens in place on the proposal card, same as the contract
+  // editor, so the price and timeline are typed where the offer already lives.
+  const [countering, setCountering] = useState<null | "counter" | "counter_back">(null);
+  const [counterAmount, setCounterAmount] = useState("");
+  const [counterWeeks, setCounterWeeks] = useState("");
+  const [counterNote, setCounterNote] = useState("");
+  const counterAmountValue = Math.floor(Number(counterAmount));
+  const counterWeeksValue = Math.floor(Number(counterWeeks));
+  const counterValid =
+    Number.isFinite(counterAmountValue) &&
+    counterAmountValue >= 1 &&
+    Number.isFinite(counterWeeksValue) &&
+    counterWeeksValue >= 1;
 
   const embed = message.embed;
   if (!embed) return null;
@@ -281,6 +297,87 @@ function SystemEmbedCard({
           </div>
         ) : null}
 
+        {/* Counter round: price and timeline are edited on the card itself. */}
+        {embed.type === "proposal" && countering ? (
+          <div className="mt-3 rounded-xl border border-[#e8571e]/30 bg-[#14171a] p-3">
+            <p className="text-[11px] font-semibold text-[#f6d6c3]">
+              {countering === "counter" ? "Counter offer" : "Counter back"}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <label className="sr-only" htmlFor={`counter-amount-${message.id}`}>
+                Total amount in EUR
+              </label>
+              <input
+                id={`counter-amount-${message.id}`}
+                value={counterAmount}
+                onChange={(event) => setCounterAmount(event.target.value)}
+                inputMode="numeric"
+                placeholder="Total (EUR)"
+                disabled={embedBusy}
+                className="w-28 rounded-lg border border-white/10 bg-[#1c2024] px-3 py-1.5 text-xs text-[#ece7de] placeholder:text-[#8f959b] focus:border-[#e8571e] focus:outline-none disabled:opacity-60"
+              />
+              <label className="sr-only" htmlFor={`counter-weeks-${message.id}`}>
+                Timeline in weeks
+              </label>
+              <input
+                id={`counter-weeks-${message.id}`}
+                value={counterWeeks}
+                onChange={(event) => setCounterWeeks(event.target.value)}
+                inputMode="numeric"
+                placeholder="Weeks"
+                disabled={embedBusy}
+                className="w-24 rounded-lg border border-white/10 bg-[#1c2024] px-3 py-1.5 text-xs text-[#ece7de] placeholder:text-[#8f959b] focus:border-[#e8571e] focus:outline-none disabled:opacity-60"
+              />
+              <label className="sr-only" htmlFor={`counter-note-${message.id}`}>
+                Note
+              </label>
+              <input
+                id={`counter-note-${message.id}`}
+                value={counterNote}
+                onChange={(event) => setCounterNote(event.target.value)}
+                placeholder="Note (optional)"
+                maxLength={1000}
+                disabled={embedBusy}
+                className="min-w-0 flex-1 rounded-lg border border-white/10 bg-[#1c2024] px-3 py-1.5 text-xs text-[#ece7de] placeholder:text-[#8f959b] focus:border-[#e8571e] focus:outline-none disabled:opacity-60"
+              />
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={embedBusy || !counterValid}
+                onClick={() => {
+                  onEmbedAction?.(
+                    embed,
+                    countering,
+                    JSON.stringify({
+                      totalAmount: counterAmountValue,
+                      weeksMin: counterWeeksValue,
+                      weeksMax: counterWeeksValue,
+                      note: counterNote.trim() || null,
+                    }),
+                  );
+                  setCountering(null);
+                }}
+                className="rounded-lg bg-[#e8571e] px-3 py-1.5 text-xs font-semibold text-[#14171a] disabled:opacity-60"
+              >
+                {countering === "counter" ? "Send counter offer" : "Send counter back"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setCountering(null)}
+                className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[#ece7de]"
+              >
+                Cancel
+              </button>
+            </div>
+            <p className="mt-1.5 text-[10px] leading-relaxed text-[#9aa0a6]">
+              {countering === "counter"
+                ? "The specialist can accept this or counter back once. After that you make the final call."
+                : "This is your last offer. The founder can only accept or decline it."}
+            </p>
+          </div>
+        ) : null}
+
         <div className="mt-3 flex flex-wrap gap-2">
           {/* Which controls appear is decided by the tested embed-actions module. */}
           {actions.map((item) =>
@@ -301,6 +398,22 @@ function SystemEmbedCard({
                 onClick={() => {
                   setDraft(ownContract?.terms ?? "");
                   setEditing(true);
+                }}
+                className="rounded-lg border border-[#e8571e]/40 px-3 py-1.5 text-xs font-semibold text-[#f6d6c3] disabled:opacity-60"
+              >
+                {item.label}
+              </button>
+            ) : item.action === "counter" || item.action === "counter_back" ? (
+              <button
+                key={item.action}
+                type="button"
+                disabled={embedBusy}
+                onClick={() => {
+                  const chosen = item.action === "counter" ? "counter" : "counter_back";
+                  setCounterAmount("");
+                  setCounterWeeks("");
+                  setCounterNote("");
+                  setCountering(chosen);
                 }}
                 className="rounded-lg border border-[#e8571e]/40 px-3 py-1.5 text-xs font-semibold text-[#f6d6c3] disabled:opacity-60"
               >

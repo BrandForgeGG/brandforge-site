@@ -48,6 +48,40 @@ interface PersistedMessage {
   created_at: string | null;
 }
 
+// Counter terms travel from the proposal card as a JSON string (the same value slot the
+// contract editor uses for terms text). Anything malformed returns undefined and the route
+// answers with its own validation error instead of a broken request.
+function parseCounterTerms(value?: string): {
+  totalAmount: number;
+  weeksMin: number;
+  weeksMax: number;
+  note?: string | null;
+} | undefined {
+  try {
+    const parsed = JSON.parse(value ?? "") as {
+      totalAmount?: unknown;
+      weeksMin?: unknown;
+      weeksMax?: unknown;
+      note?: unknown;
+    };
+    if (
+      typeof parsed.totalAmount === "number" &&
+      typeof parsed.weeksMin === "number" &&
+      typeof parsed.weeksMax === "number"
+    ) {
+      return {
+        totalAmount: parsed.totalAmount,
+        weeksMin: parsed.weeksMin,
+        weeksMax: parsed.weeksMax,
+        note: typeof parsed.note === "string" ? parsed.note : null,
+      };
+    }
+  } catch {
+    // Fall through to undefined: the route reports the missing terms.
+  }
+  return undefined;
+}
+
 function toChatMessage(message: PersistedMessage): ChatMessage {
   const sender: ChatMessage["sender"] =
     message.sender_type === "user"
@@ -1356,7 +1390,15 @@ export function ChatWorkspace() {
   }, [loadIdentity]);
 
   const handleProposalAction = useCallback(
-    async (action: "accept" | "decline" | "request_changes") => {
+    async (
+      action: "accept" | "decline" | "request_changes" | "counter" | "counter_back",
+      terms?: {
+        totalAmount: number;
+        weeksMin: number;
+        weeksMax: number;
+        note?: string | null;
+      },
+    ) => {
       if (!conversationId || !proposal) return;
 
       setBusyAction(action);
@@ -1368,16 +1410,38 @@ export function ChatWorkspace() {
             ? "accepted"
             : action === "decline"
               ? "declined"
-              : "changes_requested";
+              : action === "counter"
+                ? "countered"
+                : action === "counter_back"
+                  ? "counter_back"
+                  : "changes_requested";
 
         const response = await fetchAuthed("/api/proposals", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ proposalId: proposal.id, status }),
+          body: JSON.stringify({
+            proposalId: proposal.id,
+            status,
+            ...(terms
+              ? {
+                  counterTotalAmount: terms.totalAmount,
+                  counterWeeksMin: terms.weeksMin,
+                  counterWeeksMax: terms.weeksMax,
+                  counterNote: terms.note ?? null,
+                }
+              : {}),
+          }),
         });
 
         if (!response.ok) {
-          throw new Error("The proposal could not be updated");
+          // The server explains refused transitions itself ("a countered proposal cannot
+          // become accepted") — show that instead of a generic failure line.
+          const data = await response.json().catch(() => ({}));
+          throw new Error(
+            typeof data.error === "string" && data.error
+              ? data.error
+              : "The proposal could not be updated",
+          );
         }
 
         if (action === "accept") {
@@ -2012,6 +2076,10 @@ return (
                   return;
                 }
                 if (action === "accept") void handleProposalAction("accept");
+                if (action === "decline") void handleProposalAction("decline");
+                if (action === "counter" || action === "counter_back") {
+                  void handleProposalAction(action, parseCounterTerms(value));
+                }
                 if (action === "accept_contract" && embed.type === "agreement") {
                   void handleContractAction("accept_contract", embed.agreementId);
                   return;
@@ -2429,8 +2497,8 @@ return (
           onRequestReview={() => {
             void handleRequestReview();
           }}
-          onProposalAction={(action) => {
-            void handleProposalAction(action);
+          onProposalAction={(action, terms) => {
+            void handleProposalAction(action, terms);
           }}
           onSubmitPayment={(txHash) => {
             void handleSubmitPayment(txHash);

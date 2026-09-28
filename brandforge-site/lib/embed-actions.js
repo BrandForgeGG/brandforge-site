@@ -66,12 +66,49 @@ function embedActions({ embed, canDecide, isStaff = false, contract = null } = {
     return agreementActions(canDecide, isStaff, contract);
   }
 
-  if (!isActionable(embed, canDecide)) {
+  // Proposal decision rights follow the counter round:
+  // - the owner answers while the offer is on the table for them: pending (accept, counter,
+  //   decline) and counter_back (the specialist's final offer: accept or decline only);
+  // - staff answer their own proposal being countered: accept the founder's counter, counter
+  //   back once (their last offer), or decline;
+  // - anything already decided (or waiting on the other side) is read-only context.
+  if (embed.type === 'proposal') {
+    if (canDecide && embed.status === 'pending') {
+      return [
+        { action: 'accept', label: 'Accept proposal' },
+        { action: 'counter', label: 'Counter offer' },
+        { action: 'decline', label: 'Decline' },
+        DETAILS,
+      ];
+    }
+    if (canDecide && embed.status === 'counter_back') {
+      return [
+        { action: 'accept', label: 'Accept counter offer' },
+        { action: 'decline', label: 'Decline' },
+        DETAILS,
+      ];
+    }
+    if (canDecide && embed.status === 'countered') {
+      // The founder's own counter is on the table: only the deadlock exit stays open.
+      return [{ action: 'decline', label: 'Decline' }, DETAILS];
+    }
+    if (isStaff && embed.status === 'countered') {
+      return [
+        { action: 'accept', label: 'Accept counter' },
+        { action: 'counter_back', label: 'Counter back' },
+        { action: 'decline', label: 'Decline' },
+        DETAILS,
+      ];
+    }
+    if (isStaff && embed.status === 'counter_back') {
+      // The specialist may withdraw their final offer, never accept it.
+      return [{ action: 'decline', label: 'Decline' }, DETAILS];
+    }
     return [DETAILS];
   }
 
-  if (embed.type === 'proposal') {
-    return [{ action: 'accept', label: 'Accept proposal' }, DETAILS];
+  if (!isActionable(embed, canDecide)) {
+    return [DETAILS];
   }
 
   if (embed.type === 'funding') {

@@ -129,6 +129,36 @@ BrandForge/
   bullet). `changes_requested`/`declined` → status back to `READY_FOR_REVIEW` re-shows the
   strip, so a revised proposal is the same path. 209/209 tests, tsc/eslint/build green;
   post-deploy auth probe + pipeline e2e green.
+- **Proposal status/card RLS fix (2026-09-28, deployed `f1d6436`+`81e5cea`→prod
+  `dpl_3eExef6oqu4prfp1wb8n4cHnhqbE`)**: the "founder still sees waiting banner" report had two
+  causes. (1) An operator's proposal POST succeeded (money tables are service-role) but both
+  follow-up writes died for a non-participant: `conversations` has **no UPDATE policy for
+  non-owners and UPDATE denials are silent 0-rows, not 42501**, and `messages` INSERT is
+  participants-only (42501). `updateConversationStatus` and `addMessage` now probe the row and
+  bridge to the service role (`runUpdate` catches both shapes; `runInsert` bridges only
+  `content_type='system'`). (2) No proposal had ever reached prod at all (zero rows, no
+  `proposal_received` funnel events — the claimed submission never hit the server). Realtime
+  system rows now also trigger `refreshState`/`refreshArtifacts` so an open founder tab flips
+  the moment the status moves. E2E asserts `conversation PROPOSED after submit` + `proposal
+  card landed in chat`. Lesson: UPDATE policies fail silently — probe the row, not the error.
+- **Proposal counter round (2026-09-28, code complete, BLOCKED on
+  `0017_proposal_counters.sql` being applied)**: full negotiation lifecycle from the spec —
+  founder accepts / **counters once** / declines from `pending`; specialist accepts the
+  counter, **counters back once** (`counter_back` = final offer) or declines; founder's
+  accept/decline closes it; `declined` at any point returns `READY_FOR_REVIEW` so a fresh
+  proposal can be written. Transition matrix in `canSetProposalStatus`
+  (`lib/money-authz.js`; owner lane wins over staff; invalid jumps → 409; no `currentStatus`
+  → legacy path). Counter terms (`counter_total_amount/weeks/note/round`, migration 0017) are
+  **promoted into `total_amount`/`estimated_weeks_*` on acceptance**, so agreement, escrow and
+  the `proposal_accepted` funnel price the final deal (funnel now reads the updated row).
+  UI: inline counter forms on the proposal card (`chat-transcript.tsx`, `counter`/
+  `counter_back` embed actions) and in the panel (founder "Counter offer" replaces "Request
+  changes"); `handleProposalAction` carries terms. Pings: team `proposal_countered`,
+  specialist personal `proposal_countered` (names the one-shot rule), founder
+  `counter_back_ready` Telegram+email (8th stage moment). 222/222 tests, tsc/eslint/build
+  green; extended e2e covers the whole round trip incl. four 409 refusals and the
+  promote-on-accept total. **Counter buttons 500 until 0017 runs** (accept path is
+  defensive against the missing columns).
 - **Empty-sidebar regression fixed (2026-09-28, deployed `f7691b2`)**: 0014/0015 revoked
   `EXECUTE` from `authenticated`, but routes call those RPCs through the **user-session**
   client (`db()`) → `42501 permission denied` → recents rendered `[]` (AI draft saves hit the
@@ -157,5 +187,7 @@ BrandForge/
 - Required migrations: `0001_chat_first_rls.sql` … `0016_grant_rpc_execute.sql` — **all
   applied** in prod (0006 run 2026-09-22 via Supabase Management API; 0007–0012 verified live by
   column/table probe 2026-09-28; 0013–0016 run 2026-09-28 via the SQL editor; 0016 verified by
-  `has_function_privilege` + session-client RPC probes). Supabase PAT for
+  `has_function_privilege` + session-client RPC probes). **`0017_proposal_counters.sql` is
+  written but NOT yet applied** — the proposal counter round stays inert until the founder
+  runs it in the SQL editor (accept path tolerates its absence). Supabase PAT for
   future SQL runs is not stored here — ask the operator or use the SQL editor.

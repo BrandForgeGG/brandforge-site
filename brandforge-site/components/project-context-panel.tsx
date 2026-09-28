@@ -20,7 +20,20 @@ export interface ProposalSummary {
   currency: string;
   estimated_weeks_min?: number | null;
   estimated_weeks_max?: number | null;
-  status: 'pending' | 'changes_requested' | 'accepted' | 'declined' | 'expired';
+  status:
+    | 'pending'
+    | 'countered'
+    | 'counter_back'
+    | 'changes_requested'
+    | 'accepted'
+    | 'declined'
+    | 'expired';
+  /** Counter round (migration 0017): 1 = founder countered, 2 = specialist's final offer. */
+  counter_round?: number | null;
+  counter_total_amount?: number | null;
+  counter_weeks_min?: number | null;
+  counter_weeks_max?: number | null;
+  counter_note?: string | null;
 }
 
 export interface AgreementSummary {
@@ -109,7 +122,10 @@ export function ProjectContextPanel({
   files: { name: string; size: number; contentType: string; path: string }[];
   onClose: () => void;
   onRequestReview: () => void;
-  onProposalAction: (action: 'accept' | 'decline' | 'request_changes') => void;
+  onProposalAction: (
+    action: 'accept' | 'decline' | 'counter',
+    terms?: { totalAmount: number; weeksMin: number; weeksMax: number; note?: string | null },
+  ) => void;
   onSubmitPayment: (txHash: string) => void;
   onPaymentAction: (payload: {
     action: 'verify' | 'reject' | 'release';
@@ -127,6 +143,19 @@ export function ProjectContextPanel({
 
   const [txInput, setTxInput] = useState('');
   const [rejectNote, setRejectNote] = useState('');
+  // Counter offer form (founder side): opens inside the proposal card while the offer
+  // is still on the table for them.
+  const [countering, setCountering] = useState(false);
+  const [counterAmount, setCounterAmount] = useState('');
+  const [counterWeeks, setCounterWeeks] = useState('');
+  const [counterNote, setCounterNote] = useState('');
+  const counterAmountValue = Math.floor(Number(counterAmount));
+  const counterWeeksValue = Math.floor(Number(counterWeeks));
+  const counterValid =
+    Number.isFinite(counterAmountValue) &&
+    counterAmountValue >= 1 &&
+    Number.isFinite(counterWeeksValue) &&
+    counterWeeksValue >= 1;
   // Task actions are independent: each row locks only itself, so assigning one task never
   // freezes the rest of the panel. The row unlocks when fresh state arrives after the action.
   const [taskBusyId, setTaskBusyId] = useState<string | null>(null);
@@ -548,7 +577,21 @@ export function ProjectContextPanel({
             <p className="mt-1 text-xs text-[#9aa0a6]">
               {proposal.estimated_weeks_min ?? '?'}–{proposal.estimated_weeks_max ?? '?'} weeks delivery
             </p>
-            {proposal.status === 'pending' ? (
+            {typeof proposal.counter_round === 'number' && proposal.counter_round >= 1 ? (
+              <div className="mt-2 rounded-lg border border-[#e8571e]/25 bg-[#14171a] px-3 py-2">
+                <p className="text-[11px] text-[#f6d6c3]">
+                  {proposal.counter_round === 1 ? 'Your counter' : 'Final offer from the specialist'}
+                  {' · '}
+                  {money(proposal.counter_total_amount, proposal.currency)}
+                  {' · '}
+                  {proposal.counter_weeks_min ?? '?'}–{proposal.counter_weeks_max ?? '?'} weeks
+                </p>
+                {proposal.counter_note ? (
+                  <p className="mt-1 text-[11px] text-[#9aa0a6]">{proposal.counter_note}</p>
+                ) : null}
+              </div>
+            ) : null}
+            {proposal.status === 'pending' || proposal.status === 'counter_back' ? (
               <div className="mt-3 space-y-2">
                 <button
                 type="button"
@@ -556,16 +599,20 @@ export function ProjectContextPanel({
                 disabled={busyAction !== null}
                 className="w-full rounded-lg bg-[#5aa578] px-3 py-2 text-xs font-semibold text-[#14171a] transition hover:opacity-95 disabled:opacity-60"
               >
-                Accept proposal and continue to funding
+                {proposal.status === 'counter_back'
+                  ? 'Accept counter offer and continue to funding'
+                  : 'Accept proposal and continue to funding'}
               </button>
-              <button
-                type="button"
-                onClick={() => onProposalAction('request_changes')}
-                disabled={busyAction !== null}
-                className="w-full rounded-lg border border-white/10 px-3 py-2 text-xs text-[#ece7de] transition hover:border-[#e8571e] disabled:opacity-60"
-              >
-                Request changes
-              </button>
+              {proposal.status === 'pending' ? (
+                <button
+                  type="button"
+                  onClick={() => setCountering(true)}
+                  disabled={busyAction !== null}
+                  className="w-full rounded-lg border border-[#e8571e]/40 px-3 py-2 text-xs font-semibold text-[#f6d6c3] transition hover:border-[#e8571e] disabled:opacity-60"
+                >
+                  Counter offer
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => onProposalAction('decline')}
@@ -575,6 +622,96 @@ export function ProjectContextPanel({
                 Decline
               </button>
             </div>
+            ) : null}
+            {proposal.status === 'countered' ? (
+              <div className="mt-3 space-y-2">
+                <p className="text-[11px] leading-relaxed text-[#9aa0a6]">
+                  Waiting for the specialist to accept or counter back. Decline only if the
+                  talks are stuck.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onProposalAction('decline')}
+                  disabled={busyAction !== null}
+                  className="w-full rounded-lg border border-white/10 px-3 py-2 text-xs text-[#9aa0a6] transition hover:border-red-500/40 hover:text-red-200 disabled:opacity-60"
+                >
+                  Decline
+                </button>
+              </div>
+            ) : null}
+            {countering ? (
+              <div className="mt-3 space-y-2 rounded-xl border border-[#e8571e]/30 bg-[#14171a] p-3">
+                <div className="flex gap-2">
+                  <label className="sr-only" htmlFor={`counter-amount-${proposal.id}`}>
+                    Total amount in EUR
+                  </label>
+                  <input
+                    id={`counter-amount-${proposal.id}`}
+                    value={counterAmount}
+                    onChange={(event) => setCounterAmount(event.target.value)}
+                    inputMode="numeric"
+                    placeholder="Total (EUR)"
+                    disabled={busyAction !== null}
+                    className="w-28 rounded-lg border border-white/10 bg-[#1c2024] px-3 py-1.5 text-xs text-[#ece7de] placeholder:text-[#8f959b] focus:border-[#e8571e] focus:outline-none disabled:opacity-60"
+                  />
+                  <label className="sr-only" htmlFor={`counter-weeks-${proposal.id}`}>
+                    Timeline in weeks
+                  </label>
+                  <input
+                    id={`counter-weeks-${proposal.id}`}
+                    value={counterWeeks}
+                    onChange={(event) => setCounterWeeks(event.target.value)}
+                    inputMode="numeric"
+                    placeholder="Weeks"
+                    disabled={busyAction !== null}
+                    className="w-24 rounded-lg border border-white/10 bg-[#1c2024] px-3 py-1.5 text-xs text-[#ece7de] placeholder:text-[#8f959b] focus:border-[#e8571e] focus:outline-none disabled:opacity-60"
+                  />
+                </div>
+                <label className="sr-only" htmlFor={`counter-note-${proposal.id}`}>
+                  Note
+                </label>
+                <input
+                  id={`counter-note-${proposal.id}`}
+                  value={counterNote}
+                  onChange={(event) => setCounterNote(event.target.value)}
+                  placeholder="Note (optional)"
+                  maxLength={1000}
+                  disabled={busyAction !== null}
+                  className="w-full rounded-lg border border-white/10 bg-[#1c2024] px-3 py-1.5 text-xs text-[#ece7de] placeholder:text-[#8f959b] focus:border-[#e8571e] focus:outline-none disabled:opacity-60"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={busyAction !== null || !counterValid}
+                    onClick={() => {
+                      onProposalAction('counter', {
+                        totalAmount: counterAmountValue,
+                        weeksMin: counterWeeksValue,
+                        weeksMax: counterWeeksValue,
+                        note: counterNote.trim() || null,
+                      });
+                      setCountering(false);
+                      setCounterAmount('');
+                      setCounterWeeks('');
+                      setCounterNote('');
+                    }}
+                    className="rounded-lg bg-[#e8571e] px-3 py-1.5 text-xs font-semibold text-[#14171a] disabled:opacity-60"
+                  >
+                    Send counter offer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCountering(false)}
+                    className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[#ece7de]"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                <p className="text-[10px] leading-relaxed text-[#9aa0a6]">
+                  The specialist can accept this or counter back once. After that you make
+                  the final call.
+                </p>
+              </div>
             ) : null}
           </div>
         ) : null}

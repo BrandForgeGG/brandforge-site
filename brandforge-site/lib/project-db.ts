@@ -1782,9 +1782,24 @@ export async function getProposalById(proposalId: string) {
   return data ?? null;
 }
 
+export type ProposalCounter = {
+  totalAmount: number;
+  weeksMin: number;
+  weeksMax: number;
+  note?: string | null;
+};
+
 export async function updateProposalStatus(
   proposalId: string,
-  status: 'pending' | 'changes_requested' | 'accepted' | 'declined' | 'expired'
+  status:
+    | 'pending'
+    | 'changes_requested'
+    | 'accepted'
+    | 'declined'
+    | 'expired'
+    | 'countered'
+    | 'counter_back',
+  counter?: ProposalCounter
 ) {
   // Runs as the service role after the route has authorized the caller (founder or staff).
   const supabase = createSupabaseAdminClient();
@@ -1793,12 +1808,44 @@ export async function updateProposalStatus(
     return null;
   }
 
+  // The row itself decides two things we cannot know up front: whether an outstanding
+  // counter must be promoted into the deal terms on acceptance, and which round we are in.
+  // A failed read (for instance migration 0017 not applied yet) never blocks the status
+  // update itself: without it acceptance simply keeps the original offer terms.
+  const { data: current, error: readError } = await supabase
+    .from('proposals')
+    .select('status, counter_total_amount, counter_weeks_min, counter_weeks_max, counter_round')
+    .eq('id', proposalId)
+    .maybeSingle();
+
+  if (readError) {
+    console.error('Error reading proposal for update (continuing without counter terms):', readError.message);
+  }
+
+  const patch: Record<string, unknown> = { status };
+
+  if (status === 'accepted') {
+    patch.accepted_at = new Date().toISOString();
+    // Promote the counter the two sides just agreed on: the agreement total, escrow
+    // schedule and funnel must price the final deal, not the original opening offer.
+    if (current && (current.counter_round ?? 0) >= 1 && current.counter_total_amount) {
+      patch.total_amount = current.counter_total_amount;
+      patch.estimated_weeks_min = current.counter_weeks_min;
+      patch.estimated_weeks_max = current.counter_weeks_max;
+    }
+  }
+
+  if ((status === 'countered' || status === 'counter_back') && counter) {
+    patch.counter_total_amount = counter.totalAmount;
+    patch.counter_weeks_min = counter.weeksMin;
+    patch.counter_weeks_max = counter.weeksMax;
+    if (counter.note !== undefined && counter.note !== null) patch.counter_note = counter.note;
+    patch.counter_round = status === 'countered' ? 1 : 2;
+  }
+
   const { data, error } = await supabase
     .from('proposals')
-    .update({
-      status,
-      ...(status === 'accepted' ? { accepted_at: new Date().toISOString() } : {}),
-    })
+    .update(patch)
     .eq('id', proposalId)
     .select()
     .maybeSingle();

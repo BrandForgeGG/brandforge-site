@@ -66,6 +66,20 @@ function buildMessage(event, details = {}) {
     case 'proposal_answered':
       return `The founder answered proposal "${clip(details.title)}": ${clip(details.status) || 'updated'}.`;
 
+    case 'proposal_countered': {
+      const parts = [`Counter offer on "${clip(details.title)}"`];
+      const price = money(details.totalAmount, details.currency);
+      if (price) parts.push(price);
+      const weeks = clip(details.weeks);
+      if (weeks) parts.push(weeks);
+      const by = details.by === 'specialist' ? 'specialist' : 'founder';
+      const next =
+        by === 'founder'
+          ? 'The specialist may accept or counter back once.'
+          : 'The founder has the final call: accept or decline.';
+      return `${parts.join(' · ')} (from the ${by}). ${next}`;
+    }
+
     case 'contract_signed':
       return 'Contract signed by both sides. The founder can fund escrow now — verify the transfer on-chain when it lands.';
 
@@ -229,6 +243,26 @@ function buildPersonalMessage(event, details = {}) {
         return `BrandForge: the founder declined your proposal "${title}".`;
       }
       return `BrandForge: the founder answered your proposal "${title}": ${status || 'updated'}.`;
+    }
+
+    // The specialist's turn: the founder countered, and the counter back (if they send one)
+    // is the specialist's last offer — the product must say so before they spend it.
+    case 'proposal_countered': {
+      const title = clip(details.title);
+      const price = money(details.totalAmount, details.currency);
+      const weeks = clip(details.weeks);
+      const facts = [price, weeks].filter(Boolean).join(', ');
+      return `BrandForge: the founder countered your proposal "${title}"${facts ? ` at ${facts}` : ''}. Accept it or counter back; the counter back is your last offer.`;
+    }
+
+    // The founder's turn: the specialist's final counter is on the table and only the
+    // founder can close it.
+    case 'counter_back_ready': {
+      const title = clip(details.title);
+      const price = money(details.totalAmount, details.currency);
+      const weeks = clip(details.weeks);
+      const facts = [price, weeks].filter(Boolean).join(', ');
+      return `BrandForge: the specialist countered back on "${title}"${facts ? ` (${facts})` : ''}. Accept or decline in the chat to close the deal.`;
     }
 
     default:

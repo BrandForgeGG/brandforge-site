@@ -49,6 +49,76 @@ test('proposal status: an unknown status is rejected before any ownership check'
   assert.equal(result.status, 400);
 });
 
+// ---------- proposal counter round (transition matrix) ----------
+
+const transition = (actor, currentStatus, status) =>
+  canSetProposalStatus({ actor, ownerId: OWNER_ID, status, currentStatus });
+
+test('counter round: the founder counters only from pending, never twice', () => {
+  assert.equal(transition(FOUNDER, 'pending', 'countered').allowed, true);
+  assert.equal(transition(FOUNDER, 'pending', 'accepted').allowed, true);
+  // Their own counter is outstanding: only decline (the deadlock exit) stays open.
+  assert.equal(transition(FOUNDER, 'countered', 'countered').allowed, false, 'no second counter');
+  assert.equal(transition(FOUNDER, 'countered', 'countered').status, 409);
+  assert.equal(transition(FOUNDER, 'countered', 'accepted').allowed, false, 'own offer cannot be accepted');
+  assert.equal(transition(FOUNDER, 'countered', 'declined').allowed, true);
+  // The specialist's counter-back is the final offer: accept or decline, never counter again.
+  assert.equal(transition(FOUNDER, 'counter_back', 'accepted').allowed, true);
+  assert.equal(transition(FOUNDER, 'counter_back', 'declined').allowed, true);
+  assert.equal(transition(FOUNDER, 'counter_back', 'countered').allowed, false, 'no second counter');
+});
+
+test('counter round: staff answer their countered proposal exactly once', () => {
+  assert.equal(transition(STAFF, 'countered', 'accepted').allowed, true);
+  assert.equal(transition(STAFF, 'countered', 'counter_back').allowed, true);
+  assert.equal(transition(STAFF, 'countered', 'declined').allowed, true);
+  // The counter-back is the specialist's last offer: staff cannot accept their own final bid.
+  assert.equal(transition(STAFF, 'counter_back', 'accepted').allowed, false);
+  assert.equal(transition(STAFF, 'counter_back', 'accepted').status, 409);
+  assert.equal(transition(STAFF, 'counter_back', 'declined').allowed, true);
+  assert.equal(transition(STAFF, 'counter_back', 'counter_back').allowed, false, 'no second counter');
+});
+
+test('counter round: on a pending proposal staff may withdraw or expire, never decide or counter', () => {
+  // The panel is the founder's surface and the card gives staff no answer button on pending:
+  // the matrix mirrors exactly that, while the legacy path below keeps old callers working.
+  assert.equal(transition(STAFF, 'pending', 'declined').allowed, true);
+  assert.equal(transition(STAFF, 'pending', 'expired').allowed, true);
+  assert.equal(transition(STAFF, 'pending', 'accepted').allowed, false, 'staff cannot sign their own offer');
+  assert.equal(transition(STAFF, 'pending', 'countered').allowed, false, 'countering is the founder answer');
+  assert.equal(transition(FOUNDER, 'pending', 'expired').allowed, false, 'expiry is a staff cleanup');
+});
+
+test('counter round: ownership wins over staff (founder-admin edge)', () => {
+  const staffWhoOwns = { userId: OWNER_ID, isStaff: true };
+  assert.equal(transition(staffWhoOwns, 'countered', 'counter_back').allowed, false, 'owner lane, not staff');
+  assert.equal(transition(staffWhoOwns, 'countered', 'counter_back').status, 409);
+  assert.equal(transition(staffWhoOwns, 'pending', 'countered').allowed, true, 'owner lane');
+});
+
+test('counter round: a foreign founder is refused regardless of the matrix row', () => {
+  const denied = transition(OTHER_FOUNDER, 'pending', 'accepted');
+  assert.equal(denied.allowed, false);
+  assert.equal(denied.status, 403);
+});
+
+test('counter round: changes_requested reopens only the staff lane; terminals are locked', () => {
+  assert.equal(transition(FOUNDER, 'changes_requested', 'accepted').allowed, false, 'stale answer is a 409');
+  assert.equal(transition(STAFF, 'changes_requested', 'expired').allowed, true);
+  for (const terminal of ['accepted', 'declined', 'expired']) {
+    assert.equal(transition(FOUNDER, terminal, 'accepted').allowed, false, terminal);
+    assert.equal(transition(STAFF, terminal, 'declined').allowed, false, terminal);
+  }
+});
+
+test('counter round: without currentStatus the legacy role rule still applies', () => {
+  // Callers that do not pass the current status (old rows, repair scripts) keep the
+  // original semantics: the owner answers, staff may set anything valid.
+  assert.equal(canSetProposalStatus({ actor: FOUNDER, ownerId: OWNER_ID, status: 'accepted' }).allowed, true);
+  assert.equal(canSetProposalStatus({ actor: STAFF, ownerId: OWNER_ID, status: 'expired' }).allowed, true);
+  assert.equal(canSetProposalStatus({ actor: OTHER_FOUNDER, ownerId: OWNER_ID, status: 'accepted' }).allowed, false);
+});
+
 test('agreement: only the owner or staff may create one, never another participant', () => {
   assert.equal(canCreateAgreement({ actor: FOUNDER, ownerId: OWNER_ID }).allowed, true);
   assert.equal(canCreateAgreement({ actor: STAFF, ownerId: OWNER_ID }).allowed, true);

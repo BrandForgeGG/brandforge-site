@@ -115,6 +115,39 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// Counter terms arrive as explicit fields so a counter can never silently reuse the
+// original offer. Returns { ok:false, error } for anything a founder or specialist
+// should not be able to submit.
+function readCounterTerms(body: Record<string, unknown>, status: string) {
+  if (status !== 'countered' && status !== 'counter_back') {
+    return { ok: true as const, counter: undefined };
+  }
+  const totalAmount = Math.floor(Number(body.counterTotalAmount));
+  const weeksMin = Math.floor(Number(body.counterWeeksMin));
+  const weeksMax = Math.floor(Number(body.counterWeeksMax));
+  const noteRaw = typeof body.counterNote === 'string' ? body.counterNote.trim() : '';
+  if (!Number.isFinite(totalAmount) || totalAmount < 1) {
+    return { ok: false as const, error: 'A counter offer needs a total amount of at least EUR 1' };
+  }
+  if (!Number.isFinite(weeksMin) || weeksMin < 1 || !Number.isFinite(weeksMax) || weeksMax < 1) {
+    return { ok: false as const, error: 'A counter offer needs a timeline of at least 1 week' };
+  }
+  if (weeksMax < weeksMin) {
+    return { ok: false as const, error: 'The longest timeline must be at least the shortest one' };
+  }
+  return {
+    ok: true as const,
+    counter: {
+      totalAmount,
+      weeksMin,
+      weeksMax,
+      note: noteRaw ? noteRaw.slice(0, 1000) : null,
+    },
+  };
+}
+
+const weeksLabel = (min: number, max: number) => (min === max ? `${min} weeks` : `${min}–${max} weeks`);
+
 export async function PATCH(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser(request);
@@ -130,9 +163,22 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const allowed = ['pending', 'changes_requested', 'accepted', 'declined', 'expired'];
+    const allowed = [
+      'pending',
+      'changes_requested',
+      'accepted',
+      'declined',
+      'expired',
+      'countered',
+      'counter_back',
+    ];
     if (!allowed.includes(status)) {
       return NextResponse.json({ error: 'Invalid proposal status' }, { status: 400 });
+    }
+
+    const terms = readCounterTerms(body, status);
+    if (!terms.ok) {
+      return NextResponse.json({ error: terms.error }, { status: 400 });
     }
 
     // Only the founder who owns the conversation (or BrandForge staff) may change a proposal,
@@ -145,32 +191,45 @@ export async function PATCH(request: NextRequest) {
     const isStaff = await isStaffAccount(user.id);
     const ownerId = await getConversationOwnerId(existing.conversation_id);
 
-    // Shared, unit-tested decision (lib/money-authz.js): the owner may answer a proposal, staff may
-    // do anything, and a different founder is refused. The test suite covers that cross-user case.
+    // Shared, unit-tested decision (lib/money-authz.js): with the current status attached the
+    // counter matrix decides who may do what in this round — 409 on a jump the lifecycle
+    // does not allow (a second counter, accepting your own offer, a stale answer).
     const decision = canSetProposalStatus({
       actor: { userId: user.id, isStaff },
       ownerId,
       status,
+      currentStatus: existing.status ?? undefined,
     });
 
     if (!decision.allowed) {
       return NextResponse.json({ error: decision.reason }, { status: decision.status });
     }
 
-    const proposal = await updateProposalStatus(proposalId, status);
+    const proposal = await updateProposalStatus(proposalId, status, terms.counter);
 
     if (!proposal) {
       return NextResponse.json({ error: 'Failed to update proposal' }, { status: 500 });
     }
 
-    // The founder's decision lives in the same chat as the proposal.
-    const statusLine =
-      status === 'accepted'
+    const isCounter = status === 'countered' || status === 'counter_back';
+    const byFounder = decision.reason === 'founder';
+    const counter = terms.counter;
+    const currency = existing.currency ?? 'EUR';
+
+    // The decision lives in the same chat as the proposal. Counters never move the
+    // conversation status: the deal is still being negotiated.
+    const statusLine = isCounter
+      ? status === 'countered'
+        ? `BrandForge countered the proposal at ${currency} ${counter!.totalAmount} over ${weeksLabel(counter!.weeksMin, counter!.weeksMax)}. The specialist may accept it or counter back once, and the counter back is the final offer.`
+        : `The specialist countered back at ${currency} ${counter!.totalAmount} over ${weeksLabel(counter!.weeksMin, counter!.weeksMax)}. Accept it or decline to close the deal.`
+      : status === 'accepted'
         ? 'Proposal accepted. The agreement and payment schedule are being prepared in this chat.'
         : status === 'changes_requested'
           ? 'The founder requested changes to the proposal. BrandForge will revise it here.'
           : status === 'declined'
-            ? 'The founder declined the proposal.'
+            ? byFounder
+              ? 'The founder declined the proposal.'
+              : 'The specialist declined the proposal.'
             : null;
 
     if (statusLine && proposal.conversation_id) {
@@ -182,7 +241,9 @@ export async function PATCH(request: NextRequest) {
         content_type: 'system',
         artifact_data: { type: 'proposal', id: proposalId, status },
       });
+    }
 
+    if (!isCounter && proposal.conversation_id) {
       if (status === 'accepted') {
         await updateConversationStatus(proposal.conversation_id, 'ACCEPTED');
         // The accept IS the invite: the proposal's author joins with a visible
@@ -191,7 +252,37 @@ export async function PATCH(request: NextRequest) {
       } else if (status === 'changes_requested' || status === 'declined') {
         await updateConversationStatus(proposal.conversation_id, 'READY_FOR_REVIEW');
       }
+    }
 
+    if (isCounter && counter) {
+      const counterDetails = {
+        title: existing.title,
+        totalAmount: counter.totalAmount,
+        currency,
+        weeks: weeksLabel(counter.weeksMin, counter.weeksMax),
+      };
+
+      // Team channel: who countered and what is on the table. The personal pings below
+      // tell each side what they must do next.
+      await notify('proposal_countered', {
+        ...counterDetails,
+        by: byFounder ? 'founder' : 'specialist',
+      });
+
+      if (status === 'countered') {
+        // The specialist's turn: ping the author's linked Telegram (skipped when they
+        // countered their own proposal, which the matrix refuses anyway).
+        if (existing.created_by && existing.created_by !== user.id) {
+          const authorChatId = await getTelegramChatIdForUser(existing.created_by);
+          if (authorChatId) {
+            await notifyUser(authorChatId, 'proposal_countered', counterDetails);
+          }
+        }
+      } else if (proposal.conversation_id) {
+        // The founder's turn: the final counter needs a human decision — email + Telegram.
+        await notifyFounder(proposal.conversation_id, 'counter_back_ready', counterDetails);
+      }
+    } else {
       await notify('proposal_answered', { title: existing.title, status });
 
       // The author waits on this answer personally: ping their linked Telegram
@@ -208,9 +299,11 @@ export async function PATCH(request: NextRequest) {
       }
 
       if (status === 'accepted') {
+        // proposal.total_amount, not existing.total_amount: acceptance may have promoted
+        // an outstanding counter into the deal terms, and escrow must price that.
         await recordFunnelEvent('proposal_accepted', {
           signedIn: true,
-          properties: { total_amount: existing.total_amount, currency: existing.currency, stage: 'fund' },
+          properties: { total_amount: proposal.total_amount, currency: proposal.currency ?? currency, stage: 'fund' },
         });
       }
     }

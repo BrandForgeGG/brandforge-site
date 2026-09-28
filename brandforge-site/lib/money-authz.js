@@ -8,20 +8,80 @@
 // depends on: a founder may act only on a project they own, staff may act on the lifecycle, and
 // nobody else may act at all.
 
-const PROPOSAL_STATUSES = ['pending', 'accepted', 'declined', 'changes_requested', 'expired'];
+const PROPOSAL_STATUSES = [
+  'pending',
+  'accepted',
+  'declined',
+  'changes_requested',
+  'expired',
+  'countered',
+  'counter_back',
+];
 
 /** Statuses a founder may answer a proposal with. */
-const FOUNDER_PROPOSAL_STATUSES = ['accepted', 'declined', 'changes_requested'];
+const FOUNDER_PROPOSAL_STATUSES = ['accepted', 'declined', 'changes_requested', 'countered'];
+
+// The counter round, one row per current state. `owner` is the founder of the conversation,
+// `staff` is BrandForge staff (the specialist who wrote the proposal acts through this lane).
+// The rules the spec fixes in place:
+// - one counter per side: the founder may counter only from 'pending', the specialist may
+//   counter back only from 'countered', and the founder never gets a second counter;
+// - nobody accepts their own outstanding offer: the owner cannot accept their own counter,
+//   and staff cannot accept their own counter-back — only the founder signs the final deal;
+// - 'declined' while a counter is outstanding is the way out of a deadlock (the conversation
+//   returns to review and the specialist may re-propose with a fresh row).
+const PROPOSAL_TRANSITIONS = {
+  pending: {
+    owner: ['accepted', 'declined', 'changes_requested', 'countered'],
+    staff: ['declined', 'expired'],
+  },
+  countered: {
+    owner: ['declined'],
+    staff: ['accepted', 'declined', 'counter_back', 'expired'],
+  },
+  counter_back: {
+    owner: ['accepted', 'declined'],
+    staff: ['declined', 'expired'],
+  },
+  changes_requested: {
+    owner: [],
+    staff: ['expired'],
+  },
+  accepted: { owner: [], staff: [] },
+  declined: { owner: [], staff: [] },
+  expired: { owner: [], staff: [] },
+};
 
 /**
  * Can `actor` set this proposal status?
- * The founder who owns the project may answer a pending proposal; staff may do anything.
+ * When `currentStatus` is supplied the transition matrix decides (409 on a jump the
+ * lifecycle does not allow); without it the legacy role rule applies, which is what the
+ * original callers and tests exercise.
  */
-function canSetProposalStatus({ actor, ownerId, status }) {
+function canSetProposalStatus({ actor, ownerId, status, currentStatus }) {
   if (!actor) return { allowed: false, status: 401, reason: 'Authentication required' };
   if (!PROPOSAL_STATUSES.includes(status)) {
     return { allowed: false, status: 400, reason: `Invalid proposal status: ${status}` };
   }
+
+  const isOwner = actor.userId === ownerId;
+
+  if (typeof currentStatus === 'string' && currentStatus) {
+    if (!isOwner && !actor.isStaff) {
+      return { allowed: false, status: 403, reason: 'This proposal belongs to another founder' };
+    }
+    const row = PROPOSAL_TRANSITIONS[currentStatus];
+    const lane = isOwner ? row.owner : row.staff;
+    if (!row || !lane.includes(status)) {
+      return {
+        allowed: false,
+        status: 409,
+        reason: `A ${currentStatus} proposal cannot become ${status}`,
+      };
+    }
+    return { allowed: true, status: 200, reason: isOwner ? 'founder' : 'staff' };
+  }
+
   if (actor.isStaff) return { allowed: true, status: 200, reason: 'staff' };
   if (actor.userId !== ownerId) {
     return { allowed: false, status: 403, reason: 'This proposal belongs to another founder' };

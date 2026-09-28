@@ -68,7 +68,22 @@ describe('describeProposalStatus', () => {
   it('turns proposal states into founder-readable next steps', () => {
     assert.match(describeProposalStatus('pending'), /Awaiting your decision/);
     assert.match(describeProposalStatus('changes_requested'), /revising/);
+    assert.match(describeProposalStatus('countered'), /Countered/);
+    assert.match(describeProposalStatus('counter_back'), /final decision/);
     assert.equal(describeProposalStatus('unknown'), 'Proposal status unavailable.');
+  });
+});
+
+describe('buildProjectPulse counter round', () => {
+  it('points the founder at the outstanding counter-back', () => {
+    const pulse = buildProjectPulse({
+      state: { status: 'PROPOSED' },
+      tasks: [],
+      proposal: { status: 'counter_back' },
+      agreement: null,
+    });
+    const proposalItem = pulse.find((item) => item.key === 'proposal');
+    assert.match(proposalItem.value, /Answer the counter offer/);
   });
 });
 

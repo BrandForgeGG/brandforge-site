@@ -44,6 +44,7 @@ test('buildMessage covers every wired event with its key detail', () => {
     ['application_submitted', { email: 'a@b.co' }, 'a@b.co'],
     ['proposal_sent', { title: 'Landing page', totalAmount: 4000, currency: 'EUR' }, 'Landing page'],
     ['proposal_answered', { title: 'Landing page', status: 'accepted' }, 'accepted'],
+    ['proposal_countered', { title: 'Landing page', totalAmount: 3200, currency: 'EUR', weeks: '4 weeks', by: 'founder' }, 'founder'],
     ['payment_submitted', { txHash: 'abc123', network: 'USDT (TRC-20)' }, 'abc123'],
     ['payment_verified', {}, 'funded'],
     ['payment_rejected', { note: 'wrong amount' }, 'wrong amount'],
@@ -103,6 +104,35 @@ test('buildPersonalMessage covers every proposal answer an operator waits on', (
 test('buildPersonalMessage returns null for unknown events', () => {
   assert.equal(buildPersonalMessage('nope', {}), null);
   assert.equal(buildPersonalMessage('', {}), null);
+});
+
+test('buildPersonalMessage tells the specialist their counter is on the table', () => {
+  const countered = buildPersonalMessage('proposal_countered', {
+    title: 'Landing page',
+    totalAmount: 3200,
+    currency: 'EUR',
+    weeks: '4 weeks',
+  });
+  assert.ok(countered.includes('countered your proposal'));
+  assert.ok(countered.includes('EUR 3,200'));
+  assert.ok(countered.includes('last offer'), 'the one-shot rule must be in the ping');
+  assert.ok(!countered.includes('\n'));
+});
+
+test('buildPersonalMessage tells the founder the final counter is waiting', () => {
+  const ready = buildPersonalMessage('counter_back_ready', {
+    title: 'Landing page',
+    totalAmount: 3500,
+    currency: 'EUR',
+    weeks: '5 weeks',
+  });
+  assert.ok(ready.includes('countered back'));
+  assert.ok(ready.includes('EUR 3,500'));
+  assert.ok(ready.includes('Accept or decline'));
+
+  const noPrice = buildPersonalMessage('counter_back_ready', { title: 'Landing page' });
+  assert.ok(noPrice.includes('countered back'));
+  assert.ok(!noPrice.includes('EUR'), 'money is omitted when absent');
 });
 
 // ---------- sending ----------

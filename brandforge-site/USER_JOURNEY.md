@@ -46,10 +46,19 @@ Every feature gets checked against this map before it is built.
 
 ### 3. Proposal (Operator → Founder) — `PROPOSED`
 - **Operator's action:** issues the proposal (`POST /api/proposals`, staff-only): title, scope,
-  deliverables, **total**, weeks. Funnel `proposal_received`; notify fires.
-- **Founder sees:** proposal card in the same chat — accept / decline / request changes.
+  deliverables, **total**, weeks. The send form sits above the chat while the brief is
+  `READY_FOR_REVIEW`. Funnel `proposal_received`; notify fires.
+- **Founder sees:** proposal card in the same chat — accept / counter offer / decline.
+- **Counter round (migration 0017):** one counter per side. The founder counters from `pending`
+  (`status = countered`); the specialist then accepts, declines, or counters back once
+  (`status = counter_back`, their final offer, which the founder can only accept or decline).
+  `declined` at any point returns the chat to `READY_FOR_REVIEW` so a fresh proposal can be
+  written. On acceptance the outstanding counter terms are promoted into `total_amount` and
+  `estimated_weeks_*`, so the agreement, escrow schedule and funnel price the deal the two
+  sides actually agreed to. The transition matrix lives in `canSetProposalStatus`
+  (`lib/money-authz.js`) and refuses illegal jumps with 409.
 - **Founder's answer:** `PATCH /api/proposals` → `ACCEPTED` (or `READY_FOR_REVIEW` again on
-  changes requested). Funnel `proposal_accepted`.
+  changes requested / declined). Funnel `proposal_accepted` records the promoted total.
 - **Conversion goal:** the accept click. Everything above exists to make this safe to click:
   scope readable in chat, price fixed, no dashboards.
 

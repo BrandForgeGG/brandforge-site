@@ -5,6 +5,7 @@ const { buildStageEmail } = require('./stage-emails');
 
 const EVENTS = [
   'proposal_ready',
+  'counter_back_ready',
   'contract_accepted',
   'contract_signed',
   'funding_verified',

@@ -8,9 +8,14 @@ const actions = (embed, canDecide) => embedActions({ embed, canDecide }).map((a)
 const proposalPending = { type: 'proposal', proposalId: 'p1', status: 'pending' };
 const fundingWaiting = { type: 'funding', agreementId: 'a1', status: 'pending_funding' };
 
-test('proposal card: the owner gets accept plus details', () => {
-  assert.deepEqual(actions(proposalPending, true), ['accept', 'details']);
-  assert.deepEqual(labels(proposalPending, true), ['Accept proposal', 'View details']);
+test('proposal card: the owner gets accept, counter, decline plus details', () => {
+  assert.deepEqual(actions(proposalPending, true), ['accept', 'counter', 'decline', 'details']);
+  assert.deepEqual(labels(proposalPending, true), [
+    'Accept proposal',
+    'Counter offer',
+    'Decline',
+    'View details',
+  ]);
 });
 
 test('proposal card: a non-owner sees read-only context, never a dead control', () => {
@@ -137,4 +142,34 @@ test('contract card: missing signature columns (migration not applied) stay read
   }).forEach((item) => assert.equal(item.action, 'details'));
   // And a missing contract row (old message, artifacts not loaded) is read-only too.
   assert.deepEqual(contractActions({ founder: true, state: null }), ['details']);
+});
+
+// ---------- proposal counter round (spec: one counter per side) ----------
+
+const counterActions = (status, { owner = false, staff = false } = {}) =>
+  embedActions({ embed: { type: 'proposal', proposalId: 'p1', status }, canDecide: owner, isStaff: staff }).map(
+    (a) => a.action
+  );
+
+test('counter round: owner waits while their own counter is outstanding', () => {
+  // The founder countered: only decline (the deadlock exit) stays open, never a second counter.
+  assert.deepEqual(counterActions('countered', { owner: true }), ['decline', 'details']);
+  // The specialist answers it: accept, one counter back, or decline.
+  assert.deepEqual(counterActions('countered', { staff: true }), ['accept', 'counter_back', 'decline', 'details']);
+  // An uninvited reader sees context only.
+  assert.deepEqual(counterActions('countered'), ['details']);
+});
+
+test('counter round: the counter-back is the final offer, accept or decline only', () => {
+  assert.deepEqual(counterActions('counter_back', { owner: true }), ['accept', 'decline', 'details']);
+  // Staff cannot accept their own final offer — the founder signs the deal.
+  assert.deepEqual(counterActions('counter_back', { staff: true }), ['decline', 'details']);
+  assert.deepEqual(counterActions('counter_back'), ['details']);
+});
+
+test('counter round: decided proposals are read-only for both sides', () => {
+  for (const status of ['accepted', 'declined', 'expired']) {
+    assert.deepEqual(counterActions(status, { owner: true }), ['details'], status);
+    assert.deepEqual(counterActions(status, { staff: true }), ['details'], status);
+  }
 });

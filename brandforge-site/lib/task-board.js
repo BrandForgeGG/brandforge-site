@@ -85,6 +85,8 @@ export function describeProposalStatus(status) {
   const labels = {
     pending: 'Awaiting your decision — review the scope and timeline before continuing.',
     changes_requested: 'Changes requested — BrandForge is revising the proposal in chat.',
+    countered: 'Countered — the specialist is answering your counter offer.',
+    counter_back: 'Counter-back received — accept it or decline. This is the final decision.',
     accepted: 'Accepted — the agreement and payment schedule are being prepared.',
     declined: 'Declined — you can return to chat if you want a new proposal.',
     expired: 'Expired — ask the team in chat for an updated proposal.',
@@ -102,6 +104,7 @@ export function buildProjectPulse({ state, proposal, agreement, tasks } = {}) {
     if (action !== 'No delivery tasks are planned yet.') items.push({ key: 'next', label: 'Next delivery action', value: action.replace(/^Next: /, '') });
   }
   if (proposal?.status === 'pending') items.push({ key: 'proposal', label: 'Decision', value: 'Review the proposal in this panel' });
+  if (proposal?.status === 'counter_back') items.push({ key: 'proposal', label: 'Decision', value: 'Answer the counter offer in this panel' });
   if (agreement?.status === 'pending_funding') items.push({ key: 'funding', label: 'Funding', value: 'Submit the transaction hash for verification' });
   if (state?.openQuestions?.length) items.push({ key: 'questions', label: 'Open questions', value: `${state.openQuestions.length} need an answer` });
   return items.slice(0, 5);

@@ -181,13 +181,22 @@ CREATE TABLE proposals (
   estimated_weeks_max INTEGER,
   
   status TEXT DEFAULT 'pending',
-  -- 'pending' | 'changes_requested' | 'accepted' | 'declined' | 'expired'
+  -- 'pending' | 'countered' | 'counter_back' | 'changes_requested' | 'accepted' | 'declined' | 'expired'
   
   created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   
   -- when accepted
-  accepted_at TIMESTAMPTZ
+  accepted_at TIMESTAMPTZ,
+
+  -- counter round (migration 0017): the offer currently on the table. On acceptance the
+  -- counter terms are promoted into total_amount / estimated_weeks_*.
+  counter_total_amount INTEGER,
+  counter_weeks_min INTEGER,
+  counter_weeks_max INTEGER,
+  counter_note TEXT,
+  counter_round SMALLINT NOT NULL DEFAULT 0
+  -- 0 = none, 1 = founder countered, 2 = specialist countered back (final offer)
 );
 ```
 
