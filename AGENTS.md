@@ -173,7 +173,8 @@ BrandForge/
   verification, not signing; no dispute model yet (only funding-rejected routes to disputes);
   weekly digests need an aggregation cron (phase 2). E2E ALL PASS (27/27) + auth probe green
   on the deploy. Founder setup still open: create the Discord channels/webhooks + GitHub
-  webhook (checklist in the 2026-09-29 report).
+  webhook (checklist in the 2026-09-29 report). Site code pushed 2026-09-29 to the private
+  repo `BrandForgeGG/brandforge-site` (`main`); repo webhook + label + releases still open.
 - **Weekly digest live as a manual trigger (2026-09-29, deployed `main`→prod
   `dpl_6D33yezecq44s6G2KMNn2pH44FtG`)**: phase 2 of the webhook spec as code —
   `lib/digest.js` (pure weekly text from counts, numbers only, honest quiet-week line),
