@@ -96,6 +96,16 @@ BrandForge/
   pure builders in `lib/stage-emails.js` + `sendStageEmail`, +5 tests → 201/201).
   Emails send from `hello@brandforge.gg` (Resend domain verified; API key is
   send-only). Wiring: proposals, agreements, payments, chat-tasks routes.
+- **Discovery notifier + atomic AI drafts (2026-09-28, deployed)**: any real
+  transition into `READY_FOR_REVIEW` (send-for-review, AI `request_human_review`,
+  proposal rejected back) posts one embed to the specialists' Discord
+  (`lib/discord.js`, `DISCORD_WEBHOOK_URL` in `.env.local` + Vercel production;
+  transition filter in `updateConversationStatus` — no double-posts, no pings).
+  Same deploy wired `replaceDraftMilestones`/`replaceDraftTasks` to the
+  transactional 0014 RPCs (conversation-row lock; drafts-only milestone map) and
+  `buildConversationSummaries` to the 0015 one-query RPC (presentation stays in
+  JS). Migrations applied by the founder; validated on PGlite (30 checks) and in
+  prod (RPC keys + authenticated route). 206/206 tests.
 
 
 - **Open auth**: any Google account can sign in (login allowlist removed). Staff/admin access

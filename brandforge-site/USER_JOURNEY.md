@@ -114,7 +114,12 @@ Every feature gets checked against this map before it is built.
    linked Telegram *and* email. Emails send from `hello@brandforge.gg` (Resend domain
    verified; sender test `01a0e786`); templates in `lib/stage-emails.js`, delivery in
    `lib/stage-notify.ts`. Invite email + paste-code Telegram linking were already live.
-5. **Developer discovery** — when a project reaches `READY_FOR_REVIEW`, notify specialists so
-   proposals happen fast (stage 2 → 3 latency).
+5. ~~**Developer discovery**~~ — **built** (2026-09-28): every transition into
+   `READY_FOR_REVIEW` (send-for-review, AI `request_human_review`, proposal rejected back)
+   posts one embed into the specialists' Discord — project title linking straight to the
+   chat, ping-free, fired only on a real status change so idempotent retries never
+   double-post. `lib/discord.js` + `DISCORD_WEBHOOK_URL` (.env.local + Vercel), wire in
+   `updateConversationStatus`. Live-verified against production: scratch row transitioned
+   once, embed accepted (204), repeat call no-op, row removed.
 6. ~~**Post-login resume**~~ — **built** (2026-09-28): the hero's typed idea survives the Google
    redirect via `sessionStorage` and lands prefilled in the chat composer.
