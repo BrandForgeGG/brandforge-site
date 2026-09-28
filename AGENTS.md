@@ -81,8 +81,21 @@ BrandForge/
   and `authCookieExpiresAt` use the same pick. Failures log
   `[auth] no token extracted: req=n/m fwd=n/m … names=[…]` (names/lengths only —
   never values) so the next storm is readable in one log pull. 196/196 tests.
-  Known gap: `fetchAuthed`'s retry after a *successful* refresh does not re-check
-  401 (refresh-fail path does) — revisit if a new silent-storm shape appears.
+  Known gap closed (same day, `de92443`): a retry that still 401'd after a
+  *successful* refresh used to return that second 401 silently — `fetchAuthed`
+  now warns (`fetchAuthed: still 401 after refresh on <path>`, path only) and
+  parks on `/login` through the same terminal path as a failed refresh.
+- **Contract signing live + founder stage notifications (2026-09-28, deployed)**:
+  migration `0013_contract_signature.sql` applied in prod → the chat contract
+  card is interactive end to end (two-sided edit/accept, signature badges,
+  `contract_signed` funnel event, fund-escrow CTA). `notifyFounder`
+  (`lib/stage-notify.ts`) reaches the founder on **both** channels at 7 moments —
+  proposal ready, team accepted contract, contract signed, funding verified,
+  funding rejected, work delivered for approval, payment released — linked
+  Telegram (personal ping, previously wired for one event only) and email (new:
+  pure builders in `lib/stage-emails.js` + `sendStageEmail`, +5 tests → 201/201).
+  Emails send from `hello@brandforge.gg` (Resend domain verified; API key is
+  send-only). Wiring: proposals, agreements, payments, chat-tasks routes.
 
 
 - **Open auth**: any Google account can sign in (login allowlist removed). Staff/admin access
