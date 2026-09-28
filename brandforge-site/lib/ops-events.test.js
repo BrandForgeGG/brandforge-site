@@ -10,6 +10,7 @@ const {
   postOpsEvent,
   postPublicActivity,
   postDevLog,
+  postLiveMessage,
 } = require('./ops-events.js');
 
 function okFetch(captured) {
@@ -202,4 +203,25 @@ test('postPublicActivity posts content-only lines and refuses private events', a
 test('postDevLog stays quiet without a dev-log webhook', async () => {
   const result = await postDevLog({ title: 'Shipped: x' }, { env: {} });
   assert.deepEqual(result, { sent: false, reason: 'not_configured' });
+});
+
+test('postLiveMessage sends clipped plain text, never empty', async () => {
+  const captured = {};
+  const result = await postLiveMessage('This week: 2 posted.', {
+    env: { DISCORD_LIVE_URL: 'https://discord/live' },
+    fetchImpl: okFetch(captured),
+  });
+  assert.deepEqual(result, { sent: true, ok: true });
+  const body = JSON.parse(captured.init.body);
+  assert.equal(body.content, 'This week: 2 posted.');
+  assert.equal(body.embeds, undefined);
+
+  assert.deepEqual(await postLiveMessage('   ', { env: { DISCORD_LIVE_URL: 'x' }, fetchImpl: okFetch({}) }), {
+    sent: false,
+    reason: 'empty',
+  });
+  assert.deepEqual(await postLiveMessage('hi', { env: {}, fetchImpl: okFetch({}) }), {
+    sent: false,
+    reason: 'not_configured',
+  });
 });

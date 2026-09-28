@@ -60,6 +60,41 @@ export async function getFunnelSummary(limit = 10000) {
   };
 }
 
+// Weekly growth stats for the ops digest (admin-only route). Service-role counts so
+// the numbers never depend on the caller's RLS visibility; counts only, no content.
+export async function getWeeklyStats(
+  sinceIso?: string
+): Promise<{ posted: number; matched: number; funded: number; shipped: number }> {
+  const empty = { posted: 0, matched: 0, funded: 0, shipped: 0 };
+  const admin = createSupabaseAdminClient();
+  if (!admin) {
+    console.error('Error loading weekly stats: service role client not configured');
+    return empty;
+  }
+  const since = sinceIso ?? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const [posted, matched, funded, shipped] = await Promise.all([
+    admin.from('conversations').select('id', { count: 'exact', head: true }).gte('created_at', since),
+    admin.from('funnel_events').select('id', { count: 'exact', head: true }).eq('event', 'proposal_accepted').gte('created_at', since),
+    admin.from('funnel_events').select('id', { count: 'exact', head: true }).eq('event', 'funding_verified').gte('created_at', since),
+    admin.from('funnel_events').select('id', { count: 'exact', head: true }).eq('event', 'payment_released').gte('created_at', since),
+  ]);
+
+  for (const result of [posted, matched, funded, shipped]) {
+    if (result.error) {
+      console.error('Error loading weekly stats:', result.error.message);
+      return empty;
+    }
+  }
+
+  return {
+    posted: posted.count ?? 0,
+    matched: matched.count ?? 0,
+    funded: funded.count ?? 0,
+    shipped: shipped.count ?? 0,
+  };
+}
+
 export type ProjectDbClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 // Server-side funnel recording. The events table has no client INSERT policy on purpose, so every

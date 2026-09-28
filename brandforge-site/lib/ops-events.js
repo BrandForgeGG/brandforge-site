@@ -314,6 +314,25 @@ async function postDevLog({ title, description, url }, opts = {}) {
   }
 }
 
+/** Plain-text line to the public live feed (weekly digest, manual trigger). */
+async function postLiveMessage(text, opts = {}) {
+  const { env = process.env, fetchImpl = fetch } = opts;
+  const clean = clip(text, 1000);
+  if (!clean) return { sent: false, reason: 'empty' };
+  const webhookUrl = env.DISCORD_LIVE_URL;
+  if (!webhookUrl) return { sent: false, reason: 'not_configured' };
+  try {
+    return await postJson(
+      webhookUrl,
+      { username: 'BrandForge', allowed_mentions: { parse: [] }, content: clean },
+      fetchImpl
+    );
+  } catch (cause) {
+    console.warn('postLiveMessage failed:', cause instanceof Error ? cause.message : cause);
+    return { sent: false, reason: 'network' };
+  }
+}
+
 module.exports = {
   buildOpsEmbed,
   buildPublicPost,
@@ -321,4 +340,5 @@ module.exports = {
   postOpsEvent,
   postPublicActivity,
   postDevLog,
+  postLiveMessage,
 };
