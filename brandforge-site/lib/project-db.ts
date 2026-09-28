@@ -10,6 +10,7 @@
 import { createSupabaseServerClient } from './supabase/server';
 import { createSupabaseAdminClient } from './supabase/admin';
 import { track } from './funnel.js';
+import { notifyDiscordDiscovery } from './discord';
 import { headers } from 'next/headers';
 
 import { validateUsername } from '@/lib/identity';
@@ -988,14 +989,28 @@ export async function updateConversationStatus(
 ): Promise<boolean> {
   const supabase = await db();
 
-  const { error } = await supabase
+  // Only a real transition writes: the or() filter matches rows that are not
+  // already in the target state (a null status counts as "somewhere else"), and
+  // select() hands the row back so the discovery notifier can name the project.
+  // Repeated tool calls and idempotent retries update nothing and notify nobody.
+  const { data, error } = await supabase
     .from('conversations')
     .update({ status, updated_at: new Date().toISOString() })
-    .eq('id', conversationId);
+    .eq('id', conversationId)
+    .or(`status.is.null,status.neq.${status}`)
+    .select('id, title')
+    .maybeSingle();
 
   if (error) {
     console.error('Error updating conversation status:', error.message);
     return false;
+  }
+
+  // Journey gap #5: arrival at READY_FOR_REVIEW is the moment specialists must
+  // see — post once into the Discord discovery channel (best-effort, never
+  // fails the caller; fires only when the row actually transitioned).
+  if (data && status === 'READY_FOR_REVIEW') {
+    await notifyDiscordDiscovery(conversationId, data.title);
   }
 
   return true;
@@ -1044,118 +1059,46 @@ export async function getUserConversations(userId: string) {
 
 // Recents must reflect real persisted conversations only: a chat with zero messages has
 // not become a project yet, so it is never listed.
-// Participant roles that mean "a BrandForge human is in this chat" (the founder is not staff).
-const STAFF_PARTICIPANT_ROLES = new Set(['operator', 'builder', 'observer']);
-
+// One query does the heavy lifting: get_conversation_summaries (migration 0015) returns
+// up to 50 scoped conversations with message counts, previews, project names and first
+// staff presence. This side only presents — title fallbacks, truncation, the staff-name
+// fallback — and sorts by last activity, exactly like before.
 async function buildConversationSummaries(userId?: string): Promise<ConversationSummary[]> {
   const supabase = await db();
 
-  const orderedQuery = supabase
-    .from('conversations')
-    .select('id, title, status, created_at, user_id')
-    .order('created_at', { ascending: false });
-
-  const { data: conversations, error } = await (userId
-    ? orderedQuery.eq('user_id', userId)
-    : orderedQuery
-  ).limit(50);
+  const { data, error } = await supabase.rpc('get_conversation_summaries', {
+    p_user_id: userId ?? null,
+  });
 
   if (error) {
     console.error('Error fetching conversation summaries:', error.message);
     return [];
   }
 
-  if (!conversations || conversations.length === 0) {
-    return [];
-  }
-
-  const conversationIds = conversations.map((conversation: { id: string }) => conversation.id);
-
-  const [contextsResult, messagesResult, participantsResult] = await Promise.all([
-    supabase
-      .from('project_context')
-      .select('conversation_id, project_name')
-      .in('conversation_id', conversationIds),
-    supabase
-      .from('messages')
-      .select('conversation_id, content, sender_type, created_at')
-      .in('conversation_id', conversationIds)
-      .order('created_at', { ascending: true }),
-    // Staff presence already lives in participants (role operator/builder/observer), so
-    // "the team has seen this chat" needs no extra table, column or migration.
-    supabase
-      .from('participants')
-      .select('conversation_id, role, display_name, joined_at')
-      .in('conversation_id', conversationIds)
-      .order('joined_at', { ascending: true }),
-  ]);
-
-  const projectNames = new Map<string, string>();
-  for (const context of contextsResult.data ?? []) {
-    const name = String(context.project_name ?? '').trim();
-    if (name) {
-      projectNames.set(context.conversation_id, name);
-    }
-  }
-
-  const messagesByConversation = new Map<
-    string,
-    { content: string; sender_type: string; created_at: string }[]
-  >();
-  for (const message of messagesResult.data ?? []) {
-    const bucket = messagesByConversation.get(message.conversation_id) ?? [];
-    bucket.push(message);
-    messagesByConversation.set(message.conversation_id, bucket);
-  }
-
-  const staffByConversation = new Map<string, { name: string; at: string }>();
-
-  for (const participant of participantsResult.data ?? []) {
-    if (!STAFF_PARTICIPANT_ROLES.has(String(participant.role))) {
-      continue;
-    }
-
-    // The first staff member to open the chat is the moment the founder can see.
-    if (staffByConversation.has(participant.conversation_id)) {
-      continue;
-    }
-
-    staffByConversation.set(participant.conversation_id, {
-      name: String(participant.display_name ?? '').trim() || 'Specialist',
-      at: String(participant.joined_at ?? ''),
-    });
-  }
-
   const summaries: ConversationSummary[] = [];
 
-  for (const conversation of conversations) {
-    const messages = messagesByConversation.get(conversation.id) ?? [];
-    if (messages.length === 0) {
-      continue;
-    }
-
-    const firstFounderMessage = messages.find((message) => message.sender_type === 'user');
-    const lastMessage = messages[messages.length - 1];
-    const storedTitle = String(conversation.title ?? '').trim();
+  for (const row of data ?? []) {
+    const storedTitle = String(row.title ?? '').trim();
     const title =
-      projectNames.get(conversation.id) ||
+      (row.project_name ? String(row.project_name).trim() : '') ||
       (storedTitle && storedTitle !== 'New Project' ? storedTitle : '') ||
-      truncate(firstFounderMessage?.content ?? storedTitle, 60) ||
+      truncate(row.first_user_content ?? storedTitle, 60) ||
       'New conversation';
-
-    const staffView = staffByConversation.get(conversation.id) ?? null;
+    const staffViewedBy = row.staff_name
+      ? String(row.staff_name).trim() || 'Specialist'
+      : null;
 
     summaries.push({
-      id: conversation.id,
+      id: row.id,
       title,
-      status: conversation.status ?? 'DISCOVERY',
-      messageCount: messages.length,
-      lastActivity: lastMessage?.created_at ?? null,
-      preview: truncate(lastMessage?.content ?? '', 90) || null,
-      ownerId: String(conversation.user_id ?? ''),
-      staffViewedAt: staffView?.at || null,
-      staffViewedBy: staffView?.name ?? null,
-      isUnseen: staffView === null,
+      status: row.status ?? 'DISCOVERY',
+      messageCount: Number(row.message_count),
+      lastActivity: row.last_activity ?? null,
+      preview: truncate(row.last_content ?? '', 90) || null,
+      ownerId: String(row.user_id ?? ''),
+      staffViewedAt: row.staff_joined_at || null,
+      staffViewedBy,
+      isUnseen: row.staff_joined_at == null,
     });
   }
 
@@ -1736,7 +1679,8 @@ export async function createMilestone(milestone: Milestone): Promise<Milestone |
 
 // AI-suggested milestones are drafts: each pass rewrites them in place instead of deleting,
 // because the founder's own RLS policies allow insert and update (not delete). Superseded
-// drafts are marked 'cancelled' so history stays intact and nothing is ever duplicated.
+// drafts are marked 'cancelled' so history stays intact and nothing is ever duplicated —
+// and the whole rewrite runs atomically in the database (see below).
 export async function replaceDraftMilestones(
   conversationId: string,
   milestones: {
@@ -1760,61 +1704,27 @@ export async function replaceDraftMilestones(
     return [];
   }
 
+  // The rewrite itself is one transaction in Postgres
+  // (replace_draft_milestones, migration 0014): read, reuse, insert and retire
+  // happen behind a conversation lock, so two concurrent AI passes serialize
+  // instead of duplicating rows. All-or-nothing — on failure nothing was
+  // written, so report the empty result the tool already understands.
   const supabase = await db();
-  const existing = (await getConversationMilestones(conversationId)).filter(
-    (milestone) => !milestone.proposal_id
-  );
-
-  const reusable = Math.min(existing.length, rows.length);
-
-  for (let index = 0; index < reusable; index += 1) {
-    const target = existing[index];
-    const next = rows[index];
-
-    const { error } = await supabase
-      .from('milestones')
-      .update({
-        sequence: next.sequence,
-        title: next.title,
-        description: next.description,
-        amount: next.amount,
-        estimated_weeks: next.estimated_weeks,
-        currency: 'EUR',
-        status: 'pending',
-      })
-      .eq('id', target.id);
-
+  try {
+    const { error } = await supabase.rpc('replace_draft_milestones', {
+      p_conversation_id: conversationId,
+      p_rows: rows,
+    });
     if (error) {
-      console.error('Error updating draft milestone:', error.message);
+      console.error('Error replacing draft milestones:', error.message);
+      return [];
     }
-  }
-
-  const newRows = rows.slice(reusable).map((row) => ({
-    conversation_id: conversationId,
-    currency: 'EUR',
-    status: 'pending',
-    ...row,
-  }));
-
-  if (newRows.length > 0) {
-    const { error } = await supabase.from('milestones').insert(newRows);
-
-    if (error) {
-      console.error('Error inserting draft milestones:', error.message);
-    }
-  }
-
-  const surplus = existing.slice(reusable);
-
-  for (const milestone of surplus) {
-    const { error } = await supabase
-      .from('milestones')
-      .update({ status: 'cancelled' })
-      .eq('id', milestone.id);
-
-    if (error) {
-      console.error('Error retiring draft milestone:', error.message);
-    }
+  } catch (cause) {
+    console.error(
+      'Error replacing draft milestones:',
+      cause instanceof Error ? cause.message : cause
+    );
+    return [];
   }
 
   return getMilestones(conversationId);
@@ -2225,19 +2135,6 @@ export async function getConversationTasks(conversationId: string): Promise<Task
   return data ?? [];
 }
 
-export async function getTaskMilestoneMap(conversationId: string): Promise<Map<string, string>> {
-  const milestones = await getConversationMilestones(conversationId);
-  const map = new Map<string, string>();
-
-  for (const milestone of milestones) {
-    if (milestone.id && typeof milestone.sequence === 'number') {
-      map.set(String(milestone.sequence), String(milestone.id));
-    }
-  }
-
-  return map;
-}
-
 export async function createTask(task: Task): Promise<Task | null> {
   const supabase = await db();
 
@@ -2282,65 +2179,27 @@ export async function replaceDraftTasks(
     return [];
   }
 
+  // Same atomic pattern as the milestones replace (migration 0014): pairing,
+  // reuse, insert and retire run in one transaction behind the conversation
+  // lock, so concurrent AI passes serialize. milestone_sequence resolves
+  // against draft milestones only; a claimed or advanced task is never
+  // touched because the SQL keeps only unassigned TODOs as drafts.
   const supabase = await db();
-  const milestoneMap = await getTaskMilestoneMap(conversationId);
-  const existing = (await getConversationTasks(conversationId)).filter(
-    (task) => !task.assignee_id && (task.status ?? 'TODO') === 'TODO'
-  );
-
-  const reusable = Math.min(existing.length, rows.length);
-
-  for (let index = 0; index < reusable; index += 1) {
-    const target = existing[index];
-    const next = rows[index];
-    const milestoneId =
-      next.milestone_sequence !== null ? milestoneMap.get(String(next.milestone_sequence)) ?? null : null;
-
-    const { error } = await supabase
-      .from('tasks')
-      .update({
-        title: next.title,
-        description: next.description,
-        assignee_name: next.assignee_name,
-        milestone_id: milestoneId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', target.id);
-
+  try {
+    const { error } = await supabase.rpc('replace_draft_tasks', {
+      p_conversation_id: conversationId,
+      p_rows: rows,
+    });
     if (error) {
-      console.error('Error updating draft task:', error.message);
+      console.error('Error replacing draft tasks:', error.message);
+      return [];
     }
-  }
-
-  const newRows = rows.slice(reusable).map((row) => ({
-    conversation_id: conversationId,
-    title: row.title,
-    description: row.description,
-    assignee_name: row.assignee_name,
-    milestone_id:
-      row.milestone_sequence !== null ? milestoneMap.get(String(row.milestone_sequence)) ?? null : null,
-    status: 'TODO',
-  }));
-
-  if (newRows.length > 0) {
-    const { error } = await supabase.from('tasks').insert(newRows);
-
-    if (error) {
-      console.error('Error inserting draft tasks:', error.message);
-    }
-  }
-
-  const surplus = existing.slice(reusable);
-
-  for (const task of surplus) {
-    const { error } = await supabase
-      .from('tasks')
-      .update({ status: 'DONE', updated_at: new Date().toISOString() })
-      .eq('id', task.id);
-
-    if (error) {
-      console.error('Error retiring draft task:', error.message);
-    }
+  } catch (cause) {
+    console.error(
+      'Error replacing draft tasks:',
+      cause instanceof Error ? cause.message : cause
+    );
+    return [];
   }
 
   return getConversationTasks(conversationId);
