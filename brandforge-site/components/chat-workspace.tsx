@@ -17,6 +17,7 @@ import {
 import { summarizeTaskProgress } from "@/lib/task-board";
 import { shapeTaskRoster } from "@/lib/task-board";
 import { isNearBottom } from "@/lib/chat-scroll";
+import { fetchAuthed } from "@/lib/browser-auth";
 import { BetaBanner } from "@/components/beta-banner";
 import { ChatTranscript, type ChatMessage } from "@/components/chat-transcript";
 import {
@@ -355,7 +356,7 @@ export function ChatWorkspace() {
 
   const loadRecents = useCallback(async () => {
     try {
-      const response = await fetch("/api/conversations-list");
+      const response = await fetchAuthed("/api/conversations-list");
       if (!response.ok)
         return {
           isStaff: false,
@@ -395,7 +396,7 @@ export function ChatWorkspace() {
 
   const refreshMessages = useCallback(
     async (id: string): Promise<ChatMessage[]> => {
-      const response = await fetch(
+      const response = await fetchAuthed(
         `/api/messages?conversationId=${id}&limit=${MESSAGE_PAGE_SIZE}`,
       );
       if (!response.ok) return [];
@@ -438,7 +439,7 @@ export function ChatWorkspace() {
 
     setIsLoadingOlder(true);
     try {
-      const response = await fetch(
+      const response = await fetchAuthed(
         `/api/messages?conversationId=${requestedFor}&limit=${MESSAGE_PAGE_SIZE}&before=${encodeURIComponent(oldest)}`,
       );
       if (!response.ok) return;
@@ -489,7 +490,7 @@ export function ChatWorkspace() {
 
   const refreshState = useCallback(
     async (id: string): Promise<ClientProjectState | null> => {
-      const response = await fetch(`/api/project-context?conversationId=${id}`);
+      const response = await fetchAuthed(`/api/project-context?conversationId=${id}`);
       if (!response.ok) return null;
 
       const data = await response.json();
@@ -504,9 +505,9 @@ export function ChatWorkspace() {
   const refreshArtifacts = useCallback(async (id: string) => {
     const [proposalResult, agreementResult, participantsResult] =
       await Promise.all([
-        fetch(`/api/proposals?conversationId=${id}`),
-        fetch(`/api/agreements?conversationId=${id}`),
-        fetch(`/api/participants?conversationId=${id}`),
+        fetchAuthed(`/api/proposals?conversationId=${id}`),
+        fetchAuthed(`/api/agreements?conversationId=${id}`),
+        fetchAuthed(`/api/participants?conversationId=${id}`),
       ]);
 
     if (conversationIdRef.current !== id) return;
@@ -577,7 +578,7 @@ export function ChatWorkspace() {
       let turnStatus = "Working…";
 
       try {
-        const response = await fetch("/api/chat", {
+        const response = await fetchAuthed("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -842,7 +843,7 @@ export function ChatWorkspace() {
       setError(null);
 
       try {
-        const response = await fetch("/api/conversations", {
+        const response = await fetchAuthed("/api/conversations", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ conversationId: id }),
@@ -929,7 +930,7 @@ export function ChatWorkspace() {
         if (slash.command === "review") {
           setIsContextOpen(true);
           try {
-            const response = await fetch("/api/request-review", {
+            const response = await fetchAuthed("/api/request-review", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ conversationId }),
@@ -962,7 +963,7 @@ export function ChatWorkspace() {
           form.set("conversationId", conversationId);
           form.set("file", attachment);
           form.set("caption", text);
-          const response = await fetch("/api/attachments", {
+          const response = await fetchAuthed("/api/attachments", {
             method: "POST",
             body: form,
           });
@@ -999,7 +1000,7 @@ export function ChatWorkspace() {
         setIsStreaming(true);
 
         try {
-          const response = await fetch("/api/staff/post", {
+          const response = await fetchAuthed("/api/staff/post", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ conversationId, message: text }),
@@ -1033,7 +1034,7 @@ export function ChatWorkspace() {
         setIsCreatingConversation(true);
 
         try {
-          const response = await fetch("/api/conversations", {
+          const response = await fetchAuthed("/api/conversations", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ initialMessage: text }),
@@ -1096,7 +1097,7 @@ export function ChatWorkspace() {
 
     void (async () => {
       try {
-        await fetch("/api/staff/join", {
+        await fetchAuthed("/api/staff/join", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ conversationId }),
@@ -1115,7 +1116,7 @@ export function ChatWorkspace() {
       value?: string,
     ) => {
       if (!conversationId) return;
-      const response = await fetch("/api/messages", {
+      const response = await fetchAuthed("/api/messages", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1160,7 +1161,7 @@ export function ChatWorkspace() {
     setError(null);
 
     try {
-      const response = await fetch("/api/request-review", {
+      const response = await fetchAuthed("/api/request-review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ conversationId }),
@@ -1189,7 +1190,7 @@ export function ChatWorkspace() {
 
   const loadIdentity = useCallback(async () => {
     try {
-      const response = await fetch("/api/identity");
+      const response = await fetchAuthed("/api/identity");
       if (!response.ok) return;
       const data = await response.json();
       setTelegramConnected(data.telegram_connected === true);
@@ -1200,7 +1201,7 @@ export function ChatWorkspace() {
 
   const handleTelegramConnect = useCallback(async () => {
     try {
-      const response = await fetch("/api/identity/telegram-link", {
+      const response = await fetchAuthed("/api/identity/telegram-link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
@@ -1216,7 +1217,7 @@ export function ChatWorkspace() {
   const handleInvite = useCallback(async () => {
     if (!conversationId || !inviteEmail.trim()) return;
     try {
-      await fetch("/api/invite", {
+      await fetchAuthed("/api/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ conversationId, email: inviteEmail.trim() }),
@@ -1248,7 +1249,7 @@ export function ChatWorkspace() {
               ? "declined"
               : "changes_requested";
 
-        const response = await fetch("/api/proposals", {
+        const response = await fetchAuthed("/api/proposals", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ proposalId: proposal.id, status }),
@@ -1261,7 +1262,7 @@ export function ChatWorkspace() {
         if (action === "accept") {
           // Only the ids travel: the server derives the contract total and terms from
           // the accepted proposal itself.
-          const agreementResponse = await fetch("/api/agreements", {
+          const agreementResponse = await fetchAuthed("/api/agreements", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -1315,7 +1316,7 @@ export function ChatWorkspace() {
       setError(null);
 
       try {
-        const response = await fetch("/api/agreements", {
+        const response = await fetchAuthed("/api/agreements", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(
@@ -1370,7 +1371,7 @@ export function ChatWorkspace() {
       setError(null);
 
       try {
-        const response = await fetch("/api/chat-tasks", {
+        const response = await fetchAuthed("/api/chat-tasks", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ taskId, ...payload }),
@@ -1407,7 +1408,7 @@ export function ChatWorkspace() {
       setError(null);
 
       try {
-        const response = await fetch("/api/payments", {
+        const response = await fetchAuthed("/api/payments", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ agreementId: agreement.id, txHash }),
@@ -1460,7 +1461,7 @@ export function ChatWorkspace() {
       setError(null);
 
       try {
-        const response = await fetch("/api/payments", {
+        const response = await fetchAuthed("/api/payments", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ agreementId: agreement.id, ...payload }),

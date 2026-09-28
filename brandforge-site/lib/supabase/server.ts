@@ -24,6 +24,16 @@ function parseCookieHeader(raw: string | null | undefined): CookiePair[] {
 function readCookies(request?: NextRequest): CookiePair[] {
   if (!request) return [];
 
+  // 0. Middleware-rewritten cookie string: raw cookies + any token refresh it
+  // performed on this request. Must win over the untouched sources below,
+  // which still hold the pre-refresh (possibly expired) session — otherwise a
+  // route refresh races the already-rotated refresh token (auto-signout bug).
+  const forwarded = request.headers.get('x-forwarded-cookie');
+  if (forwarded) {
+    const parsed = parseCookieHeader(forwarded);
+    if (parsed.length > 0) return parsed;
+  }
+
   // 1. NextRequest.cookies (works in middleware, sometimes empty in route handlers)
   try {
     const fromRequestCookies = request.cookies.getAll();
@@ -32,14 +42,7 @@ function readCookies(request?: NextRequest): CookiePair[] {
     // fall through
   }
 
-  // 2. Middleware-forwarded raw cookie string
-  const forwarded = request.headers.get('x-forwarded-cookie');
-  if (forwarded) {
-    const parsed = parseCookieHeader(forwarded);
-    if (parsed.length > 0) return parsed;
-  }
-
-  // 3. Raw Cookie header directly on the request
+  // 2. Raw Cookie header directly on the request
   const rawCookie = request.headers.get('cookie');
   if (rawCookie) {
     const parsed = parseCookieHeader(rawCookie);

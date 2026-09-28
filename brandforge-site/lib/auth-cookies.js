@@ -170,6 +170,29 @@ function sessionUserFromCookiePairs(pairs) {
   };
 }
 
+// Pull the JWT candidate out of parsed cookie pairs (null when there is none).
+function tokenFromPairs(pairs) {
+  const combined = combineAuthChunks(pairs);
+  if (!combined) return null;
+  const session = decodeSessionJson(combined);
+  const token = session && typeof session.access_token === 'string' ? session.access_token : '';
+  return token || null;
+}
+
+// x-forwarded-cookie is the middleware-rewritten Cookie header: the browser's
+// cookies with any token refresh middleware performed on THIS request already
+// applied. It must win over the untouched Cookie header and cookies() store,
+// which still carry the pre-refresh (possibly expired) token the route would
+// otherwise verify. Client-sent x-forwarded-cookie is deleted by middleware
+// (H6) and whatever remains is signature-checked by auth.getUser anyway.
+function sessionTokenFromSources(forwardedCookie, fallbackPairs) {
+  if (forwardedCookie) {
+    const forwardedToken = tokenFromPairs(parseCookieHeader(forwardedCookie));
+    if (forwardedToken) return forwardedToken;
+  }
+  return tokenFromPairs(fallbackPairs);
+}
+
 module.exports = {
   parseCookieHeader,
   isAuthCookieName,
@@ -179,4 +202,6 @@ module.exports = {
   combineAuthChunks,
   decodeSessionJson,
   sessionUserFromCookiePairs,
+  tokenFromPairs,
+  sessionTokenFromSources,
 };

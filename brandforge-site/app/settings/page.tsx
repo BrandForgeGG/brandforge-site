@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/app-shell';
 import { supabase } from '@/lib/supabase';
-import { getSessionUser } from '@/lib/browser-auth';
+import { fetchAuthed, getSessionUser } from '@/lib/browser-auth';
 import { getUserRoleFromEmail } from '@/lib/user-roles';
 import { avatarTone, initialsFor } from '@/lib/identity-display';
 
@@ -64,7 +64,7 @@ export default function SettingsPage() {
       );
 
       try {
-        const response = await fetch('/api/identity');
+        const response = await fetchAuthed('/api/identity');
         if (response.ok) {
           const data = await response.json();
           const identity = data?.identity;
@@ -127,7 +127,7 @@ export default function SettingsPage() {
       if (formUsername !== profile.username) updates.username = formUsername;
 
       if (Object.keys(updates).length > 0) {
-        const response = await fetch('/api/identity', {
+        const response = await fetchAuthed('/api/identity', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updates),
@@ -157,7 +157,7 @@ export default function SettingsPage() {
           data: { publicUrl },
         } = supabase.storage.from('avatars').getPublicUrl(path);
 
-        const response = await fetch('/api/identity', {
+        const response = await fetchAuthed('/api/identity', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ avatar_url: publicUrl }),

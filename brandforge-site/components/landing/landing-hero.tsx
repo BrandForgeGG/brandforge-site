@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { fetchAuthed } from '@/lib/browser-auth';
 import { trackEvent } from '@/lib/funnel-client';
 import { COMMUNITY_LINKS } from '@/lib/community';
 
@@ -64,7 +65,7 @@ export function LandingHero() {
     }
 
     try {
-      const response = await fetch('/api/conversations', {
+      const response = await fetchAuthed('/api/conversations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ initialMessage: trimmed }),

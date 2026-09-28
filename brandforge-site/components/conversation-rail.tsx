@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { getSessionUser } from "@/lib/browser-auth";
+import { fetchAuthed, getSessionUser } from "@/lib/browser-auth";
 import { avatarTone, initialsFor } from "@/lib/identity-display";
 
 export interface RecentConversation {
@@ -135,7 +135,7 @@ onMobileClose,
       // a missing username must never break the rail.
       let username: string | null = null;
       try {
-        const response = await fetch("/api/identity");
+        const response = await fetchAuthed("/api/identity");
         if (response.ok) {
           const data = await response.json();
           username = data?.identity?.username ?? null;
@@ -166,7 +166,7 @@ onMobileClose,
 
   const loadSelfRecents = useCallback(async () => {
     try {
-      const response = await fetch("/api/conversations-list");
+      const response = await fetchAuthed("/api/conversations-list");
       if (!response.ok) return;
       const data = await response.json();
       setSelfRecents(
@@ -193,7 +193,7 @@ onMobileClose,
 
   const loadCounts = useCallback(async () => {
     try {
-      const response = await fetch("/api/stats");
+      const response = await fetchAuthed("/api/stats");
       if (!response.ok) return;
       const data = await response.json();
       // Only the access flags are kept: platform-wide counters no longer render in the rail.

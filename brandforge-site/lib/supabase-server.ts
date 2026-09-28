@@ -3,11 +3,7 @@ import type { NextRequest } from 'next/server';
 import type { User } from '@supabase/supabase-js';
 import { headers } from 'next/headers';
 import crypto from 'node:crypto';
-import {
-  parseCookieHeader,
-  combineAuthChunks,
-  decodeSessionJson,
-} from './auth-cookies';
+import { parseCookieHeader, sessionTokenFromSources } from './auth-cookies';
 
 // Server-side Supabase access for API routes.
 //
@@ -28,11 +24,12 @@ import {
 //
 // On Vercel, NextRequest.cookies and cookies() are often empty in route handlers;
 // cookie sources are merged: request cookies, x-forwarded-cookie, raw Cookie header,
-// async headers() store, cookies() store.
+// async headers() store, cookies() store. The token itself is then chosen by
+// sessionTokenFromSources: middleware's x-forwarded-cookie (raw cookie + any token
+// refresh it performed on this request) beats the stale pre-refresh sources, so an
+// expiry-window request verifies the refreshed token instead of the expired one.
 
 export { createSupabaseServerClient };
-
-type DecodedSession = { access_token?: unknown; refresh_token?: unknown } | null;
 
 function pairsFromRequest(request?: NextRequest): ReturnType<typeof parseCookieHeader> {
   const pairs: ReturnType<typeof parseCookieHeader> = [];
@@ -82,12 +79,15 @@ async function sessionTokenFromRequest(request?: NextRequest): Promise<string | 
   }
   pairs.push(...storePairs);
 
-  const combined = combineAuthChunks(pairs);
-  if (!combined) return null;
+  // Middleware-rewritten cookies first: they carry any refresh this request's
+  // middleware pass already performed, while the raw Cookie header / cookies()
+  // store still hold the pre-refresh (possibly expired) token.
+  const forwarded =
+    request?.headers.get('x-forwarded-cookie') ??
+    headerStore?.get('x-forwarded-cookie') ??
+    null;
 
-  const session = decodeSessionJson(combined) as DecodedSession;
-  const token = session && typeof session.access_token === 'string' ? session.access_token : '';
-  return token || null;
+  return sessionTokenFromSources(forwarded, pairs);
 }
 
 // Verified-token cache: token hash -> user. Bounded; cleared wholesale past the cap

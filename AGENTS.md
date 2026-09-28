@@ -57,6 +57,13 @@ BrandForge/
   send keeps its text in the composer and shows **Try again** in the red banner, and `/progress` +
   "Project sent for review." moved to the green status row, so `role="alert"` now means a real
   failure. No schema change.
+- **Signed-in 401 storm fixed (2026-09-28, deployed)**: with an expired access token, routes
+  verified the stale raw-Cookie token instead of middleware's refreshed `x-forwarded-cookie`
+  → every API 401'd while the UI still looked signed in. `x-forwarded-cookie` now wins in
+  `sessionTokenFromRequest` (tested `sessionTokenFromSources` in `lib/auth-cookies.js`) and
+  in `createSupabaseServerClient.readCookies`; `lib/browser-auth.ts` `fetchAuthed` retries
+  once after `refreshSession()` on 401 (chat-workspace, rail, settings, landing hero).
+  Probes: fresh cookie 200, expired cookie 200 (rotated), no cookie 401.
 
 
 - **Open auth**: any Google account can sign in (login allowlist removed). Staff/admin access
@@ -66,8 +73,8 @@ BrandForge/
 - **Auto sign-out fix (deployed)**: middleware uses `getSession()` only (no network
   `getUser()`); never writes auth-cookie deletions; all Supabase clients use
   `cookieEncoding: 'base64url'`; pages use `lib/browser-auth.ts` `getSessionUser()`;
-  API identity comes from `x-user-*` headers → `headers()` → local chunked-cookie
-  decode → `cookies()` → local `getSession()` (`getAuthenticatedUser`; no `getUser`).
+  API identity (C1) is the cookie `access_token` verified with `auth.getUser(token)`
+  (`getAuthenticatedUser`, 60s cache) — `x-user-*` headers are advisory only.
   Unauthenticated `POST /api/conversations` correctly returns 401; signed-in chat
   must not.
 - Secrets live only in `brandforge-site/.env.local` (gitignored): `SUPABASE_SERVICE_ROLE_KEY`,
