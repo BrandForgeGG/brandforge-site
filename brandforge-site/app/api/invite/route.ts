@@ -38,17 +38,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Please enter a valid email address' }, { status: 400 });
     }
 
+    const access = await canAccessConversation(user.id, body.conversationId);
+    if (!access) {
+      return NextResponse.json({ error: 'You do not have access to this conversation' }, { status: 403 });
+    }
+
     const rate = checkRateLimit(`invite:${user.id}`, INVITE_RATE_LIMIT);
     if (!rate.allowed) {
       return NextResponse.json(
         { error: 'Too many invites — please try again later.' },
         { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } }
       );
-    }
-
-    const access = await canAccessConversation(user.id, body.conversationId);
-    if (!access) {
-      return NextResponse.json({ error: 'You do not have access to this conversation' }, { status: 403 });
     }
 
     const conversation = await getConversation(body.conversationId);

@@ -226,3 +226,22 @@ Every cycle verified green before commit: 252/252 unit tests (up from 239, +13 n
   email on the Resend quota. Now 10/hour per sender with 429 + Retry-After
   (same helper as applications/chat/funnel/proposals). `staff/post` reviewed clean.
 - Verified: 252/252 tests, tsc, eslint, build green.
+
+### C25 — Conversation creation reviewed (done, no change)
+- Validated, parallel reads already in place, honest errors, server-side funnel. Clean.
+
+### C26 — Review findings fixed, delivery workflow repaired (done)
+- A second reviewer pass over the overnight diff found one live bug that predates tonight:
+  the panel's Approve/Send-back buttons sent `{status}` with no `action`, which the server
+  ignores — founder approval of delivered work could never succeed (409 on main, 400 with
+  the new whitelist). Fixed properly: Approve sends `action: 'advance'` (founder-only),
+  staff get Start/Submit-for-review on TODO/IN_PROGRESS plus a working Send-back via a new
+  staff-only `reopen` transition (REVIEW→IN_PROGRESS). Nothing could advance tasks in the
+  UI before this.
+- Reviewer nits fixed: throttles moved after authz (diagnostic 403s preserved),
+  `AbortSignal.any` composes caller signals, panel Escape skips text fields.
+- Accepted as designed: funnel throw pattern (matches neighbors), parallel pre-authz reads
+  (discarded, no leak), weeks edge rendering (intended), visual deltas.
+- Self-correction: my reorder edits collided mid-file (duplicated lines) — caught by tsc,
+  rewritten cleanly, green after.
+- Verified: 252/252 tests, tsc, eslint, build green.

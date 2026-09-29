@@ -200,10 +200,22 @@ export function ProjectContextPanel({
   const projectPulse = buildProjectPulse({ state, proposal, agreement, tasks: state?.tasks ?? [] });
   const taskProgress = state ? summarizeTaskProgress(state.tasks) : null;
 
-  // The drawer is dismissible by keyboard: Escape returns the reader to the chat.
+  // The drawer is dismissible by keyboard: Escape returns the reader to the chat,
+  // unless they are typing (then it only leaves the field, standard behavior).
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key !== 'Escape') return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -516,23 +528,39 @@ export function ProjectContextPanel({
                           />
                         </div>
                       ) : null}
-                      {task.status === 'REVIEW' ? (
+                      {task.status === 'REVIEW' && !isStaff ? (
                         <div className="mt-1.5 flex gap-1.5">
                           <button
                             type="button"
-                            onClick={() => runTaskAction(task.id, { status: 'DONE' })}
+                            onClick={() => runTaskAction(task.id, { action: 'advance' })}
                             disabled={taskControlsDisabled(task.id)}
                             className="rounded-lg bg-[#5aa578] px-2 py-1 text-[10px] font-semibold text-[#14171a] transition hover:opacity-95 disabled:opacity-60"
                           >
                             Approve
                           </button>
+                        </div>
+                      ) : null}
+                      {task.status === 'REVIEW' && isStaff ? (
+                        <div className="mt-1.5 flex gap-1.5">
                           <button
                             type="button"
-                            onClick={() => runTaskAction(task.id, { status: 'IN_PROGRESS' })}
+                            onClick={() => runTaskAction(task.id, { action: 'reopen' })}
                             disabled={taskControlsDisabled(task.id)}
                             className="rounded-lg border border-white/10 px-2 py-1 text-[10px] text-[#9aa0a6] transition hover:border-[#e8571e] disabled:opacity-60"
                           >
                             Send back
+                          </button>
+                        </div>
+                      ) : null}
+                      {isStaff && (task.status === 'TODO' || task.status === 'IN_PROGRESS') ? (
+                        <div className="mt-1.5 flex gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => runTaskAction(task.id, { action: 'advance' })}
+                            disabled={taskControlsDisabled(task.id)}
+                            className="rounded-lg border border-white/10 px-2 py-1 text-[10px] text-[#ece7de] transition hover:border-[#e8571e] disabled:opacity-60"
+                          >
+                            {task.status === 'TODO' ? 'Start work' : 'Submit for review'}
                           </button>
                         </div>
                       ) : null}

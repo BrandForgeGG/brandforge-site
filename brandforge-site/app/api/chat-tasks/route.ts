@@ -42,7 +42,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'taskId is required' }, { status: 400 });
     }
 
-    if (!['schedule', 'assign', 'claim', 'advance'].includes(action)) {
+    if (!['schedule', 'assign', 'claim', 'advance', 'reopen'].includes(action)) {
       return NextResponse.json({ error: 'Unknown task action' }, { status: 400 });
     }
 
@@ -139,8 +139,14 @@ export async function PATCH(request: NextRequest) {
       updatedTask = claimed;
     } else {
       const currentStatus = String(task.status ?? 'TODO');
+      // Forward movement for whoever may advance (staff walk the line, founders close
+      // REVIEW once delivered); send-back returns delivered work to progress, staff only.
       const target =
-        action === 'advance' ? nextTaskStatusFor(currentStatus, staff, conversationStatus) : null;
+        action === 'advance'
+          ? nextTaskStatusFor(currentStatus, staff, conversationStatus)
+          : action === 'reopen' && staff && currentStatus === 'REVIEW'
+            ? 'IN_PROGRESS'
+            : null;
 
       if (!target || target === currentStatus) {
         return NextResponse.json(

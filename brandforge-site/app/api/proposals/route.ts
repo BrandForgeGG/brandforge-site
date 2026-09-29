@@ -43,14 +43,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const rate = checkRateLimit(`proposals:${user.id}`, PROPOSAL_RATE_LIMIT);
-    if (!rate.allowed) {
-      return NextResponse.json(
-        { error: 'Too many proposals — please try again later.' },
-        { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } }
-      );
-    }
-
     // Independent reads fire together: one round trip instead of four in series.
     // The guards below evaluate in the same order with the same messages.
     const [hasAccess, isStaff, priorDeclines, authorName] = await Promise.all([
@@ -70,6 +62,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Only BrandForge staff can issue proposals' },
         { status: 403 }
+      );
+    }
+
+    // Throttled after authorization so rejected callers keep their diagnostic 403
+    // instead of burning quota on doomed requests.
+    const rate = checkRateLimit(`proposals:${user.id}`, PROPOSAL_RATE_LIMIT);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: 'Too many proposals — please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } }
       );
     }
 
