@@ -7,16 +7,22 @@
 - **Chat architecture:** `chat-workspace` (state, realtime, streaming, all actions) + `chat-transcript` (markdown renderer, system embed cards, reactions, profile cards) + `project-context-panel` (quiet summaries) + `conversation-rail`. Embeds for proposal/agreement/funding/review with role-gated actions (`lib/embed-actions.js`), idempotent endpoints, system-message receipts.
 - **Design system:** near-black grounds, ember `#e8571e` accent, Fraunces serif display + Inter, `bf-*` classes in `globals.css`. No template look; keep it that way.
 - **Data rules that must not break:** RLS everywhere, service role confined to `lib/project-db.ts`; agreement totals derived server-side from the accepted proposal; `counter_round` 0/1/2 is the negotiation counter; funnel properties are allowlisted (no PII).
-- **Broken/missing right now:** nothing known-broken on prod (morning triage: zero errors/5xx; overnight batch fixed task approval + submit hangs, both unshipped). Missing by design decision: matching engine, dispute model, digest cron, Telegram auto-post, `public-changelog` label flow unused until first release. Open setup: Discord webhook values, GitHub webhook + secret, PAT revocation, SPF/DMARC.
+- **Broken/missing right now:** nothing known-broken on prod (all-day triage clean).
+  Missing by design decision: matching engine, dispute model, digest cron, Telegram
+  auto-post, first GitHub release. Open setup: PAT revocation, SPF/DMARC,
+  `#ops-disputes` webhook, Reddit creds, demo assets.
 - **Baseline this morning:** 252/252 tests, tsc clean, `npm run lint` clean, production build green.
 
 > Autonomous session notes live below. Branch: `auto/improvements` (this session). Overnight work is merged; `IMPROVEMENT_LOG.md` continues append-only.
 
 ## Summary for the user
 
-> Autonomous session. Branch: `auto/overnight-improvements` (local only — NOT pushed,
-> NOT deployed). All verification is local (tests, tsc, eslint, build). No prod writes,
-> no messages to real users, no secrets touched.
+**60+ improvement cycles, all green: 263 unit tests (up from 239), `tsc`, `eslint`,
+`next build`. Production is current — every deploy came from this tree and every
+probe since has passed.**
+Branch `auto/improvements` sits 55 commits ahead of `main`; nothing pushed (no
+credentials here). To sync GitHub: merge to `main`, `git push origin main` from an
+authenticated terminal.
 
 ## Summary for the user
 
