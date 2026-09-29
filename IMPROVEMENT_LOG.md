@@ -6,7 +6,31 @@
 
 ## Summary for the user
 
-_To be written at handoff._
+**Overnight shift: 22 improvement cycles, all on branch `auto/overnight-improvements`
+(local only — never pushed, never deployed). Production is untouched.**
+Every cycle verified green before commit: 252/252 unit tests (up from 239, +13 new),
+`tsc`, `eslint`, `next build`.
+
+**What got better**
+- SEO: `/robots.txt` + `/sitemap.xml` now emitted, twitter card, theme color, Organization
+  structured data on the landing page.
+- Accessibility: named composer/proposal/invite/reject inputs, reply-dismiss label, focus-
+  reachable message actions with named reaction pills, `role=alert/status` on every form
+  banner, real-button account menu with Escape, Escape-dismissable project drawer.
+- Performance: proposal/participants/context read waterfalls parallelized, task progress
+  memoized, rail polls skip hidden tabs, images lazy, stats route dropped two full-table
+  counts it computed for nobody.
+- Product: copy buttons on wallet/tx/code blocks, branded 404 + error pages, sharper hero
+  copy, rail role reads the database, proposal creation throttled (10/hour), counter offers
+  in the funnel + dashboard, auth fetch can no longer hang (30s cap), OAuth logs PII-free.
+- Correctness fixes: `3–3 weeks` rendering, doubled pulse title, first-run copy matching
+  the counter model.
+
+**To ship it:** review the diff (`git diff main...auto/overnight-improvements`), merge to
+`main`, push, `vercel --prod` from `brandforge-site/`, then run the pipeline e2e once
+(it writes prod rows and pings channels — daylight only).
+
+**Open decisions:** see "Needs human decision" below (9 items, PAT revocation first).
 
 ## Needs human decision
 
