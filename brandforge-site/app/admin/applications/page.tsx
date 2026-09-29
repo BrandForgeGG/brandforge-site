@@ -181,7 +181,10 @@ export default function AdminApplicationsPage() {
   return (
     <AppShell title="Applications" subtitle="Review specialist applications.">
       {error ? (
-        <p className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+        <p
+          role="alert"
+          className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200"
+        >
           {error}
         </p>
       ) : null}

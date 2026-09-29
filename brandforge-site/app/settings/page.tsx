@@ -377,12 +377,18 @@ export default function SettingsPage() {
           </div>
 
           {error ? (
-            <p className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+            <p
+              role="alert"
+              className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200"
+            >
               {error}
             </p>
           ) : null}
           {success ? (
-            <p className="mt-4 rounded-lg border border-[#5aa578]/30 bg-[#5aa578]/10 px-3 py-2 text-sm text-[#b9e3c4]">
+            <p
+              role="status"
+              className="mt-4 rounded-lg border border-[#5aa578]/30 bg-[#5aa578]/10 px-3 py-2 text-sm text-[#b9e3c4]"
+            >
               {success}
             </p>
           ) : null}

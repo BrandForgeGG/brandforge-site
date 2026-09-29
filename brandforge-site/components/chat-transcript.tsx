@@ -821,6 +821,10 @@ function MessageActions({
       className="mt-1 flex flex-wrap items-center gap-1.5"
       onMouseEnter={() => setVisible(true)}
       onMouseLeave={() => setVisible(false)}
+      onFocus={() => setVisible(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setVisible(false);
+      }}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
     >
@@ -837,6 +841,7 @@ function MessageActions({
                 type="button"
                 disabled={busy}
                 aria-pressed={reaction.reactedByMe}
+                aria-label={`${emoji}, ${reaction.count} reactions${reaction.reactedByMe ? ', reacted by you' : ''}`}
                 onClick={() => void run(() => onReact(emoji))}
                 className={`rounded-full border px-2 py-0.5 text-xs ${
                   reaction.reactedByMe
@@ -915,6 +920,7 @@ function MessageActions({
                 type="button"
                 disabled={busy}
                 aria-pressed={reaction.reactedByMe}
+                aria-label={`${emoji}, ${reaction.count} reactions${reaction.reactedByMe ? ', reacted by you' : ''}`}
                 onClick={() => void run(() => onReact(emoji))}
                 className={`rounded-full border px-2 py-0.5 text-xs ${
                   reaction.reactedByMe

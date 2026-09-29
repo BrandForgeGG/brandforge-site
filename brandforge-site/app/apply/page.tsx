@@ -302,13 +302,19 @@ export default function ApplyPage() {
           </div>
 
           {error ? (
-            <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+            <p
+              role="alert"
+              className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200"
+            >
               {error}
             </p>
           ) : null}
 
           {success ? (
-            <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+            <p
+              role="status"
+              className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200"
+            >
               Application submitted. We will review it shortly.
             </p>
           ) : null}

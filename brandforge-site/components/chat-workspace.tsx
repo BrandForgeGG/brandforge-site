@@ -1935,6 +1935,7 @@ return (
                     <input
                       type="email"
                       value={inviteEmail}
+                      aria-label="Email address to invite"
                       onChange={(event) => setInviteEmail(event.target.value)}
                       placeholder="friend@example.com"
                       className="min-w-0 flex-1 rounded-lg border border-white/15 bg-[#14171a] px-2 py-1.5 text-sm text-[#ece7de] placeholder:text-[#8f959b]"
@@ -2218,6 +2219,7 @@ return (
                 <span>Replying to message</span>
                 <button
                   type="button"
+                  aria-label="Stop replying"
                   onClick={() => {
                     setIsReplyingTo(null);
                     setInput("");
@@ -2273,6 +2275,7 @@ return (
                     <input
                       type="text"
                       value={proposalTitle}
+                      aria-label="Proposal title"
                       onChange={(event) => setProposalTitle(event.target.value)}
                       placeholder="Proposal title, e.g. CRM dashboard build"
                       maxLength={160}
@@ -2280,6 +2283,7 @@ return (
                     />
                     <textarea
                       value={proposalScope}
+                      aria-label="Technical approach"
                       onChange={(event) => setProposalScope(event.target.value)}
                       placeholder="Outline your technical stack, architecture, and implementation strategy…"
                       rows={4}
@@ -2366,6 +2370,7 @@ return (
               <textarea
                 ref={composerRef}
                 value={input}
+                aria-label="Chat message"
                 onChange={(event) => {
                   setInput(event.target.value);
                   setIsTyping(Boolean(event.target.value.trim()));

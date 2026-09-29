@@ -652,6 +652,7 @@ export function ProjectContextPanel({
                     <input
                       type="text"
                       value={rejectNote}
+                      aria-label="Reason for rejecting the transfer"
                       onChange={(event) => setRejectNote(event.target.value)}
                       placeholder="Reason if the transfer does not check out"
                       className="w-full rounded-md border border-white/10 bg-[#14171a] px-2 py-1.5 text-[11px] text-[#ece7de] outline-none transition placeholder:text-[#8f959b] focus:border-red-500/50"
