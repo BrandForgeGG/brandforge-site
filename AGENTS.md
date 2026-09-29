@@ -177,6 +177,10 @@ BrandForge/
   via CLI 2026-09-29 and channel-proven with a live test post; `GITHUB_WEBHOOK_SECRET` set
   the same night but needed a redeploy to take effect (`dpl_D8MyM8L8S59Xfx4DGagZbjaTmrFt`);
   repo webhook deliveries were 404ing until then. First release + redelivery still open.
+- **Traffic-source classification live with fallbacks (2026-09-29, deployed `main`→prod
+  `dpl_8prrKBPjRZtu43AzjdagcF9vE47X`)**: `0018_conversation_source.sql` still unapplied —
+  the wiring tolerates both states (writes retry without the label, organic-only reads
+  fall back to unfiltered, verified live). E2E ALL PASS (27/27) + auth probe green.
 - **Slash-command autocomplete (2026-09-29, deployed `main`→prod
   `dpl_DNyb4i3SVCUVDeU6zjEp9SRJ8nee`)**: typing `/` in the composer filters the shared
   command vocabulary with arrow-key navigation (Enter completes a partial command, exact

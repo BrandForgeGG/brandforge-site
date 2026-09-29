@@ -335,3 +335,10 @@ channels — you are awake, so daylight rules apply).
   `source` (`organic` default, `test` for synthetic) to both tables. After go: routes
   accept an optional validated source, dashboards/digest default to organic-only.
 - Bot friction verdict: sufficient as built; no new hurdles that could hurt real users.
+
+### C38 — Source wiring shipped with pre-migration fallbacks (done, deployed `dpl_8prrKBPjRZtu43AzjdagcF9vE47X`)
+- `track()` normalizes source, `recordFunnelEvent`/`createConversation` retry without the
+  label on unknown-column errors, organic-only reads fall back to unfiltered, conversations
+  POST accepts an optional validated source. Behavior identical before and after 0018 lands.
+- Verified: 253/253 tests, tsc, eslint, build green; full pipeline e2e ALL PASS (27/27) +
+  auth probe green on the deploy — the fallbacks held live with columns absent.
