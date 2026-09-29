@@ -107,6 +107,13 @@ _To be written at handoff._
   not `metadata`) — moved, warning gone.
 - Verified: 246/246 tests, tsc, eslint, build green.
 
+### C13 — Empty-state audit + stale copy (done)
+- Rail, transcript, panel and chat empty states all reviewed: genuinely good onboarding
+  copy, honeypot correctly hidden, login minimal. One fix: the first-run explainer still
+  described the pre-counter model ("accept, decline, or send back with changes") — now
+  "accept, counter, or decline".
+- Verified: 246/246 tests, tsc, eslint, build green.
+
 ### C6 — Landing copy (done)
 - Hero sub rewritten in two plain sentences (niche role list moved to services where it
   belongs, em dash removed); two vague suggestion chips replaced with specific briefs that

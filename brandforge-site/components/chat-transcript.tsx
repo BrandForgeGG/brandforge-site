@@ -1091,13 +1091,13 @@ export function ChatTranscript({
           Share the problem and who it is for, and I will turn it into
           requirements you can correct as we talk.
         </p>
-        <p className="mt-3 max-w-xl text-xs leading-relaxed text-[#8f959b]">
-          Your first message creates the project. A BrandForge specialist then
-          reviews it in this same chat and sends a priced proposal you can
-          accept, decline, or send back with changes. Nothing is charged before
-          you approve a proposal, and your money is held in escrow until you
-          approve delivered work.
-        </p>
+          <p className="mt-3 max-w-xl text-xs leading-relaxed text-[#8f959b]">
+            Your first message creates the project. A BrandForge specialist then
+            reviews it in this same chat and sends a priced proposal you can
+            accept, counter, or decline. Nothing is charged before
+            you approve a proposal, and your money is held in escrow until you
+            approve delivered work.
+          </p>
 
         <FirstRunRail />
 
