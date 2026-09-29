@@ -6,7 +6,7 @@
 
 ## Summary for the user
 
-**Overnight shift: 22 improvement cycles, all on branch `auto/overnight-improvements`
+**Overnight shift: 26 improvement cycles, all on branch `auto/overnight-improvements`
 (local only — never pushed, never deployed). Production is untouched.**
 Every cycle verified green before commit: 252/252 unit tests (up from 239, +13 new),
 `tsc`, `eslint`, `next build`.
@@ -17,14 +17,18 @@ Every cycle verified green before commit: 252/252 unit tests (up from 239, +13 n
 - Accessibility: named composer/proposal/invite/reject inputs, reply-dismiss label, focus-
   reachable message actions with named reaction pills, `role=alert/status` on every form
   banner, real-button account menu with Escape, Escape-dismissable project drawer.
-- Performance: proposal/participants/context read waterfalls parallelized, task progress
+- Performance: proposal/participants/context/task read waterfalls parallelized, task progress
   memoized, rail polls skip hidden tabs, images lazy, stats route dropped two full-table
   counts it computed for nobody.
 - Product: copy buttons on wallet/tx/code blocks, branded 404 + error pages, sharper hero
-  copy, rail role reads the database, proposal creation throttled (10/hour), counter offers
-  in the funnel + dashboard, auth fetch can no longer hang (30s cap), OAuth logs PII-free.
+  copy, rail role reads the database, counter offers in the funnel + dashboard, task delivery
+  actually advanceable (Approve/Start/Submit-for-review/Send-back — the approval path never
+  worked), unknown task actions get 400.
+- Robustness/security: proposal creation + invites throttled (10/hour, 429 after authz),
+  auth fetch can no longer hang (30s cap, signals compose), OAuth logs PII-free, filename
+  sanitizer shared, task claims use email prefixes.
 - Correctness fixes: `3–3 weeks` rendering, doubled pulse title, first-run copy matching
-  the counter model.
+  the counter model, dead email export removed.
 
 **To ship it:** review the diff (`git diff main...auto/overnight-improvements`), merge to
 `main`, push, `vercel --prod` from `brandforge-site/`, then run the pipeline e2e once
