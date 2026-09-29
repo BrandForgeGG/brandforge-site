@@ -383,3 +383,8 @@ channels — you are awake, so daylight rules apply).
   `MARKETING_TELEGRAM`, `MARKETING_REDDIT`, `REDDIT_CLIENT_ID`,
   `REDDIT_CLIENT_SECRET`, `REDDIT_USERNAME`, `REDDIT_PASSWORD`,
   `REDDIT_USER_AGENT` (plus the existing `DISCORD_*`/`TELEGRAM_*`).
+
+### C42 — 0019 applied, RLS proven locked down (done)
+- Founder applied the migration after the editor's RLS warning (fixed in-file first).
+  Verified live: service-role read 200, anon reads 0 rows with a real row present,
+  probe row cleaned (0 remaining). Processor still gated on creds/channels/scheduler.
