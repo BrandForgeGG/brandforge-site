@@ -34,7 +34,7 @@ export function LandingCommunity() {
                 {COMMUNITY_LINKS.discord.description}
               </p>
               <p className="mt-4 text-sm font-semibold text-[#e8571e]">
-                {COMMUNITY_LINKS.discord.href.replace('https://', '')}
+                Join the Discord
               </p>
             </a>
 

@@ -507,3 +507,15 @@ channels — you are awake, so daylight rules apply).
 - Served files lacked `X-Content-Type-Options: nosniff`. One header line, zero behavior
   change in modern browsers, closes the MIME-sniffing class entirely.
 - Verified: tsc, eslint, build green.
+
+### C55 — Impeccable critique of the landing (done)
+- Method: detector CLI on `components/landing` (clean: `[]`) + direct review; no browser
+  available (no overlay path), single context (declared per the skill's own fallback rule).
+- Design Health 27/36 (Good): 3s across nine scored heuristics, n/a on Flexibility
+  (Persuade surface, single path by design). Specificity verdict: serif + ember-on-black
+  + chat-first composition reads authored; residue is the eyebrow system and card grids.
+- Fixed from the report: Discord card showed the raw invite URL as link text — now
+  "Join the Discord". Deliberately kept: eyebrow system (wayfinding), two generic chips
+  (category anchors), contextual CTA labels.
+- Verified: 263/263 tests, tsc, eslint, build green.
+- Questions skipped: standing autonomous instruction — deciding myself, log records all calls.
