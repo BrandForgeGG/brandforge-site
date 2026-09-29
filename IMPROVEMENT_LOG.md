@@ -6,10 +6,10 @@
 
 ## Summary for the user
 
-**Overnight shift: 26 improvement cycles, all on branch `auto/overnight-improvements`
+**Overnight shift: 27 improvement cycles, all on branch `auto/overnight-improvements`
 (local only — never pushed, never deployed). Production is untouched.**
 Every cycle verified green before commit: 252/252 unit tests (up from 239, +13 new),
-`tsc`, `eslint`, `next build`.
+`tsc`, `eslint`, `next build` (final full pass green this morning).
 
 **What got better**
 - SEO: `/robots.txt` + `/sitemap.xml` now emitted, twitter card, theme color, Organization
@@ -249,3 +249,8 @@ Every cycle verified green before commit: 252/252 unit tests (up from 239, +13 n
 - Self-correction: my reorder edits collided mid-file (duplicated lines) — caught by tsc,
   rewritten cleanly, green after.
 - Verified: 252/252 tests, tsc, eslint, build green.
+
+### C27 — Staff gate, review route, conversation creation (done, no change)
+- `staff/join`, `lib/staff.ts` (parallel role+participants, idempotent join, no email
+  leak), `request-review` (deliberately accepts thin briefs for in-chat triage;
+  idempotent by status), `conversations POST` (validated, honest errors). All clean.
