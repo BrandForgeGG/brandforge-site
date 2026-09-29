@@ -52,6 +52,8 @@ export function LandingHero() {
       // Local session empty — do not force /login here; middleware handles auth.
       // A transient getSession miss was bouncing signed-in users to login.
       // The typed idea survives sign-in: stash it for the chat composer (session-scoped).
+      // No auto-redirect: the notice below names the next step and the idea waits in
+      // this tab until the visitor chooses sign-in or community.
       try {
         window.sessionStorage.setItem('brandforge:pending-message', trimmed);
       } catch {
@@ -60,7 +62,6 @@ export function LandingHero() {
       setBusy(false);
       setIsSignedOut(true);
       setNotice('Sign in with Google first — your idea becomes a project once you are in.');
-      setTimeout(() => router.push('/login'), 1200);
       return;
     }
 
