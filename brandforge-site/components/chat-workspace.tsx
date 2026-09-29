@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRealtimeMessages } from "@/lib/realtime-messages";
 import { useConversationPresence } from "@/lib/presence";
 import { formatTypingLabel } from "@/lib/presence-utils";
@@ -25,14 +26,12 @@ import {
   relativeTime,
   type RecentConversation,
 } from "@/components/conversation-rail";
-import {
-  ProjectContextPanel,
-  STATUS_LABELS,
-  type AgreementSummary,
-  type PaymentSummary,
-  type ProposalSummary,
-  type TaskParticipant,
-} from "@/components/project-context-panel";
+import { STATUS_LABELS, type AgreementSummary, type PaymentSummary, type ProposalSummary, type TaskParticipant } from "@/components/project-context-panel";
+
+const ProjectContextPanel = dynamic(
+  () => import("@/components/project-context-panel").then((mod) => mod.ProjectContextPanel),
+  { ssr: false, loading: () => null }
+);
 
 interface PersistedMessage {
   id: string;
