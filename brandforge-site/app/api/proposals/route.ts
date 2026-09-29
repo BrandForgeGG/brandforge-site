@@ -356,6 +356,12 @@ export async function PATCH(request: NextRequest) {
         round: status === 'countered' ? 1 : 2,
       });
 
+      // Negotiation analytics: recorded server-side at the moment the counter exists.
+      await recordFunnelEvent('counter_offered', {
+        signedIn: true,
+        properties: { round: status === 'countered' ? 1 : 2, stage: 'negotiate' },
+      });
+
       if (status === 'countered') {
         // The specialist's turn: ping the author's linked Telegram (skipped when they
         // countered their own proposal, which the matrix refuses anyway).

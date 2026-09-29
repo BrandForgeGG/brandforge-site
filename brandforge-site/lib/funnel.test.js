@@ -5,7 +5,7 @@ const { FUNNEL_EVENTS, ALLOWED_PROPERTY_KEYS, isFunnelEvent, sanitizeProperties,
 test('the funnel event list is the closed set the brief asked for', () => {
   for (const event of [
     'landing_viewed', 'signin_started', 'chat_started', 'project_described', 'review_requested',
-    'proposal_received', 'proposal_accepted', 'funding_submitted', 'funding_verified',
+    'proposal_received', 'counter_offered', 'proposal_accepted', 'funding_submitted', 'funding_verified',
     'milestone_completed', 'payment_released', 'repeat_project_started',
     'apply_started', 'apply_submitted', 'application_approved',
   ]) {
@@ -13,6 +13,12 @@ test('the funnel event list is the closed set the brief asked for', () => {
   }
   assert.equal(isFunnelEvent('nope'), false);
   assert.equal(isFunnelEvent(''), false);
+});
+
+test('the negotiation round survives sanitizing as a small int', () => {
+  const cleaned = sanitizeProperties({ round: 2, stage: 'negotiate', signedIn: true });
+  assert.equal(cleaned.round, 2);
+  assert.equal(cleaned.stage, 'negotiate');
 });
 
 test('property sanitizing keeps primitives and drops anything that could carry personal data', () => {

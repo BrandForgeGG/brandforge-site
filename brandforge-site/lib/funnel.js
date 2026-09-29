@@ -37,6 +37,7 @@ const ALLOWED_PROPERTY_KEYS = new Set([
   'network',
   'milestone_count',
   'task_count',
+  'round',            // negotiation round (counter_round 1|2), a small int enum
   'signed_in',
 ]);
 
@@ -50,6 +51,7 @@ const FUNNEL_EVENTS = Object.freeze([
   'project_described',
   'review_requested',
   'proposal_received',
+  'counter_offered',
   'proposal_accepted',
   'contract_signed',
   'funding_submitted',

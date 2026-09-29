@@ -175,3 +175,10 @@ _To be written at handoff._
 - `presence-utils.js` promised node:test coverage in its header but had no test file.
   Added five cases: tab-dedupe, self-exclusion, role fallbacks, 40-char clip, typing cap.
 - Verified: 251/251 tests, tsc, eslint, build green.
+
+### C21 — Negotiation enters the funnel (done)
+- Counters were the only negotiation moment with no metric. New `counter_offered` event
+  (+ `round` property key, small-int enum, privacy-safe) recorded server-side in the PATCH
+  counter branch; admin funnel dashboard gains the Counter row and the previously-missing
+  Contract-signed row.
+- Verified: 252/252 tests, tsc, eslint, build green.
