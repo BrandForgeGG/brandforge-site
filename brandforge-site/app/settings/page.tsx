@@ -72,6 +72,8 @@ export default function SettingsPage() {
             base.username = identity.username ?? '';
             base.avatarUrl = identity.avatarUrl ?? null;
             if (identity.displayName) base.name = identity.displayName;
+            // profiles.role is the truth; the email hint in base only covers rows that predate it.
+            if (identity.role) base.role = identity.role;
           }
         }
       } catch {
