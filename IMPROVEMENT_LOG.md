@@ -252,3 +252,15 @@ Every cycle verified green before commit: 252/252 unit tests (up from 239, +13 n
 - Landing community body repeated "land" from the headline and used an em dash. Now:
   "Watch us ship, talk to the crew, or bring your project today. A human answers."
 - Verified: 252/252 tests, tsc, eslint, build green.
+
+### C29 — Focus styles verified (done, no change)
+- Global `:focus-visible` rings plus per-component rules cover buttons, links, inputs,
+  menus and chips. No gap.
+
+### C30 — Auth identity path reviewed (done, no change)
+- Token-hash cache keys (tokens never stored), bounded cache, labeled extraction
+  diagnostics, no PII in logs. Exemplary — untouched by rule (auth-critical, no live
+  verification overnight).
+
+### C31 — Dependency audit (done, no change)
+- `npm audit`: 0 vulnerabilities in production dependencies.
