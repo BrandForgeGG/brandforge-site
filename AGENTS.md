@@ -257,6 +257,10 @@ BrandForge/
   comma eyebrow, arrow glyphs off community cards. Social proof refused (nothing real
   to show yet — blocked on first delivery + consent). Requested skills `ui-ux-pro-max` /
   `impeccable` match nothing by name — operating on local equivalents.
+- **Hero fold fix from a real screenshot (2026-09-29, deployed `auto/improvements`→prod
+  `dpl_AVJHY4VckNk2dURU2CU3PyrPRRHY`)**: first-ever visual review (agent-browser skill
+  installed, Chromium downloaded) showed the composer cut off at 720p. Tightened rhythm
+  + 3-row starter; verified fixed with an after screenshot (full composer above the fold).
 - **Proposal inputs validated server-side (2026-09-29, deployed `dpl_6KF1DCMe7444g8WyJX7jAA4GSZFY`)**:
   direct API calls bypassed every composer cap (negative/string amounts, unbounded text
   and JSON reached the money tables). Same shapes enforced with naming 400s; hostile

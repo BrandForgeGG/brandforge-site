@@ -519,3 +519,11 @@ channels — you are awake, so daylight rules apply).
   (category anchors), contextual CTA labels.
 - Verified: 263/263 tests, tsc, eslint, build green.
 - Questions skipped: standing autonomous instruction — deciding myself, log records all calls.
+
+### C56 — Browser skill installed, hero fold fixed from a real screenshot (done, deployed `dpl_AVJHY4VckNk2dURU2CU3PyrPRRHY`)
+- Installed `agent-browser` (Vercel skill, CLI via npx, Chromium downloaded) plus
+  `impeccable` + `ui-ux-pro-max` (read directly; the loader doesn't register local skills).
+  First real screenshot: the composer sat cut off at 720p viewports. Tightened hero rhythm
+  (padding, chips, 3-row starter) so the money element clears the fold sooner. Mobile
+  viewport tooling unresolved — desktop review only.
+- Verified: 263/263 tests, tsc, eslint, build green; auth probe green on the deploy.
