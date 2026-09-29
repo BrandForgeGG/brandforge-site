@@ -463,6 +463,15 @@ channels — you are awake, so daylight rules apply).
   on rejected posts by construction.
 - Verified: 263/263 tests, tsc, eslint, build green; e2e ALL PASS + auth probe green.
 
+### C53 — Prod burst triage: refused safely, source unknown (done, no change)
+- 4.5-minute window: 96× POST-400 + 64× PATCH-409 on `/api/proposals` (~35/min),
+  zero errors, zero 5xx. Every request refused — no state changed. Real data point:
+  a genuine €1000 pending proposal ("I can do this", 08:02 UTC) exists alongside live
+  chat activity, so the team is working today.
+- Cannot distinguish founder testing / operator form fight / hostile probing from
+  server logs (no bodies, no actor ids). Asking the founder directly; no code action
+  regardless — validation + matrix + throttles held exactly as designed.
+
 ### C52 — Content-calendar truth audit (done, no code — founder content, my punchlist)
 - Read `Distribution/content-calendar.md` + `marketing-copy.md` against repo truth.
   Do-not-publish findings: Day 3/9/17/21/27/30 assert shipped projects, timelines and
