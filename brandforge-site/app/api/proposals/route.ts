@@ -70,14 +70,17 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    if (
-      deliverables !== undefined &&
-      deliverables !== null &&
-      (typeof deliverables !== 'object' ||
-        Array.isArray(deliverables) ||
-        JSON.stringify(deliverables).length > 20000)
-    ) {
-      return NextResponse.json({ error: 'Deliverables must be a small object' }, { status: 400 });
+    if (deliverables !== undefined && deliverables !== null) {
+      // The column is JSONB: any JSON value fits, but it must be small and serializable.
+      let serialized: string | undefined;
+      try {
+        serialized = JSON.stringify(deliverables);
+      } catch {
+        serialized = undefined;
+      }
+      if (serialized === undefined || serialized.length > 20000) {
+        return NextResponse.json({ error: 'Deliverables must be small, valid JSON' }, { status: 400 });
+      }
     }
 
     // Independent reads fire together: one round trip instead of four in series.
