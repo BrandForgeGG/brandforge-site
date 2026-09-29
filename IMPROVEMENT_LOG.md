@@ -130,6 +130,12 @@ _To be written at handoff._
   (module needs the bundler's `@/` alias), verified by tsc + eslint + build.
 - Verified: 246/246 tests, tsc, eslint, build green.
 
+### C16 — Sweep: TODOs clean, email out of OAuth logs (done)
+- Full `TODO|FIXME|console.log` sweep: every TODO hit is the legitimate task-status enum;
+  the only real find was `user.email` in the OAuth success log — removed (redirect target
+  kept). Cookie/error logs were already PII-free.
+- Verified: 246/246 tests, tsc, eslint, build green.
+
 ### C6 — Landing copy (done)
 - Hero sub rewritten in two plain sentences (niche role list moved to services where it
   belongs, em dash removed); two vague suggestion chips replaced with specific briefs that

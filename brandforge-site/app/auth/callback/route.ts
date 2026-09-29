@@ -94,6 +94,6 @@ export async function GET(request: Request) {
   }
 
   const redirectUrl = new URL(next, requestUrl.origin);
-  console.log('OAuth callback success', { email: user.email, redirect: next });
+  console.log('OAuth callback success', { redirect: next });
   return redirectWithCookies(redirectUrl);
 }
