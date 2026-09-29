@@ -38,15 +38,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const hasAccess = await canAccessConversation(user.id, conversationId, { allowStaff: true });
-    
+    // Independent reads fire together: one round trip instead of four in series.
+    // The guards below evaluate in the same order with the same messages.
+    const [hasAccess, isStaff, priorDeclines, authorName] = await Promise.all([
+      canAccessConversation(user.id, conversationId, { allowStaff: true }),
+      isStaffAccount(user.id),
+      countDeclinedProposals(conversationId, user.id),
+      getProfileDisplayName(user.id),
+    ]);
+
     if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
     // A proposal is a priced offer from BrandForge; only staff may issue one. The founder's
     // job is to accept, decline or request changes via PATCH.
-    const isStaff = await isStaffAccount(user.id);
     if (!isStaff) {
       return NextResponse.json(
         { error: 'Only BrandForge staff can issue proposals' },
@@ -56,15 +62,12 @@ export async function POST(request: NextRequest) {
 
     // Two-declines-out: the founder declined this author twice on this brief, so the
     // author is out — another specialist may still propose.
-    const priorDeclines = await countDeclinedProposals(conversationId, user.id);
     if (priorDeclines >= 2) {
       return NextResponse.json(
         { error: 'The founder declined two of your proposals on this brief — you are out. Another specialist may still propose.' },
         { status: 403 }
       );
     }
-
-    const authorName = await getProfileDisplayName(user.id);
 
     const proposal = await createProposal({
       conversation_id: conversationId,
@@ -225,8 +228,11 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Proposal not found' }, { status: 404 });
     }
 
-    const isStaff = await isStaffAccount(user.id);
-    const ownerId = await getConversationOwnerId(existing.conversation_id);
+    // Independent reads fire together.
+    const [isStaff, ownerId] = await Promise.all([
+      isStaffAccount(user.id),
+      getConversationOwnerId(existing.conversation_id),
+    ]);
 
     // Shared, unit-tested decision (lib/money-authz.js): with the current status attached the
     // counter matrix decides who may do what in this round — 409 on a jump the lifecycle
