@@ -220,3 +220,9 @@ Every cycle verified green before commit: 252/252 unit tests (up from 239, +13 n
   convention everywhere else); unknown actions get an honest 400 instead of a misleading
   409-about-roles; conversation + staff lookups fire together.
 - Verified: 252/252 tests, tsc, eslint, build green.
+
+### C24 — Invite emails throttled (done)
+- `POST /api/invite` was validated and gated but unthrottled: every call sends a real
+  email on the Resend quota. Now 10/hour per sender with 429 + Retry-After
+  (same helper as applications/chat/funnel/proposals). `staff/post` reviewed clean.
+- Verified: 252/252 tests, tsc, eslint, build green.

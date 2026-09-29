@@ -5,8 +5,13 @@ import { isValidEmail, resolveSiteUrl } from '@/lib/auth-utils';
 import { escapeHtml, oneLine } from '@/lib/html';
 import { notify } from '@/lib/notify';
 import { sendEmail } from '@/lib/email';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
+
+// Each invite sends a real email on the founder's Resend quota, so invites are
+// throttled per sender (per instance — see lib/rate-limit.js).
+const INVITE_RATE_LIMIT = { limit: 10, windowMs: 60 * 60 * 1000 };
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,6 +36,14 @@ export async function POST(request: NextRequest) {
 
     if (!isValidEmail(body.email)) {
       return NextResponse.json({ error: 'Please enter a valid email address' }, { status: 400 });
+    }
+
+    const rate = checkRateLimit(`invite:${user.id}`, INVITE_RATE_LIMIT);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: 'Too many invites — please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } }
+      );
     }
 
     const access = await canAccessConversation(user.id, body.conversationId);
