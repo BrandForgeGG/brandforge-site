@@ -570,3 +570,8 @@ channels — you are awake, so daylight rules apply).
   access, configured-check, store-before-answer, empty-answer and save-failure loud
   failures, controller always closed). One suspicion checked and cleared: the
   last-message guard indexes correctly because `getMessages` returns chronological rows.
+
+### C63 — AI service bounds reviewed (done, no change)
+- 55s abort, 2048 max tokens, 6 tool rounds max, per-line defensive SSE parsing, tool
+  args bounded by the token cap. No runaway cost or hang paths. Untouched by rule
+  (behavior-critical, needs live verification for any change).
