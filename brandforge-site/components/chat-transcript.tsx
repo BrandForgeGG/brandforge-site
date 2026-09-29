@@ -283,7 +283,7 @@ function SystemEmbedCard({
         {embed.type === "proposal" ? (
           <div className="mt-1">
             {typeof embed.totalAmount === "number" ? (
-              <p className="mt-1 text-lg text-[#ece7de]">
+              <p className="mt-1 text-lg tabular-nums text-[#ece7de]">
                 {embed.currency || "EUR"}{" "}
                 {embed.totalAmount.toLocaleString("en-US")}
                 {(embed.weeksMin ?? embed.weeksMax) != null ? (
@@ -906,7 +906,7 @@ function MessageActions({
             onClick={handleCopy}
             className="rounded px-1.5 py-0.5 text-xs text-[#9aa0a6] hover:bg-white/5"
           >
-            {copied ? '✓ Copied' : '📋 Copy'}
+            {copied ? '✓ Copied' : <><span aria-hidden="true">📋</span> Copy</>}
           </button>
           {canManage ? (
             <>

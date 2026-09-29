@@ -598,7 +598,7 @@ export function ProjectContextPanel({
           <div className="mb-6 rounded-xl border border-[#e8571e]/30 bg-[#1c2024] p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-[#b8763b]">BrandForge proposal</p>
             <h3 className="mt-1 font-serif text-base text-[#ece7de]">{proposal.title}</h3>
-            <p className="mt-2 text-lg text-[#ece7de]">
+            <p className="mt-2 text-lg tabular-nums text-[#ece7de]">
               {money(proposal.total_amount, proposal.currency)}
               <span className="ml-2 align-middle text-xs font-normal text-[#9aa0a6]">
                 {proposal.estimated_weeks_min ?? '?'}–{proposal.estimated_weeks_max ?? '?'} weeks
