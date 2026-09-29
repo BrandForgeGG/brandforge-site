@@ -176,7 +176,17 @@ BrandForge/
   webhook (checklist in the 2026-09-29 report). `DISCORD_DEVLOG_URL` set in Vercel production
   via CLI 2026-09-29 and channel-proven with a live test post; `GITHUB_WEBHOOK_SECRET` set
   the same night but needed a redeploy to take effect (`dpl_D8MyM8L8S59Xfx4DGagZbjaTmrFt`);
-  repo webhook deliveries were 404ing until then. First release + redelivery still open. Site code pushed 2026-09-29 to the private
+  repo webhook deliveries were 404ing until then. First release + redelivery still open.
+- **Overnight improvement batch (2026-09-29, merged to `main`, deployed DEPLOY_ID)**: 27
+  cycles on `auto/overnight-improvements`, all green (252/252 tests, tsc, eslint, build).
+  Highlights: task delivery actually advanceable (panel Approve/Send-back sent payloads the
+  server ignored — founder approval never worked; now advance/reopen wired per role);
+  proposal + invite creation throttled; auth fetch time-boxed at 30s; SEO essentials
+  (robots, sitemap, twitter card, JSON-LD); a11y pass (named inputs, live regions, real
+  menu button, Escape handling); perf (parallel reads, memoized progress, hidden-tab poll
+  skip, stats route flags-only); copy buttons (wallet/tx/code), branded 404/error pages,
+  hero copy, rail role from DB, counters in funnel, presence tests. Full list in
+  `IMPROVEMENT_LOG.md`. Verified on prod with pipeline e2e + auth probe after deploy. Site code pushed 2026-09-29 to the private
   repo `BrandForgeGG/brandforge-site` (`main`); repo webhook + label + releases still open.
 - **Weekly digest live as a manual trigger (2026-09-29, deployed `main`→prod
   `dpl_6D33yezecq44s6G2KMNn2pH44FtG`)**: phase 2 of the webhook spec as code —
