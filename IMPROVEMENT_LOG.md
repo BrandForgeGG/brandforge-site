@@ -465,12 +465,14 @@ channels — you are awake, so daylight rules apply).
 
 ### C53 — Prod burst triage: refused safely, source unknown (done, no change)
 - 4.5-minute window: 96× POST-400 + 64× PATCH-409 on `/api/proposals` (~35/min),
-  zero errors, zero 5xx. Every request refused — no state changed. Real data point:
-  a genuine €1000 pending proposal ("I can do this", 08:02 UTC) exists alongside live
-  chat activity, so the team is working today.
-- Cannot distinguish founder testing / operator form fight / hostile probing from
-  server logs (no bodies, no actor ids). Asking the founder directly; no code action
-  regardless — validation + matrix + throttles held exactly as designed.
+  zero errors, zero 5xx. Founder confirms it was neither them nor the operator, so an
+  authenticated third session fired malformed requests for ~2 minutes and stopped.
+  Follow-up DB check: zero proposals and zero messages created in the window — nothing
+  got through, nothing to clean. Validation + matrix + throttles held exactly as designed.
+  If either human pasted a session/token anywhere, rotating it (Supabase Auth → sign out)
+  closes the remaining hypothesis; no emergency action otherwise.
+- Unrelated real data from the same probe: a genuine €1000 pending proposal
+  ("I can do this") and live chat activity — the team is working today.
 
 ### C52 — Content-calendar truth audit (done, no code — founder content, my punchlist)
 - Read `Distribution/content-calendar.md` + `marketing-copy.md` against repo truth.
