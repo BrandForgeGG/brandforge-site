@@ -388,3 +388,9 @@ channels — you are awake, so daylight rules apply).
 - Founder applied the migration after the editor's RLS warning (fixed in-file first).
   Verified live: service-role read 200, anon reads 0 rows with a real row present,
   probe row cleaned (0 remaining). Processor still gated on creds/channels/scheduler.
+
+### C43 — Telegram webhook acknowledges garbage (done)
+- P6 error-handling sweep: 20+ routes parse bodies, all safely inside try/catch except
+  the Telegram webhook, where a throw means 500 → Telegram retries the same garbage.
+  Malformed updates now get `{ok:true}` (secret check unchanged, still first). Other
+  routes left as-is: 500-on-garbage there is logged, safe, and client-caused.

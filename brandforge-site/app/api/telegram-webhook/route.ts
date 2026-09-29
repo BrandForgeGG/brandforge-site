@@ -75,7 +75,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const update = await request.json();
+    const update = await request.json().catch(() => null);
+
+    // Garbage in: acknowledge so Telegram stops retrying the delivery.
+    if (!update || typeof update !== 'object') {
+      return NextResponse.json({ ok: true });
+    }
 
     const message = update.message;
     const callbackQuery = update.callback_query;
