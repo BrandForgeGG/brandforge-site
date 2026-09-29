@@ -170,3 +170,8 @@ _To be written at handoff._
 - Read the operator-granting path end to end: admin gate, idempotent decline
   (`eq(status, pending)`), invite-requires-accepted, no PII in messages. The single raw
   DB error echo goes to admins only — acceptable, left alone.
+
+### C20 — Presence utils finally tested (done)
+- `presence-utils.js` promised node:test coverage in its header but had no test file.
+  Added five cases: tab-dedupe, self-exclusion, role fallbacks, 40-char clip, typing cap.
+- Verified: 251/251 tests, tsc, eslint, build green.
