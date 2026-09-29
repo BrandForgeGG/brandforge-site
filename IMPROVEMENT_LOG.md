@@ -463,6 +463,21 @@ channels — you are awake, so daylight rules apply).
   on rejected posts by construction.
 - Verified: 263/263 tests, tsc, eslint, build green; e2e ALL PASS + auth probe green.
 
+### C52 — Content-calendar truth audit (done, no code — founder content, my punchlist)
+- Read `Distribution/content-calendar.md` + `marketing-copy.md` against repo truth.
+  Do-not-publish findings: Day 3/9/17/21/27/30 assert shipped projects, timelines and
+  counts that do not exist (zero real deliveries to date) — replace with real numbers
+  or hold until true. Day 16 promises 48-hour review SLA that exists nowhere — cut or
+  commit. Day 26 describes vetting criteria no page states — write the criteria or soften.
+  Press release + long description claim skill/budget matching; the product broadcasts,
+  it does not match — reword to the broadcast truth.
+- Broken CTAs: eight posts point at `#apply` and `#projects`; neither channel exists
+  (verified against the live guild list). Suggested mapping: `#apply` → `#・start-a-project`,
+  `#projects` → `#↳︱showcase` — founder decides, channel semantics are theirs.
+- Offer flag: Day 15 promises a free consultation prize — needs explicit founder sign-off
+  before scheduling. Style otherwise clean (their own ruleset mostly honored).
+- Their files, their voice: no edits made. Xlsx not reviewed (binary).
+
 ### C46 — Attachments gain nosniff (done)
 - Served files lacked `X-Content-Type-Options: nosniff`. One header line, zero behavior
   change in modern browsers, closes the MIME-sniffing class entirely.
