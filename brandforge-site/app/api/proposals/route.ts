@@ -39,8 +39,45 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { conversationId, title, scope, deliverables, totalAmount, estimatedWeeksMin, estimatedWeeksMax } = body;
 
-    if (!conversationId || !title || !totalAmount) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    // Server-side shapes mirror the composer limits (which direct API calls bypass):
+    // a negative or stringly amount must never reach the money tables, and unbounded
+    // text/JSON must never reach storage or the rendered card.
+    const cleanTitle = typeof title === 'string' ? title.trim().slice(0, 160) : '';
+    const cleanScope = typeof scope === 'string' ? scope.trim().slice(0, 4000) : '';
+    const amount = Math.floor(Number(totalAmount));
+    const weeksMinRaw = estimatedWeeksMin ?? null;
+    const weeksMaxRaw = estimatedWeeksMax ?? null;
+    const weeksMin = weeksMinRaw === null ? null : Math.floor(Number(weeksMinRaw));
+    const weeksMax = weeksMaxRaw === null ? null : Math.floor(Number(weeksMaxRaw));
+
+    if (!conversationId || !cleanTitle || !Number.isFinite(amount) || amount < 1) {
+      return NextResponse.json(
+        { error: 'A title and a total amount of at least EUR 1 are required' },
+        { status: 400 }
+      );
+    }
+    for (const weeks of [weeksMin, weeksMax]) {
+      if (weeks !== null && (!Number.isFinite(weeks) || weeks < 1)) {
+        return NextResponse.json(
+          { error: 'The timeline must be at least 1 week' },
+          { status: 400 }
+        );
+      }
+    }
+    if (weeksMin !== null && weeksMax !== null && weeksMax < weeksMin) {
+      return NextResponse.json(
+        { error: 'The longest timeline must be at least the shortest one' },
+        { status: 400 }
+      );
+    }
+    if (
+      deliverables !== undefined &&
+      deliverables !== null &&
+      (typeof deliverables !== 'object' ||
+        Array.isArray(deliverables) ||
+        JSON.stringify(deliverables).length > 20000)
+    ) {
+      return NextResponse.json({ error: 'Deliverables must be a small object' }, { status: 400 });
     }
 
     // Independent reads fire together: one round trip instead of four in series.
@@ -86,13 +123,13 @@ export async function POST(request: NextRequest) {
 
     const proposal = await createProposal({
       conversation_id: conversationId,
-      title,
-      scope,
+      title: cleanTitle,
+      scope: cleanScope,
       deliverables,
-      total_amount: totalAmount,
+      total_amount: amount,
       currency: 'EUR',
-      estimated_weeks_min: estimatedWeeksMin,
-      estimated_weeks_max: estimatedWeeksMax,
+      estimated_weeks_min: weeksMin ?? undefined,
+      estimated_weeks_max: weeksMax ?? undefined,
       created_by: user.id,
     });
 
@@ -105,7 +142,7 @@ export async function POST(request: NextRequest) {
       conversation_id: conversationId,
       sender_type: 'ai',
       sender_name: 'BrandForge',
-      content: `${authorName} sent a proposal: ${title}. Accept it here in the chat, or open the project panel to read the full scope.`,
+      content: `${authorName} sent a proposal: ${cleanTitle}. Accept it here in the chat, or open the project panel to read the full scope.`,
       content_type: 'system',
       // The card carries its own priced-offer snapshot so it renders the price,
       // timeline and scope without another fetch — and keeps showing them forever.
@@ -113,46 +150,46 @@ export async function POST(request: NextRequest) {
         type: 'proposal',
         id: proposal.id,
         status: proposal.status,
-        title,
-        totalAmount,
+        title: cleanTitle,
+        totalAmount: amount,
         currency: 'EUR',
-        weeksMin: estimatedWeeksMin ?? null,
-        weeksMax: estimatedWeeksMax ?? null,
-        scope: scope ?? null,
+        weeksMin,
+        weeksMax,
+        scope: cleanScope || null,
       },
     });
 
     // Recorded server-side at the moment the proposal actually exists.
     await recordFunnelEvent('proposal_received', {
       signedIn: true,
-      properties: { total_amount: totalAmount, currency: 'EUR', stage: 'proposal' },
+      properties: { total_amount: amount, currency: 'EUR', stage: 'proposal' },
     });
 
     await notify('proposal_sent', {
-      title,
-      totalAmount,
+      title: cleanTitle,
+      totalAmount: amount,
       currency: 'EUR',
       conversationId,
-      weeks: weeks(estimatedWeeksMin, estimatedWeeksMax),
+      weeks: weeks(weeksMin, weeksMax),
     });
 
     // The offer must reach the founder even when Telegram is unlinked: email +
     // linked Telegram ping, best-effort, never blocks the proposal itself.
     await notifyFounder(conversationId, 'proposal_ready', {
-      title,
-      totalAmount,
+      title: cleanTitle,
+      totalAmount: amount,
       currency: 'EUR',
-      weeks: weeks(estimatedWeeksMin, estimatedWeeksMax),
+      weeks: weeks(weeksMin, weeksMax),
     });
 
     // Staff ops channel: priced terms stay off the public feed by design.
     await postOpsEvent('proposal_submitted', {
-      title,
-      totalAmount,
+      title: cleanTitle,
+      totalAmount: amount,
       currency: 'EUR',
       conversationId,
-      weeksMin: estimatedWeeksMin ?? null,
-      weeksMax: estimatedWeeksMax ?? null,
+      weeksMin,
+      weeksMax,
       authorName,
     });
 

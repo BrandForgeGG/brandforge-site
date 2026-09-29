@@ -449,6 +449,14 @@ channels — you are awake, so daylight rules apply).
   copy now speaks to staff too (briefs land here; link Telegram for the ping).
 - Verified: 263/263 tests, tsc, eslint, build green; auth probe green on the deploy.
 
+### C51 — Proposal inputs validated server-side (done)
+- Bot-persona audit: the composer caps title/scope/quote, but direct API calls bypassed
+  everything — negative and stringly amounts, unbounded text and JSON all reached the
+  money tables. POST now enforces the same shapes server-side (title ≤160, scope ≤4000,
+  amount ≥1 integer, weeks ≥1 with min≤max, deliverables a small object), with 400s that
+  name the problem.
+- Verified: 263/263 tests, tsc, eslint, build green.
+
 ### C46 — Attachments gain nosniff (done)
 - Served files lacked `X-Content-Type-Options: nosniff`. One header line, zero behavior
   change in modern browsers, closes the MIME-sniffing class entirely.
