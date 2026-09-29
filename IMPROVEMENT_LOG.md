@@ -8,6 +8,18 @@
 
 _To be written at handoff._
 
+## Needs human decision
+
+1. **Revoke the two GitHub PATs** (security, 1 min) — both were pasted in chat and used from shell history. Outstanding since last night.
+2. **Digest cron** — the trigger route is live; automation needs a cron auth scheme (the route requires an admin session today) plus a schedule call. Vercel plan limits may apply.
+3. **Matching engine** — broadcast vs routed briefs is a product decision, not a code task.
+4. **Dispute model** — states, evidence, who arbitrates. Nothing raises disputes yet.
+5. **Public PNG deletion** — `discord-banner.png` (357 KB) + 6 siblings are unreferenced in code but may still need uploading to Discord/Telegram profiles. Delete only after confirming.
+6. **money()/clip() unification** — 6-file blast radius across tested notify builders; safe only with a live e2e run. Daylight work.
+7. **next/dynamic code-splitting** — needs visual verification (panel lazy-load behavior).
+8. **Telegram channel auto-post** — needs channel admin + chat id; manual forwarding works meanwhile.
+9. **SPF + DMARC DNS** (older open item) and **demo video/screenshots**.
+
 ## Cycles
 
 ### C0 — Audit (2026-09-29, ~02:00)
@@ -56,6 +68,13 @@ _To be written at handoff._
   money()/clip() unification (6-file blast radius — daylight work), public PNG deletion
   (assets may still need uploading — founder call).
 - Verified: 245/245 tests, tsc, eslint, build green. Commit `chore: drop dead email export, share filename sanitizer`.
+
+### C6 — Landing copy (done)
+- Hero sub rewritten in two plain sentences (niche role list moved to services where it
+  belongs, em dash removed); two vague suggestion chips replaced with specific briefs that
+  model good input; CTA `Start →` is now `Start building`; hero textarea named for
+  screen readers. Steps/services sections left alone (rewritten days ago, still accurate).
+- Verified: 245/245 tests, tsc, eslint, build green. Commit `copy: sharper hero, specific suggestions, named composer`.
 
 ### C6 — Landing copy (done)
 - Hero sub rewritten in two plain sentences (niche role list moved to services where it
@@ -142,9 +161,12 @@ _To be written at handoff._
   buttons), plus its CSS. Inline code untouched.
 - Verified: 246/246 tests, tsc, eslint, build green.
 
-### C6 — Landing copy (done)
-- Hero sub rewritten in two plain sentences (niche role list moved to services where it
-  belongs, em dash removed); two vague suggestion chips replaced with specific briefs that
-  model good input; CTA `Start →` is now `Start building`; hero textarea named for
-  screen readers. Steps/services sections left alone (rewritten days ago, still accurate).
-- Verified: 245/245 tests, tsc, eslint, build green.
+### C18 — Full-diff self-review + deferred register (done)
+- Reviewed the complete overnight diff file by file: no unintended changes, route guard
+  order preserved, display strings identical except the intended `3–3 weeks` → `3 weeks`
+  fix. Created the "Needs human decision" register (9 items). No code change.
+
+### C19 — Admin applications route review (done, no change)
+- Read the operator-granting path end to end: admin gate, idempotent decline
+  (`eq(status, pending)`), invite-requires-accepted, no PII in messages. The single raw
+  DB error echo goes to admins only — acceptable, left alone.
