@@ -177,7 +177,7 @@ BrandForge/
   via CLI 2026-09-29 and channel-proven with a live test post; `GITHUB_WEBHOOK_SECRET` set
   the same night but needed a redeploy to take effect (`dpl_D8MyM8L8S59Xfx4DGagZbjaTmrFt`);
   repo webhook deliveries were 404ing until then. First release + redelivery still open.
-- **Overnight improvement batch (2026-09-29, merged to `main`, deployed DEPLOY_ID)**: 27
+- **Overnight improvement batch (2026-09-29, merged to `main`, deployed `dpl_5NZdT8iwNRVFidcXjW9sMZFL5avQ`)**: 27
   cycles on `auto/overnight-improvements`, all green (252/252 tests, tsc, eslint, build).
   Highlights: task delivery actually advanceable (panel Approve/Send-back sent payloads the
   server ignored — founder approval never worked; now advance/reopen wired per role);
