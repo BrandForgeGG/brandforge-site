@@ -563,3 +563,10 @@ channels — you are awake, so daylight rules apply).
 - Issue + confirm routes: HMAC-bound codes, constant-time bot secret, fail-closed on
   missing secret, user-friendly errors that don't oracle valid codes, chat-id
   format-checked. Textbook — untouched.
+
+### C62 — Route review sweep: health, auth-status, AI turn (done, no change)
+- `/health` leaks nothing (booleans only); `/auth/status` reports names/lengths, email
+  only to the session owner. The chat turn is careful end to end (throttle, validation,
+  access, configured-check, store-before-answer, empty-answer and save-failure loud
+  failures, controller always closed). One suspicion checked and cleared: the
+  last-message guard indexes correctly because `getMessages` returns chronological rows.
