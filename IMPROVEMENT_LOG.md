@@ -316,3 +316,22 @@ channels — you are awake, so daylight rules apply).
   timelines, or testimonials), native expanders, FAQPage JSON-LD for search.
 - Verified: 252/252 tests, tsc, eslint, build green; landing smoke (FAQ + schema live),
   auth probe green on the deploy.
+
+### C37 — Revenue-path analysis + test-traffic classification (migration PROPOSED, awaiting go)
+- **Founder:** landing (strong) → Google-only sign-in wall (biggest filter, but the idea
+  survives it) → chat shapes the brief in minutes → waiting banner with no ETA (honest:
+  no pickup-time data exists, so none is promised) → priced card → counter round →
+  two-sided signing → crypto funding → approval-gated releases. Structural conversion
+  filter, not fixable in code: funding is crypto-only; non-crypto founders bounce.
+- **Specialist:** apply (throttled, honeypot, clear success) → silent wait for admin
+  review → inbox + Telegram brief DMs → strip → POST → answer by Telegram → accept is
+  the invite → task controls now work (C26). Gap: no in-product operator guide; the
+  walkthrough lives in Telegram DMs only.
+- **Bot/low-intent:** stopped cold at Google OAuth. Authenticated abuse meets throttles
+  on chat, funnel, applications, proposals and invites, plus the apply honeypot. The one
+  hole is analytic, not abusive: probe/e2e traffic (including mine tonight) pollutes
+  `conversations` and `funnel_events` with no way to separate it from revenue.
+- Fix: `supabase/migrations/0018_conversation_source.sql` (written, NOT applied) adds
+  `source` (`organic` default, `test` for synthetic) to both tables. After go: routes
+  accept an optional validated source, dashboards/digest default to organic-only.
+- Bot friction verdict: sufficient as built; no new hurdles that could hurt real users.
