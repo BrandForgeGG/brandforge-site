@@ -384,6 +384,19 @@ channels — you are awake, so daylight rules apply).
   `REDDIT_CLIENT_SECRET`, `REDDIT_USERNAME`, `REDDIT_PASSWORD`,
   `REDDIT_USER_AGENT` (plus the existing `DISCORD_*`/`TELEGRAM_*`).
 
+### C44 — Discord bot wired end to end, buttons proven in-channel (done, deployed `dpl_HL8r6pbw7V6LSMZBFeaa13ZS2uyo`)
+- Founder supplied the app credentials; token validated read-only first (`Execution
+  Assistant`), then all seven channel webhooks + the bot token set in Vercel via CLI.
+  Ops sends now go bot-first (real URL-button components, channel resolved from the
+  configured webhook and memoized) with webhook-markdown fallback only when the channel
+  is unresolvable — never double-posts. Public lines stay webhook-only and button-free.
+- Proven by reading the channels back through the bot API after the e2e run: brief,
+  counter, final-counter, accepted and matched embeds all carry [Open conversation];
+  the live feed stays plain one-liners. Full e2e ALL PASS + auth probe green.
+- Not needed and not stored: App ID and public key (only for custom-id interaction
+  handling, which URL buttons don't require). Secrets rule stands: everything pasted
+  tonight should be rotated if this chat is ever shared.
+
 ### C42 — 0019 applied, RLS proven locked down (done)
 - Founder applied the migration after the editor's RLS warning (fixed in-file first).
   Verified live: service-role read 200, anon reads 0 rows with a real row present,

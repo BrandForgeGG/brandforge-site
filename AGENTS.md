@@ -223,6 +223,14 @@ BrandForge/
   carries an Open-conversation deep link (founder links flow centrally through
   `notifyFounder`'s `chatUrl`); ops sender retries once on 429 honoring `retry_after`.
   True component buttons need a Discord bot token (open). 256/256, probe green.
+- **Discord bot live with real buttons (2026-09-29, deployed `auto/improvements`→prod
+  `dpl_HL8r6pbw7V6LSMZBFeaa13ZS2uyo`)**: founder-supplied app credentials (`Execution
+  Assistant`); all seven channel webhooks + bot token in Vercel; ops sends go bot-first
+  with URL-button components (channel memoized from the webhook, markdown fallback only
+  when unresolvable — never double-posts). Proven by reading the channels back: brief,
+  counter, final-counter, accepted and matched embeds all carry the button; live feed
+  stays plain. Full e2e ALL PASS on the deploy. App ID + public key intentionally not
+  stored (only needed for custom-id interactions).
 - **Telegram inline-keyboard buttons (2026-09-29, deployed `auto/improvements`→prod
   `dpl_HkzZKnwG3M8B3hCyU5JbdWURRSRN`)**: pings that know their conversation carry a tappable Open-chat URL button
   (https-only, max one row of three); caller-supplied buttons win when present. 258/258,
