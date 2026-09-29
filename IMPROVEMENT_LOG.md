@@ -552,3 +552,8 @@ channels — you are awake, so daylight rules apply).
   Secret-scanned (reads `.env.local` at runtime, nothing stored). Agent-browser skill
   committed too.
 - Verified: 263/263 tests (untouched), file parse checks green.
+
+### C61 — Telegram link flow reviewed (done, no change)
+- Issue + confirm routes: HMAC-bound codes, constant-time bot secret, fail-closed on
+  missing secret, user-friendly errors that don't oracle valid codes, chat-id
+  format-checked. Textbook — untouched.
