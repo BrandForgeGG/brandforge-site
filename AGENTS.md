@@ -177,6 +177,9 @@ BrandForge/
   via CLI 2026-09-29 and channel-proven with a live test post; `GITHUB_WEBHOOK_SECRET` set
   the same night but needed a redeploy to take effect (`dpl_D8MyM8L8S59Xfx4DGagZbjaTmrFt`);
   repo webhook deliveries were 404ing until then. First release + redelivery still open.
+  Dev-log target moved to the new `public-changelog` channel webhook 2026-09-29 (old value
+  replaced via rm+add; redeployed `dpl_Bysmgdo87YgtEfnEfyJAb7GMUQFY` so the runtime picks
+  it up — env-only change, no code).
 - **`0019_marketing_posts.sql` applied 2026-09-29** (founder ran it after the editor
   flagged the missing RLS — fixed in the file first: RLS on, zero policies, anon reads
   proven empty live with a cleaned probe row). Queue table ready; processor still waits
