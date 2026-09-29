@@ -28,6 +28,9 @@ import {
 import { notify } from '@/lib/notify';
 import { notifyFounder } from '@/lib/stage-notify';
 import { postOpsEvent } from '@/lib/ops-events';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+const AGREEMENTS_RATE_LIMIT = { limit: 20, windowMs: 60 * 60 * 1000 };
 
 export const dynamic = 'force-dynamic';
 
@@ -59,6 +62,16 @@ export async function POST(request: NextRequest) {
 
     if (!decision.allowed) {
       return NextResponse.json({ error: decision.reason }, { status: decision.status });
+    }
+
+    // Throttled after authorization so rejected callers keep their diagnostic status
+    // instead of burning quota on doomed requests.
+    const createRate = checkRateLimit(`agreements:${user.id}`, AGREEMENTS_RATE_LIMIT);
+    if (!createRate.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests — please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(createRate.retryAfterSeconds) } }
+      );
     }
 
     // The agreement must belong to this conversation and the proposal must have been accepted.
@@ -158,6 +171,15 @@ export async function PATCH(request: NextRequest) {
     const ownerId = await getConversationOwnerId(agreement.conversation_id);
     const actor = { userId: user.id, isStaff };
     const isOwner = user.id === ownerId;
+
+    // Shared bucket with POST: agreement writes are rare, 20/hour total is generous.
+    const patchRate = checkRateLimit(`agreements:${user.id}`, AGREEMENTS_RATE_LIMIT);
+    if (!patchRate.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests — please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(patchRate.retryAfterSeconds) } }
+      );
+    }
 
     // ---- Contract signature: this side accepts the current terms (chat contract card). ----
     if (action === 'accept') {

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { displayAttachmentName, safeDownloadName } from '@/lib/message-actions';
 import { canAccessConversation, downloadConversationAttachment, removeConversationAttachment, uploadConversationAttachment, addMessage } from '@/lib/project-db';
 import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+const ATTACHMENTS_RATE_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 };
 
 export const dynamic = 'force-dynamic';
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -69,6 +72,14 @@ export async function POST(request: NextRequest) {
   }
   if (!(await canAccessConversation(user.id, conversationId, { allowStaff: true }))) {
     return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  }
+  // Throttled after authorization: 30 × 10 MB caps upload abuse per instance.
+  const rate = checkRateLimit(`attachments:${user.id}`, ATTACHMENTS_RATE_LIMIT);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: 'Too many uploads — please try again later.' },
+      { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } }
+    );
   }
   const attachment = await uploadConversationAttachment(conversationId, user.id, file);
   if (!attachment) return NextResponse.json({ error: 'Attachment could not be stored' }, { status: 500 });

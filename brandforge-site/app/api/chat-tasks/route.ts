@@ -16,6 +16,9 @@ import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { notify } from '@/lib/notify';
 import { notifyFounder } from '@/lib/stage-notify';
 import { normalizeTaskDueDate } from '@/lib/task-board';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+const CHAT_TASKS_RATE_LIMIT = { limit: 60, windowMs: 60 * 60 * 1000 };
 
 export const dynamic = 'force-dynamic';
 
@@ -44,6 +47,16 @@ export async function PATCH(request: NextRequest) {
 
     if (!['schedule', 'assign', 'claim', 'advance', 'reopen'].includes(action)) {
       return NextResponse.json({ error: 'Unknown task action' }, { status: 400 });
+    }
+
+    // Throttled after validation so malformed callers keep their 400s instead of
+    // burning quota (per-instance window — see lib/rate-limit.js).
+    const rate = checkRateLimit(`chat-tasks:${user.id}`, CHAT_TASKS_RATE_LIMIT);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: 'Too many task updates — please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } }
+      );
     }
 
     const task = await getTask(taskId);

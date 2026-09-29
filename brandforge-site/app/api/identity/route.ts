@@ -3,6 +3,9 @@ import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { supabase } from '@/lib/supabase';
 import { getMyIdentity, updateMyProfile } from '@/lib/project-db';
 import { validateUsername } from '@/lib/identity';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+const IDENTITY_RATE_LIMIT = { limit: 20, windowMs: 60 * 60 * 1000 };
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +43,14 @@ export async function PATCH(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    const rate = checkRateLimit(`identity:${user.id}`, IDENTITY_RATE_LIMIT);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: 'Too many profile updates — please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } }
+      );
     }
 
     const body = (await request.json().catch(() => ({}))) as {

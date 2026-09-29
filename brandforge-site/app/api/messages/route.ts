@@ -10,6 +10,10 @@ import {
   normalizeReactionEmoji,
 } from '@/lib/message-actions';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+// Generous on purpose: reactions are rapid-fire by design. Still caps floods.
+const MESSAGES_RATE_LIMIT = { limit: 200, windowMs: 60 * 60 * 1000 };
 
 export const dynamic = 'force-dynamic';
 
@@ -76,6 +80,16 @@ export async function PATCH(request: NextRequest) {
   const action = String(body.action ?? '');
   if (!messageId || !['edit', 'delete', 'react'].includes(action)) {
     return NextResponse.json({ error: 'messageId and a valid action are required' }, { status: 400 });
+  }
+
+  // Throttled after validation so malformed callers keep their 400s instead of
+  // burning quota (per-instance window — see lib/rate-limit.js).
+  const rate = checkRateLimit(`messages:${user.id}`, MESSAGES_RATE_LIMIT);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests — please try again later.' },
+      { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } }
+    );
   }
 
   if (action === 'react') {

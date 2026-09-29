@@ -6,6 +6,9 @@ import {
   isStaffAccount,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+const PARTICIPANTS_RATE_LIMIT = { limit: 20, windowMs: 60 * 60 * 1000 };
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +31,16 @@ export async function POST(request: NextRequest) {
     
     if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
+
+    // Throttled after authorization so rejected callers keep their diagnostic 403
+    // instead of burning quota on doomed requests.
+    const rate = checkRateLimit(`participants:${user.id}`, PARTICIPANTS_RATE_LIMIT);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests — please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } }
+      );
     }
 
     const participant = await addParticipant({

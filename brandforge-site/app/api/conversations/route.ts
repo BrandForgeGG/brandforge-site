@@ -8,6 +8,10 @@ import {
   recordFunnelEvent,
 } from '@/lib/project-db';
 import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+const CONVERSATION_CREATE_RATE_LIMIT = { limit: 10, windowMs: 60 * 60 * 1000 };
+const CONVERSATION_DELETE_RATE_LIMIT = { limit: 20, windowMs: 60 * 60 * 1000 };
 
 export const dynamic = 'force-dynamic';
 
@@ -19,6 +23,16 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    // Throttled after authentication so signed-out callers keep their 401
+    // instead of burning quota (per-instance window — see lib/rate-limit.js).
+    const createRate = checkRateLimit(`conversations-create:${user.id}`, CONVERSATION_CREATE_RATE_LIMIT);
+    if (!createRate.allowed) {
+      return NextResponse.json(
+        { error: 'Too many new chats — please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(createRate.retryAfterSeconds) } }
+      );
     }
 
     let body: { initialMessage?: string; source?: string } = {};
@@ -138,6 +152,14 @@ export async function DELETE(request: NextRequest) {
 
     if (!conversationId) {
       return NextResponse.json({ error: 'conversationId is required' }, { status: 400 });
+    }
+
+    const deleteRate = checkRateLimit(`conversations-delete:${user.id}`, CONVERSATION_DELETE_RATE_LIMIT);
+    if (!deleteRate.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests — please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(deleteRate.retryAfterSeconds) } }
+      );
     }
 
     const outcome = await deleteConversationForUser(user.id, conversationId);

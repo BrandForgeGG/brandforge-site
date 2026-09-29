@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { canOperatorParticipate, ensureStaffParticipant, requireStaffContext } from '@/lib/staff';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+const STAFF_JOIN_RATE_LIMIT = { limit: 20, windowMs: 60 * 60 * 1000 };
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +33,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Operators join a chat when their proposal is accepted.' },
         { status: 403 }
+      );
+    }
+
+    const rate = checkRateLimit(`staff-join:${context.user.id}`, STAFF_JOIN_RATE_LIMIT);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests — please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } }
       );
     }
 

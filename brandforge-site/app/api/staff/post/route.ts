@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { addMessage } from '@/lib/project-db';
 import { canOperatorParticipate, ensureStaffParticipant, requireStaffContext } from '@/lib/staff';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+const STAFF_POST_RATE_LIMIT = { limit: 60, windowMs: 60 * 60 * 1000 };
 
 export const dynamic = 'force-dynamic';
 
@@ -32,6 +35,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'You can post here once your proposal is accepted.' },
         { status: 403 }
+      );
+    }
+
+    // Throttled after the participation check so rejected operators keep their
+    // diagnostic 403 instead of burning quota.
+    const rate = checkRateLimit(`staff-post:${context.user.id}`, STAFF_POST_RATE_LIMIT);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: 'Too many messages — please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } }
       );
     }
 

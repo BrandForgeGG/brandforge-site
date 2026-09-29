@@ -22,6 +22,9 @@ import { notify } from '@/lib/notify';
 import { notifyFounder } from '@/lib/stage-notify';
 import { postOpsEvent, postPublicActivity } from '@/lib/ops-events';
 import { canSubmitFunding } from '@/lib/money-authz.js';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+const PAYMENTS_RATE_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 };
 
 export const dynamic = 'force-dynamic';
 
@@ -77,6 +80,16 @@ export async function POST(request: NextRequest) {
 
     if (!decision.allowed) {
       return NextResponse.json({ error: decision.reason }, { status: decision.status });
+    }
+
+    // Throttled after authorization so rejected callers keep their diagnostic status
+    // instead of burning quota on doomed requests.
+    const submitRate = checkRateLimit(`payments:${user.id}`, PAYMENTS_RATE_LIMIT);
+    if (!submitRate.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests — please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(submitRate.retryAfterSeconds) } }
+      );
     }
 
     if (agreement.status !== 'pending_funding') {
@@ -142,6 +155,15 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json(
         { error: 'Only BrandForge staff can manage payments' },
         { status: 403 }
+      );
+    }
+
+    // Shared bucket with funding submits: staff verifications are rare.
+    const manageRate = checkRateLimit(`payments:${user.id}`, PAYMENTS_RATE_LIMIT);
+    if (!manageRate.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests — please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(manageRate.retryAfterSeconds) } }
       );
     }
 
