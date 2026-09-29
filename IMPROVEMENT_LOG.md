@@ -114,6 +114,14 @@ _To be written at handoff._
   "accept, counter, or decline".
 - Verified: 246/246 tests, tsc, eslint, build green.
 
+### C14 — Proposal creation throttled (done)
+- `POST /api/proposals` had no rate limit: every call pings the founder twice (Telegram +
+  email) plus the team group and ops, so one compromised staff account could flood all
+  four. Now 10/hour per author with 429 + Retry-After (same helper and shape as
+  applications/chat/funnel). Legitimate use (a few proposals a day) and the e2e suite
+  (≤4 posts/run) sit far below the cap.
+- Verified: 246/246 tests, tsc, eslint, build green.
+
 ### C6 — Landing copy (done)
 - Hero sub rewritten in two plain sentences (niche role list moved to services where it
   belongs, em dash removed); two vague suggestion chips replaced with specific briefs that

@@ -20,8 +20,13 @@ import { canSetProposalStatus } from '@/lib/money-authz.js';
 import { notify, notifyUser } from '@/lib/notify';
 import { notifyFounder } from '@/lib/stage-notify';
 import { postOpsEvent, postPublicActivity, weeks } from '@/lib/ops-events';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
+
+// Each proposal pings the founder (Telegram + email), the team group and the ops
+// channel, so creation is throttled per author (per instance — see lib/rate-limit.js).
+const PROPOSAL_RATE_LIMIT = { limit: 10, windowMs: 60 * 60 * 1000 };
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,6 +41,14 @@ export async function POST(request: NextRequest) {
 
     if (!conversationId || !title || !totalAmount) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    const rate = checkRateLimit(`proposals:${user.id}`, PROPOSAL_RATE_LIMIT);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: 'Too many proposals — please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } }
+      );
     }
 
     // Independent reads fire together: one round trip instead of four in series.
