@@ -254,3 +254,8 @@ Every cycle verified green before commit: 252/252 unit tests (up from 239, +13 n
 - `staff/join`, `lib/staff.ts` (parallel role+participants, idempotent join, no email
   leak), `request-review` (deliberately accepts thin briefs for in-chat triage;
   idempotent by status), `conversations POST` (validated, honest errors). All clean.
+
+### C28 — Community copy dedupe (done, day loop on main)
+- Landing community body repeated "land" from the headline and used an em dash. Now:
+  "Watch us ship, talk to the crew, or bring your project today. A human answers."
+- Verified: 252/252 tests, tsc, eslint, build green.

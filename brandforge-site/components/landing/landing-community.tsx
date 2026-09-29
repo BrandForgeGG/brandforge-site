@@ -19,7 +19,7 @@ export function LandingCommunity() {
             The app is live. The community is where builds land first.
           </h2>
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-[#9aa0a6]">
-            Watch builds land, talk to the crew, or bring your project today — a human answers.
+            Watch us ship, talk to the crew, or bring your project today. A human answers.
           </p>
 
           <div className="mt-10 grid gap-4 md:grid-cols-2">
