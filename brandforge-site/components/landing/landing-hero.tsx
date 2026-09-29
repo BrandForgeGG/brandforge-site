@@ -13,8 +13,8 @@ const SUGGESTIONS = [
   'Launch a SaaS',
   'Automate my business',
   'Build an AI product',
-  'Grow my business',
-  'I have an idea',
+  'A booking site for my salon',
+  'A dashboard for support tickets',
 ];
 
 export function LandingHero() {
@@ -98,8 +98,8 @@ export function LandingHero() {
           Humans build it.
         </h1>
         <p className="mt-5 max-w-xl text-lg leading-relaxed text-[#9aa0a6]">
-          Type what you want to build. BrandForge structures it into requirements, and designers,
-          developers, reverse engineers and marketers ship it — with your crypto payment verified
+          Type what you want to build. BrandForge structures it into requirements, and
+          designers, developers and marketers ship it. Your crypto payment is verified
           on-chain and held in escrow until you approve the work.
         </p>
 
@@ -120,6 +120,7 @@ export function LandingHero() {
           <div className="relative">
             <textarea
               value={input}
+              aria-label="Describe what you want to build"
               onChange={(e) => setInput(e.target.value)}
               placeholder="What do you want to build?"
               rows={4}
@@ -130,7 +131,7 @@ export function LandingHero() {
               disabled={busy || !input.trim()}
               className="absolute bottom-4 right-4 rounded-lg bg-[#e8571e] px-5 py-2 text-sm font-semibold text-[#14171a] transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f6a07a] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1c2024] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {busy ? 'Starting…' : 'Start →'}
+              {busy ? 'Starting…' : 'Start building'}
             </button>
           </div>
         </form>

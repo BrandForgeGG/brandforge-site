@@ -56,3 +56,10 @@ _To be written at handoff._
   money()/clip() unification (6-file blast radius — daylight work), public PNG deletion
   (assets may still need uploading — founder call).
 - Verified: 245/245 tests, tsc, eslint, build green. Commit `chore: drop dead email export, share filename sanitizer`.
+
+### C6 — Landing copy (done)
+- Hero sub rewritten in two plain sentences (niche role list moved to services where it
+  belongs, em dash removed); two vague suggestion chips replaced with specific briefs that
+  model good input; CTA `Start →` is now `Start building`; hero textarea named for
+  screen readers. Steps/services sections left alone (rewritten days ago, still accurate).
+- Verified: 245/245 tests, tsc, eslint, build green.
