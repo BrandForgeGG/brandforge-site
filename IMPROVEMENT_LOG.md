@@ -442,12 +442,12 @@ channels — you are awake, so daylight rules apply).
   chooses. One clear CTA, no surprise navigation.
 - Verified: 263/263 tests, tsc, eslint, build green; auth probe green on the deploy.
 
-### C50 — Accepted specialists get told (done)
+### C50 — Accepted specialists get told (done, deployed `dpl_BDxfbFzfAnB8rpruJxCagSqY2Ut7`)
 - Specialist persona hole: approving an application changed the role and nothing else —
   the specialist never learned they were in. Acceptance now sends a short email (staff
   inbox link + Telegram-link nudge), best-effort, never failing the approval. Empty rail
   copy now speaks to staff too (briefs land here; link Telegram for the ping).
-- Verified: 263/263 tests, tsc, eslint, build green.
+- Verified: 263/263 tests, tsc, eslint, build green; auth probe green on the deploy.
 
 ### C46 — Attachments gain nosniff (done)
 - Served files lacked `X-Content-Type-Options: nosniff`. One header line, zero behavior

@@ -252,6 +252,10 @@ BrandForge/
   `dpl_DeHaF1b3FhSqw3vEEeHJ4FdhfRzB`)**: typing an idea while signed out showed community
   options, then yanked to login after 1.2s — unreadable. The redirect is gone; notice,
   stashed idea, visitor's choice. Auth probe green.
+- **Accepted specialists get told (2026-09-29, deployed `auto/improvements`→prod
+  `dpl_BDxfbFzfAnB8rpruJxCagSqY2Ut7`)**: approving an application changed the role and
+  nothing else — the specialist never learned they were in. Acceptance now emails them
+  the inbox link (best-effort); empty rail copy speaks to staff too. Auth probe green.
 - **Proposal submit silently dead — nested form fixed (2026-09-28, deployed `0ab3567`→prod
   `dpl_BJ5mtXHnUspiuAkkXNhvbLWEofZH`)**: the "Submit proposal goes to bare /chat, nothing
   happens" report. The Send-proposal `<form>` rendered **inside** the composer `<form>`
