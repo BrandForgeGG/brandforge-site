@@ -508,7 +508,7 @@ channels — you are awake, so daylight rules apply).
   change in modern browsers, closes the MIME-sniffing class entirely.
 - Verified: tsc, eslint, build green.
 
-### C55 — Impeccable critique of the landing (done)
+### C55 — Impeccable critique of the landing (done, deployed `dpl_2Zgo7a4P7dmau68CgMA73Vhm6YEa`)
 - Method: detector CLI on `components/landing` (clean: `[]`) + direct review; no browser
   available (no overlay path), single context (declared per the skill's own fallback rule).
 - Design Health 27/36 (Good): 3s across nine scored heuristics, n/a on Flexibility
