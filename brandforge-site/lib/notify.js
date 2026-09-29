@@ -15,9 +15,9 @@
 
 const TELEGRAM_API_BASE = 'https://api.telegram.org';
 const SEND_TIMEOUT_MS = 5000;
-const MAX_FIELD_LENGTH = 160;
 
 const { resolveSiteUrl } = require('./auth-utils');
+const { truncateText: clip, formatMoney: money } = require('./format');
 
 // Deep link to the chat. Builders stay text-focused; the link is appended centrally
 // so every ping carries its destination without each call site formatting URLs.
@@ -47,21 +47,7 @@ function isNotifyConfigured(env) {
   );
 }
 
-// One line of human-provided text, made safe for a single message.
-function clip(value, max = MAX_FIELD_LENGTH) {
-  return String(value ?? '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, max);
-}
-
-function money(amount, currency) {
-  const value = Number(amount);
-  if (!Number.isFinite(value) || value <= 0) {
-    return '';
-  }
-  return `${clip(currency) || 'EUR'} ${value.toLocaleString('en-US')}`;
-}
+// clip/money live in lib/format.js so every message builder renders identically.
 
 // Maps a product event to the message the team chat receives. Returns null for unknown events
 // so a typo at a call site fails quietly instead of spamming the chat.

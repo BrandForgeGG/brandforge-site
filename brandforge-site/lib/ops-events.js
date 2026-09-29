@@ -27,6 +27,7 @@ const GREEN = 0x5aa578;
 const RED = 0xe5484d;
 
 const { resolveSiteUrl } = require('./auth-utils');
+const { truncateText: clip, formatMoney: money } = require('./format');
 
 const KIND_BY_EVENT = {
   brief_posted: 'briefs',
@@ -42,18 +43,9 @@ const KIND_BY_EVENT = {
   milestone_released: 'contracts',
 };
 
-function clip(value, max) {
-  return String(value ?? '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, max);
-}
-
-function money(amount, currency) {
-  const n = Number(amount);
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return `${String(currency || 'EUR')} ${n.toLocaleString('en-US')}`;
-}
+// clip/money live in lib/format.js so every message builder renders identically.
+// (money used to return null on invalid; every call site below is truthiness-checked,
+// so the shared '' behaves the same.)
 
 function weeks(min, max) {
   const lo = Number(min);

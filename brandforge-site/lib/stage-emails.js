@@ -17,15 +17,10 @@
 //   the one thing the reader can do next.
 
 const { escapeHtml, oneLine } = require('./html');
+const { formatMoney: money } = require('./format');
 
 function line(value, max = 90) {
   return oneLine(String(value ?? ''), max);
-}
-
-function money(amount, currency) {
-  const value = Number(amount);
-  if (!Number.isFinite(value) || value <= 0) return '';
-  return `${line(currency, 8) || 'EUR'} ${value.toLocaleString('en-US')}`;
 }
 
 // The shared dark card, same shape as the invite email so every message from
