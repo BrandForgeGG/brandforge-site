@@ -585,8 +585,7 @@ channels — you are awake, so daylight rules apply).
 - 24-minute window: 39 requests, all 200/304/307/401, zero errors. Morning burst gone,
   traffic back to idle polling. Nothing to chase.
 
-### C66 — Message builders unified on lib/format.js (shipped)
-- The deferred duplication audit is done properly now that daylight e2e is available:
+### C66 — Message builders unified on lib/format.js (shipped)- The deferred duplication audit is done properly now that daylight e2e is available:
   new `lib/format.js` (`truncateText`, `formatMoney`) + 2 tests, and notify.js,
   ops-events.js, stage-emails.js use it instead of three local copies. Currency caps
   unified at 8 (codes are short; longer is hostile input). ops-events' old null-on-
@@ -598,3 +597,12 @@ channels — you are awake, so daylight rules apply).
 - Deployed to prod (first attempt failed: ran vercel from the repo root, no
   package.json there — redeployed from `brandforge-site/`, Ready in 25s). Verified
   live: auth probe green, pipeline e2e ALL PASS on the new deployment.
+
+### C67 — Audit H1+H2 closed: dead credential file deleted, headers live (shipped)
+- Deleted `supabase/client.ts` (zero importers, hardcoded live URL + anon key).
+- `next.config.ts` now sends global `nosniff`, `SAMEORIGIN` framing, `frame-ancestors
+  'self'`, strict referrer, and camera/mic/geolocation denied. Full script/style CSP
+  deliberately deferred (needs a nonce design; a half-policy is worse than none).
+- Verified live with HEAD on brandforge.gg: all five headers present; auth probe
+  green on the deploy. (Deploy note: ran vercel from the repo root twice now — the
+  rule is written on the wall: `brandforge-site/` only.)
