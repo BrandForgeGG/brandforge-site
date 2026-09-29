@@ -122,6 +122,14 @@ _To be written at handoff._
   (≤4 posts/run) sit far below the cap.
 - Verified: 246/246 tests, tsc, eslint, build green.
 
+### C15 — Auth fetch can no longer hang forever (done)
+- `fetchAuthed` had no timeout on any attempt: a stalled request or a hung session refresh
+  left buttons stuck ("Sending…") with no error and no retry — the exact shape of tonight's
+  earliest submit complaint. Every attempt (initial fetch, refresh race, retry) is now
+  time-boxed at 30s; timeouts surface as normal caller errors. No unit test possible here
+  (module needs the bundler's `@/` alias), verified by tsc + eslint + build.
+- Verified: 246/246 tests, tsc, eslint, build green.
+
 ### C6 — Landing copy (done)
 - Hero sub rewritten in two plain sentences (niche role list moved to services where it
   belongs, em dash removed); two vague suggestion chips replaced with specific briefs that
