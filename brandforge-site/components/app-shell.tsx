@@ -1,8 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { ConversationRail } from '@/components/conversation-rail';
+import { useState, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { BetaBanner } from '@/components/beta-banner';
+
+const ConversationRail = dynamic(
+  () => import('@/components/conversation-rail').then((mod) => mod.ConversationRail),
+  { ssr: false, loading: () => null }
+);
 
 export function AppShell({
   title,
@@ -19,10 +24,12 @@ export function AppShell({
     <div className="bf-page">
       <BetaBanner />
       <div className="mx-auto flex max-w-[1600px]">
-        <ConversationRail
-          isMobileOpen={isRailOpen}
-          onMobileClose={() => setIsRailOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <ConversationRail
+            isMobileOpen={isRailOpen}
+            onMobileClose={() => setIsRailOpen(false)}
+          />
+        </Suspense>
 
         <main className="flex min-w-0 flex-1 flex-col p-4 sm:p-6 lg:p-8">
           <header className="mb-6 flex items-center justify-between gap-3 border-b border-white/10 pb-6">
