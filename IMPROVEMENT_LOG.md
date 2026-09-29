@@ -634,3 +634,18 @@ channels — you are awake, so daylight rules apply).
 - Proven live, honestly this time: `POST /api/participants` with a hostile body
   returns **405** on prod (a refusal creates no rows, so this proof cost nothing).
   Pipeline e2e ALL PASS on the deploy. 265/265, tsc, eslint, build green.
+
+### C70 — Storage audit clean + settings role fixed (shipped)
+- M3 investigated and cleared, no change: bucket `conversation-attachments` is
+  private with matching 10 MB + 12-type allowlists at BOTH layers (route set and
+  bucket MIME list are identical), service-role mediated (no direct client access),
+  UUID paths with a `..`-rejecting regex, extension-derived content types on
+  download (stored MIME never trusted — kills polyglots), images inline / rest
+  forced download + nosniff, 404-masked existence, `upsert: false`. The storage
+  INSERT RLS policy compares a prefixed folder to a bare uuid (never matches) but
+  uploads bypass RLS via service role, so it fails closed and harmless. Exemplary.
+- M2 fixed for real: settings built its role label from the email hint, so anyone
+  promoted via `/admin/applications` still read "user" there. It now prefers the
+  DB role from `/api/identity` (email hint stays as the null-row fallback — same
+  pattern as conversations-list). Live proof with a throwaway user: identity
+  serves `"viewer"` for new accounts; row cleaned afterwards. Deployed, e2e green.
