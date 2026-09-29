@@ -104,13 +104,6 @@ Every cycle verified green before commit: 252/252 unit tests (up from 239, +13 n
   screen readers. Steps/services sections left alone (rewritten days ago, still accurate).
 - Verified: 245/245 tests, tsc, eslint, build green. Commit `copy: sharper hero, specific suggestions, named composer`.
 
-### C6 — Landing copy (done)
-- Hero sub rewritten in two plain sentences (niche role list moved to services where it
-  belongs, em dash removed); two vague suggestion chips replaced with specific briefs that
-  model good input; CTA `Start →` is now `Start building`; hero textarea named for
-  screen readers. Steps/services sections left alone (rewritten days ago, still accurate).
-- Verified: 245/245 tests, tsc, eslint, build green. Commit `copy: sharper hero, specific suggestions, named composer`.
-
 ### C7 — Proposal read waterfall (done)
 - POST fires its four independent reads (access, staff, declines, author name) in one
   `Promise.all`; PATCH fires staff + owner lookup together. Guards evaluate in the same
