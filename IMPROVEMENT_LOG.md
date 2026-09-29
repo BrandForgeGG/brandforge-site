@@ -363,3 +363,23 @@ channels — you are awake, so daylight rules apply).
   last night and I re-derived half of it before noticing — check the log AND recent branch
   history for shipped work before building, not just the code.
 - Verified: 258/258 tests, tsc, eslint, build green.
+
+### C41 — P5 autoposter: queue migration proposed, Reddit skill declined (done, design only)
+- Skill search found `flowkit-labs/skills@reddit-automation` (690K installs) but the repo
+  has 10 stars, Snyk flags a warning, and its philosophy (draft replies for review) only
+  half-matches scheduled auto-posting — NOT installed. Reddit work goes through the
+  official API directly when credentials exist.
+- Wrote `supabase/migrations/0019_marketing_posts.sql` (PROPOSED, unapplied): queue table
+  with channel/target/title/body/url, scheduled_at, status lifecycle
+  (queued/posted/failed/paused), attempts, permalink, error + due index. Kill switch
+  (`MARKETING_ENABLED`, default off) and per-channel flags live in the processor commit,
+  which waits for: this migration applied, Reddit OAuth creds, test channels, subreddit
+  list, scheduler choice. No sender built without those — an untested spam cannon
+  ships over nothing.
+- Content note: the founder is building the 30-day calendar themselves in
+  `Distribution/` (xlsx + md already there). No competing `marketing/` folder created;
+  the queue will consume that calendar, not replace it.
+- Env names for setup day: `MARKETING_ENABLED`, `MARKETING_DISCORD`,
+  `MARKETING_TELEGRAM`, `MARKETING_REDDIT`, `REDDIT_CLIENT_ID`,
+  `REDDIT_CLIENT_SECRET`, `REDDIT_USERNAME`, `REDDIT_PASSWORD`,
+  `REDDIT_USER_AGENT` (plus the existing `DISCORD_*`/`TELEGRAM_*`).
