@@ -252,6 +252,11 @@ BrandForge/
   `dpl_DeHaF1b3FhSqw3vEEeHJ4FdhfRzB`)**: typing an idea while signed out showed community
   options, then yanked to login after 1.2s — unreadable. The redirect is gone; notice,
   stashed idea, visitor's choice. Auth probe green.
+- **Proposal inputs validated server-side (2026-09-29, deployed `dpl_6KF1DCMe7444g8WyJX7jAA4GSZFY`)**:
+  direct API calls bypassed every composer cap (negative/string amounts, unbounded text
+  and JSON reached the money tables). Same shapes enforced with naming 400s; hostile
+  suite (6 rejections + valid control) proven live. First cut over-rejected string
+  deliverables — e2e caught it (21 cascading fails), fixed forward, e2e green again.
 - **Accepted specialists get told (2026-09-29, deployed `auto/improvements`→prod
   `dpl_BDxfbFzfAnB8rpruJxCagSqY2Ut7`)**: approving an application changed the role and
   nothing else — the specialist never learned they were in. Acceptance now emails them

@@ -449,13 +449,19 @@ channels — you are awake, so daylight rules apply).
   copy now speaks to staff too (briefs land here; link Telegram for the ping).
 - Verified: 263/263 tests, tsc, eslint, build green; auth probe green on the deploy.
 
-### C51 — Proposal inputs validated server-side (done)
+### C51 — Proposal inputs validated server-side (done, deployed `dpl_AYQAJ2Uzirwcb4j3dMcqRNFMPF2H`, fixed forward in `dpl_6KF1DCMe7444g8WyJX7jAA4GSZFY`)
 - Bot-persona audit: the composer caps title/scope/quote, but direct API calls bypassed
   everything — negative and stringly amounts, unbounded text and JSON all reached the
   money tables. POST now enforces the same shapes server-side (title ≤160, scope ≤4000,
-  amount ≥1 integer, weeks ≥1 with min≤max, deliverables a small object), with 400s that
+  amount ≥1 integer, weeks ≥1 with min≤max, deliverables small valid JSON), with 400s that
   name the problem.
-- Verified: 263/263 tests, tsc, eslint, build green.
+- Incident caught by e2e before any user hit it: the first version rejected string
+  deliverables, which Postgres JSONB accepts fine — 21 checks failed, all cascading from
+  one over-strict gate. Fixed to accept any small JSON, redeployed, e2e ALL PASS again.
+- Hostile suite live on the fix deploy: negative/string/zero amounts, empty title,
+  inverted weeks, 30KB deliverables all 400; valid control 200. Zero notifications fire
+  on rejected posts by construction.
+- Verified: 263/263 tests, tsc, eslint, build green; e2e ALL PASS + auth probe green.
 
 ### C46 — Attachments gain nosniff (done)
 - Served files lacked `X-Content-Type-Options: nosniff`. One header line, zero behavior
