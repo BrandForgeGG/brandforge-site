@@ -575,3 +575,8 @@ channels — you are awake, so daylight rules apply).
 - 55s abort, 2048 max tokens, 6 tool rounds max, per-line defensive SSE parsing, tool
   args bounded by the token cap. No runaway cost or hang paths. Untouched by rule
   (behavior-critical, needs live verification for any change).
+
+### C64 — Session gate reviewed (done, no change)
+- `proxy.ts` matches every documented fix: zombie gate, forwarded-cookie precedence,
+  H6 header stripping, no deletion writes, correct /login↔/chat bounce ordering.
+  `/apply` correctly behind auth. Untouched by rule.
