@@ -6,10 +6,13 @@
 
 ## Summary for the user
 
-**Overnight shift: 27 improvement cycles, all on branch `auto/overnight-improvements`
-(local only — never pushed, never deployed). Production is untouched.**
-Every cycle verified green before commit: 252/252 unit tests (up from 239, +13 new),
-`tsc`, `eslint`, `next build` (final full pass green this morning).
+**34 improvement cycles, branch merged, all green: 252/252 unit tests (up from 239),
+`tsc`, `eslint`, `next build` including one clean build from scratch. Nothing pushed
+to GitHub (no credentials here).**
+Production runs `dpl_5NZdT8iwNRVFidcXjW9sMZFL5avQ`; `main` is four small commits ahead
+(community copy, log hygiene, live-row cards) awaiting deploy + e2e.
+Morning prod triage: zero errors, zero 5xx; a 409 burst traced to stale proposal cards
+offering dead buttons after panel decisions — fixed at the source this cycle.
 
 **What got better**
 - SEO: `/robots.txt` + `/sitemap.xml` now emitted, twitter card, theme color, Organization
@@ -28,11 +31,12 @@ Every cycle verified green before commit: 252/252 unit tests (up from 239, +13 n
   auth fetch can no longer hang (30s cap, signals compose), OAuth logs PII-free, filename
   sanitizer shared, task claims use email prefixes.
 - Correctness fixes: `3–3 weeks` rendering, doubled pulse title, first-run copy matching
-  the counter model, dead email export removed.
+  the counter model, dead email export removed, proposal cards follow the live row (stale
+  cards offered dead buttons after panel decisions).
 
-**To ship it:** review the diff (`git diff main...auto/overnight-improvements`), merge to
-`main`, push, `vercel --prod` from `brandforge-site/`, then run the pipeline e2e once
-(it writes prod rows and pings channels — daylight only).
+**To ship it:** `main` is ready — `git push origin main`, `vercel --prod` from
+`brandforge-site/`, then run the pipeline e2e once (it writes prod rows and pings
+channels — you are awake, so daylight rules apply).
 
 **Open decisions:** see "Needs human decision" below (9 items, PAT revocation first).
 
