@@ -185,7 +185,9 @@ onMobileClose,
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadSelfRecents();
     // Staff need to notice a brand new chat without reloading the page.
+    // Hidden tabs skip the poll: nothing on screen can go stale.
     const timer = window.setInterval(() => {
+      if (document.hidden) return;
       void loadSelfRecents();
     }, 30000);
     return () => window.clearInterval(timer);
@@ -210,6 +212,7 @@ onMobileClose,
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadCounts();
     const timer = window.setInterval(() => {
+      if (document.hidden) return;
       void loadCounts();
     }, 60000);
     return () => window.clearInterval(timer);
@@ -303,9 +306,7 @@ onMobileClose,
           >
             {recents.map((conversation) => {
               const isActive = conversation.id === activeConversationId;
-              const letter = (
-                conversation.title.trim().charAt(0) || "?"
-              ).toUpperCase();
+              const letter = initialsFor(conversation.title);
               return (
                 <Link
                   key={conversation.id}

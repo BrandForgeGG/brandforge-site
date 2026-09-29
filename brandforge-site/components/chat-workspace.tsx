@@ -1680,7 +1680,10 @@ export function ChatWorkspace() {
   );
 
   const projectLabel = state?.project.name || state?.title || "New project";
-  const taskProgress = summarizeTaskProgress(state?.tasks ?? []);
+  const taskProgress = useMemo(
+    () => summarizeTaskProgress(state?.tasks ?? []),
+    [state?.tasks],
+  );
   const isBusy = isStreaming || isCreatingConversation;
 
   // The active row from Recents carries the staff marker.

@@ -667,6 +667,8 @@ function Avatar({
             src={profile?.avatarUrl ?? ""}
             alt={avatarLabel(displayName)}
             className="bf-avatar-img"
+            loading="lazy"
+            decoding="async"
             onError={() => setImageFailed(true)}
           />
         ) : (
@@ -690,6 +692,8 @@ function Avatar({
                     src={profile.avatarUrl}
                     alt={avatarLabel(displayName)}
                     className="bf-avatar-img h-9 w-9 rounded-full"
+                    loading="lazy"
+                    decoding="async"
                     onError={() => setImageFailed(true)}
                   />
                 ) : (
@@ -1245,6 +1249,8 @@ export function ChatTranscript({
                         src={`/api/attachments?path=${encodeURIComponent(artifact.path)}`}
                         alt={artifact.name}
                         className="mb-2 max-h-64 max-w-full rounded-xl border border-white/10 object-contain"
+                        loading="lazy"
+                        decoding="async"
                       />
                     ) : null}
                     <a

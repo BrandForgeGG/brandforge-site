@@ -262,6 +262,7 @@ export default function SettingsPage() {
                   <img
                     src={avatarPreview}
                     alt=""
+                    decoding="async"
                     className="h-full w-full rounded-full object-cover"
                   />
                 ) : (
