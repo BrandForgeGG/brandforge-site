@@ -23,11 +23,15 @@ export function LandingNav() {
   }, []);
 
   return (
-    <nav className="bf-landing-nav">
+    <nav className="bf-landing-nav" aria-label="Landing">
       <div className="bf-landing-nav-inner">
-        <div className="font-serif text-2xl text-[#ece7de]">
+        <Link
+          href="/"
+          className="font-serif text-2xl text-[#ece7de]"
+          aria-label="BrandForge home"
+        >
           Brand<span className="text-[#e8571e]">Forge</span>
-        </div>
+        </Link>
 
         <div className="hidden items-center gap-6 text-sm text-[#9aa0a6] sm:flex">
           <a href="#services" className="transition hover:text-[#ece7de]">
@@ -35,6 +39,9 @@ export function LandingNav() {
           </a>
           <a href="#process" className="transition hover:text-[#ece7de]">
             How it works
+          </a>
+          <a href="#faq" className="transition hover:text-[#ece7de]">
+            Questions
           </a>
           <a href="#community" className="transition hover:text-[#ece7de]">
             Community

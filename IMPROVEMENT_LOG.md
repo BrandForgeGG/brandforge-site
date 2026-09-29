@@ -428,6 +428,12 @@ channels — you are awake, so daylight rules apply).
   rule already covers every `outline-none` input — no change needed there.
 - Verified: 263/263 tests, tsc, eslint, build green.
 
+### C48 — Landing nav: home link + FAQ anchor (done)
+- The wordmark was a dead div (now links home with a label); the new FAQ section had no
+  nav entry (now listed between How it works and Community). Checked: nav is not sticky,
+  so no scroll-margin needed.
+- Verified: 263/263 tests, tsc, eslint, build green.
+
 ### C46 — Attachments gain nosniff (done)
 - Served files lacked `X-Content-Type-Options: nosniff`. One header line, zero behavior
   change in modern browsers, closes the MIME-sniffing class entirely.
