@@ -182,6 +182,9 @@ BrandForge/
   command vocabulary with arrow-key navigation (Enter completes a partial command, exact
   commands keep send-on-Enter, Escape dismisses). The Actions menu renders the same list
   (surfacing the previously hidden `/help`). 252/252, auth probe green on the deploy.
+- **Landing FAQ (2026-09-29, deployed `main`→prod `dpl_6T8CNXDKiTMDXy1GcHzLJezQzBve`)**: five
+  questions answered strictly from repo truth plus FAQPage JSON-LD. Smoke-verified live
+  (FAQ section + schema in prod HTML), auth probe green.
 - **Overnight improvement batch (2026-09-29, merged to `main`, deployed `dpl_5NZdT8iwNRVFidcXjW9sMZFL5avQ`)**: 27
   cycles on `auto/overnight-improvements`, all green (252/252 tests, tsc, eslint, build).
   Highlights: task delivery actually advanceable (panel Approve/Send-back sent payloads the
