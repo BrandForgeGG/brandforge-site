@@ -487,7 +487,7 @@ channels — you are awake, so daylight rules apply).
   before scheduling. Style otherwise clean (their own ruleset mostly honored).
 - Their files, their voice: no edits made. Xlsx not reviewed (binary).
 
-### C46 — Attachments gain nosniff (done)
+### C46b — Attachments gain nosniff (done)
 - Served files lacked `X-Content-Type-Options: nosniff`. One header line, zero behavior
   change in modern browsers, closes the MIME-sniffing class entirely.
 - Verified: tsc, eslint, build green.
