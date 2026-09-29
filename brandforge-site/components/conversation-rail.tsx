@@ -444,17 +444,13 @@ onMobileClose,
                 {newChatCount} new chat{newChatCount === 1 ? "" : "s"}
               </p>
             ) : null}
-            <div
-              className="flex items-center gap-3 cursor-pointer"
+            <button
+              type="button"
+              className="flex w-full items-center gap-3 cursor-pointer text-left"
               onClick={() => setDropdownOpen((v) => !v)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  setDropdownOpen((v) => !v);
-                }
+                if (e.key === 'Escape') setDropdownOpen(false);
               }}
-              role="button"
-              tabIndex={0}
               aria-expanded={dropdownOpen}
               aria-haspopup="menu"
               aria-label="Account menu"
@@ -466,20 +462,20 @@ onMobileClose,
               >
                 {initialsFor(account?.name ?? "?")}
               </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-[#ece7de]">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium text-[#ece7de]">
                   {account?.name ?? "BrandForge"}
-                </p>
+                </span>
                 {account?.username ? (
-                  <p className="truncate text-[11px] text-[#9aa0a6]">
+                  <span className="block truncate text-[11px] text-[#9aa0a6]">
                     @{account.username}
-                  </p>
+                  </span>
                 ) : null}
-                <p className="truncate text-[10px] uppercase tracking-[0.15em] text-[#8f959b]">
+                <span className="block truncate text-[10px] uppercase tracking-[0.15em] text-[#8f959b]">
                   {account ? account.role : "Signed in"}
-                </p>
-              </div>
-            </div>
+                </span>
+              </span>
+            </button>
             {dropdownOpen ? (
               <div className="absolute bottom-full left-0 mb-2 w-56 rounded-xl border border-white/10 bg-[#1c2024] p-3 shadow-xl">
                 <Link

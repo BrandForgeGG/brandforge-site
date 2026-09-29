@@ -24,3 +24,11 @@ _To be written at handoff._
   twitter summary-large-image meta, `themeColor #111417`, Organization JSON-LD on landing.
 - Verified: build emits `/robots.txt` + `/sitemap.xml`; 245/245 tests, tsc, eslint green.
 - Commit: `seo: robots, sitemap, twitter card, theme color, org structured data`.
+
+### C2 — Named controls + live-region feedback (done)
+- aria-labels on composer, proposal title/approach, invite email, funding-reject reason,
+  reply-dismiss; MessageActions reveal on focus with named reaction pills (both branches);
+  role=alert/role=status on auth/apply/admin/settings banners. No visual change.
+- Verified: 245/245 tests, tsc, eslint, build green. Commit `a11y: named controls and
+  live-region feedback`. (Note: first build attempt ran in the repo root by mistake;
+  re-ran in brandforge-site — green.)

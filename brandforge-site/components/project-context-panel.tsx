@@ -191,6 +191,15 @@ export function ProjectContextPanel({
 
   const projectPulse = buildProjectPulse({ state, proposal, agreement, tasks: state?.tasks ?? [] });
   const taskProgress = state ? summarizeTaskProgress(state.tasks) : null;
+
+  // The drawer is dismissible by keyboard: Escape returns the reader to the chat.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
   const submittedNetwork = payments.find((payment) => payment.network)?.network ?? null;
 
   // "What happens next?" - the next delivery task, else the first unmet discovery step,
