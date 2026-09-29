@@ -623,3 +623,14 @@ channels — you are awake, so daylight rules apply).
 - Side observation (not changed, flagged for a later cycle): participants POST lets
   any participant add any userId with any role after a bare access check — worth a
   dedicated authz review.
+
+### C69 — Rogue participants POST removed (shipped, live-proven)
+- The flagged endpoint was worse than suspected: any participant could add ANY user
+  under ANY role string (no allowlist at route or DB — the founder/operator/builder/
+  observer union is a TS type only), and the route had exactly zero legitimate
+  callers (the app only ever GETs the list; writes go through staff-join, admin
+  invite, and proposal-accept flows with fixed roles). Deleted the handler (−55
+  lines); the route is now documented read-only.
+- Proven live, honestly this time: `POST /api/participants` with a hostile body
+  returns **405** on prod (a refusal creates no rows, so this proof cost nothing).
+  Pipeline e2e ALL PASS on the deploy. 265/265, tsc, eslint, build green.
