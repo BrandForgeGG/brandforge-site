@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
       'Content-Type': contentType,
       'Content-Disposition': `${contentType.startsWith('image/') ? 'inline' : 'attachment'}; filename="${safeDownloadName(name)}"`,
       'Cache-Control': 'private, no-store',
+      'X-Content-Type-Options': 'nosniff',
     },
   });
 }

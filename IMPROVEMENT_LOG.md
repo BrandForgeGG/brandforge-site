@@ -384,10 +384,8 @@ channels — you are awake, so daylight rules apply).
   `REDDIT_CLIENT_SECRET`, `REDDIT_USERNAME`, `REDDIT_PASSWORD`,
   `REDDIT_USER_AGENT` (plus the existing `DISCORD_*`/`TELEGRAM_*`).
 
-### C44 — Discord bot wired end to end, buttons proven in-channel (done, deployed `dpl_HL8r6pbw7V6LSMZBFeaa13ZS2uyo`)
-- Founder supplied the app credentials; token validated read-only first (`Execution
-  Assistant`), then all seven channel webhooks + the bot token set in Vercel via CLI.
-  Ops sends now go bot-first (real URL-button components, channel resolved from the
+### C44 — Discord bot wired end to end, buttons proven in-channel (done, deployed `dpl_HL8r6pbw7V6LSMZBFeaa13ZS2uyo`)- Founder supplied the app credentials; token validated read-only first (`Execution
+  Assistant`), then all seven channel webhooks + the bot token set in Vercel via CLI.  Ops sends now go bot-first (real URL-button components, channel resolved from the
   configured webhook and memoized) with webhook-markdown fallback only when the channel
   is unresolvable — never double-posts. Public lines stay webhook-only and button-free.
 - Proven by reading the channels back through the bot API after the e2e run: brief,
@@ -408,3 +406,14 @@ channels — you are awake, so daylight rules apply).
   Malformed updates now get `{ok:true}` (secret check unchanged, still first). Other
   routes left as-is: 500-on-garbage there is logged, safe, and client-caused.
 - Verified: 258/258 tests, tsc, eslint, build green; auth probe green on the deploy.
+
+### C45 — Discord recon (done, no change)
+- Listed the guild through the bot API: all mapped channels exist except `#ops-disputes`
+  (missing — escrow-rejected embeds stay skipped until its webhook exists). `#dev-log`
+  exists. No GitHub webhook deliveries in the window — no release published yet.
+  `Showcase` and `ops-registrations` deliberately unwired.
+
+### C46 — Attachments gain nosniff (done)
+- Served files lacked `X-Content-Type-Options: nosniff`. One header line, zero behavior
+  change in modern browsers, closes the MIME-sniffing class entirely.
+- Verified: tsc, eslint, build green.
