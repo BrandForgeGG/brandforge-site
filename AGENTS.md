@@ -179,7 +179,9 @@ BrandForge/
   repo webhook deliveries were 404ing until then. First release + redelivery still open.
   Dev-log target moved to the new `public-changelog` channel webhook 2026-09-29 (old value
   replaced via rm+add; redeployed `dpl_Bysmgdo87YgtEfnEfyJAb7GMUQFY` so the runtime picks
-  it up — env-only change, no code).
+  it up — env-only change, no code). Split 2026-09-29 (deployed `dpl_EmGAyHoRFvtsPGH49AbTa4ZKwZFP`):
+  releases post to both the staff dev-log and `DISCORD_PUBLIC_CHANGELOG_URL`, labeled merges
+  stay private. Still needs the old `#dev-log` webhook re-pasted for `DISCORD_DEVLOG_URL`.
 - **`0019_marketing_posts.sql` applied 2026-09-29** (founder ran it after the editor
   flagged the missing RLS — fixed in the file first: RLS on, zero policies, anon reads
   proven empty live with a cleaned probe row). Queue table ready; processor still waits

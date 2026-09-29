@@ -413,6 +413,13 @@ channels — you are awake, so daylight rules apply).
   exists. No GitHub webhook deliveries in the window — no release published yet.
   `Showcase` and `ops-registrations` deliberately unwired.
 
+### C46 — Public/private changelog split (done, deployed `dpl_EmGAyHoRFvtsPGH49AbTa4ZKwZFP`)
+- Founder decision: dev changelogs stay private (staff+owner), public gets releases only.
+  New `postPublicChangelog` (`DISCORD_PUBLIC_CHANGELOG_URL`, set via CLI); the receiver
+  posts releases to both feeds, labeled merges to the private one. Still needs the old
+  `#dev-log` webhook re-pasted for `DISCORD_DEVLOG_URL`, which currently points public.
+- Verified: 263/263 tests, tsc, eslint, build green.
+
 ### C46 — Attachments gain nosniff (done)
 - Served files lacked `X-Content-Type-Options: nosniff`. One header line, zero behavior
   change in modern browsers, closes the MIME-sniffing class entirely.
