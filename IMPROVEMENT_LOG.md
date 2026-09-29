@@ -584,3 +584,14 @@ channels — you are awake, so daylight rules apply).
 ### C65 — Midday prod snapshot (done, no change)
 - 24-minute window: 39 requests, all 200/304/307/401, zero errors. Morning burst gone,
   traffic back to idle polling. Nothing to chase.
+
+### C66 — Message builders unified on lib/format.js (shipped)
+- The deferred duplication audit is done properly now that daylight e2e is available:
+  new `lib/format.js` (`truncateText`, `formatMoney`) + 2 tests, and notify.js,
+  ops-events.js, stage-emails.js use it instead of three local copies. Currency caps
+  unified at 8 (codes are short; longer is hostile input). ops-events' old null-on-
+  invalid is now '' — every one of its call sites is truthiness-checked, verified by
+  reading all 8. All pre-existing tests pass UNCHANGED (263→265 with the 2 new ones),
+  which proves zero output drift. Deliberately left out: panel/transcript/payments
+  display money (their '—'/fallback null semantics are a different contract) and the
+  ellipsis truncate variants (different behavior, documented).
