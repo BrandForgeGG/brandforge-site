@@ -2101,6 +2101,7 @@ return (
               embedBusy={busyAction !== null}
               canDecide={isOwnConversation}
               agreement={agreement}
+              proposal={proposal}
               isStaff={railMeta.isStaff}
               selfRole={selfRoleLabel}
               participantRoles={participantRoles}

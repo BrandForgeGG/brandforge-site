@@ -268,3 +268,17 @@ Every cycle verified green before commit: 252/252 unit tests (up from 239, +13 n
 ### C32 — Clean build + prod SEO check (done, no change)
 - Full build from a deleted `.next` directory green; prod serves `/robots.txt` and all
   seven `/sitemap.xml` URLs live (read-only check); no stale `stats` consumers anywhere.
+
+### C33 — Proposal cards follow the live row (done)
+- Prod evidence: ~14 PATCH attempts in 7 seconds, all 409, on an already-accepted
+  proposal — stale cards keep offering dead buttons after the decision lands elsewhere
+  (each card rendered from its frozen message artifact). Cards for the current proposal
+  now take buttons + status pill from the live row (same pattern as the contract card's
+  `ownContract`); older proposals keep their historical snapshot. Accepting via the panel
+  instantly disarms every open card.
+- Verified: 252/252 tests, tsc, eslint, build green.
+
+### C34 — Prod error triage (done, no change)
+- 18-minute morning window: 432×200, 0 errors, 0 fives. 24×403 = pre-accept operator
+  gates working as designed; 48×409 investigated above (stale-card hammering, now fixed
+  at the source).

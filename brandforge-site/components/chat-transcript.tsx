@@ -136,6 +136,7 @@ function SystemEmbedCard({
   canDecide,
   isStaff,
   contract,
+  proposal,
   embedBusy,
   onEmbedAction,
 }: {
@@ -143,6 +144,8 @@ function SystemEmbedCard({
   canDecide?: boolean;
   isStaff?: boolean;
   contract: ContractSummary | null;
+  /** Live proposal row: binds action buttons and the status pill to reality. */
+  proposal?: { id: string; status: string } | null;
   embedBusy?: boolean;
   onEmbedAction?: (
     embed: ChatEmbed,
@@ -177,7 +180,22 @@ function SystemEmbedCard({
   const founderSigned = Boolean(ownContract?.founder_accepted_at);
   const teamSigned = Boolean(ownContract?.team_accepted_at);
   const bothSigned = founderSigned && teamSigned;
-  const actions = embedActions({ embed, canDecide, isStaff, contract: ownContract });
+  // A card never goes stale: when this card IS the current proposal, its buttons and
+  // status pill follow the live row (answering via the panel instantly disarms every
+  // older card instead of leaving dead buttons that 409). Older proposals keep their
+  // own historical snapshot — their ids never match the live row.
+  const liveProposal =
+    embed.type === "proposal" && proposal && proposal.id === embed.proposalId
+      ? proposal
+      : null;
+  const liveStatus =
+    embed.type === "proposal" ? (liveProposal?.status ?? embed.status) : "";
+  const actions = embedActions({
+    embed: embed.type === "proposal" ? { ...embed, status: liveStatus } : embed,
+    canDecide,
+    isStaff,
+    contract: ownContract,
+  });
 
   const title =
     embed.type === "proposal"
@@ -230,12 +248,12 @@ function SystemEmbedCard({
   };
 
   const proposalStatusTone =
-    embed.type === "proposal" && embed.status === "accepted"
+    embed.type === "proposal" && liveStatus === "accepted"
       ? "rounded-full border border-[#5aa578]/30 bg-[#5aa578]/10 px-2.5 py-0.5 text-[11px] text-[#d9f7ea]"
       : embed.type === "proposal" &&
-          (embed.status === "pending" ||
-            embed.status === "countered" ||
-            embed.status === "counter_back")
+          (liveStatus === "pending" ||
+            liveStatus === "countered" ||
+            liveStatus === "counter_back")
         ? "rounded-full border border-[#e8571e]/40 bg-[#e8571e]/10 px-2.5 py-0.5 text-[11px] text-[#f6d6c3]"
         : "rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[11px] text-[#9aa0a6]";
 
@@ -275,10 +293,10 @@ function SystemEmbedCard({
                 ) : null}
               </p>
             ) : null}
-            {proposalStatusLabel(embed.status) ? (
+            {proposalStatusLabel(liveStatus) ? (
               <div className="mt-2">
                 <span className={proposalStatusTone}>
-                  {proposalStatusLabel(embed.status)}
+                  {proposalStatusLabel(liveStatus)}
                 </span>
               </div>
             ) : null}
@@ -1040,6 +1058,7 @@ export function ChatTranscript({
   embedBusy,
   canDecide,
   agreement,
+  proposal,
   isStaff,
   onAskFile,
   selfRole,
@@ -1071,6 +1090,8 @@ export function ChatTranscript({
   canDecide?: boolean;
   /** Live contract row for signature state on agreement cards; null before one exists. */
   agreement?: ContractSummary | null;
+  /** Live proposal row: proposal cards follow it instead of their frozen snapshot. */
+  proposal?: { id: string; status: string } | null;
   /** Whether the viewer is BrandForge staff (the "team" side of the contract signature). */
   isStaff?: boolean;
   /** Prefills the composer with an "ask about this file" prompt for a readable attachment. */
@@ -1139,6 +1160,7 @@ export function ChatTranscript({
                 canDecide={canDecide}
                 isStaff={isStaff}
                 contract={agreement ?? null}
+                proposal={proposal ?? null}
                 embedBusy={embedBusy}
                 onEmbedAction={onEmbedAction}
               />
