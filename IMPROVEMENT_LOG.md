@@ -264,3 +264,7 @@ Every cycle verified green before commit: 252/252 unit tests (up from 239, +13 n
 
 ### C31 — Dependency audit (done, no change)
 - `npm audit`: 0 vulnerabilities in production dependencies.
+
+### C32 — Clean build + prod SEO check (done, no change)
+- Full build from a deleted `.next` directory green; prod serves `/robots.txt` and all
+  seven `/sitemap.xml` URLs live (read-only check); no stale `stats` consumers anywhere.
