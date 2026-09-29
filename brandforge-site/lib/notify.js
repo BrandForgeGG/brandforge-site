@@ -138,6 +138,32 @@ function buildMessageText(event, details = {}) {
   }
 }
 
+// Optional URL buttons (Telegram inline keyboard): [{ text, url }]. URLs must be
+// https — anything else is dropped, so a bad caller cannot smuggle a scheme.
+// At most one row of three.
+function validButtons(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item) => item && typeof item === 'object')
+    .map((item) => ({
+      text: clip(item.text, 40) || 'Open',
+      url: typeof item.url === 'string' ? item.url.trim() : '',
+    }))
+    .filter((item) => item.url.startsWith('https://'))
+    .slice(0, 3);
+}
+
+// Every ping that knows its conversation carries an Open-chat button; callers with
+// their own buttons keep them. The URL comes from the same trusted builder as the
+// text link, never from user input.
+function buttonsFor(details = {}, options = {}) {
+  if (Array.isArray(options.buttons) && options.buttons.length > 0) {
+    return validButtons(options.buttons);
+  }
+  const url = chatUrlFor(details);
+  return url ? [{ text: 'Open chat', url }] : [];
+}
+
 // Low-level sender. Options allow tests to inject env + fetch without touching globals.
 async function sendTelegramMessage(text, options = {}) {
   const env = options.env || process.env;
@@ -182,10 +208,18 @@ async function sendTelegramMessage(text, options = {}) {
     return { sent: false, reason: 'not_configured' };
   }
 
+  const buttons = validButtons(options.buttons);
   const body = JSON.stringify({
     chat_id: chatId,
     text: String(text).slice(0, 4000),
     disable_web_page_preview: true,
+    ...(buttons.length > 0
+      ? {
+          reply_markup: {
+            inline_keyboard: [buttons.map((button) => ({ text: button.text, url: button.url }))],
+          },
+        }
+      : {}),
   });
 
   try {
@@ -313,7 +347,12 @@ async function notifyUser(chatId, event, details = {}, options = {}) {
     return { sent: false, reason: 'no_linked_chat' };
   }
 
-  return sendTelegramMessage(text, { ...options, chatId: String(chatId).trim() });
+  const buttons = buttonsFor(details, options);
+  return sendTelegramMessage(text, {
+    ...options,
+    chatId: String(chatId).trim(),
+    ...(buttons.length > 0 ? { buttons } : {}),
+  });
 }
 
 // The public entry point. Await it inside the route (serverless runtimes may kill fire-and-forget
@@ -325,7 +364,11 @@ async function notify(event, details = {}, options = {}) {
     return { sent: false, reason: 'unknown_event' };
   }
 
-  return sendTelegramMessage(text, options);
+  const buttons = buttonsFor(details, options);
+  return sendTelegramMessage(text, {
+    ...options,
+    ...(buttons.length > 0 ? { buttons } : {}),
+  });
 }
 
 module.exports = {

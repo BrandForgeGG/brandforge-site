@@ -9,6 +9,7 @@ const {
   buildPersonalMessage,
   sendTelegramMessage,
   notify,
+  notifyUser,
 } = require('./notify.js');
 
 const ENV = { TELEGRAM_BOT_TOKEN: 'tok123', TELEGRAM_CHAT_ID: '-100999' };
@@ -227,6 +228,60 @@ test('notify builds and sends a real event end to end', async () => {
   const body = JSON.parse(captured.init.body);
   assert.ok(body.text.includes('Design phase'));
   assert.ok(body.text.includes('EUR 3,000'));
+});
+
+test('pings carry an Open-chat button when the conversation is known', async () => {
+  const previousSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  process.env.NEXT_PUBLIC_SITE_URL = 'https://brandforge.gg';
+  try {
+    const captured = {};
+    await notify(
+      'proposal_sent',
+      { title: 'Landing page', conversationId: 'c9' },
+      { env: ENV, fetchImpl: okFetch(captured) }
+    );
+    const body = JSON.parse(captured.init.body);
+    assert.ok(body.text.includes('/chat?conversationId=c9'));
+    assert.deepEqual(body.reply_markup, {
+      inline_keyboard: [[{ text: 'Open chat', url: 'https://brandforge.gg/chat?conversationId=c9' }]],
+    });
+
+    const personal = {};
+    await notifyUser('12345', 'proposal_ready', { title: 'X', conversationId: 'c9' }, {
+      env: { TELEGRAM_BOT_TOKEN: 'tok123' },
+      fetchImpl: okFetch(personal),
+    });
+    const personalBody = JSON.parse(personal.init.body);
+    assert.equal(personalBody.chat_id, '12345');
+    assert.ok(personalBody.reply_markup.inline_keyboard[0][0].url.includes('c9'));
+  } finally {
+    if (previousSiteUrl === undefined) delete process.env.NEXT_PUBLIC_SITE_URL;
+    else process.env.NEXT_PUBLIC_SITE_URL = previousSiteUrl;
+  }
+});
+
+test('button URLs must be https and callers keep their own buttons', async () => {
+  const captured = {};
+  await notify(
+    'proposal_sent',
+    { title: 'X' },
+    {
+      env: ENV,
+      fetchImpl: okFetch(captured),
+      buttons: [
+        { text: 'A', url: 'javascript:alert(1)' },
+        { text: 'B', url: 'https://brandforge.gg/chat?conversationId=c1' },
+      ],
+    }
+  );
+  const body = JSON.parse(captured.init.body);
+  assert.deepEqual(body.reply_markup, {
+    inline_keyboard: [[{ text: 'B', url: 'https://brandforge.gg/chat?conversationId=c1' }]],
+  });
+
+  const plain = {};
+  await notify('proposal_sent', { title: 'X' }, { env: ENV, fetchImpl: okFetch(plain) });
+  assert.equal(JSON.parse(plain.init.body).reply_markup, undefined);
 });
 
 test('notify is a silent no-op without env so dev and CI stay quiet', async () => {
