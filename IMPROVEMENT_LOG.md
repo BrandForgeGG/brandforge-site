@@ -136,6 +136,12 @@ _To be written at handoff._
   kept). Cookie/error logs were already PII-free.
 - Verified: 246/246 tests, tsc, eslint, build green.
 
+### C17 — Copy buttons on code blocks (done)
+- AI answers render fenced code with no way to copy it. New `CodeBlock` renderer with a
+  Copy/Copied button (positioned top-right, same interaction pattern as the other copy
+  buttons), plus its CSS. Inline code untouched.
+- Verified: 246/246 tests, tsc, eslint, build green.
+
 ### C6 — Landing copy (done)
 - Hero sub rewritten in two plain sentences (niche role list moved to services where it
   belongs, em dash removed); two vague suggestion chips replaced with specific briefs that

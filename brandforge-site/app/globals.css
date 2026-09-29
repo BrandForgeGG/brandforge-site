@@ -1160,6 +1160,31 @@ footer p {
   white-space: pre;
 }
 
+.bf-code-wrap {
+  position: relative;
+}
+
+.bf-code-copy {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(20, 23, 26, 0.9);
+  color: #9aa0a6;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.bf-code-copy:hover {
+  color: #ece7de;
+  border-color: rgba(232, 87, 30, 0.6);
+}
+
 .bf-msg-link {
   color: var(--copper);
   text-decoration: underline;

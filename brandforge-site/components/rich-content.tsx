@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { parseMarkdown, type MarkdownInline, type MarkdownToken } from '@/lib/markdown';
 
 // Renders the safe token tree from lib/markdown.js as React elements. Text nodes are
@@ -36,6 +36,32 @@ function renderInlines(inlines: MarkdownInline[], keyPrefix: string) {
 
 const HEADING_TAGS = ['h3', 'h4', 'h5', 'h6'] as const;
 
+// Fenced code with a copy button: AI answers carry buildable code, and selecting it
+// by hand inside a scrollable block is friction nobody needs.
+function CodeBlock({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="bf-code-wrap">
+      <button
+        type="button"
+        aria-label="Copy code block"
+        onClick={() => {
+          void navigator.clipboard?.writeText(code).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          });
+        }}
+        className="bf-code-copy"
+      >
+        {copied ? 'Copied' : 'Copy'}
+      </button>
+      <pre className="bf-code-block">
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+}
+
 function renderToken(token: MarkdownToken, index: number) {
   switch (token.type) {
     case 'heading': {
@@ -57,11 +83,7 @@ function renderToken(token: MarkdownToken, index: number) {
       );
     }
     case 'code':
-      return (
-        <pre key={index} className="bf-code-block">
-          <code>{token.code}</code>
-        </pre>
-      );
+      return <CodeBlock key={index} code={token.code} />;
     case 'hr':
       return <hr key={index} />;
     default:
