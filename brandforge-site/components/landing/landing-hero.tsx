@@ -83,7 +83,7 @@ export function LandingHero() {
   }
 
   return (
-    <section className="px-6 pb-16 pt-16 sm:pt-24" aria-labelledby="hero-title">
+    <section className="px-6 pb-12 pt-12 sm:pt-16" aria-labelledby="hero-title">
       <div className="mx-auto w-full max-w-3xl">
         <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#e8571e]/30 bg-[#e8571e]/10 px-4 py-1.5 text-xs font-medium text-[#f6d6c3]">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#e8571e]" />
@@ -100,7 +100,7 @@ export function LandingHero() {
           your money until you approve.
         </p>
 
-        <div className="mt-8 flex flex-wrap gap-2">
+        <div className="mt-6 flex flex-wrap gap-2">
           {SUGGESTIONS.map((prompt) => (
             <button
               key={prompt}
@@ -113,14 +113,14 @@ export function LandingHero() {
           ))}
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-6">
+        <form onSubmit={handleSubmit} className="mt-5">
           <div className="relative">
             <textarea
               value={input}
               aria-label="Describe what you want to build"
               onChange={(e) => setInput(e.target.value)}
               placeholder="What do you want to build?"
-              rows={4}
+              rows={3}
               className="w-full resize-none rounded-2xl border border-white/10 bg-[#1c2024] px-5 py-4 text-base text-[#ece7de] placeholder-[#8f959b] outline-none transition focus:border-[#e8571e] focus-visible:ring-2 focus-visible:ring-[#f6a07a] focus-visible:ring-offset-2 focus-visible:ring-offset-[#14171a]"
             />
             <button
