@@ -535,9 +535,9 @@ channels — you are awake, so daylight rules apply).
   metadata (added title + description). Mobile viewport command unresolved — desktop only.
 - Verified: 263/263 tests, tsc, eslint, build green; auth probe green on the deploy.
 
-### C58 — Pro-rule pass: safe areas, emoji hiding, tabular money (done)
+### C58 — Pro-rule pass: safe areas, emoji hiding, tabular money (done, deployed `dpl_HJpkEgjgYUSdsNGZUGbZ7kQxiByf`)
 - `ui-ux-pro-max` pro-rules applied to web surfaces (Python search tool unavailable —
   no Python on this machine; applied the static rules directly): composer respects the
   home-indicator safe area, clipboard emoji hidden from screen readers, tabular numerals
   on proposal prices.
-- Verified: 263/263 tests, tsc, eslint, build green.
+- Verified: 263/263 tests, tsc, eslint, build green; auth probe green on the deploy.
