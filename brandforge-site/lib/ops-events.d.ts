@@ -20,7 +20,11 @@ export interface OpsSendResult {
   reason?: string;
 }
 
-export declare function buildOpsEmbed(event: string, details?: OpsDetails): OpsEmbed | null;
+export declare function buildOpsEmbed(
+  event: string,
+  details?: OpsDetails,
+  opts?: { link?: boolean }
+): OpsEmbed | null;
 
 export declare function buildPublicPost(event: string): string | null;
 
@@ -46,5 +50,10 @@ export declare function postLiveMessage(
   text: string,
   opts?: OpsSendOptions
 ): Promise<OpsSendResult>;
+
+export declare function resolveChannelId(
+  webhookUrl: string,
+  fetchImpl?: typeof fetch
+): Promise<string | null>;
 
 export declare function weeks(min: unknown, max: unknown): string | null;

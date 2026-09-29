@@ -69,13 +69,14 @@ function footer(kind) {
 
 /**
  * Staff embed for an ops event. Returns null for unknown events (the sender treats
- * that as "nothing to post", same as notify()). Every embed carries an
- * [Open conversation] link when the caller passes a conversationId — Discord renders
- * the markdown link as the card's action, no bot token or components needed.
+ * that as "nothing to post", same as notify()). With the default link flavor the
+ * embed carries an [Open conversation] markdown link for plain-webhook delivery;
+ * the bot path passes { link: false } and attaches a real button component instead.
  */
-function buildOpsEmbed(event, details = {}) {
+function buildOpsEmbed(event, details = {}, opts = {}) {
   const embed = buildOpsEmbedBody(event, details);
   if (!embed) return null;
+  if (opts.link === false) return embed;
   if (typeof details.conversationId !== 'string' || !details.conversationId.trim()) {
     return embed;
   }
@@ -277,14 +278,35 @@ async function postJson(webhookUrl, payload, fetchImpl) {
 /**
  * Post a staff embed. Never throws: unconfigured, unknown event, provider error and
  * network failure are all logged no-ops.
+ *
+ * Delivery prefers the bot token (real URL-button components) and falls back to the
+ * plain webhook (markdown link) only when the channel cannot be resolved — never
+ * after a bot attempt, so a message is never posted twice.
  */
 async function postOpsEvent(event, details = {}, opts = {}) {
   const { env = process.env, fetchImpl = fetch } = opts;
-  const embed = buildOpsEmbed(event, details);
-  if (!embed) return { sent: false, reason: 'unknown_event' };
+  const probe = buildOpsEmbed(event, details, { link: false });
+  if (!probe) return { sent: false, reason: 'unknown_event' };
   const kind = KIND_BY_EVENT[event] || 'proposals';
   const webhookUrl = opsWebhookUrl(kind, env);
   if (!webhookUrl) return { sent: false, reason: 'not_configured' };
+
+  const botToken = String(env.DISCORD_BOT_TOKEN || '').trim();
+  if (botToken) {
+    const channelId = await resolveChannelId(webhookUrl, fetchImpl);
+    if (channelId) {
+      try {
+        return await postViaBot({ channelId, embed: probe, details, env, fetchImpl });
+      } catch (cause) {
+        console.warn('postOpsEvent bot send failed:', cause instanceof Error ? cause.message : cause);
+        return { sent: false, reason: 'network' };
+      }
+    }
+    // Channel unresolvable: fall through to the webhook path (nothing sent yet).
+  }
+
+  const embed = buildOpsEmbed(event, details);
+  if (!embed) return { sent: false, reason: 'unknown_event' };
   try {
     return await postJson(
       webhookUrl,
@@ -299,6 +321,54 @@ async function postOpsEvent(event, details = {}, opts = {}) {
     console.warn('postOpsEvent failed:', cause instanceof Error ? cause.message : cause);
     return { sent: false, reason: 'network' };
   }
+}
+
+/** Webhook URL -> channel id, memoized per process. Null when unresolvable. */
+const channelCache = new Map();
+
+async function resolveChannelId(webhookUrl, fetchImpl) {
+  if (channelCache.has(webhookUrl)) return channelCache.get(webhookUrl);
+  try {
+    const response = await fetchImpl(webhookUrl, { method: 'GET' });
+    if (!response.ok) return null;
+    const data = await response.json().catch(() => null);
+    const channelId = data && typeof data.channel_id === 'string' ? data.channel_id : null;
+    if (channelId) channelCache.set(webhookUrl, channelId);
+    return channelId;
+  } catch {
+    return null;
+  }
+}
+
+/** Bot-token channel post with a real Open-conversation button component. */
+async function postViaBot({ channelId, embed, details = {}, env, fetchImpl }) {
+  const botToken = String(env.DISCORD_BOT_TOKEN || '').trim();
+  const components = [];
+  if (typeof details.conversationId === 'string' && details.conversationId.trim()) {
+    const url = `${resolveSiteUrl()}/chat?conversationId=${encodeURIComponent(details.conversationId.trim())}`;
+    if (url.startsWith('https://')) {
+      components.push({
+        type: 1,
+        components: [{ type: 2, style: 5, label: 'Open conversation', url }],
+      });
+    }
+  }
+  const response = await fetchImpl(
+    `https://discord.com/api/v10/channels/${encodeURIComponent(channelId)}/messages`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bot ${botToken}` },
+      body: JSON.stringify({
+        embeds: [{ ...embed, timestamp: new Date().toISOString() }],
+        ...(components.length > 0 ? { components } : {}),
+      }),
+    }
+  );
+  if (!response.ok) {
+    console.warn(`ops-events: bot post responded ${response.status}`);
+    return { sent: true, ok: false };
+  }
+  return { sent: true, ok: true };
 }
 
 /**
@@ -380,5 +450,7 @@ module.exports = {
   postPublicActivity,
   postDevLog,
   postLiveMessage,
+  resolveChannelId,
+  postViaBot,
   weeks,
 };

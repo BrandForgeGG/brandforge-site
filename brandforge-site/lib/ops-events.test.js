@@ -11,6 +11,7 @@ const {
   postPublicActivity,
   postDevLog,
   postLiveMessage,
+  resolveChannelId,
   weeks,
 } = require('./ops-events.js');
 
@@ -277,4 +278,74 @@ test('weeks renders ranges, singles and nothing for garbage', () => {
   assert.equal(weeks(null, null), null);
   assert.equal(weeks(0, 4), null);
   assert.equal(weeks('soon', 'later'), null);
+});
+
+test('buildOpsEmbed link:false leaves the button to the bot sender', () => {
+  const linked = buildOpsEmbed('proposal_accepted', { title: 'X', conversationId: 'c1' });
+  assert.ok(linked.description.includes('[Open conversation]'));
+  const clean = buildOpsEmbed('proposal_accepted', { title: 'X', conversationId: 'c1' }, { link: false });
+  assert.ok(!clean.description.includes('[Open conversation]'));
+  assert.ok(clean.title.includes('Accepted'));
+});
+
+test('bot token routes through the channel API with a real button', async () => {
+  const previousSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  process.env.NEXT_PUBLIC_SITE_URL = 'https://brandforge.gg';
+  try {
+  const calls = [];
+  const router = async (url, init) => {
+    calls.push({ url, init });
+    if (String(url).includes('/api/webhooks/')) {
+      return { ok: true, status: 200, json: async () => ({ channel_id: 'chan1' }) };
+    }
+    return { ok: true, status: 200 };
+  };
+  const env = { DISCORD_OPS_URL: 'https://discord/api/webhooks/a/b', DISCORD_BOT_TOKEN: 'tok' };
+  const result = await postOpsEvent('proposal_accepted', { title: 'X', conversationId: 'c9' }, { env, fetchImpl: router });
+  assert.deepEqual(result, { sent: true, ok: true });
+
+  const post = calls.find((c) => String(c.url).includes('/channels/'));
+  assert.ok(post, 'channel post happened');
+  const body = JSON.parse(post.init.body);
+  assert.ok(!body.embeds[0].description.includes('[Open conversation]'), 'no duplicated text link');
+  assert.deepEqual(body.components, [
+    {
+      type: 1,
+      components: [
+        { type: 2, style: 5, label: 'Open conversation', url: 'https://brandforge.gg/chat?conversationId=c9' },
+      ],
+    },
+  ]);
+  assert.equal(post.init.headers.Authorization, 'Bot tok');
+  } finally {
+    if (previousSiteUrl === undefined) delete process.env.NEXT_PUBLIC_SITE_URL;
+    else process.env.NEXT_PUBLIC_SITE_URL = previousSiteUrl;
+  }
+});
+
+test('an unresolvable channel falls back to the plain webhook, never double-posts', async () => {
+  const calls = [];
+  const router = async (url, init) => {
+    calls.push(String(url));
+    if (String(url).includes('/api/webhooks/') && (!init || !init.body)) {
+      return { ok: false, status: 404, json: async () => null };
+    }
+    return { ok: true, status: 204 };
+  };
+  const env = { DISCORD_OPS_URL: 'https://discord/api/webhooks/x/y', DISCORD_BOT_TOKEN: 'tok' };
+  const result = await postOpsEvent('proposal_accepted', { title: 'X' }, { env, fetchImpl: router });
+  assert.deepEqual(result, { sent: true, ok: true });
+  assert.equal(calls.filter((u) => u.includes('/channels/')).length, 0, 'no channel post attempted');
+  assert.ok(calls.some((u) => u.includes('/api/webhooks/')), 'webhook fallback posted');
+});
+
+test('resolveChannelId memoizes per webhook', async () => {
+  let fetches = 0;
+  const stub = async () => {
+    fetches += 1;
+    return { ok: true, status: 200, json: async () => ({ channel_id: 'chan9' }) };
+  };
+  assert.equal(await resolveChannelId('https://discord/api/webhooks/m/n', stub), 'chan9');
+  assert.equal(await resolveChannelId('https://discord/api/webhooks/m/n', stub), 'chan9');
+  assert.equal(fetches, 1);
 });
