@@ -32,3 +32,27 @@ _To be written at handoff._
 - Verified: 245/245 tests, tsc, eslint, build green. Commit `a11y: named controls and
   live-region feedback`. (Note: first build attempt ran in the repo root by mistake;
   re-ran in brandforge-site — green.)
+
+### C3 — Menu semantics + Escape + audit correction (done)
+- Rail account menu is a real `<button>` (valid span content, platform keyboard handling);
+  Escape closes it. Panel drawer closes on Escape back to chat.
+- Audit correction: claimed "zero reduced-motion handling" is wrong — `globals.css` already
+  ships a `prefers-reduced-motion` block. Verified, untouched.
+- Verified: 245/245 tests, tsc, eslint, build green. Commit `a11y: real menu button, escape dismiss, audit correction`.
+
+### C4 — Perf micro-batch (done)
+- Rail polls skip hidden tabs; task progress memoized; images lazy + async decode;
+  collapsed chips use shared initialsFor. No visible change.
+- Verified: 245/245 tests, tsc, eslint (one unused-disable caught and removed), build
+  green. Commit `perf: memoize progress, pause hidden-tab polls, lazy images, shared initials`.
+- Audit note: the "summarizeTaskProgress twice per render" claim was overstated — one call
+  site is event-driven (/progress command); memoized the per-render one.
+
+### C5 — Dead code + one dedupe (done)
+- Deleted `isEmailConfigured` (zero importers; verified by grep).
+- `uploadConversationAttachment` uses the tested `safeDownloadName` instead of its own
+  regex copy (behavior identical, `|| 'attachment'` fallback kept).
+- Skipped: test-only allowlist predicates (deleting breaks their tests; harmless),
+  money()/clip() unification (6-file blast radius — daylight work), public PNG deletion
+  (assets may still need uploading — founder call).
+- Verified: 245/245 tests, tsc, eslint, build green. Commit `chore: drop dead email export, share filename sanitizer`.

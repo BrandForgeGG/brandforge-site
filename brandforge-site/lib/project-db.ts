@@ -11,6 +11,7 @@ import { createSupabaseServerClient } from './supabase/server';
 import { createSupabaseAdminClient } from './supabase/admin';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { track } from './funnel.js';
+import { safeDownloadName } from './message-actions.js';
 import { notifyDiscordDiscovery } from './discord';
 import { notifyUser } from './notify';
 import { postOpsEvent, postPublicActivity } from './ops-events';
@@ -1464,7 +1465,7 @@ export async function uploadConversationAttachment(
 ): Promise<{ path: string; name: string; size: number; contentType: string } | null> {
   const admin = createSupabaseAdminClient();
   if (!admin) return null;
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120) || 'attachment';
+  const safeName = safeDownloadName(file.name) || 'attachment';
   const path = `conversation-${conversationId}/${userId}/${crypto.randomUUID()}-${safeName}`;
   const { error } = await admin.storage.from('conversation-attachments').upload(path, file, {
     contentType: file.type || 'application/octet-stream',

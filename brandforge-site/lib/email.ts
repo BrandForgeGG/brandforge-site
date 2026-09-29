@@ -24,10 +24,6 @@ function getClient(): Resend | null {
   return client;
 }
 
-export function isEmailConfigured(): boolean {
-  return Boolean((process.env.RESEND_API_KEY ?? '').trim());
-}
-
 function fromAddress(): string {
   return (
     (process.env.RESEND_FROM ?? '').trim() ||
