@@ -182,3 +182,10 @@ _To be written at handoff._
   counter branch; admin funnel dashboard gains the Counter row and the previously-missing
   Contract-signed row.
 - Verified: 252/252 tests, tsc, eslint, build green.
+
+### C22 — Stats route stops scanning profiles (done)
+- `/api/stats` ran two full-table service-role counts on every 60-second poll per client
+  while nothing renders the numbers anymore (README already documented the flags-only
+  end-state; the code never finished it). Now flags only; `getPlatformCounts` deleted
+  (sole caller was this route, verified by grep).
+- Verified: 252/252 tests, tsc, eslint, build green.

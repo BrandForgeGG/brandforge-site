@@ -1418,44 +1418,6 @@ export async function countMessages(conversationId: string): Promise<number> {
   return count ?? 0;
 }
 
-export interface PlatformCounts {
-  registered: number | null;
-  staff: number | null;
-}
-
-// Platform-wide counters for the rail: how many accounts exist and how many are BrandForge staff.
-// RLS only exposes the signed-in account's own profile row, so these counts are read with the
-// service role. null means the key is not configured - the rail shows a dash rather than a
-// fabricated number.
-export async function getPlatformCounts(): Promise<PlatformCounts> {
-  const admin = createSupabaseAdminClient();
-
-  if (!admin) {
-    return { registered: null, staff: null };
-  }
-
-  const [registeredResult, staffResult] = await Promise.all([
-    admin.from('profiles').select('id', { count: 'exact', head: true }),
-    admin
-      .from('profiles')
-      .select('id', { count: 'exact', head: true })
-      .in('role', ['admin', 'operator']),
-  ]);
-
-  if (registeredResult.error) {
-    console.error('Error counting registered users:', registeredResult.error.message);
-  }
-
-  if (staffResult.error) {
-    console.error('Error counting staff accounts:', staffResult.error.message);
-  }
-
-  return {
-    registered: registeredResult.error ? null : registeredResult.count ?? 0,
-    staff: staffResult.error ? null : staffResult.count ?? 0,
-  };
-}
-
 // ---------- Messages ----------
 
 export async function uploadConversationAttachment(
