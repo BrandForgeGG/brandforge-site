@@ -3,6 +3,7 @@ import { LandingNav } from '@/components/landing/landing-nav';
 import { LandingHero } from '@/components/landing/landing-hero';
 import { LandingSections } from '@/components/landing/landing-sections';
 import { LandingCommunity } from '@/components/landing/landing-community';
+import { LandingFaq } from '@/components/landing/landing-faq';
 import { BetaBanner } from '@/components/beta-banner';
 
 export const metadata = {
@@ -36,6 +37,7 @@ export default function Home() {
       <main>
         <LandingHero />
         <LandingSections />
+        <LandingFaq />
         <LandingCommunity />
       </main>
       <footer className="border-t border-white/10 px-6 py-8">

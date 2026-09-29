@@ -310,3 +310,8 @@ channels — you are awake, so daylight rules apply).
   `Distribution/` — removed from the commit before pushing anything; file untouched on
   disk. Lesson: `git add -A` sweeps untracked user files — inspect status before staging.
 - Verified: 252/252 tests, tsc, eslint, build green; auth probe green on the deploy.
+
+### C36 — Landing FAQ + schema (done)
+- P2 gap: no FAQ. Five questions answered strictly from repo truth (no invented pricing,
+  timelines, or testimonials), native expanders, FAQPage JSON-LD for search.
+- Verified: 252/252 tests, tsc, eslint, build green.
