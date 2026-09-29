@@ -10,6 +10,7 @@ const {
   postOpsEvent,
   postPublicActivity,
   postDevLog,
+  postPublicChangelog,
   postLiveMessage,
   resolveChannelId,
   weeks,
@@ -248,6 +249,21 @@ test('milestone shipments prefer the milestones channel, else the live feed', as
 test('postDevLog stays quiet without a dev-log webhook', async () => {
   const result = await postDevLog({ title: 'Shipped: x' }, { env: {} });
   assert.deepEqual(result, { sent: false, reason: 'not_configured' });
+});
+
+test('postPublicChangelog targets the public feed only', async () => {
+  const captured = {};
+  const result = await postPublicChangelog({ title: 'Shipped: v1', description: 'Notes' }, {
+    env: { DISCORD_PUBLIC_CHANGELOG_URL: 'https://discord/public' },
+    fetchImpl: okFetch(captured),
+  });
+  assert.deepEqual(result, { sent: true, ok: true });
+  const body = JSON.parse(captured.init.body);
+  assert.equal(body.embeds[0].footer.text, 'BrandForge · changelog');
+  assert.deepEqual(await postPublicChangelog({ title: 'x' }, { env: {} }), {
+    sent: false,
+    reason: 'not_configured',
+  });
 });
 
 test('postLiveMessage sends clipped plain text, never empty', async () => {

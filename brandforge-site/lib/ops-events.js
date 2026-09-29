@@ -442,6 +442,32 @@ async function postLiveMessage(text, opts = {}) {
   }
 }
 
+/** Public changelog post (releases only — never merges). Lives apart from the
+    staff dev-log so the team can narrate freely in private. */
+async function postPublicChangelog({ title, description, url }, opts = {}) {
+  const { env = process.env, fetchImpl = fetch } = opts;
+  const webhookUrl = env.DISCORD_PUBLIC_CHANGELOG_URL;
+  if (!webhookUrl) return { sent: false, reason: 'not_configured' };
+  const embed = {
+    title: clip(title, 256) || 'Shipped',
+    description: clip(description, 2000) || undefined,
+    url: typeof url === 'string' && url.startsWith('http') ? url : undefined,
+    color: BRAND,
+    footer: { text: 'BrandForge · changelog' },
+    timestamp: new Date().toISOString(),
+  };
+  try {
+    return await postJson(
+      webhookUrl,
+      { username: 'BrandForge', allowed_mentions: { parse: [] }, embeds: [embed] },
+      fetchImpl
+    );
+  } catch (cause) {
+    console.warn('postPublicChangelog failed:', cause instanceof Error ? cause.message : cause);
+    return { sent: false, reason: 'network' };
+  }
+}
+
 module.exports = {
   buildOpsEmbed,
   buildPublicPost,
@@ -449,6 +475,7 @@ module.exports = {
   postOpsEvent,
   postPublicActivity,
   postDevLog,
+  postPublicChangelog,
   postLiveMessage,
   resolveChannelId,
   postViaBot,

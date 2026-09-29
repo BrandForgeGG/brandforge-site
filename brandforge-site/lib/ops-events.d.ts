@@ -46,6 +46,11 @@ export declare function postDevLog(
   opts?: OpsSendOptions
 ): Promise<OpsSendResult>;
 
+export declare function postPublicChangelog(
+  post: { title?: string; description?: string; url?: string },
+  opts?: OpsSendOptions
+): Promise<OpsSendResult>;
+
 export declare function postLiveMessage(
   text: string,
   opts?: OpsSendOptions

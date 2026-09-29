@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyGitHubSignature, devLogForGithubEvent } from '@/lib/github-webhooks';
-import { postDevLog } from '@/lib/ops-events';
+import { postDevLog, postPublicChangelog } from '@/lib/ops-events';
 
 export const dynamic = 'force-dynamic';
 
-// GitHub -> #dev-log receiver (build-in-public layer). Only stable releases and
-// merged PRs carrying the `public-changelog` label ever reach the public channel;
-// everything else is acknowledged and ignored. Without GITHUB_WEBHOOK_SECRET the
-// route does not exist (404) so scanners learn nothing.
+// GitHub -> changelog receiver (build-in-public layer). Split routing: the staff
+// dev-log gets everything public-eligible (stable releases + labeled merges), while
+// the public changelog gets releases only — merge internals never leave the team.
+// Only stable releases and merged PRs carrying the `public-changelog` label are
+// eligible at all; everything else is acknowledged and ignored. Without
+// GITHUB_WEBHOOK_SECRET the route does not exist (404) so scanners learn nothing.
 export async function POST(request: NextRequest) {
   try {
     const secret = process.env.GITHUB_WEBHOOK_SECRET;
@@ -36,6 +38,9 @@ export async function POST(request: NextRequest) {
     }
 
     await postDevLog(post);
+    if (eventName === 'release') {
+      await postPublicChangelog(post);
+    }
     return NextResponse.json({ posted: true });
   } catch (error) {
     console.error('GitHub webhook error:', error);
