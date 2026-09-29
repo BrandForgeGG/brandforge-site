@@ -580,3 +580,7 @@ channels — you are awake, so daylight rules apply).
 - `proxy.ts` matches every documented fix: zombie gate, forwarded-cookie precedence,
   H6 header stripping, no deletion writes, correct /login↔/chat bounce ordering.
   `/apply` correctly behind auth. Untouched by rule.
+
+### C65 — Midday prod snapshot (done, no change)
+- 24-minute window: 39 requests, all 200/304/307/401, zero errors. Morning burst gone,
+  traffic back to idle polling. Nothing to chase.
