@@ -63,7 +63,6 @@ export async function POST(request: NextRequest) {
       conversationId: body.conversationId,
       invitedBy: user.email ?? user.id,
     });
-
     // The actual invite email. Non-fatal: the invite itself is recorded either way,
     // and a provider hiccup must never turn into a 500 for the sender.
     const siteUrl = resolveSiteUrl();

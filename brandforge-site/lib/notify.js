@@ -17,6 +17,28 @@ const TELEGRAM_API_BASE = 'https://api.telegram.org';
 const SEND_TIMEOUT_MS = 5000;
 const MAX_FIELD_LENGTH = 160;
 
+const { resolveSiteUrl } = require('./auth-utils');
+
+// Deep link to the chat. Builders stay text-focused; the link is appended centrally
+// so every ping carries its destination without each call site formatting URLs.
+// Telegram renders the raw URL as a tappable link; Discord embeds get their own
+// markdown link in ops-events.js (this module stays plain-text).
+function chatUrlFor(details = {}) {
+  if (typeof details.chatUrl === 'string' && details.chatUrl.trim()) {
+    return details.chatUrl.trim();
+  }
+  if (typeof details.conversationId === 'string' && details.conversationId.trim()) {
+    return `${resolveSiteUrl()}/chat?conversationId=${encodeURIComponent(details.conversationId.trim())}`;
+  }
+  return null;
+}
+
+function withChatUrl(text, details = {}) {
+  if (!text) return text;
+  const url = chatUrlFor(details);
+  return url ? `${text}\n${url}` : text;
+}
+
 function isNotifyConfigured(env) {
   const source = env || process.env;
   return Boolean(
@@ -44,6 +66,10 @@ function money(amount, currency) {
 // Maps a product event to the message the team chat receives. Returns null for unknown events
 // so a typo at a call site fails quietly instead of spamming the chat.
 function buildMessage(event, details = {}) {
+  return withChatUrl(buildMessageText(event, details), details);
+}
+
+function buildMessageText(event, details = {}) {
   switch (event) {
     case 'review_requested':
       return `New project ready for review (discovery at ${clip(details.percent) || '?'}%). Open the staff inbox and join the chat.`;
@@ -193,6 +219,10 @@ async function sendTelegramMessage(text, options = {}) {
 // A member-facing event is written in the second person and points at the app, because a
 // founder reading it should never have to guess which internal system is talking to them.
 function buildPersonalMessage(event, details = {}) {
+  return withChatUrl(buildPersonalMessageText(event, details), details);
+}
+
+function buildPersonalMessageText(event, details = {}) {
   switch (event) {
     case 'proposal_ready':
       return `BrandForge: your proposal "${clip(details.title)}" is ready to review in the chat.${

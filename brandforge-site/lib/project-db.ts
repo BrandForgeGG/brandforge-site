@@ -731,7 +731,9 @@ export async function notifyStaffBriefReady(conversationId: string, title: strin
     const targets = await getStaffTelegramTargets(ownerId);
     if (targets.length === 0) return;
 
-    await Promise.all(targets.map((chatId) => notifyUser(chatId, 'brief_ready', { title })));
+    await Promise.all(
+      targets.map((chatId) => notifyUser(chatId, 'brief_ready', { title, conversationId }))
+    );
   } catch (error) {
     console.error('notifyStaffBriefReady failed:', error instanceof Error ? error.message : error);
   }

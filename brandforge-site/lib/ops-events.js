@@ -26,6 +26,8 @@ const BRAND = 0xe8571e;
 const GREEN = 0x5aa578;
 const RED = 0xe5484d;
 
+const { resolveSiteUrl } = require('./auth-utils');
+
 const KIND_BY_EVENT = {
   brief_posted: 'briefs',
   proposal_submitted: 'proposals',
@@ -67,9 +69,21 @@ function footer(kind) {
 
 /**
  * Staff embed for an ops event. Returns null for unknown events (the sender treats
- * that as "nothing to post", same as notify()).
+ * that as "nothing to post", same as notify()). Every embed carries an
+ * [Open conversation] link when the caller passes a conversationId — Discord renders
+ * the markdown link as the card's action, no bot token or components needed.
  */
 function buildOpsEmbed(event, details = {}) {
+  const embed = buildOpsEmbedBody(event, details);
+  if (!embed) return null;
+  if (typeof details.conversationId !== 'string' || !details.conversationId.trim()) {
+    return embed;
+  }
+  const url = `${resolveSiteUrl()}/chat?conversationId=${encodeURIComponent(details.conversationId.trim())}`;
+  return { ...embed, description: `${embed.description}\n\n[Open conversation](${url})` };
+}
+
+function buildOpsEmbedBody(event, details = {}) {
   const title = clip(details.title, 200) || 'Untitled project';
   const price = money(details.totalAmount, details.currency);
   const timeline = weeks(details.weeksMin ?? details.weeks, details.weeksMax ?? details.weeks);
@@ -228,11 +242,31 @@ function opsWebhookUrl(kind, env = process.env) {
 }
 
 async function postJson(webhookUrl, payload, fetchImpl) {
-  const response = await fetchImpl(webhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+  const send = () =>
+    fetchImpl(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  let response = await send();
+  // Discord answers 429 when a webhook is over its ~30/min budget. Honor its
+  // retry_after (capped) exactly once instead of dropping the event.
+  if (response && response.status === 429) {
+    let waitMs = 1000;
+    try {
+      const retryAfter =
+        response.headers && typeof response.headers.get === 'function'
+          ? Number(response.headers.get('retry-after'))
+          : NaN;
+      if (Number.isFinite(retryAfter) && retryAfter > 0) {
+        waitMs = Math.min(retryAfter * 1000, 5000);
+      }
+    } catch {
+      // Default wait stands.
+    }
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+    response = await send();
+  }
   if (!response.ok) {
     console.warn(`ops-events: webhook responded ${response.status}`);
     return { sent: true, ok: false };

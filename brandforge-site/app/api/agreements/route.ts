@@ -118,6 +118,7 @@ export async function POST(request: NextRequest) {
       title: proposal.title,
       totalAmount,
       currency,
+      conversationId,
       milestoneCount: schedule.milestones.length,
     });
 
@@ -206,6 +207,7 @@ export async function PATCH(request: NextRequest) {
         await postOpsEvent('contract_signed', {
           totalAmount: updated.total_amount,
           currency: updated.currency,
+          conversationId: agreement.conversation_id,
         });
       } else if (isOwner) {
         // Founder signed first: the team's accept is now the only thing left.

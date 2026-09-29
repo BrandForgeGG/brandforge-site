@@ -92,6 +92,31 @@ test('the out is named on a second decline', () => {
   assert.ok(!first.description.includes('two declines'));
 });
 
+test('staff embeds link into the chat when the caller passes a conversation', () => {
+  const linked = buildOpsEmbed('proposal_submitted', { title: 'X', conversationId: 'c1' });
+  assert.ok(linked.description.includes('[Open conversation]'));
+  assert.ok(linked.description.includes('/chat?conversationId=c1'));
+  const plain = buildOpsEmbed('proposal_submitted', { title: 'X' });
+  assert.ok(!plain.description.includes('Open conversation'));
+});
+
+test('a 429 is retried once after the advertised wait', async () => {
+  let calls = 0;
+  const flaky = async () => {
+    calls += 1;
+    if (calls === 1) {
+      return { ok: false, status: 429, headers: { get: () => '0.01' } };
+    }
+    return { ok: true, status: 204 };
+  };
+  const result = await postOpsEvent('proposal_accepted', { title: 'X' }, {
+    env: { DISCORD_OPS_URL: 'https://discord/ops' },
+    fetchImpl: flaky,
+  });
+  assert.deepEqual(result, { sent: true, ok: true });
+  assert.equal(calls, 2);
+});
+
 // ---------- public feed ----------
 
 test('only the four growth-safe moments have a public template', () => {

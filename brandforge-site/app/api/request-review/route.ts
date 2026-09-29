@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    await notify('review_requested', { percent: discovery.percent });
+    await notify('review_requested', { percent: discovery.percent, conversationId });
 
     await recordFunnelEvent('review_requested', {
       signedIn: true,

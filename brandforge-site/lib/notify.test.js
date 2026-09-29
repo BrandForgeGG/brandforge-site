@@ -106,6 +106,20 @@ test('buildPersonalMessage returns null for unknown events', () => {
   assert.equal(buildPersonalMessage('', {}), null);
 });
 
+test('messages link into the chat when a destination is known', () => {
+  const personal = buildPersonalMessage('proposal_ready', {
+    title: 'Landing page',
+    conversationId: 'c1',
+  });
+  assert.ok(personal.includes('/chat?conversationId=c1'));
+
+  const team = buildMessage('proposal_sent', { title: 'Landing page', conversationId: 'c2' });
+  assert.ok(team.includes('/chat?conversationId=c2'));
+
+  const without = buildPersonalMessage('proposal_ready', { title: 'Landing page' });
+  assert.ok(!without.includes('/chat'));
+});
+
 test('buildPersonalMessage tells the specialist their counter is on the table', () => {
   const countered = buildPersonalMessage('proposal_countered', {
     title: 'Landing page',

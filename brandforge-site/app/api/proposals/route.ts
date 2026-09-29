@@ -132,6 +132,7 @@ export async function POST(request: NextRequest) {
       title,
       totalAmount,
       currency: 'EUR',
+      conversationId,
       weeks: weeks(estimatedWeeksMin, estimatedWeeksMax),
     });
 
@@ -149,6 +150,7 @@ export async function POST(request: NextRequest) {
       title,
       totalAmount,
       currency: 'EUR',
+      conversationId,
       weeksMin: estimatedWeeksMin ?? null,
       weeksMax: estimatedWeeksMax ?? null,
       authorName,
@@ -325,6 +327,7 @@ export async function PATCH(request: NextRequest) {
         const invited = await inviteProposalAuthor(existing);
         await postOpsEvent('match_made', {
           title: existing.title,
+          conversationId: proposal.conversation_id,
           specialistName: invited?.displayName ?? undefined,
         });
       } else if (status === 'changes_requested' || status === 'declined') {
@@ -337,6 +340,7 @@ export async function PATCH(request: NextRequest) {
         title: existing.title,
         totalAmount: counter.totalAmount,
         currency,
+        conversationId: proposal.conversation_id,
         weeks: weeks(counter.weeksMin, counter.weeksMax),
       };
 
@@ -352,6 +356,7 @@ export async function PATCH(request: NextRequest) {
         title: existing.title,
         totalAmount: counter.totalAmount,
         currency,
+        conversationId: proposal.conversation_id,
         weeksMin: counter.weeksMin,
         weeksMax: counter.weeksMax,
         by: byFounder ? 'founder' : 'specialist',
@@ -370,7 +375,10 @@ export async function PATCH(request: NextRequest) {
         if (existing.created_by && existing.created_by !== user.id) {
           const authorChatId = await getTelegramChatIdForUser(existing.created_by);
           if (authorChatId) {
-            await notifyUser(authorChatId, 'proposal_countered', counterDetails);
+            await notifyUser(authorChatId, 'proposal_countered', {
+              ...counterDetails,
+              conversationId: existing.conversation_id,
+            });
           }
         }
       } else if (proposal.conversation_id) {
@@ -378,7 +386,11 @@ export async function PATCH(request: NextRequest) {
         await notifyFounder(proposal.conversation_id, 'counter_back_ready', counterDetails);
       }
     } else {
-      await notify('proposal_answered', { title: existing.title, status });
+      await notify('proposal_answered', {
+        title: existing.title,
+        status,
+        conversationId: proposal.conversation_id,
+      });
 
       // Ops routing: accepts are priced but staff-only; declines never go public.
       if (status === 'accepted') {
@@ -386,12 +398,14 @@ export async function PATCH(request: NextRequest) {
           title: existing.title,
           totalAmount: proposal.total_amount,
           currency: proposal.currency ?? currency,
+          conversationId: proposal.conversation_id,
         });
         await postPublicActivity('match_made');
       } else {
         await postOpsEvent('proposal_declined', {
           title: existing.title,
           status,
+          conversationId: proposal.conversation_id,
           declinesOut: outNote !== '',
         });
       }
@@ -405,6 +419,7 @@ export async function PATCH(request: NextRequest) {
           await notifyUser(authorChatId, 'proposal_answered', {
             title: existing.title,
             status,
+            conversationId: existing.conversation_id,
           });
         }
       }

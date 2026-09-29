@@ -191,6 +191,7 @@ export async function PATCH(request: NextRequest) {
       await notify('task_review', {
         title: updatedTask.title,
         assigneeName: updatedTask.assignee_name,
+        conversationId,
       });
       await notifyFounder(conversationId, 'milestone_ready', {
         title: updatedTask.title,

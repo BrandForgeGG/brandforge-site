@@ -184,7 +184,7 @@ export async function PATCH(request: NextRequest) {
           properties: { total_amount: agreement.total_amount, stage: 'deliver' },
         });
 
-        await notify('payment_verified', {});
+        await notify('payment_verified', { conversationId: agreement.conversation_id });
 
         await notifyFounder(agreement.conversation_id, 'funding_verified', {});
 
@@ -193,6 +193,7 @@ export async function PATCH(request: NextRequest) {
         await postOpsEvent('escrow_funded', {
           totalAmount: agreement.total_amount,
           currency: agreement.currency,
+          conversationId: agreement.conversation_id,
         });
         await postPublicActivity('contract_funded');
 
@@ -210,12 +211,12 @@ export async function PATCH(request: NextRequest) {
         { type: 'funding', id: agreementId, status: 'failed' }
       );
 
-      await notify('payment_rejected', { note });
+      await notify('payment_rejected', { note, conversationId: agreement.conversation_id });
 
       await notifyFounder(agreement.conversation_id, 'funding_rejected', { note });
 
       // Closest thing to a dispute signal pre-dispute: staff disputes channel.
-      await postOpsEvent('escrow_rejected', { note });
+      await postOpsEvent('escrow_rejected', { note, conversationId: agreement.conversation_id });
 
       return NextResponse.json({ success: true });
     }
@@ -249,6 +250,7 @@ export async function PATCH(request: NextRequest) {
         title: released.title,
         amount: released.amount,
         currency: released.currency,
+        conversationId: released.conversation_id,
       });
 
       await notifyFounder(released.conversation_id, 'payment_released', {
@@ -261,6 +263,7 @@ export async function PATCH(request: NextRequest) {
         title: released.title,
         amount: released.amount,
         currency: released.currency,
+        conversationId: released.conversation_id,
       });
       await postPublicActivity('milestone_released');
 
