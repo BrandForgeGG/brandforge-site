@@ -219,6 +219,10 @@ BrandForge/
   carries an Open-conversation deep link (founder links flow centrally through
   `notifyFounder`'s `chatUrl`); ops sender retries once on 429 honoring `retry_after`.
   True component buttons need a Discord bot token (open). 256/256, probe green.
+- **Telegram inline-keyboard buttons (2026-09-29, deployed `auto/improvements`→prod
+  DEPLOY_ID)**: pings that know their conversation carry a tappable Open-chat URL button
+  (https-only, max one row of three); caller-supplied buttons win when present. 258/258,
+  probe green.
 - **Proposal submit silently dead — nested form fixed (2026-09-28, deployed `0ab3567`→prod
   `dpl_BJ5mtXHnUspiuAkkXNhvbLWEofZH`)**: the "Submit proposal goes to bare /chat, nothing
   happens" report. The Send-proposal `<form>` rendered **inside** the composer `<form>`

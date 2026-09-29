@@ -353,4 +353,13 @@ channels — you are awake, so daylight rules apply).
 - Skipped deliberately: AI-draft-created pings (drafts save on every AI pass — a ping per
   save is spam; needs a product call on what "awaits approval" means) and founder-message-
   unanswered pings (needs presence/seen design + noise tolerance call).
-- Verified: 256/256 tests, tsc, eslint, build green.
+
+### C40 — Telegram inline-keyboard buttons (done)
+- Pings that know their conversation now carry a tappable Open-chat URL button, not just
+  a pasted link: central `buttonsFor` (caller buttons win when present), https-only URL
+  validation, max one row of three. Founder/specialist/team paths all covered with zero
+  call-site changes beyond what C39 threaded.
+- Process lesson: C39 had already shipped the ops-side links + retry + call-site threading
+  last night and I re-derived half of it before noticing — check the log AND recent branch
+  history for shipped work before building, not just the code.
+- Verified: 258/258 tests, tsc, eslint, build green.
