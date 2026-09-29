@@ -252,6 +252,11 @@ BrandForge/
   `dpl_DeHaF1b3FhSqw3vEEeHJ4FdhfRzB`)**: typing an idea while signed out showed community
   options, then yanked to login after 1.2s — unreadable. The redirect is gone; notice,
   stashed idea, visitor's choice. Auth probe green.
+- **Landing de-slop from user feedback (2026-09-29, deployed `auto/improvements`→prod
+  `dpl_5VctkcWRotW5T5GF4LV4jf9U5i9k`)**: hero sub to 19 words, suggestion chips 7→4,
+  comma eyebrow, arrow glyphs off community cards. Social proof refused (nothing real
+  to show yet — blocked on first delivery + consent). Requested skills `ui-ux-pro-max` /
+  `impeccable` match nothing by name — operating on local equivalents.
 - **Proposal inputs validated server-side (2026-09-29, deployed `dpl_6KF1DCMe7444g8WyJX7jAA4GSZFY`)**:
   direct API calls bypassed every composer cap (negative/string amounts, unbounded text
   and JSON reached the money tables). Same shapes enforced with naming 400s; hostile

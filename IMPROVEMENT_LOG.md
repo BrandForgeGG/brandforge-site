@@ -485,7 +485,8 @@ channels — you are awake, so daylight rules apply).
 - Skills note: `ui-ux-pro-max` and `impeccable` match nothing by name in the skill
   registry (adjacent hits only) — not installed; operating on frontend-design +
   stop-slop + web-design-guidelines + vercel composition/best-practices instead.
-- Verified: 263/263 tests, tsc, eslint, build green.
+- Verified: 263/263 tests, tsc, eslint, build green; deployed
+  `dpl_5VctkcWRotW5T5GF4LV4jf9U5i9k`, auth probe green.
 
 ### C52 — Content-calendar truth audit (done, no code — founder content, my punchlist)
 - Read `Distribution/content-calendar.md` + `marketing-copy.md` against repo truth.
