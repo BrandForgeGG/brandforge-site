@@ -139,6 +139,14 @@ export function ProjectContextPanel({
 
   const [txInput, setTxInput] = useState('');
   const [rejectNote, setRejectNote] = useState('');
+  const [walletCopied, setWalletCopied] = useState(false);
+  const [txCopied, setTxCopied] = useState(false);
+  const copyText = (value: string, done: (copied: boolean) => void) => {
+    void navigator.clipboard?.writeText(value).then(() => {
+      done(true);
+      setTimeout(() => done(false), 1500);
+    });
+  };
   // Task actions are independent: each row locks only itself, so assigning one task never
   // freezes the rest of the panel. The row unlocks when fresh state arrives after the action.
   const [taskBusyId, setTaskBusyId] = useState<string | null>(null);
@@ -646,7 +654,16 @@ export function ProjectContextPanel({
                   delivery as soon as it is verified.
                 </p>
                 {submittedTx ? (
-                  <p className="mt-1 break-all font-mono text-[10px] text-[#8f959b]">{submittedTx}</p>
+                  <p className="mt-1 flex items-center gap-2 break-all font-mono text-[10px] text-[#8f959b]">
+                    <span className="min-w-0 flex-1 truncate">{submittedTx}</span>
+                    <button
+                      type="button"
+                      onClick={() => copyText(submittedTx, setTxCopied)}
+                      className="shrink-0 rounded border border-white/10 px-1.5 py-0.5 font-sans text-[10px] font-semibold uppercase tracking-wide text-[#9aa0a6] transition hover:border-[#e8571e] hover:text-[#ece7de]"
+                    >
+                      {txCopied ? 'Copied' : 'Copy'}
+                    </button>
+                  </p>
                 ) : null}
                 {isStaff ? (
                   <div className="mt-3 space-y-2">
@@ -695,7 +712,16 @@ export function ProjectContextPanel({
                         {depositNetwork}
                       </p>
                     ) : null}
-                    <p className="break-all font-mono text-[11px] text-[#ece7de]">{depositWallet}</p>
+                    <div className="flex items-start gap-2">
+                      <p className="min-w-0 flex-1 break-all font-mono text-[11px] text-[#ece7de]">{depositWallet}</p>
+                      <button
+                        type="button"
+                        onClick={() => copyText(depositWallet, setWalletCopied)}
+                        className="shrink-0 rounded border border-white/10 px-1.5 py-0.5 font-sans text-[10px] font-semibold uppercase tracking-wide text-[#9aa0a6] transition hover:border-[#e8571e] hover:text-[#ece7de]"
+                      >
+                        {walletCopied ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <p className="mt-2 text-xs text-[#9aa0a6]">

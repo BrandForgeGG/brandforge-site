@@ -94,6 +94,12 @@ _To be written at handoff._
   prefix handling verified consistent between panel and pulse.
 - Verified: 246/246 tests, tsc, eslint, build green.
 
+### C11 — Copy buttons for wallet + tx hash (done)
+- The deposit wallet address and the submitted transaction hash were long crypto strings
+  with no way to copy them. Both get a Copy button with Copied confirmation (same pattern
+  as the rail's Telegram code button). Real friction removed from the funding flow.
+- Verified: 246/246 tests, tsc, eslint, build green.
+
 ### C6 — Landing copy (done)
 - Hero sub rewritten in two plain sentences (niche role list moved to services where it
   belongs, em dash removed); two vague suggestion chips replaced with specific briefs that
