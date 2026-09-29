@@ -213,3 +213,10 @@ Every cycle verified green before commit: 252/252 unit tests (up from 239, +13 n
   end-state; the code never finished it). Now flags only; `getPlatformCounts` deleted
   (sole caller was this route, verified by grep).
 - Verified: 252/252 tests, tsc, eslint, build green.
+
+### C23 — Task action hardening (done)
+- Read `chat-tasks` end to end. Three fixes: claiming a task no longer stores the
+  operator's raw email as the assignee name (email prefix, matching the display-name
+  convention everywhere else); unknown actions get an honest 400 instead of a misleading
+  409-about-roles; conversation + staff lookups fire together.
+- Verified: 252/252 tests, tsc, eslint, build green.

@@ -42,6 +42,10 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'taskId is required' }, { status: 400 });
     }
 
+    if (!['schedule', 'assign', 'claim', 'advance'].includes(action)) {
+      return NextResponse.json({ error: 'Unknown task action' }, { status: 400 });
+    }
+
     const task = await getTask(taskId);
 
     if (!task) {
@@ -55,12 +59,14 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    const conversation = await getConversation(conversationId);
+    const [conversation, staff] = await Promise.all([
+      getConversation(conversationId),
+      isStaffAccount(user.id),
+    ]);
     const conversationStatus = String(conversation?.status ?? 'DISCOVERY');
     // profiles.role decides staff powers, nothing else. The old participant fallback meant any
     // invited teammate counted as staff and could set due dates, assign work, claim tasks and
     // advance any status (H2).
-    const staff = await isStaffAccount(user.id);
     const isFounder = conversation?.user_id === user.id;
 
     let updatedTask = task;
@@ -121,7 +127,9 @@ export async function PATCH(request: NextRequest) {
         assignee_id: user.id,
         assignee_name:
           assigneeName ||
-          String(user.user_metadata?.full_name ?? user.email ?? 'BrandForge staff'),
+          String(user.user_metadata?.full_name ?? '').trim() ||
+          String(user.email ?? '').split('@')[0] ||
+          'BrandForge staff',
       });
 
       if (!claimed) {
