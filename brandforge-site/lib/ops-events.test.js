@@ -11,6 +11,7 @@ const {
   postPublicActivity,
   postDevLog,
   postLiveMessage,
+  weeks,
 } = require('./ops-events.js');
 
 function okFetch(captured) {
@@ -203,8 +204,7 @@ test('postPublicActivity posts content-only lines and refuses private events', a
   assert.equal(called, false);
 });
 
-test('milestone shipments prefer the milestones channel, else the live feed', async () => {
-  const captured = {};
+test('milestone shipments prefer the milestones channel, else the live feed', async () => {  const captured = {};
   await postPublicActivity('milestone_released', {
     env: { DISCORD_MILESTONE_URL: 'https://discord/mile', DISCORD_LIVE_URL: 'https://discord/live' },
     fetchImpl: okFetch(captured),
@@ -243,4 +243,13 @@ test('postLiveMessage sends clipped plain text, never empty', async () => {
     sent: false,
     reason: 'not_configured',
   });
+});
+
+test('weeks renders ranges, singles and nothing for garbage', () => {
+  assert.equal(weeks(3, 3), '3 weeks');
+  assert.equal(weeks(2, 6), '2–6 weeks');
+  assert.equal(weeks(4, 2), '4 weeks', 'inverted max falls back to min');
+  assert.equal(weeks(null, null), null);
+  assert.equal(weeks(0, 4), null);
+  assert.equal(weeks('soon', 'later'), null);
 });

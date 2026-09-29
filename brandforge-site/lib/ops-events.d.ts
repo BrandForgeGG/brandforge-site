@@ -46,3 +46,5 @@ export declare function postLiveMessage(
   text: string,
   opts?: OpsSendOptions
 ): Promise<OpsSendResult>;
+
+export declare function weeks(min: unknown, max: unknown): string | null;

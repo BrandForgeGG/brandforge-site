@@ -19,7 +19,7 @@ import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { canSetProposalStatus } from '@/lib/money-authz.js';
 import { notify, notifyUser } from '@/lib/notify';
 import { notifyFounder } from '@/lib/stage-notify';
-import { postOpsEvent, postPublicActivity } from '@/lib/ops-events';
+import { postOpsEvent, postPublicActivity, weeks } from '@/lib/ops-events';
 
 export const dynamic = 'force-dynamic';
 
@@ -117,10 +117,7 @@ export async function POST(request: NextRequest) {
       title,
       totalAmount,
       currency: 'EUR',
-      weeks:
-        estimatedWeeksMin && estimatedWeeksMax
-          ? `${estimatedWeeksMin}–${estimatedWeeksMax} weeks`
-          : null,
+      weeks: weeks(estimatedWeeksMin, estimatedWeeksMax),
     });
 
     // The offer must reach the founder even when Telegram is unlinked: email +
@@ -129,10 +126,7 @@ export async function POST(request: NextRequest) {
       title,
       totalAmount,
       currency: 'EUR',
-      weeks:
-        estimatedWeeksMin && estimatedWeeksMax
-          ? `${estimatedWeeksMin}–${estimatedWeeksMax} weeks`
-          : null,
+      weeks: weeks(estimatedWeeksMin, estimatedWeeksMax),
     });
 
     // Staff ops channel: priced terms stay off the public feed by design.
@@ -185,8 +179,6 @@ function readCounterTerms(body: Record<string, unknown>, status: string) {
     },
   };
 }
-
-const weeksLabel = (min: number, max: number) => (min === max ? `${min} weeks` : `${min}–${max} weeks`);
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -274,8 +266,8 @@ export async function PATCH(request: NextRequest) {
     // conversation status: the deal is still being negotiated.
     const statusLine = isCounter
       ? status === 'countered'
-        ? `BrandForge countered the proposal at ${currency} ${counter!.totalAmount} over ${weeksLabel(counter!.weeksMin, counter!.weeksMax)}. The specialist may accept it or counter back once, and the counter back is the final offer.`
-        : `The specialist countered back at ${currency} ${counter!.totalAmount} over ${weeksLabel(counter!.weeksMin, counter!.weeksMax)}. Accept it or decline to close the deal.`
+        ? `BrandForge countered the proposal at ${currency} ${counter!.totalAmount} over ${weeks(counter!.weeksMin, counter!.weeksMax)}. The specialist may accept it or counter back once, and the counter back is the final offer.`
+        : `The specialist countered back at ${currency} ${counter!.totalAmount} over ${weeks(counter!.weeksMin, counter!.weeksMax)}. Accept it or decline to close the deal.`
       : status === 'accepted'
         ? 'Proposal accepted. The agreement and payment schedule are being prepared in this chat.'
         : status === 'changes_requested'
@@ -330,7 +322,7 @@ export async function PATCH(request: NextRequest) {
         title: existing.title,
         totalAmount: counter.totalAmount,
         currency,
-        weeks: weeksLabel(counter.weeksMin, counter.weeksMax),
+        weeks: weeks(counter.weeksMin, counter.weeksMax),
       };
 
       // Team channel: who countered and what is on the table. The personal pings below

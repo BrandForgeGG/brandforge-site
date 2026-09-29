@@ -71,6 +71,16 @@ _To be written at handoff._
 - Verified: 245/245 tests, tsc, eslint, build green. (Live e2e left for daylight since it
   writes prod rows and pings real channels.)
 
+### C8 — Shared weeks helper + contrast audit (done)
+- `weeks()` is now exported from ops-events and used by the proposals route (replaces
+  `weeksLabel` plus two inline blocks). Side benefit: equal min/max used to render the
+  silly `3–3 weeks` in Telegram/email; now `3 weeks`. Unit-tested.
+- Measured all ten flagged contrast pairs with the real luminance formula: nine pass AA,
+  the tenth (`#b8763b` on `#1c2024` = 4.44) rounds to the AA floor and stays. The two
+  scary audit claims dissolved — `#b9e3c4`-on-green is translucent-over-dark in reality,
+  and the eyebrow/brand/muted pairs all clear 4.5. No palette change.
+- Verified: 246/246 tests, tsc, eslint, build green.
+
 ### C6 — Landing copy (done)
 - Hero sub rewritten in two plain sentences (niche role list moved to services where it
   belongs, em dash removed); two vague suggestion chips replaced with specific briefs that
