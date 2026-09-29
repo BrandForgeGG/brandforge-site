@@ -1,68 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  addParticipant,
   canAccessConversation,
   getParticipants,
   isStaffAccount,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
-import { checkRateLimit } from '@/lib/rate-limit';
-
-const PARTICIPANTS_RATE_LIMIT = { limit: 20, windowMs: 60 * 60 * 1000 };
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: NextRequest) {
-  try {
-    const user = await getAuthenticatedUser(request);
-    
-    if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
-    const body = await request.json();
-    const { conversationId, userId, role, displayName } = body;
-
-    if (!conversationId || !userId || !role) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
-
-    const hasAccess = await canAccessConversation(user.id, conversationId);
-    
-    if (!hasAccess) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
-
-    // Throttled after authorization so rejected callers keep their diagnostic 403
-    // instead of burning quota on doomed requests.
-    const rate = checkRateLimit(`participants:${user.id}`, PARTICIPANTS_RATE_LIMIT);
-    if (!rate.allowed) {
-      return NextResponse.json(
-        { error: 'Too many requests — please try again later.' },
-        { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } }
-      );
-    }
-
-    const participant = await addParticipant({
-      conversation_id: conversationId,
-      user_id: userId,
-      role,
-      display_name: displayName,
-    });
-
-    if (!participant) {
-      return NextResponse.json({ error: 'Failed to add participant' }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true, participant });
-  } catch (error) {
-    console.error('Add participant API error:', error);
-    return NextResponse.json(
-      { error: 'Failed to add participant' },
-      { status: 500 }
-    );
-  }
-}
+// NOTE: this route is read-only by design. Participant writes happen only through
+// server-side flows with fixed roles (staff join, admin invite, proposal-accept
+// invite). A generic POST here once let any participant add any user under any
+// role string — it had zero legitimate callers, so it was removed (audit, C69).
 
 export async function GET(request: NextRequest) {
   try {
