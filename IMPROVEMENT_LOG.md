@@ -528,9 +528,9 @@ channels — you are awake, so daylight rules apply).
   viewport tooling unresolved — desktop review only.
 - Verified: 263/263 tests, tsc, eslint, build green; auth probe green on the deploy.
 
-### C57 — Public-page screenshot sweep (done)
+### C57 — Public-page screenshot sweep (done, deployed `dpl_7yh5rKCDC5ui8STtbWGFaShamZFR`)
 - Drove the live site with agent-browser: community + footer + FAQ header all clean;
   login card is premium as-is. Two findings: `/apply` redirects signed-out visitors to
   `/login` (correct — applying requires an account, no change), and `/login` had no
   metadata (added title + description). Mobile viewport command unresolved — desktop only.
-- Verified: 263/263 tests, tsc, eslint, build green.
+- Verified: 263/263 tests, tsc, eslint, build green; auth probe green on the deploy.
