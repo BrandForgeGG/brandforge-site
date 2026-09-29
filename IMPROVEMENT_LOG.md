@@ -342,3 +342,15 @@ channels — you are awake, so daylight rules apply).
   POST accepts an optional validated source. Behavior identical before and after 0018 lands.
 - Verified: 253/253 tests, tsc, eslint, build green; full pipeline e2e ALL PASS (27/27) +
   auth probe green on the deploy — the fallbacks held live with columns absent.
+
+### C39 — Actionable notifications: every ping links into its chat (done)
+- P4 audit: Telegram senders already time-box; Discord webhooks cannot send components
+  (true buttons need a bot token — logged as needs-human), so the shippable core is deep
+  links. Founder pings get the chat URL centrally via `notifyFounder`'s existing `chatUrl`;
+  team + specialist messages and all staff ops embeds append `[Open conversation]` when the
+  call site passes an id (threaded through proposals, agreements, payments, invite, tasks,
+  review, brief-ready). Ops sender retries once on 429 honoring `retry_after` (capped 5s).
+- Skipped deliberately: AI-draft-created pings (drafts save on every AI pass — a ping per
+  save is spam; needs a product call on what "awaits approval" means) and founder-message-
+  unanswered pings (needs presence/seen design + noise tolerance call).
+- Verified: 256/256 tests, tsc, eslint, build green.
