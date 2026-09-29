@@ -245,6 +245,9 @@ BrandForge/
   `dpl_HkzZKnwG3M8B3hCyU5JbdWURRSRN`)**: pings that know their conversation carry a tappable Open-chat URL button
   (https-only, max one row of three); caller-supplied buttons win when present. 258/258,
   probe green.
+- **Interface-guideline pass (2026-09-29, deployed `auto/improvements`→prod
+  `dpl_7QFgycjxuXcDPNNAaTQt1aEDXm57`)**: dark `color-scheme` on root, tap-delay removed
+  on controls, width-only progress transitions. No visual change. Auth probe green.
 - **Proposal submit silently dead — nested form fixed (2026-09-28, deployed `0ab3567`→prod
   `dpl_BJ5mtXHnUspiuAkkXNhvbLWEofZH`)**: the "Submit proposal goes to bare /chat, nothing
   happens" report. The Send-proposal `<form>` rendered **inside** the composer `<form>`

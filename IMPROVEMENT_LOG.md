@@ -420,6 +420,14 @@ channels — you are awake, so daylight rules apply).
   `#dev-log` webhook re-pasted for `DISCORD_DEVLOG_URL`, which currently points public.
 - Verified: 263/263 tests, tsc, eslint, build green.
 
+### C47 — Interface-guideline compliance pass (done, deployed `dpl_7QFgycjxuXcDPNNAaTQt1aEDXm57`)
+- Audited chat surfaces against the Vercel Web Interface Guidelines: `color-scheme: dark`
+  moved to `:root` unconditionally (was stranded inside a light-preference query),
+  `touch-action: manipulation` on all controls (kills mobile tap delay), progress bars
+  animate `width` only instead of `transition-all`. Verified the global `:focus-visible`
+  rule already covers every `outline-none` input — no change needed there.
+- Verified: 263/263 tests, tsc, eslint, build green.
+
 ### C46 — Attachments gain nosniff (done)
 - Served files lacked `X-Content-Type-Options: nosniff`. One header line, zero behavior
   change in modern browsers, closes the MIME-sniffing class entirely.
