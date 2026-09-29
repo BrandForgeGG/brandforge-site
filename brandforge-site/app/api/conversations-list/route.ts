@@ -3,6 +3,7 @@ import {
   getStaffConversationSummaries,
   getUserConversationSummaries,
   isStaffAccount,
+  getProfileRole,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { getUserRoleFromEmail } from '@/lib/user-roles';
@@ -34,7 +35,8 @@ export async function GET(request: NextRequest) {
     const name =
       user.user_metadata?.full_name ?? user.user_metadata?.name ?? null;
     const email = user.email ?? null;
-    const role = email ? getUserRoleFromEmail(email) : 'user';
+    // profiles.role is the truth; the email hint only covers rows that predate it.
+    const role = (await getProfileRole(user.id)) ?? (email ? getUserRoleFromEmail(email) : 'user');
 
     return NextResponse.json({ conversations, isStaff, unseenCount, userId: user.id, name, email, role });
   } catch (error) {

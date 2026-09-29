@@ -81,6 +81,13 @@ _To be written at handoff._
   and the eyebrow/brand/muted pairs all clear 4.5. No palette change.
 - Verified: 246/246 tests, tsc, eslint, build green.
 
+### C9 — Rail role reads the database (done)
+- `/api/conversations-list` reported `role` from a hardcoded email list, disagreeing with
+  `profiles.role` for anyone promoted outside that list (found live: a fresh operator read
+  back `user`). Now DB-first with the email hint as fallback; the admin/staff badge mapping
+  accepts both `admin` (DB) and `founder` (legacy hint). Same labels for all real accounts.
+- Verified: 246/246 tests, tsc, eslint, build green.
+
 ### C6 — Landing copy (done)
 - Hero sub rewritten in two plain sentences (niche role list moved to services where it
   belongs, em dash removed); two vague suggestion chips replaced with specific briefs that

@@ -1691,8 +1691,10 @@ export function ChatWorkspace() {
     recents.find((conversation) => conversation.id === conversationId) ?? null;
 
   // Role labels: staff see "admin" or "staff"; regular users see no role badge.
+  // The rail reports the profiles.role value ('admin'), with the legacy email hint
+  // ('founder') as fallback for rows that predate it.
   const selfRoleLabel = railMeta.isStaff
-    ? railMeta.role === 'founder'
+    ? railMeta.role === 'admin' || railMeta.role === 'founder'
       ? 'admin'
       : 'staff'
     : null;
