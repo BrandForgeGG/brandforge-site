@@ -541,3 +541,14 @@ channels — you are awake, so daylight rules apply).
   home-indicator safe area, clipboard emoji hidden from screen readers, tabular numerals
   on proposal prices.
 - Verified: 263/263 tests, tsc, eslint, build green; auth probe green on the deploy.
+
+### C59 — Funding error paths reviewed (done, no change)
+- Submit validates format + ownership + state with idempotent-submit 409; verify/reject/
+  release are staff-gated with clear errors; funnel skips the tx hash by design. Solid.
+
+### C60 — Probe harness committed to the repo (done)
+- The pipeline e2e + auth probe lived only in a temp dir — one dead machine from gone.
+  Now `brandforge-site/scripts/prod/` with a README (daylight-only rules, never CI).
+  Secret-scanned (reads `.env.local` at runtime, nothing stored). Agent-browser skill
+  committed too.
+- Verified: 263/263 tests (untouched), file parse checks green.
