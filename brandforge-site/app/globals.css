@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: dark;
   --background: #14171a;
   --foreground: #ece7de;
   --font-sans: var(--font-inter), "Inter", sans-serif;
@@ -580,12 +581,6 @@ body {
   }
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color-scheme: dark;
-  }
-}
-
 * {
   scrollbar-color: #3a4248 var(--background);
   scrollbar-width: thin;
@@ -602,6 +597,7 @@ input,
 textarea,
 select {
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 button:focus-visible,

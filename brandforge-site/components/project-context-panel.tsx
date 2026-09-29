@@ -381,7 +381,7 @@ export function ProjectContextPanel({
             <div className="mb-2 flex items-center gap-2">
               <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
                 <div
-                  className="h-full bg-[#e8571e] transition-all"
+                  className="h-full bg-[#e8571e] transition-[width]"
                   style={{ width: `${discovery?.percent ?? 0}%` }}
                 />
               </div>
@@ -456,9 +456,9 @@ export function ProjectContextPanel({
                 <span className="text-[#ece7de]">Delivery progress</span>
                 <span className="text-[#5aa578]">{taskProgress.done}/{taskProgress.total} complete</span>
               </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-                <div className="h-full rounded-full bg-[#5aa578] transition-all" style={{ width: `${taskProgress.percent}%` }} />
-              </div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full rounded-full bg-[#5aa578] transition-[width]" style={{ width: `${taskProgress.percent}%` }} />
+                </div>
               <p className="mt-1 text-[10px] text-[#9aa0a6]">{taskProgress.inProgress} in progress · {taskProgress.review} awaiting review · {taskProgress.queued} queued{taskProgress.overdue ? ` · ${taskProgress.overdue} overdue` : ''}</p>
               {describeNextDeliveryAction(state.tasks)}
             </div>
