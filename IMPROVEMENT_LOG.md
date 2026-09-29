@@ -595,3 +595,6 @@ channels — you are awake, so daylight rules apply).
   which proves zero output drift. Deliberately left out: panel/transcript/payments
   display money (their '—'/fallback null semantics are a different contract) and the
   ellipsis truncate variants (different behavior, documented).
+- Deployed to prod (first attempt failed: ran vercel from the repo root, no
+  package.json there — redeployed from `brandforge-site/`, Ready in 25s). Verified
+  live: auth probe green, pipeline e2e ALL PASS on the new deployment.
