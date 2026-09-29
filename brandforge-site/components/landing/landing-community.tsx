@@ -34,8 +34,7 @@ export function LandingCommunity() {
                 {COMMUNITY_LINKS.discord.description}
               </p>
               <p className="mt-4 text-sm font-semibold text-[#e8571e]">
-                {COMMUNITY_LINKS.discord.href.replace('https://', '')}{' '}
-                <span className="inline-block transition group-hover:translate-x-1">→</span>
+                {COMMUNITY_LINKS.discord.href.replace('https://', '')}
               </p>
             </a>
 
@@ -51,7 +50,7 @@ export function LandingCommunity() {
                     className="group flex items-center justify-between gap-4 text-sm"
                   >
                     <span className="text-[#ece7de]">{channel.label}</span>
-                    <span className="text-[#9aa0a6] transition group-hover:text-[#e8571e]">→</span>
+                    <span className="text-[#9aa0a6] transition group-hover:text-[#e8571e]">Open</span>
                   </a>
                 ))}
               </div>

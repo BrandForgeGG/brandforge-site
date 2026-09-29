@@ -474,6 +474,19 @@ channels — you are awake, so daylight rules apply).
 - Unrelated real data from the same probe: a genuine €1000 pending proposal
   ("I can do this") and live chat activity — the team is working today.
 
+### C54 — Landing de-slop from user feedback (done)
+- Tommy (AI-generated look): hero eyebrow dots → commas, arrow glyphs off the community
+  cards, hero sub cut to 19 words. Mcdonut (too much text): suggestion chips 7 → 4,
+  keeping two broad + two specific brief models. Brandon (login yank): already fixed and
+  deployed in C49 — his session likely predates it; hard-refresh resolves.
+- Social proof requested and refused: zero deliveries exist, so stars/testimonials would
+  be fabricated. Logged as blocked on the first real delivery + written consent. The
+  open-beta framing stays as the honest signal.
+- Skills note: `ui-ux-pro-max` and `impeccable` match nothing by name in the skill
+  registry (adjacent hits only) — not installed; operating on frontend-design +
+  stop-slop + web-design-guidelines + vercel composition/best-practices instead.
+- Verified: 263/263 tests, tsc, eslint, build green.
+
 ### C52 — Content-calendar truth audit (done, no code — founder content, my punchlist)
 - Read `Distribution/content-calendar.md` + `marketing-copy.md` against repo truth.
   Do-not-publish findings: Day 3/9/17/21/27/30 assert shipped projects, timelines and

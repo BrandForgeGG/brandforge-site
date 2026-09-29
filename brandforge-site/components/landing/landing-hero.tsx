@@ -9,10 +9,7 @@ import { COMMUNITY_LINKS } from '@/lib/community';
 
 const SUGGESTIONS = [
   'Build a website',
-  'Build an app',
   'Launch a SaaS',
-  'Automate my business',
-  'Build an AI product',
   'A booking site for my salon',
   'A dashboard for support tickets',
 ];
@@ -90,7 +87,7 @@ export function LandingHero() {
       <div className="mx-auto w-full max-w-3xl">
         <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#e8571e]/30 bg-[#e8571e]/10 px-4 py-1.5 text-xs font-medium text-[#f6d6c3]">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#e8571e]" />
-          One chat · one project · humans ship it
+          One chat, one project, humans ship it
         </p>
 
         <h1 id="hero-title" className="font-serif text-4xl leading-[1.1] text-[#ece7de] sm:text-6xl">
@@ -99,9 +96,8 @@ export function LandingHero() {
           Humans build it.
         </h1>
         <p className="mt-5 max-w-xl text-lg leading-relaxed text-[#9aa0a6]">
-          Type what you want to build. BrandForge structures it into requirements, and
-          designers, developers and marketers ship it. Your crypto payment is verified
-          on-chain and held in escrow until you approve the work.
+          Describe what you want. AI shapes the brief, humans ship it, escrow holds
+          your money until you approve.
         </p>
 
         <div className="mt-8 flex flex-wrap gap-2">
