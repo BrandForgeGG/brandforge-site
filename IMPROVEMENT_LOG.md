@@ -435,12 +435,12 @@ channels — you are awake, so daylight rules apply).
 - Verified: 263/263 tests, tsc, eslint, build green; landing smoke (FAQ nav live), auth
   probe green on the deploy.
 
-### C49 — Signed-out hero stops yanking visitors (done)
+### C49 — Signed-out hero stops yanking visitors (done, deployed `dpl_DeHaF1b3FhSqw3vEEeHJ4FdhfRzB`)
 - P3 walkthrough: typing an idea signed-out showed a notice with Discord/Telegram/Sign-in
   options, then auto-redirected to login 1.2s later — too fast to read, let alone choose.
   The redirect is gone; the notice names the step, the idea waits in the tab, the visitor
   chooses. One clear CTA, no surprise navigation.
-- Verified: 263/263 tests, tsc, eslint, build green.
+- Verified: 263/263 tests, tsc, eslint, build green; auth probe green on the deploy.
 
 ### C46 — Attachments gain nosniff (done)
 - Served files lacked `X-Content-Type-Options: nosniff`. One header line, zero behavior

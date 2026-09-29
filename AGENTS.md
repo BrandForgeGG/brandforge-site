@@ -248,6 +248,10 @@ BrandForge/
 - **Interface-guideline pass (2026-09-29, deployed `auto/improvements`→prod
   `dpl_7QFgycjxuXcDPNNAaTQt1aEDXm57`)**: dark `color-scheme` on root, tap-delay removed
   on controls, width-only progress transitions. No visual change. Auth probe green.
+- **Signed-out hero keeps the choice (2026-09-29, deployed `auto/improvements`→prod
+  `dpl_DeHaF1b3FhSqw3vEEeHJ4FdhfRzB`)**: typing an idea while signed out showed community
+  options, then yanked to login after 1.2s — unreadable. The redirect is gone; notice,
+  stashed idea, visitor's choice. Auth probe green.
 - **Proposal submit silently dead — nested form fixed (2026-09-28, deployed `0ab3567`→prod
   `dpl_BJ5mtXHnUspiuAkkXNhvbLWEofZH`)**: the "Submit proposal goes to bare /chat, nothing
   happens" report. The Send-proposal `<form>` rendered **inside** the composer `<form>`
