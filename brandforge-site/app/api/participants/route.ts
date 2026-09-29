@@ -66,9 +66,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'conversationId required' }, { status: 400 });
     }
 
-    const isStaff = await isStaffAccount(user.id);
-    const hasAccess = await canAccessConversation(user.id, conversationId, { allowStaff: true });
-    
+    const [isStaff, hasAccess] = await Promise.all([
+      isStaffAccount(user.id),
+      canAccessConversation(user.id, conversationId, { allowStaff: true }),
+    ]);
+
     if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }

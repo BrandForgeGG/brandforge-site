@@ -88,6 +88,12 @@ _To be written at handoff._
   accepts both `admin` (DB) and `founder` (legacy hint). Same labels for all real accounts.
 - Verified: 246/246 tests, tsc, eslint, build green.
 
+### C10 — Two more read waterfalls (done)
+- `participants` and `project-context` routes fire staff + access checks together.
+  Downstream guards unchanged. About page skimmed (clean, no change); `describeNextDeliveryAction`
+  prefix handling verified consistent between panel and pulse.
+- Verified: 246/246 tests, tsc, eslint, build green.
+
 ### C6 — Landing copy (done)
 - Hero sub rewritten in two plain sentences (niche role list moved to services where it
   belongs, em dash removed); two vague suggestion chips replaced with specific briefs that
