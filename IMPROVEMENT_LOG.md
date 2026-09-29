@@ -428,11 +428,12 @@ channels — you are awake, so daylight rules apply).
   rule already covers every `outline-none` input — no change needed there.
 - Verified: 263/263 tests, tsc, eslint, build green.
 
-### C48 — Landing nav: home link + FAQ anchor (done)
+### C48 — Landing nav: home link + FAQ anchor (done, deployed `dpl_8DMMW8j8iJXEZ6DNsM17jNEk99kH`)
 - The wordmark was a dead div (now links home with a label); the new FAQ section had no
   nav entry (now listed between How it works and Community). Checked: nav is not sticky,
   so no scroll-margin needed.
-- Verified: 263/263 tests, tsc, eslint, build green.
+- Verified: 263/263 tests, tsc, eslint, build green; landing smoke (FAQ nav live), auth
+  probe green on the deploy.
 
 ### C46 — Attachments gain nosniff (done)
 - Served files lacked `X-Content-Type-Options: nosniff`. One header line, zero behavior
