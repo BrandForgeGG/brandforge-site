@@ -606,3 +606,20 @@ channels — you are awake, so daylight rules apply).
 - Verified live with HEAD on brandforge.gg: all five headers present; auth probe
   green on the deploy. (Deploy note: ran vercel from the repo root twice now — the
   rule is written on the wall: `brandforge-site/` only.)
+
+### C68 — Audit H3 closed: every write route throttled (shipped)
+- 12 routes × 14 handlers now check `checkRateLimit` after auth/authz, before work:
+  conversations create 10/h + delete 20/h, request-review 10/h, agreements 20/h
+  (POST+PATCH share a bucket), payments 30/h (submits + staff verify share),
+  chat-tasks 60/h, staff-post 60/h, staff-join 20/h, participants 20/h, attachments
+  30/h (300 MB/h/instance upload cap), messages edit/delete/react 200/h (reactions
+  are rapid-fire by design), identity 20/h. Same 429 + Retry-After shape as the
+  existing five throttled routes. 265/265, tsc, eslint, build green; pipeline e2e
+  ALL PASS on the deploy (normal flows sit far below every limit).
+- Honestly noted: no live 429 proof — firing 200 junk requests at prod to see one
+  refusal would create the abuse this prevents. The helper is unit-tested and the
+  call pattern is the proven one. Per-instance caveat still stands (see M-side
+  shared-limiter item); this caps bursty abuse, not distributed quotas.
+- Side observation (not changed, flagged for a later cycle): participants POST lets
+  any participant add any userId with any role after a bare access check — worth a
+  dedicated authz review.
