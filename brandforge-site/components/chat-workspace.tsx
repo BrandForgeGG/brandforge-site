@@ -129,6 +129,16 @@ const STARTERS = [
 
 const MESSAGE_PAGE_SIZE = 300;
 
+// The slash vocabulary, shared by the Actions menu and the composer autocomplete so the
+// two surfaces can never disagree about which commands exist.
+const SLASH_COMMANDS = [
+  { command: "/progress", label: "Progress report" },
+  { command: "/review", label: "Send to BrandForge review" },
+  { command: "/contract", label: "Agreement steps" },
+  { command: "/attach", label: "How to attach a file" },
+  { command: "/help", label: "List all commands" },
+];
+
 export function ChatWorkspace() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -263,6 +273,29 @@ export function ChatWorkspace() {
   const [commandsOpen, setCommandsOpen] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [teamOpen, setTeamOpen] = useState(false);
+  // Autocomplete: highlighted row + whether the reader dismissed the popup for this text.
+  const [slashIndex, setSlashIndex] = useState(0);
+  const [slashClosed, setSlashClosed] = useState(false);
+
+  // Matches only when the composer starts with a slash word: typing "/" anywhere else
+  // is just prose and must never summon the popup.
+  const slashQuery = input.match(/^\/([a-z]*)$/i)?.[1] ?? null;
+  const slashMatches =
+    slashQuery === null || slashClosed
+      ? []
+      : SLASH_COMMANDS.filter((item) =>
+          item.command.startsWith(`/${slashQuery.toLowerCase()}`),
+        );
+  const slashHighlight =
+    slashMatches.length === 0 ? 0 : Math.min(slashIndex, slashMatches.length - 1);
+
+  const insertSlashCommand = (command: string) => {
+    setInput((current) =>
+      /^\/[a-z]*$/i.test(current) ? `${command} ` : insertComposerCommand(current, command),
+    );
+    setSlashClosed(true);
+    requestAnimationFrame(() => composerRef.current?.focus());
+  };
 
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -2193,8 +2226,37 @@ return (
               event.preventDefault();
               void handleSend();
             }}
-            className="mx-auto max-w-3xl"
+            className="relative mx-auto max-w-3xl"
           >
+            {slashMatches.length > 0 ? (
+              <div
+                role="listbox"
+                aria-label="Slash commands"
+                className="absolute inset-x-0 bottom-full z-40 mb-2 rounded-xl border border-white/10 bg-[#1c2024] p-1 shadow-xl"
+              >
+                {slashMatches.map((item, index) => (
+                  <button
+                    key={item.command}
+                    type="button"
+                    role="option"
+                    aria-selected={index === slashHighlight}
+                    className={
+                      "bf-menu-item w-full text-left" +
+                      (index === slashHighlight ? " bg-white/10 text-[#ece7de]" : "")
+                    }
+                    onMouseDown={(event) => {
+                      // MouseDown, not click: inserting before the textarea blurs keeps
+                      // focus (and the popup) stable through the press.
+                      event.preventDefault();
+                      insertSlashCommand(item.command);
+                    }}
+                  >
+                    {item.label}
+                    <span className="bf-menu-hint">{item.command}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
             {attachment ? (
               <div className="bf-composer-chip" role="status">
                 <span aria-hidden="true">📄</span>
@@ -2380,6 +2442,8 @@ return (
                 onChange={(event) => {
                   setInput(event.target.value);
                   setIsTyping(Boolean(event.target.value.trim()));
+                  setSlashIndex(0);
+                  setSlashClosed(false);
                 }}
                 placeholder={
                   isReplyingTo
@@ -2392,6 +2456,38 @@ return (
                 disabled={isBusy}
                 className="bf-composer-input"
                 onKeyDown={(event) => {
+                  if (slashMatches.length > 0) {
+                    if (event.key === "ArrowDown") {
+                      event.preventDefault();
+                      setSlashIndex((i) => (i + 1) % slashMatches.length);
+                      return;
+                    }
+                    if (event.key === "ArrowUp") {
+                      event.preventDefault();
+                      setSlashIndex(
+                        (i) => (i - 1 + slashMatches.length) % slashMatches.length,
+                      );
+                      return;
+                    }
+                    if (event.key === "Escape") {
+                      event.preventDefault();
+                      setSlashClosed(true);
+                      return;
+                    }
+                    if (event.key === "Enter" && !event.shiftKey) {
+                      const highlighted = slashMatches[slashHighlight];
+                      // A complete command keeps its send-on-Enter muscle memory; a
+                      // partial one completes first and sends on the next Enter.
+                      const exact =
+                        highlighted &&
+                        highlighted.command === `/${slashQuery?.toLowerCase() ?? ""}`;
+                      if (!exact && highlighted) {
+                        event.preventDefault();
+                        insertSlashCommand(highlighted.command);
+                        return;
+                      }
+                    }
+                  }
                   if (event.key === "Enter" && !event.shiftKey) {
                     event.preventDefault();
                     void handleSend();
@@ -2466,15 +2562,7 @@ return (
                       role="menu"
                       className="bf-menu absolute bottom-full left-0 z-40 mb-2 w-60 p-1"
                     >
-                      {[
-                        { command: "/progress", label: "Progress report" },
-                        {
-                          command: "/review",
-                          label: "Send to BrandForge review",
-                        },
-                        { command: "/contract", label: "Agreement steps" },
-                        { command: "/attach", label: "How to attach a file" },
-                      ].map((item) => (
+                      {SLASH_COMMANDS.map((item) => (
                         <button
                           key={item.command}
                           type="button"

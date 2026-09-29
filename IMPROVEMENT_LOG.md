@@ -1,5 +1,19 @@
 # Overnight improvement log — 2026-09-29
 
+## Current State (2026-09-29, from the repo — v2 fast-execution baseline)
+
+- **Stack:** Next.js 16 App Router + React, Supabase (auth, Postgres + RLS, Realtime, Storage), Resend email. Deployed to `brandforge.gg` via Vercel CLI. CI on push/PR runs lint + tsc + tests + build. Code mirrored to private `BrandForgeGG/brandforge-site` (main).
+- **Product:** chat-first studio. Landing → chat → AI-structured brief → staff proposal → negotiation (counter round, max 2, matrix-enforced) → two-sided contract signing → crypto escrow (admin-verified) → milestone delivery + founder approval → release. Two founder declines and that specialist is out; the brief stays open. Operators apply, get reviewed, join chats, and are auto-invited on acceptance.
+- **Chat architecture:** `chat-workspace` (state, realtime, streaming, all actions) + `chat-transcript` (markdown renderer, system embed cards, reactions, profile cards) + `project-context-panel` (quiet summaries) + `conversation-rail`. Embeds for proposal/agreement/funding/review with role-gated actions (`lib/embed-actions.js`), idempotent endpoints, system-message receipts.
+- **Design system:** near-black grounds, ember `#e8571e` accent, Fraunces serif display + Inter, `bf-*` classes in `globals.css`. No template look; keep it that way.
+- **Data rules that must not break:** RLS everywhere, service role confined to `lib/project-db.ts`; agreement totals derived server-side from the accepted proposal; `counter_round` 0/1/2 is the negotiation counter; funnel properties are allowlisted (no PII).
+- **Broken/missing right now:** nothing known-broken on prod (morning triage: zero errors/5xx; overnight batch fixed task approval + submit hangs, both unshipped). Missing by design decision: matching engine, dispute model, digest cron, Telegram auto-post, `public-changelog` label flow unused until first release. Open setup: Discord webhook values, GitHub webhook + secret, PAT revocation, SPF/DMARC.
+- **Baseline this morning:** 252/252 tests, tsc clean, `npm run lint` clean, production build green.
+
+> Autonomous session notes live below. Branch: `auto/improvements` (this session). Overnight work is merged; `IMPROVEMENT_LOG.md` continues append-only.
+
+## Summary for the user
+
 > Autonomous session. Branch: `auto/overnight-improvements` (local only — NOT pushed,
 > NOT deployed). All verification is local (tests, tsc, eslint, build). No prod writes,
 > no messages to real users, no secrets touched.
