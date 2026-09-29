@@ -183,8 +183,10 @@ BrandForge/
   releases post to both the staff dev-log and `DISCORD_PUBLIC_CHANGELOG_URL`, labeled merges
   stay private. Still needs the old `#dev-log` webhook re-pasted for `DISCORD_DEVLOG_URL`.
   Re-pasted 2026-09-29 and restored via rm+add; redeployed `dpl_3Evd6PNdGB5bkdkEzwH3LLwtRoBy`.
-  Founder deleted one webhook (`...1554084015181529210`, unknown channel — awaiting
-  identification; if it was the legacy discovery URL, brief embeds 404 until re-wired).
+  Founder deleted one webhook (`...1554084015181529210`): confirmed an unused spare — the
+  legacy discovery path proved alive the same morning (founder-quoted 12:02 post), and no
+  env var references an unknown webhook (full env inventory checked). Nothing to re-wire;
+  `#ops-disputes` still to be created.
 - **`0019_marketing_posts.sql` applied 2026-09-29** (founder ran it after the editor
   flagged the missing RLS — fixed in the file first: RLS on, zero policies, anon reads
   proven empty live with a cleaned probe row). Queue table ready; processor still waits
