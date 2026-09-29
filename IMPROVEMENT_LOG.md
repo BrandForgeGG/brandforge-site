@@ -100,6 +100,13 @@ _To be written at handoff._
   as the rail's Telegram code button). Real friction removed from the funding flow.
 - Verified: 246/246 tests, tsc, eslint, build green.
 
+### C12 — Branded 404 + error pages (done)
+- No `not-found`/`error` routes existed (framework defaults). Added both in the product
+  voice with recovery paths (open chat / go home / try again).
+- Build flagged C1's `themeColor` placement (Next 16 wants it in the `viewport` export,
+  not `metadata`) — moved, warning gone.
+- Verified: 246/246 tests, tsc, eslint, build green.
+
 ### C6 — Landing copy (done)
 - Hero sub rewritten in two plain sentences (niche role list moved to services where it
   belongs, em dash removed); two vague suggestion chips replaced with specific briefs that

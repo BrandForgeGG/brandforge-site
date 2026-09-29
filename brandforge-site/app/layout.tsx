@@ -1,5 +1,5 @@
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Fraunces } from "next/font/google";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -40,6 +40,9 @@ export const metadata: Metadata = {
       "Describe your project in a chat, get a human-vetted proposal, fund it with admin-verified crypto escrow.",
     images: ["/twitter-card.png"],
   },
+};
+
+export const viewport: Viewport = {
   themeColor: "#111417",
 };
 
