@@ -6,6 +6,9 @@
 -- itself is the audit log: every attempt is recorded, nothing is fire-and-forget.
 --
 -- SAFETY BY DESIGN:
+-- - RLS is enabled with no policies: anon/authenticated clients are denied everything
+--   by default; only the service role touches this table. This answers the editor's
+--   RLS warning in code, not via the dialog button.
 -- - No auto-approval bypass is possible from schema alone: the processor will
 --   refuse to run unless MARKETING_ENABLED=true (global kill switch, default off).
 -- - Per-channel flags (MARKETING_DISCORD / MARKETING_TELEGRAM / MARKETING_REDDIT)
@@ -48,6 +51,12 @@ create table if not exists public.marketing_posts (
 
 create index if not exists marketing_posts_due_idx
   on public.marketing_posts (status, scheduled_at);
+
+-- Locked down by default: RLS enabled with NO policies, so anon/authenticated
+-- clients are denied everything and only the service role (processor, admin reads)
+-- touches this table. The Supabase editor warning is answered by these lines, not
+-- by the dialog button — keep the file as the source of truth.
+alter table public.marketing_posts enable row level security;
 
 comment on table public.marketing_posts is
   'Scheduled outbound marketing queue (P5). Audit log included: every attempt writes status, permalink or error.';
