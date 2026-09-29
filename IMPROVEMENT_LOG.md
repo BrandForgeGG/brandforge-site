@@ -300,3 +300,13 @@ channels — you are awake, so daylight rules apply).
 - 18-minute morning window: 432×200, 0 errors, 0 fives. 24×403 = pre-accept operator
   gates working as designed; 48×409 investigated above (stale-card hammering, now fixed
   at the source).
+
+### C35 — Slash-command autocomplete (done, deployed `dpl_DNyb4i3SVCUVDeU6zjEp9SRJ8nee`)
+- P1 gap: menus existed but typing `/` did nothing. The composer now filters the shared
+  command vocabulary as you type, with arrow navigation, Enter to complete (exact commands
+  keep send-on-Enter), Escape to dismiss, and mouse selection that keeps focus. The Actions
+  menu renders the same list, which also surfaced the previously hidden `/help`.
+- Self-correction: accidentally staged an unrelated user-dropped image from
+  `Distribution/` — removed from the commit before pushing anything; file untouched on
+  disk. Lesson: `git add -A` sweeps untracked user files — inspect status before staging.
+- Verified: 252/252 tests, tsc, eslint, build green; auth probe green on the deploy.
