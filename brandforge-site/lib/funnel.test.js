@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { FUNNEL_EVENTS, ALLOWED_PROPERTY_KEYS, isFunnelEvent, sanitizeProperties, track } = require('./funnel.js');
+const { FUNNEL_EVENTS, ALLOWED_PROPERTY_KEYS, isFunnelEvent, sanitizeProperties, normalizeSource, track } = require('./funnel.js');
 
 test('the funnel event list is the closed set the brief asked for', () => {
   for (const event of [
@@ -85,8 +85,7 @@ test('track records a real event and never carries the account id', async () => 
   assert.equal(serialized.includes('email'), false);
 });
 
-test('track rejects unknown events instead of creating a stray metric', async () => {
-  const rows = [];
+test('track rejects unknown events instead of creating a stray metric', async () => {  const rows = [];
   const result = await track('totally_made_up', { insert: async (r) => rows.push(r) });
   assert.equal(result.recorded, false);
   assert.match(result.error, /unknown funnel event/);
@@ -110,4 +109,19 @@ test('every funnel event is lowercase and snake_case', () => {
   for (const event of FUNNEL_EVENTS) {
     assert.match(event, /^[a-z][a-z0-9_]*$/, event);
   }
+});
+
+test('traffic source defaults to organic and only test opts out', async () => {
+  assert.equal(normalizeSource(undefined), 'organic');
+  assert.equal(normalizeSource('organic'), 'organic');
+  assert.equal(normalizeSource('TEST'), 'test');
+  assert.equal(normalizeSource('test '), 'test');
+  assert.equal(normalizeSource('hacker'), 'organic');
+  assert.equal(normalizeSource(''), 'organic');
+
+  const rows = [];
+  await track('chat_started', { insert: async (row) => rows.push(row) });
+  assert.equal(rows[0].source, 'organic');
+  await track('chat_started', { insert: async (row) => rows.push(row), source: 'test' });
+  assert.equal(rows[1].source, 'test');
 });

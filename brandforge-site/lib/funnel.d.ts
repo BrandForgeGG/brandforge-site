@@ -10,11 +10,13 @@ export interface TrackOptions {
     signed_in: boolean;
     visitor_id: string | null;
     properties: Record<string, string | number | boolean>;
+    source: string;
     created_at: string;
   }) => unknown;
   signedIn?: boolean;
   visitorId?: string;
   properties?: FunnelProperties;
+  source?: string;
 }
 
 export interface TrackResult {
@@ -27,4 +29,5 @@ export declare const FUNNEL_EVENTS: readonly string[];
 export declare const ALLOWED_PROPERTY_KEYS: Set<string>;
 export declare function isFunnelEvent(event: string): boolean;
 export declare function sanitizeProperties(properties?: FunnelProperties): Record<string, string | number | boolean>;
+export declare function normalizeSource(value?: unknown): string;
 export declare function track(event: string, options: TrackOptions): Promise<TrackResult>;

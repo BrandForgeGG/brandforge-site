@@ -28,11 +28,21 @@ export async function getFunnelSummary(limit = 10000) {
     return null;
   }
 
-  const { data, error } = await admin
-    .from('funnel_events')
-    .select('event, created_at')
-    .order('created_at', { ascending: true })
-    .limit(limit);
+  // Revenue view: test traffic is excluded. Before migration 0018 the column does
+  // not exist, so fall back to the unfiltered query rather than failing the page.
+  const run = (organicOnly: boolean) => {
+    const query = admin
+      .from('funnel_events')
+      .select('event, created_at')
+      .order('created_at', { ascending: true })
+      .limit(limit);
+    return organicOnly ? query.eq('source', 'organic') : query;
+  };
+
+  let { data, error } = await run(true);
+  if (error && (error.code === 'PGRST204' || error.code === '42703')) {
+    ({ data, error } = await run(false));
+  }
 
   if (error) {
     // The table is missing until migration 0012 is applied; that is an expected, non-fatal state.
@@ -74,12 +84,40 @@ export async function getWeeklyStats(
   }
   const since = sinceIso ?? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [posted, matched, funded, shipped] = await Promise.all([
-    admin.from('conversations').select('id', { count: 'exact', head: true }).gte('created_at', since),
-    admin.from('funnel_events').select('id', { count: 'exact', head: true }).eq('event', 'proposal_accepted').gte('created_at', since),
-    admin.from('funnel_events').select('id', { count: 'exact', head: true }).eq('event', 'funding_verified').gte('created_at', since),
-    admin.from('funnel_events').select('id', { count: 'exact', head: true }).eq('event', 'payment_released').gte('created_at', since),
-  ]);
+  // Revenue view: test traffic is excluded once migration 0018 provides the column;
+  // before that, fall back to unfiltered counts rather than failing the digest.
+  const countConversations = (organicOnly: boolean) => {
+    const query = admin
+      .from('conversations')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', since);
+    return organicOnly ? query.eq('source', 'organic') : query;
+  };
+  const countEvents = (organicOnly: boolean, event: string) => {
+    const query = admin
+      .from('funnel_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('event', event)
+      .gte('created_at', since);
+    return organicOnly ? query.eq('source', 'organic') : query;
+  };
+  const runAll = (organicOnly: boolean) =>
+    Promise.all([
+      countConversations(organicOnly),
+      countEvents(organicOnly, 'proposal_accepted'),
+      countEvents(organicOnly, 'funding_verified'),
+      countEvents(organicOnly, 'payment_released'),
+    ]);
+
+  let results = await runAll(true);
+  if (
+    results.some(
+      (result) => result.error && (result.error.code === 'PGRST204' || result.error.code === '42703')
+    )
+  ) {
+    results = await runAll(false);
+  }
+  const [posted, matched, funded, shipped] = results;
 
   for (const result of [posted, matched, funded, shipped]) {
     if (result.error) {
@@ -117,7 +155,7 @@ let funnelUnavailableLogged = false;
 
 export async function recordFunnelEvent(
   event: string,
-  options: { signedIn?: boolean; visitorId?: string; properties?: Record<string, unknown> } = {}
+  options: { signedIn?: boolean; visitorId?: string; properties?: Record<string, unknown>; source?: string } = {}
 ) {
   const admin = createSupabaseAdminClient();
 
@@ -129,6 +167,7 @@ export async function recordFunnelEvent(
     signedIn: options.signedIn ?? false,
     visitorId: options.visitorId ?? '',
     properties: options.properties,
+    source: options.source,
     insert: async (row) => {
       const { error } = await admin.from('funnel_events').insert(row);
 
@@ -141,6 +180,14 @@ export async function recordFunnelEvent(
             console.warn('funnel_events table missing — apply migration 0012_funnel_events.sql');
           }
           return;
+        }
+        // Unknown column: migration 0018 has not been applied yet. Retry the same row
+        // without the source label rather than dropping the metric.
+        if ((error.code === 'PGRST204' || error.code === '42703') && 'source' in row) {
+          const legacyRow: Record<string, unknown> = { ...row };
+          delete legacyRow.source;
+          const retry = await admin.from('funnel_events').insert(legacyRow);
+          if (!retry.error) return;
         }
         throw new Error(error.message);
       }
@@ -1165,19 +1212,30 @@ export async function getDecisions(conversationId: string): Promise<Decision[]> 
 
 export async function createConversation(
   userId: string | null,
-  title: string = 'New Project'
+  title: string = 'New Project',
+  source?: string
 ): Promise<string | null> {
   const supabase = await db();
 
-  const { data, error } = await supabase
-    .from('conversations')
-    .insert({
-      user_id: userId,
-      title,
-      status: 'DISCOVERY',
-    })
-    .select('id')
-    .maybeSingle();
+  const cleanSource = source === 'test' ? 'test' : 'organic';
+  const insertRow: Record<string, unknown> = {
+    user_id: userId,
+    title,
+    status: 'DISCOVERY',
+    source: cleanSource,
+  };
+
+  const attempt = () =>
+    supabase.from('conversations').insert(insertRow).select('id').maybeSingle();
+
+  let { data, error } = await attempt();
+
+  // Unknown column: migration 0018 has not been applied yet. Retry without the label
+  // rather than failing conversation creation.
+  if (error && (error.code === 'PGRST204' || error.code === '42703')) {
+    delete insertRow.source;
+    ({ data, error } = await attempt());
+  }
 
   if (error) {
     console.error('Error creating conversation:', error.message);

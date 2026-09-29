@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    let body: { initialMessage?: string } = {};
+    let body: { initialMessage?: string; source?: string } = {};
 
     try {
       body = await request.json();
@@ -30,6 +30,9 @@ export async function POST(request: NextRequest) {
     }
 
     const initialMessage = String(body.initialMessage ?? '').trim().slice(0, 8000);
+    // Traffic classification: probes and e2e runs self-declare `source: 'test'` so
+    // revenue metrics stay clean. Anything else reads as organic; claiming 'test'
+    // only excludes the caller from aggregates, so there is nothing to gain by lying.
 
     // Read the founder's existing projects *before* creating the new one, so "returning founder"
     // is a fact rather than a guess. A staff member opening their own chat is not a returning
@@ -40,7 +43,7 @@ export async function POST(request: NextRequest) {
     ]);
     const isRepeatFounder = !staff && existing.length > 0;
 
-    const conversationId = await createConversation(user.id, 'New Project');
+    const conversationId = await createConversation(user.id, 'New Project', body.source);
 
     if (!conversationId) {
       return NextResponse.json({ error: 'Failed to create conversation' }, { status: 500 });

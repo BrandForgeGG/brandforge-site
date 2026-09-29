@@ -67,6 +67,13 @@ const FUNNEL_EVENTS = Object.freeze([
 
 const EVENT_SET = new Set(FUNNEL_EVENTS);
 
+// Traffic source travels as a real column (migration 0018), never as a property:
+// it classifies the row itself (organic vs synthetic) so revenue queries can exclude
+// test traffic. Anything but an explicit 'test' reads as organic.
+function normalizeSource(value) {
+  return String(value ?? '').trim().toLowerCase() === 'test' ? 'test' : 'organic';
+}
+
 function isFunnelEvent(event) {
   return EVENT_SET.has(event);
 }
@@ -123,6 +130,7 @@ function sanitizeProperties(properties) {
  * @param {boolean} [options.signedIn]
  * @param {string} [options.visitorId]
  * @param {object} [options.properties]
+ * @param {string} [options.source]  'test' marks synthetic traffic, anything else is organic.
  * @returns {Promise<{ recorded: boolean, event?: string, error?: string }>}
  */
 async function track(event, options = {}) {
@@ -132,7 +140,7 @@ async function track(event, options = {}) {
     return { recorded: false, error: `unknown funnel event: ${name || '(empty)'}` };
   }
 
-  const { insert, signedIn = false, visitorId = '', properties } = options;
+  const { insert, signedIn = false, visitorId = '', properties, source } = options;
 
   if (typeof insert !== 'function') {
     return { recorded: false, error: 'no insert function provided' };
@@ -143,6 +151,7 @@ async function track(event, options = {}) {
     signed_in: Boolean(signedIn),
     visitor_id: String(visitorId || '').slice(0, 64) || null,
     properties: sanitizeProperties(properties),
+    source: normalizeSource(source),
     created_at: new Date().toISOString(),
   };
 
@@ -156,4 +165,4 @@ async function track(event, options = {}) {
   }
 }
 
-module.exports = { FUNNEL_EVENTS, ALLOWED_PROPERTY_KEYS, isFunnelEvent, sanitizeProperties, track };
+module.exports = { FUNNEL_EVENTS, ALLOWED_PROPERTY_KEYS, isFunnelEvent, sanitizeProperties, normalizeSource, track };
