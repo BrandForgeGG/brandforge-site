@@ -364,8 +364,9 @@ onMobileClose,
 
               {recents.length === 0 ? (
                 <p className="text-xs leading-relaxed text-[#8f959b]">
-                  Your first chat appears here the moment you send a message -
-                  just start typing in the message box.
+                  {isStaff
+                    ? 'New briefs appear here the moment a founder sends one for review. Link Telegram below and the ping finds you first.'
+                    : 'Your first chat appears here the moment you send a message - just start typing in the message box.'}
                 </p>
               ) : (
                 <div className="bf-recents">

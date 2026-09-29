@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { addMessage, addParticipant, isAdminAccount, recordFunnelEvent } from '@/lib/project-db';
 import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
+import { sendEmail } from '@/lib/email';
+import { resolveSiteUrl } from '@/lib/auth-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,6 +69,30 @@ export async function POST(
       // for application_approved, and counting declines would turn a conversion metric into something
       // that rewards rejecting people.
       await recordFunnelEvent('application_approved', { signedIn: true });
+
+      // Acceptance was silent: nothing told the specialist they are in. Tell them now —
+      // email is best-effort and never fails the approval itself.
+      try {
+        const { data: approved } = await supabase
+          .from('operator_applications')
+          .select('email')
+          .eq('id', applicationId)
+          .maybeSingle();
+        const to = String(
+          (approved as { email?: string | null } | null)?.email ?? ''
+        ).trim();
+        if (to) {
+          const inboxUrl = `${resolveSiteUrl()}/chat`;
+          await sendEmail({
+            to,
+            subject: 'You are in — BrandForge specialist',
+            text: `Your application was accepted. Open your staff inbox and watch for new briefs — each one you open is yours to propose on.\n\n${inboxUrl}\n\nLink Telegram from the sidebar to get pinged the moment a brief lands.`,
+            html: `<p>Your application was accepted.</p><p>Open your <a href="${inboxUrl}">staff inbox</a> and watch for new briefs — each one you open is yours to propose on.</p><p>Link Telegram from the sidebar to get pinged the moment a brief lands.</p>`,
+          });
+        }
+      } catch {
+        // Best-effort: the approval stands regardless.
+      }
 
       return NextResponse.json({ success: true, application: data });
     }
