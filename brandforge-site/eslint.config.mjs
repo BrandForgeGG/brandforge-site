@@ -6,8 +6,9 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
-    // lib/*.js are CommonJS modules executed by `node --test`; require() is intentional there.
-    files: ["lib/**/*.js"],
+    // lib/*.js are CommonJS modules executed by `node --test`; require() is
+    // intentional there. Same for the node probe scripts under scripts/.
+    files: ["lib/**/*.js", "scripts/**/*.js"],
     rules: {
       "@typescript-eslint/no-require-imports": "off",
     },
