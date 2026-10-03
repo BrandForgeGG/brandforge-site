@@ -10,6 +10,7 @@ import {
   getPayments,
   getMilestones,
   getProposal,
+  getProposalById,
   getConversationOwnerId,
   canAccessConversation,
   addMessage,
@@ -27,7 +28,7 @@ import {
 } from '@/lib/money-authz.js';
 import { notify } from '@/lib/notify';
 import { notifyFounder } from '@/lib/stage-notify';
-import { postOpsEvent } from '@/lib/ops-events';
+import { postOpsEvent, postPublicActivity } from '@/lib/ops-events';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 const AGREEMENTS_RATE_LIMIT = { limit: 20, windowMs: 60 * 60 * 1000 };
@@ -231,6 +232,8 @@ export async function PATCH(request: NextRequest) {
           currency: updated.currency,
           conversationId: agreement.conversation_id,
         });
+        const proposal = await getProposalById(agreement.proposal_id);
+        await postPublicActivity('contract_signed', { title: proposal?.title });
       } else if (isOwner) {
         // Founder signed first: the team's accept is now the only thing left.
         await notify('contract_accepted', { side: 'founder' });

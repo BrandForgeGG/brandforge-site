@@ -18,11 +18,11 @@ export default function ErrorPage({
   return (
     <div className="bf-page">
       <main className="mx-auto flex min-h-[70vh] max-w-2xl flex-col items-center justify-center px-6 py-16 text-center">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#b8763b]">Hiccup</p>
-        <h1 className="mt-2 font-serif text-4xl text-[#ece7de] sm:text-5xl">
+        <p className="text-xs uppercase tracking-[0.2em] text-copper">Hiccup</p>
+        <h1 className="mt-2 font-serif text-4xl text-foreground sm:text-5xl">
           Something broke on our side
         </h1>
-        <p className="mt-4 max-w-md text-base leading-relaxed text-[#9aa0a6]">
+        <p className="mt-4 max-w-md text-base leading-relaxed text-muted">
           Nothing you did caused this. Try again — if it keeps happening, tell us in
           the chat or on Discord and we will fix it.
         </p>
@@ -30,13 +30,13 @@ export default function ErrorPage({
           <button
             type="button"
             onClick={() => reset()}
-            className="rounded-xl bg-[#e8571e] px-6 py-3 text-sm font-semibold text-[#14171a] transition hover:opacity-95"
+            className="rounded-xl bg-ember px-6 py-3 text-sm font-semibold text-background transition hover:opacity-95"
           >
             Try again
           </button>
           <Link
             href="/"
-            className="rounded-xl border border-white/10 px-6 py-3 text-sm text-[#ece7de] transition hover:border-[#e8571e]"
+            className="rounded-xl border border-line px-6 py-3 text-sm text-foreground transition hover:border-ember"
           >
             Go home
           </Link>

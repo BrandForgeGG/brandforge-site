@@ -54,14 +54,10 @@ export function ConversationRail({
   activeConversationId = "",
   onNewChat,
   isCreatingConversation = false,
-  isMobileOpen,
+    isMobileOpen,
 onMobileClose,
     isStaff: isStaffProp,
     staffUnseenCount: staffUnseenCountProp,
-    telegramConnected,
-    onTelegramConnect,
-    telegramCode,
-    telegramBotUrl,
   }: {
     recents?: RecentConversation[];
     activeConversationId?: string;
@@ -71,14 +67,9 @@ onMobileClose,
     onMobileClose: () => void;
     isStaff?: boolean;
     staffUnseenCount?: number;
-    telegramConnected?: boolean;
-    onTelegramConnect?: () => void;
-    telegramCode?: string;
-    telegramBotUrl?: string;
   }) {
   const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [telegramCodeCopied, setTelegramCodeCopied] = useState(false);
   const [account, setAccount] = useState<{
     name: string;
     email: string;
@@ -234,13 +225,13 @@ onMobileClose,
           type="button"
           aria-label="Close navigation"
           onClick={onMobileClose}
-          className="fixed inset-0 z-30 cursor-default bg-black/60 md:hidden"
+          className="fixed inset-0 z-30 cursor-default bg-foreground/60 md:hidden"
         />
       ) : null}
 
       <aside
         className={
-          "fixed inset-y-0 left-0 z-40 h-screen w-72 shrink-0 flex-col border-r border-white/10 bg-[#111417] md:sticky md:top-0 md:z-auto md:flex " +
+          "fixed inset-y-0 left-0 z-40 h-screen w-72 shrink-0 flex-col border-r border-line bg-deep md:sticky md:top-0 md:h-full md:z-auto md:flex " +
           (isMobileOpen ? "flex" : "hidden") +
           // Collapsed on desktop: a narrow icon rail so the conversation can breathe.
           (isCollapsed ? " md:w-16" : "")
@@ -251,22 +242,22 @@ onMobileClose,
             href="/"
             onClick={onMobileClose}
             aria-label="BrandForge home"
-            className="font-serif text-lg tracking-tight text-[#ece7de]"
+            className="font-serif text-lg tracking-tight text-foreground"
           >
             {isCollapsed ? (
               <span aria-hidden="true">
-                B<span className="text-[#e8571e]">F</span>
+                B<span className="text-ember">F</span>
               </span>
             ) : (
               <>
-                Brand<span className="text-[#e8571e]">Forge</span>
+                Brand<span className="text-ember">Forge</span>
               </>
             )}
           </Link>
           <button
             type="button"
             onClick={toggleCollapsed}
-            className="rounded-lg p-2 text-[#9aa0a6] transition hover:bg-white/5 hover:text-[#ece7de]"
+            className="rounded-lg p-2 text-muted transition hover:bg-overlay hover:text-foreground"
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <span aria-hidden="true">{isCollapsed ? ">>" : "<<"}</span>
@@ -318,14 +309,14 @@ onMobileClose,
                   className={
                     "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-semibold transition " +
                     (isActive
-                      ? "bg-white/10 text-[#ece7de]"
-                      : "text-[#8f959b] hover:bg-white/5 hover:text-[#ece7de]")
+                      ? "bg-overlay text-foreground"
+                      : "text-muted hover:bg-overlay hover:text-foreground")
                   }
                 >
                   {isStaff && conversation.isUnseen ? (
                     <span
                       aria-label="Nobody from the team has opened this chat yet"
-                      className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-[#e8571e]"
+                      className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-ember"
                     />
                   ) : null}
                   <span aria-hidden="true">{letter}</span>
@@ -344,14 +335,14 @@ onMobileClose,
                   <Link
                     href="/admin/applications"
                     onClick={onMobileClose}
-                    className="rounded-lg px-3 py-2 text-sm text-[#9aa0a6] transition hover:bg-white/5 hover:text-[#ece7de]"
+                    className="rounded-lg px-3 py-2 text-sm text-muted transition hover:bg-overlay hover:text-foreground"
                   >
                     Applications
                   </Link>
                   <Link
                     href="/admin/funnel"
                     onClick={onMobileClose}
-                    className="rounded-lg px-3 py-2 text-sm text-[#9aa0a6] transition hover:bg-white/5 hover:text-[#ece7de]"
+                    className="rounded-lg px-3 py-2 text-sm text-muted transition hover:bg-overlay hover:text-foreground"
                   >
                     Funnel
                   </Link>
@@ -363,9 +354,9 @@ onMobileClose,
               <p className="bf-rail-section-label">Recents</p>
 
               {recents.length === 0 ? (
-                <p className="text-xs leading-relaxed text-[#8f959b]">
+                <p className="text-xs leading-relaxed text-muted">
                   {isStaff
-                    ? 'New briefs appear here the moment a founder sends one for review. Link Telegram below and the ping finds you first.'
+                    ? 'New briefs appear here the moment a founder sends one for review. Link Telegram in Settings and the ping finds you first.'
                     : 'Your first chat appears here the moment you send a message - just start typing in the message box.'}
                 </p>
               ) : (
@@ -387,11 +378,11 @@ onMobileClose,
                             onClick={onMobileClose}
                             className="min-w-0 flex-1"
                           >
-                            <p className="flex items-center gap-1.5 text-sm text-[#ece7de]">
+                            <p className="flex items-center gap-1.5 text-sm text-foreground">
                               {isStaff && conversation.isUnseen ? (
                                 <span
                                   aria-label="Nobody from the team has opened this chat yet"
-                                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#e8571e]"
+                                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-ember"
                                 />
                               ) : null}
                               <span className="truncate">
@@ -430,7 +421,7 @@ onMobileClose,
               {isStaff && unseenCount > 0 ? (
                 <span
                   aria-label={`${unseenCount} chat${unseenCount === 1 ? "" : "s"} nobody from the team has opened`}
-                  className="absolute right-0 top-0 h-2 w-2 rounded-full bg-[#e8571e]"
+                  className="absolute right-0 top-0 h-2 w-2 rounded-full bg-ember"
                 />
               ) : null}
               <span aria-hidden="true">
@@ -442,7 +433,7 @@ onMobileClose,
           <div className="bf-rail-footer mt-auto shrink-0 relative">
             {/* Staff pickup badge: real per-chat operational signal, not a platform statistic. */}
             {isStaff && newChatCount > 0 ? (
-              <p className="mb-2 rounded-full bg-[#e8571e]/15 px-2 py-0.5 text-center text-[9px] uppercase tracking-[0.15em] text-[#e8571e]">
+              <p className="mb-2 rounded-full bg-ember/15 px-2 py-0.5 text-center text-[9px] uppercase tracking-[0.15em] text-ember">
                 {newChatCount} new chat{newChatCount === 1 ? "" : "s"}
               </p>
             ) : null}
@@ -465,34 +456,37 @@ onMobileClose,
                 {initialsFor(account?.name ?? "?")}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium text-[#ece7de]">
+                <span className="block truncate text-sm font-medium text-foreground">
                   {account?.name ?? "BrandForge"}
                 </span>
                 {account?.username ? (
-                  <span className="block truncate text-[11px] text-[#9aa0a6]">
+                  <span className="block truncate text-[11px] text-muted">
                     @{account.username}
                   </span>
                 ) : null}
-                <span className="block truncate text-[10px] uppercase tracking-[0.15em] text-[#8f959b]">
+                <span className="block truncate text-[10px] uppercase tracking-[0.15em] text-muted">
                   {account ? account.role : "Signed in"}
                 </span>
               </span>
             </button>
             {dropdownOpen ? (
-              <div className="absolute bottom-full left-0 mb-2 w-56 rounded-xl border border-white/10 bg-[#1c2024] p-3 shadow-xl">
+              <div className="absolute bottom-full left-0 mb-2 w-56 rounded-xl border border-line bg-panel p-3 shadow-xl">
                 <Link
                   href="/settings"
                   onClick={() => setDropdownOpen(false)}
-                  className="block rounded-lg px-3 py-2 text-sm text-[#9aa0a6] transition hover:bg-white/5 hover:text-[#ece7de]"
+                  className="block rounded-lg px-3 py-2 text-sm text-muted transition hover:bg-overlay hover:text-foreground"
                 >
                   Settings
                 </Link>
-<div className="border-t border-white/10 pt-2">
-                   <p className="px-3 py-1 text-[10px] uppercase tracking-[0.15em] text-[#8f959b]">
+<div className="border-t border-line pt-2">
+                   <p className="px-3 py-1 text-[10px] uppercase tracking-[0.15em] text-muted">
                      Learn more
                    </p>
                   {[
                     { label: 'About BrandForge', href: '/about' },
+                    { label: 'Features', href: '/features' },
+                    { label: 'Platform', href: '/platform' },
+                    { label: 'Blog', href: '/blog' },
                     { label: 'Privacy Policy', href: '/privacy' },
                     { label: 'Terms of Service', href: '/terms' },
                     { label: 'Payments & refunds', href: '/refunds' },
@@ -501,13 +495,13 @@ onMobileClose,
                       key={item.label}
                       href={item.href}
                       onClick={() => setDropdownOpen(false)}
-                      className="block rounded-lg px-3 py-2 text-sm text-[#9aa0a6] transition hover:bg-white/5 hover:text-[#ece7de]"
+                      className="block rounded-lg px-3 py-2 text-sm text-muted transition hover:bg-overlay hover:text-foreground"
                     >
                       {item.label}
                     </Link>
                   ))}
                 </div>
-                <div className="border-t border-white/10 pt-2">
+                <div className="border-t border-line pt-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -520,50 +514,6 @@ onMobileClose,
                   </button>
                 </div>
               </div>
-            ) : null}
-            {telegramConnected !== true ? (
-              telegramCode ? (
-                <div className="mt-2 rounded-lg border border-[#e8571e]/30 bg-[#e8571e]/10 px-3 py-2 text-xs text-[#e8571e]">
-                  <p className="mb-1.5 leading-snug text-[#c9b8a8]">
-                    Paste this code in the bot to get project updates in Telegram:
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <code className="select-all font-mono text-sm font-bold tracking-[0.2em] text-[#ece7de]">
-                      {telegramCode}
-                    </code>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void navigator.clipboard?.writeText(telegramCode).then(() => {
-                          setTelegramCodeCopied(true);
-                          setTimeout(() => setTelegramCodeCopied(false), 1500);
-                        });
-                      }}
-                      className="ml-auto rounded border border-[#e8571e]/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide transition hover:bg-[#e8571e]/20"
-                    >
-                      {telegramCodeCopied ? "Copied" : "Copy"}
-                    </button>
-                  </div>
-                  {telegramBotUrl ? (
-                    <a
-                      href={telegramBotUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-1.5 inline-flex items-center gap-1 font-semibold underline-offset-2 transition hover:underline"
-                    >
-                      <span aria-hidden="true">✈</span> Open the bot
-                    </a>
-                  ) : null}
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => void onTelegramConnect?.()}
-                  className="mt-2 flex w-full items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs text-[#9aa0a6] transition hover:border-[#e8571e] hover:text-[#ece7de]"
-                >
-                  <span aria-hidden="true">✈</span> Connect Telegram
-                </button>
-              )
             ) : null}
           </div>
         )}

@@ -26,7 +26,7 @@ export declare function buildOpsEmbed(
   opts?: { link?: boolean }
 ): OpsEmbed | null;
 
-export declare function buildPublicPost(event: string): string | null;
+export declare function buildPublicPost(event: string, details?: OpsDetails): string | null;
 
 export declare function opsWebhookUrl(kind: string, env?: NodeJS.ProcessEnv): string | null;
 
@@ -38,6 +38,7 @@ export declare function postOpsEvent(
 
 export declare function postPublicActivity(
   event: string,
+  details?: OpsDetails,
   opts?: OpsSendOptions
 ): Promise<OpsSendResult>;
 

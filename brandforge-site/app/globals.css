@@ -1,28 +1,71 @@
 @import "tailwindcss";
 
 :root {
+  /* Default theme: light. The dark "Forge" theme is opt-in via data-theme='original'. */
+  color-scheme: light;
+  --background: #faf9f7;
+  --foreground: #1c1f22;
+  --font-sans: var(--font-inter), "Inter", sans-serif;
+  --font-serif: var(--font-fraunces), "Fraunces", serif;
+  --panel: #ffffff;
+  --panel-2: #f4f2ef;
+  --line: rgba(28, 31, 34, 0.12);
+  --muted: #6b7280;
+  --ember: #d94e1a;
+  --ember-soft: rgba(232, 87, 30, 0.12);
+  --ember-light: #9a3412;
+  --copper: #a05f2a;
+  --trust: #2f855a;
+  --trust-light: #166534;
+  --focus: #e8571e;
+  --deep: #f1efec;
+  --overlay: rgba(28, 31, 34, 0.04);
+  --danger-fg: #b91c1c;
+  --success-fg: #166534;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+}
+
+/* The Forge theme: the original dark BrandForge surface. Chosen in Settings. */
+:root[data-theme='original'] {
   color-scheme: dark;
   --background: #14171a;
   --foreground: #ece7de;
-  --font-sans: var(--font-inter), "Inter", sans-serif;
-  --font-serif: var(--font-fraunces), "Fraunces", serif;
   --panel: #1c2024;
   --panel-2: #20262b;
   --line: rgba(236, 231, 222, 0.1);
   --muted: #9aa0a6;
   --ember: #e8571e;
   --ember-soft: rgba(232, 87, 30, 0.14);
+  --ember-light: #f6d6c3;
   --copper: #b8763b;
   --trust: #5aa578;
+  --trust-light: #d9f7ea;
   --focus: #f6a07a;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  --deep: #111417;
+  --overlay: rgba(236, 231, 222, 0.04);
+  --danger-fg: #fecaca;
+  --success-fg: #d9f7ea;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-muted: var(--muted);
+  --color-ember: var(--ember);
+  --color-ember-light: var(--ember-light);
+  --color-copper: var(--copper);
+  --color-trust: var(--trust);
+  --color-trust-light: var(--trust-light);
+  --color-focus: var(--focus);
+  --color-deep: var(--deep);
+  --color-line: var(--line);
+  --color-overlay: var(--overlay);
+  --color-danger: var(--danger-fg);
+  --color-success: var(--success-fg);
   --font-sans: var(--font-sans);
   --font-serif: var(--font-serif);
 }
@@ -263,7 +306,7 @@ body {
 
 .bf-recent-item:hover {
   border-color: var(--line);
-  background: rgba(236, 231, 222, 0.05);
+  background: var(--overlay);
 }
 
 .bf-recent-item-active {
@@ -300,7 +343,7 @@ body {
 
 .bf-action-danger {
   border: 1px solid rgba(248, 113, 113, 0.35);
-  color: #fecaca;
+  color: var(--danger-fg);
 }
 
 .bf-action-danger:hover {
@@ -333,7 +376,8 @@ body {
   background: var(--panel);
   color: var(--foreground);
   padding: 0.875rem 3.5rem 0.875rem 1rem;
-  font-size: 0.875rem;
+  /* 16px: below that iOS Safari zooms the page when the composer is focused. */
+  font-size: 1rem;
   line-height: 1.5;
   outline: none;
   transition:
@@ -352,8 +396,8 @@ body {
   right: 0.75rem;
   bottom: 0.75rem;
   display: inline-flex;
-  height: 2.25rem;
-  width: 2.25rem;
+  height: 2.5rem;
+  width: 2.5rem;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
@@ -457,7 +501,7 @@ body {
 }
 
 .bf-avatar {
-  box-shadow: 0 0 0 1px rgba(236, 231, 222, 0.08);
+  box-shadow: 0 0 0 1px var(--line);
   transition:
     transform 150ms ease,
     box-shadow 150ms ease;
@@ -473,8 +517,8 @@ body {
 
 .bf-profile-card {
   min-width: 13rem;
-  border-color: rgba(236, 231, 222, 0.16);
-  background: #171b1f;
+  border-color: var(--line);
+  background: var(--panel-2);
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
 }
 
@@ -486,9 +530,9 @@ body {
   width: 10px;
   height: 10px;
   transform: rotate(45deg);
-  border-right: 1px solid rgba(236, 231, 222, 0.16);
-  border-bottom: 1px solid rgba(236, 231, 222, 0.16);
-  background: #111417;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-2);
 }
 
 .bf-link {
@@ -744,7 +788,7 @@ a {
 
 .brandforge-btn-primary {
   background: var(--ember);
-  color: #14171a;
+  color: var(--background);
 }
 
 .brandforge-btn-secondary {
@@ -756,8 +800,16 @@ a {
   border-color: var(--copper);
 }
 
-section {
-  padding: 60px 0;
+@layer base {
+  /* Legacy catch-all padding. Kept in @layer base on purpose: utilities
+     (py-20, p-6, ...) must win, bare <section>/<footer> keep these values. */
+  section {
+    padding: 60px 0;
+  }
+
+  footer {
+    padding: 36px 0;
+  }
 }
 
 .brandforge-section-title {
@@ -1012,10 +1064,6 @@ section {
   max-width: 44ch;
 }
 
-footer {
-  padding: 36px 0;
-}
-
 footer p {
   color: var(--muted);
   font-size: 13px;
@@ -1135,7 +1183,7 @@ footer p {
 .bf-inline-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.875em;
-  background: rgba(236, 231, 222, 0.08);
+  background: var(--overlay);
   border: 1px solid var(--line);
   border-radius: 4px;
   padding: 0.1em 0.35em;
@@ -1316,7 +1364,7 @@ footer p {
 .bf-participants:hover,
 .bf-participants[aria-expanded="true"] {
   border-color: var(--line);
-  background: rgba(236, 231, 222, 0.05);
+  background: var(--overlay);
 }
 
 .bf-participant-stack {
@@ -1369,7 +1417,7 @@ footer p {
 
 .bf-header-menu-btn:hover,
 .bf-header-menu-btn[aria-expanded="true"] {
-  background: rgba(236, 231, 222, 0.06);
+  background: var(--overlay);
   color: var(--foreground);
 }
 
@@ -1381,8 +1429,8 @@ footer p {
 
 .bf-menu {
   min-width: 11rem;
-  background: #171b1f;
-  border: 1px solid rgba(236, 231, 222, 0.14);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
   border-radius: var(--radius-md);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
 }
@@ -1403,11 +1451,11 @@ footer p {
 
 .bf-menu-item:hover,
 .bf-menu-item:focus-visible {
-  background: rgba(236, 231, 222, 0.07);
+  background: var(--overlay);
 }
 
 .bf-menu-item-danger {
-  color: #f3b0a0;
+  color: var(--danger-fg);
 }
 
 .bf-menu-hint {
@@ -1528,7 +1576,7 @@ footer p {
   border: 1px solid rgba(232, 87, 30, 0.6);
   border-radius: 999px;
   background: var(--ember-soft);
-  color: #ffd9cb;
+  color: var(--ember-light);
   font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 600;

@@ -65,7 +65,7 @@ const WELCOME_TEXT =
   'Welcome to BrandForge.\n\n' +
   'To link your account and get project updates here:\n' +
   '1. Open the BrandForge app\n' +
-  '2. Press “Connect Telegram” in the sidebar\n' +
+   '2. Press “Connect Telegram” in Settings\n' +
   '3. Paste the 8-character code it shows you into this chat\n\n' +
   'Codes are valid for about 15 minutes.';
 
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
     } else {
       await callTelegramApi('sendMessage', {
         chat_id: chatId,
-        text: `${result.error ?? 'That code is not valid.'} Open the app, press “Connect Telegram” for a fresh code, and paste it here.`,
+        text: `${result.error ?? 'That code is not valid.'} Open Settings, press “Connect Telegram” for a fresh code, and paste it here.`,
       });
     }
 

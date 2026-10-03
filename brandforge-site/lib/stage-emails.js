@@ -18,14 +18,48 @@
 
 const { escapeHtml, oneLine } = require('./html');
 const { formatMoney: money } = require('./format');
+const { COMMUNITY_LINKS } = require('./community');
+const { SOCIAL_LINKS } = require('./social-links');
 
 function line(value, max = 90) {
   return oneLine(String(value ?? ''), max);
 }
 
+// Unsubscribe URLs are only ever rendered when the caller passed a real
+// https URL — a relative path or junk never becomes a clickable link.
+function unsubscribeUrlFrom(details) {
+  const value = typeof details.unsubscribeUrl === 'string' ? details.unsubscribeUrl.trim() : '';
+  return /^https:\/\/\S+$/.test(value) ? value : null;
+}
+
+// The compliance footer every email carries: site + policies + community +
+// socials, plus an unsubscribe line when a valid URL was provided.
+function footerBlock(unsubscribeUrl) {
+  const link = (href, label) =>
+    `<a href="${escapeHtml(href)}" style="color:#8f959b;text-decoration:underline">${escapeHtml(label)}</a>`;
+  const socials = SOCIAL_LINKS.map((social) => link(social.href, social.label)).join(' · ');
+  return `
+        <div style="border-top:1px solid rgba(255,255,255,0.08);margin-top:18px;padding-top:14px;font-family:Arial,sans-serif;font-size:11px;line-height:1.9;color:#8f959b">
+          <p style="margin:0">${link('https://brandforge.gg', 'brandforge.gg')} · ${link('https://brandforge.gg/terms', 'Terms')} · ${link('https://brandforge.gg/privacy', 'Privacy')}</p>
+          <p style="margin:0">${link(COMMUNITY_LINKS.discord.href, COMMUNITY_LINKS.discord.label)} · ${link(COMMUNITY_LINKS.telegramChannel.href, COMMUNITY_LINKS.telegramChannel.label)} · ${socials}</p>
+          ${unsubscribeUrl ? `<p style="margin:6px 0 0">${link(unsubscribeUrl, 'Unsubscribe from product updates')}</p>` : ''}
+        </div>`;
+}
+
+function footerText(unsubscribeUrl) {
+  const parts = [
+    '--',
+    'BrandForge · https://brandforge.gg (Terms https://brandforge.gg/terms · Privacy https://brandforge.gg/privacy)',
+    `Community ${COMMUNITY_LINKS.discord.href} · ${COMMUNITY_LINKS.telegramChannel.href}`,
+    `Socials ${SOCIAL_LINKS.map((social) => social.href).join(' · ')}`,
+  ];
+  if (unsubscribeUrl) parts.push(`Unsubscribe: ${unsubscribeUrl}`);
+  return parts.join('\n');
+}
+
 // The shared dark card, same shape as the invite email so every message from
 // BrandForge looks like one hand wrote it.
-function card(kicker, heading, paragraphs, ctaLabel, ctaUrl) {
+function card(kicker, heading, paragraphs, ctaLabel, ctaUrl, footer, unsubscribeUrl) {
   const body = paragraphs
     .map(
       (p) =>
@@ -36,6 +70,9 @@ function card(kicker, heading, paragraphs, ctaLabel, ctaUrl) {
     ctaLabel && ctaUrl
       ? `<a href="${escapeHtml(ctaUrl)}" style="display:inline-block;background:#e8571e;color:#14171a;font-family:Arial,sans-serif;font-weight:bold;font-size:14px;padding:12px 20px;border-radius:8px;text-decoration:none">${escapeHtml(ctaLabel)}</a>`
       : '';
+  const signoff =
+    footer ||
+    'This is your project on BrandForge — everything lives in the chat.';
   return `
     <div style="background:#14171a;padding:32px;font-family:Georgia,serif">
       <div style="max-width:520px;margin:0 auto;background:#1c2024;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:32px">
@@ -44,13 +81,14 @@ function card(kicker, heading, paragraphs, ctaLabel, ctaUrl) {
         ${body}
         ${cta}
         <p style="font-family:Arial,sans-serif;font-size:12px;color:#8f959b;margin:20px 0 0">
-          This is your project on BrandForge — everything lives in the chat.
+          ${escapeHtml(signoff)}
         </p>
+        ${footerBlock(unsubscribeUrl)}
       </div>
     </div>`;
 }
 
-function buildStageEmail(event, details = {}) {
+function buildCore(event, details = {}) {
   const title = line(details.title);
   const chatUrl = typeof details.chatUrl === 'string' && details.chatUrl ? details.chatUrl : '';
   const open = chatUrl ? 'Open the chat' : null;
@@ -163,9 +201,38 @@ function buildStageEmail(event, details = {}) {
       };
     }
 
+    case 'welcome': {
+      const chatUrl = typeof details.chatUrl === 'string' && details.chatUrl ? details.chatUrl : '';
+      const paragraphs = [
+        'You are in. Describe what you want to build — the AI turns it into a structured project, and a vetted specialist replies with a priced proposal.',
+        `You approve before anything is charged, and escrow pays milestone by milestone. Launch packages from ${money(500, 'EUR')}.`,
+      ];
+      const subject = 'Welcome to BrandForge';
+      return {
+        subject,
+        text: `${paragraphs.join('\n\n')}\n\n${chatUrl}`.trim(),
+        html: card(
+          'Welcome',
+          'Welcome to BrandForge',
+          paragraphs,
+          chatUrl ? 'Open the chat' : null,
+          chatUrl,
+          'One chat, one team, escrow-protected delivery.',
+          unsubscribeUrlFrom(details)
+        ),
+      };
+    }
+
     default:
       return null;
   }
+}
+
+function buildStageEmail(event, details = {}) {
+  const built = buildCore(event, details);
+  if (!built) return null;
+  const unsubscribeUrl = unsubscribeUrlFrom(details);
+  return { ...built, text: `${built.text}\n\n${footerText(unsubscribeUrl)}`.trim() };
 }
 
 module.exports = { buildStageEmail };

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { supabase } from '@/lib/supabase';
-import { getMyIdentity, updateMyProfile } from '@/lib/project-db';
+import { getMyIdentity, getOnboardingState, updateMyProfile } from '@/lib/project-db';
 import { validateUsername } from '@/lib/identity';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -26,9 +26,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
+    const onboarding = await getOnboardingState(user.id);
+
     return NextResponse.json({
       identity,
       telegram_connected: Boolean(identity.telegramChatId),
+      onboarding_completed: onboarding.completed,
+      marketing_opt_in: identity.marketingOptIn === true,
     });
   } catch (error) {
     console.error('Identity API error:', error);
@@ -59,6 +63,7 @@ export async function PATCH(request: NextRequest) {
       email?: unknown;
       avatar_url?: unknown;
       password?: unknown;
+      marketing_opt_in?: unknown;
     };
 
     const updates: Record<string, unknown> = {};
@@ -83,6 +88,12 @@ export async function PATCH(request: NextRequest) {
       updates.avatar_url = body.avatar_url ?? null;
     }
 
+    // Product-update email consent — the same flag the email footer's
+    // unsubscribe link flips, so Settings and the link stay in sync.
+    if (body.marketing_opt_in !== undefined) {
+      updates.marketing_opt_in = body.marketing_opt_in === true;
+    }
+
     if (body.password !== undefined && typeof body.password === 'string' && body.password.length > 0) {
       const { error: pwdError } = await supabase.auth.updateUser({ password: body.password });
       if (pwdError) {
@@ -91,7 +102,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (Object.keys(updates).length > 0) {
-      const result = await updateMyProfile(user.id, updates as { display_name?: string; email?: string; avatar_url?: string | null; username?: string });
+      const result = await updateMyProfile(user.id, updates as { display_name?: string; email?: string; avatar_url?: string | null; username?: string; marketing_opt_in?: boolean });
       if (!result.ok) {
         return NextResponse.json({ error: result.reason }, { status: 400 });
       }

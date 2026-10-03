@@ -61,7 +61,9 @@ function buildMessageText(event, details = {}) {
       return `New project ready for review (discovery at ${clip(details.percent) || '?'}%). Open the staff inbox and join the chat.`;
 
     case 'application_submitted':
-      return `New operator application from ${clip(details.email) || 'unknown'}. Review it at /admin/applications.`;
+      // Email is stored internally but not displayed in the team chat notification.
+      // Applications are visible in the admin panel; subscriber email is masked.
+      return `New operator application received. Review it at /admin/applications.`;
 
     case 'invite_sent':
       return `Invite sent to ${clip(details.email) || 'unknown'} by ${clip(details.invitedBy) || 'someone'} for a project chat.`;

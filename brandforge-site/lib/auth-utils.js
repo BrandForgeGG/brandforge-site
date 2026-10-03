@@ -21,6 +21,9 @@ function getAuthErrorMessage(code) {
     oauth_provider_not_supported: 'Google sign-in is not configured for this project.',
     provider_disabled: 'Google sign-in is currently disabled in the auth provider settings.',
     invalid_oauth_provider: 'Google sign-in is not configured for this project.',
+    otp_disabled: 'Email sign-in is not enabled yet — continue with Google for now.',
+    signup_disabled: 'Email sign-up is not enabled yet — continue with Google for now.',
+    email_not_allowed: 'That email cannot be used to sign in. Try Google instead.',
     generic: 'Something went wrong. Please try again.',
   };
 

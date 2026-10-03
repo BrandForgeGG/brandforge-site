@@ -68,23 +68,23 @@ function FunnelColumn({
 
   return (
     <section className="min-w-0 flex-1">
-      <h2 className="text-xs uppercase tracking-[0.2em] text-[#b8763b]">{title}</h2>
+      <h2 className="text-xs uppercase tracking-[0.2em] text-copper">{title}</h2>
       <ul className="mt-4 space-y-2">
         {steps.map((step) => {
           const count = counts.get(step) ?? 0;
           const width = count === 0 ? 0 : Math.max(4, Math.round((count / top) * 100));
           return (
-            <li key={step} className="rounded-xl border border-white/10 bg-[#1c2024] p-3">
+            <li key={step} className="rounded-xl border border-line bg-panel p-3">
               <div className="flex items-baseline justify-between gap-3">
-                <span className="text-sm text-[#ece7de]">{LABELS[step] ?? step}</span>
+                <span className="text-sm text-foreground">{LABELS[step] ?? step}</span>
                 {/* An explicit zero matters: a step with no data is not the same as a missing step. */}
-                <span className={`font-mono text-sm ${count === 0 ? 'text-[#8f959b]' : 'text-[#ece7de]'}`}>
+                <span className={`font-mono text-sm ${count === 0 ? 'text-muted' : 'text-foreground'}`}>
                   {count}
                 </span>
               </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-overlay">
                 <div
-                  className={`h-full ${count === 0 ? 'bg-transparent' : 'bg-[#e8571e]'}`}
+                  className={`h-full ${count === 0 ? 'bg-transparent' : 'bg-ember'}`}
                   style={{ width: `${width}%` }}
                 />
               </div>
@@ -137,7 +137,7 @@ export default function AdminFunnelPage() {
   if (loading) {
     return (
       <AppShell title="Funnel" subtitle="Real product events, nothing projected.">
-        <p className="text-sm text-[#9aa0a6]">Loading…</p>
+        <p className="text-sm text-muted">Loading…</p>
       </AppShell>
     );
   }
@@ -151,11 +151,11 @@ export default function AdminFunnelPage() {
   return (
     <AppShell title="Funnel" subtitle="Real product events, nothing projected.">
       {error ? (
-        <div className="max-w-2xl rounded-2xl border border-white/10 bg-[#1c2024] p-6">
-          <h2 className="font-serif text-2xl text-[#ece7de]">Not available</h2>
-          <p className="mt-2 text-sm leading-relaxed text-[#9aa0a6]">{error}</p>
+        <div className="max-w-2xl rounded-2xl border border-line bg-panel p-6">
+          <h2 className="font-serif text-2xl text-foreground">Not available</h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted">{error}</p>
           {error.includes('not available') ? (
-            <p className="mt-3 text-sm leading-relaxed text-[#8f959b]">
+            <p className="mt-3 text-sm leading-relaxed text-muted">
               This usually means migration <code className="font-mono">0012_funnel_events.sql</code> has
               not been applied to the database yet. Until it is, these numbers stay at zero on purpose
               rather than being estimated.
@@ -164,14 +164,14 @@ export default function AdminFunnelPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="max-w-2xl rounded-2xl border border-white/10 bg-[#1c2024] p-6">
-            <h2 className="font-serif text-2xl text-[#ece7de]">Measurement window</h2>
-            <p className="mt-2 text-sm leading-relaxed text-[#9aa0a6]">
+          <div className="max-w-2xl rounded-2xl border border-line bg-panel p-6">
+            <h2 className="font-serif text-2xl text-foreground">Measurement window</h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
               {total === 0
                 ? 'No events recorded yet.'
                 : `${total.toLocaleString()} event${total === 1 ? '' : 's'} recorded between ${first ?? '?'} and ${last ?? '?'}.`}
             </p>
-            <p className="mt-2 text-xs leading-relaxed text-[#8f959b]">
+            <p className="mt-2 text-xs leading-relaxed text-muted">
               These are counts of real recorded events, not projections and not modelled figures. Treat
               small numbers as directional only — they are not a growth rate, and there is no
               denominator to divide by yet.
@@ -179,7 +179,7 @@ export default function AdminFunnelPage() {
             <button
               type="button"
               onClick={() => void load()}
-              className="mt-4 rounded-xl border border-white/10 px-4 py-2 text-sm text-[#ece7de] transition hover:border-[#e8571e]"
+              className="mt-4 rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember"
             >
               Refresh
             </button>

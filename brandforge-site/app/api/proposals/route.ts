@@ -440,7 +440,7 @@ export async function PATCH(request: NextRequest) {
           currency: proposal.currency ?? currency,
           conversationId: proposal.conversation_id,
         });
-        await postPublicActivity('match_made');
+        await postPublicActivity('match_made', { title: existing.title });
       } else {
         await postOpsEvent('proposal_declined', {
           title: existing.title,

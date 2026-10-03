@@ -47,6 +47,7 @@ const FUNNEL_EVENTS = Object.freeze([
   // Founder funnel
   'landing_viewed',
   'signin_started',
+  'onboarding_completed',
   'chat_started',
   'project_described',
   'review_requested',

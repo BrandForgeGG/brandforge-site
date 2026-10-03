@@ -1,15 +1,18 @@
-import Link from 'next/link';
+import { Suspense } from 'react';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { LandingHero } from '@/components/landing/landing-hero';
 import { LandingSections } from '@/components/landing/landing-sections';
-import { LandingCommunity } from '@/components/landing/landing-community';
 import { LandingFaq } from '@/components/landing/landing-faq';
+import { LandingCommunity } from '@/components/landing/landing-community';
+import { LandingAiFlow } from '@/components/landing/landing-ai-flow';
+import { LandingProof } from '@/components/landing/landing-proof';
 import { BetaBanner } from '@/components/beta-banner';
+import { SiteFooter } from '@/components/site-footer';
 
 export const metadata = {
-  title: 'BrandForge — Describe it. Humans build it.',
+  title: 'BrandForge — Turn an idea into something real',
   description:
-    'BrandForge turns one conversation into a real project: AI structures your idea, vetted designers, developers, reverse engineers and marketers ship it, escrow protects your money.',
+    'BrandForge combines AI planning with human execution — describe your project, get a vetted team, and ship with escrow protection.',
 };
 
 export default function Home() {
@@ -19,7 +22,7 @@ export default function Home() {
     name: 'BrandForge',
     url: 'https://brandforge.gg',
     description:
-      'Chat-first studio: describe your project, get a human-vetted proposal, fund admin-verified crypto escrow, approve every milestone.',
+      'Execution platform: describe your project, AI structures it, vetted specialists build it, escrow protects your money.',
     sameAs: [
       'https://discord.gg/GSKHXkUY85',
       'https://t.me/BrandForge_gg',
@@ -35,28 +38,16 @@ export default function Home() {
       <BetaBanner />
       <LandingNav />
       <main>
-        <LandingHero />
+        <Suspense>
+          <LandingHero />
+        </Suspense>
+        <LandingAiFlow />
         <LandingSections />
+        <LandingProof />
         <LandingFaq />
         <LandingCommunity />
       </main>
-      <footer className="border-t border-white/10 px-6 py-8">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
-          <p className="text-sm text-[#9aa0a6]">
-            <span className="font-serif text-[#ece7de]">
-              Brand<span className="text-[#e8571e]">Forge</span>
-            </span>
-          </p>
-          <nav className="flex gap-6 text-sm text-[#9aa0a6]">
-            <Link href="/terms" className="transition hover:text-[#ece7de]">
-              Terms
-            </Link>
-            <Link href="/privacy" className="transition hover:text-[#ece7de]">
-              Privacy
-            </Link>
-          </nav>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

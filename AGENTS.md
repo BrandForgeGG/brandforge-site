@@ -38,7 +38,7 @@ BrandForge/
   out/, *.html                   <- older static marketing pages (reference only)
 ```
 
-## Current state (2026-09-28)
+## Current state (2026-10-03)
 
 - Live: https://brandforge.gg (Vercel, `brandforge-site` production).
 - Chat-first product: landing -> chat -> AI-structured project -> human proposal -> escrow.
@@ -324,6 +324,58 @@ BrandForge/
   fresh-user sidebar probe can't see this bug — probe with a conversation the user owns.
 
 
+- **First-run onboarding + split login + site expansion (2026-10-02, deployed
+  `dpl_7qYMe5GdVYiwFgWxZrEMnXsXvNjT`)**: light is now the default look (`:root` = light,
+  `data-theme='original'` = Forge dark, settings labels Light/Forge, danger/success tokens);
+  Telegram connect moved to Settings → Notifications (chat/rail no longer mention it);
+  chat first paint trimmed to the composer; `/login` rebuilt as a split page (Google +
+  **email magic link** — `otp_disabled` mapped to plain copy — plus an idea→shipped diagram;
+  `auth-card.tsx` deleted); real footer + six social pills (`lib/social-links.js`,
+  **handles are unverified guesses**) + `/features` `/platform` `/careers` `/blog` linked
+  from the rail's Learn more; `/onboarding` 4-step wizard (terms, 13+ birthday, three
+  promise cards, username availability) gated from fresh signups in `auth/callback`
+  (honours `?next=`), the proxy (protected route), and `loadIdentity` in chat — reads fail
+  open until migration `0020` exists, so deploy order is safe. 284/284, tsc/eslint/build
+  green; live-verified (login split page + landing footer screenshots, `/onboarding` 307
+  signed-out, auth probe green). Earlier same-day: sidebar scrim `bg-foreground/60`
+  (`dpl_8P8QvuaDVURsaowWKYAzaKw8FCBp`). **All three founder steps since confirmed done
+  (2026-10-02): `0020_onboarding.sql` applied (17/17 backfilled), Email provider enabled,
+  social handles verified — full e2e re-run green (API + real-browser wizard walk).**
+- **Marketing queue publishes + landing proof is real content (2026-10-03, deployed
+  `dpl_5zQQGAqyU81JppwWcKGkuzAPCesh`)**: the queue had no processor — rows went `queued`
+  forever. `lib/marketing-poster.js` (target → env webhook at send time, never in the DB;
+  Discord embed / plain Telegram text; reddit terminal-refused) + `runDueMarketingPosts`
+  in project-db (H7) + admin-only **Publish due posts** button at `/admin/marketing`;
+  kill switches `MARKETING_ENABLED`/`MARKETING_DISCORD`/`MARKETING_TELEGRAM` = `true` in
+  Vercel production (values mask as `[SENSITIVE]`; functionality proven live, no cron —
+  plan uncertainty, button is the trigger). E2E caught the founder's row targeting
+  `・milestones` (pasted fullwidth separator) → `normalizeTarget` now strips
+  `#＃・•·~>*>` and the requeue published it to the milestones channel.
+  Landing proof rebuilt from the founder's paste: `lib/portfolio-projects.js` (10 real
+  projects, verbatim links) + `lib/testimonials.js` (36 verbatim Discord/Telegram quotes,
+  9 curated into the landing Feedback section — 3 empty + 1 non-endorsement excluded on
+  the founder's call); stale RestaurantBooker placeholder gone. Campaign tracker seeded
+  with the founder's **53 directory/launch targets** (names only — no guessed URLs;
+  recovered from session history after the paste was lost to summarisation).
+  `0021_marketing_campaigns.sql` applied by the founder earlier. 310/310, tsc/eslint
+  6-baseline, build green; live e2e **13/13** + auth probe green. Open: portfolio
+  screenshots (founder to provide → `screenshot` field), TikTok/Reddit handles, cron
+  decision, directory `target_url`s.
+- **Community branding + @headstartup highlight + admin groups (2026-10-03, same-day
+  follow-up deploy)**: beta strip now says **"Hiring & projects: @headstartup"** + Discord;
+  landing community = 4 brand-tinted cards (Discord blurple / Telegram blue, @headstartup
+  card badge "Hiring & project manager") with **live Discord member+online counts** from
+  the public invite API (`with_counts=true`, CORS ok, hide on failure — verified
+  "1,215 members · 97 online now"); `/admin` grouped under "Product — the build" /
+  "Distribution — the advertising"; queue gained `showcase` target (`DISCORD_SHOWCASE_URL`,
+  dormant until the founder creates the webhook) + target datalist in the composer
+  (placeholder fixed: `#launches` → `milestones`). 310/310, build green, live-verified
+  (banner/cards/counts/grouping, throwaway admin session cleaned up). **Same day, second
+  follow-up**: three honest channel drafts queued for founder review (`milestones`,
+  `public-changelog`, `devlog` — nothing auto-sent; he clicks **Publish due posts** or
+  tells us to send), **draft discard** added (`DELETE /api/admin/marketing/[id]`, queued/
+  failed only, posted history protected — the queue was create-only before), and a
+  2026-10-03 blog entry ("The landing page finally proves it"). e2e 9/9 + auth probe green.
 - **Open auth**: any Google account can sign in (login allowlist removed). Staff/admin access
   is `profiles.role` (`admin` / `operator`), not email.
 - Operator pipeline: specialists apply at `/apply`; admin reviews at `/admin/applications`
@@ -345,5 +397,7 @@ BrandForge/
   column/table probe 2026-09-28; 0013–0016 run 2026-09-28 via the SQL editor; 0016 verified by
   `has_function_privilege` + session-client RPC probes). **`0017_proposal_counters.sql`
   applied 2026-09-29** (founder ran it in the SQL editor; all five columns verified readable
-  via REST before the release deploy). Supabase PAT for
+  via REST before the release deploy). **`0020_onboarding.sql` applied 2026-10-02**
+  (columns verified selectable; 17/17 rows backfilled — gate/save e2e green on prod).
+  Supabase PAT for
   future SQL runs is not stored here — ask the operator or use the SQL editor.

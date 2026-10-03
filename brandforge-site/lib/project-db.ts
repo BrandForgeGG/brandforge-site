@@ -15,6 +15,7 @@ import { safeDownloadName } from './message-actions.js';
 import { notifyDiscordDiscovery } from './discord';
 import { notifyUser } from './notify';
 import { postOpsEvent, postPublicActivity } from './ops-events';
+import { publishPost } from './marketing-poster';
 import { headers } from 'next/headers';
 
 import { validateUsername } from '@/lib/identity';
@@ -69,6 +70,21 @@ export async function getFunnelSummary(limit = 10000) {
     window: { firstEventAt: first, lastEventAt: last, eventsCounted: rows.length },
     counts,
   };
+}
+
+// Platform-wide member count for the registration channel notice. Service-role because
+// RLS only exposes the signed-in account's own profile row; a count, nothing else.
+export async function countRegisteredProfiles(): Promise<number | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) {
+    return null;
+  }
+  const { count, error } = await admin.from('profiles').select('id', { count: 'exact', head: true });
+  if (error) {
+    console.warn('countRegisteredProfiles failed:', error.message);
+    return null;
+  }
+  return count;
 }
 
 // Weekly growth stats for the ops digest (admin-only route). Service-role counts so
@@ -352,6 +368,8 @@ export interface ProfileIdentity {
   telegramChatId: string | null;
   telegramUsername: string | null;
   createdAt: string | null;
+  /** Product-update email consent (0020). Absent/false means opted out. */
+  marketingOptIn?: boolean;
 }
 
 // display_id is assigned by the 0009 trigger, but a profile row created before
@@ -376,11 +394,12 @@ export function shapeProfileIdentity(row: Record<string, unknown> | null): Profi
         : String(row.telegram_chat_id),
     telegramUsername: row.telegram_username ? String(row.telegram_username) : null,
     createdAt: row.created_at ? String(row.created_at) : null,
+    marketingOptIn: row.marketing_opt_in === true,
   };
 }
 
 const IDENTITY_COLUMNS =
-  'id, display_id, username, display_name, email, role, avatar_url, telegram_chat_id, telegram_username, created_at';
+  'id, display_id, username, display_name, email, role, avatar_url, telegram_chat_id, telegram_username, created_at, marketing_opt_in';
 
 export async function getParticipantIdentity(conversationId: string, userId: string): Promise<ProfileIdentity | null> {
   const admin = createSupabaseAdminClient();
@@ -478,7 +497,7 @@ export async function updateMyUsername(
 
 export async function updateMyProfile(
   userId: string,
-  fields: { display_name?: string; email?: string; avatar_url?: string | null },
+  fields: { display_name?: string; email?: string; avatar_url?: string | null; marketing_opt_in?: boolean },
 ): Promise<{ ok: true; identity: ProfileIdentity } | { ok: false; reason: string }> {
   const supabase = await db();
 
@@ -499,6 +518,114 @@ export async function updateMyProfile(
   }
 
   return { ok: true, identity };
+}
+
+// --- Onboarding (migration 0020) ---------------------------------------------
+
+// Whether the caller has finished the first-run wizard (terms + birthday +
+// username). Fails OPEN: before 0020 the columns do not exist, and a read
+// problem must never trap a signed-in user outside the workspace.
+export async function getOnboardingState(userId: string): Promise<{ completed: boolean }> {
+  const supabase = await db();
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('onboarding_completed_at, terms_accepted_at')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) {
+    if (error.code !== '42703' && error.code !== 'PGRST204' && error.code !== '42P01') {
+      console.error('Onboarding state error:', error.message);
+    }
+    return { completed: true };
+  }
+
+  if (!data) return { completed: true };
+  return {
+    completed: Boolean(
+      (data as { onboarding_completed_at?: string | null; terms_accepted_at?: string | null })
+        .onboarding_completed_at &&
+        (data as { terms_accepted_at?: string | null }).terms_accepted_at
+    ),
+  };
+}
+
+// Availability probe for the onboarding username step. Service-role because RLS
+// only exposes the caller's own row, which would read every taken handle as free;
+// the unique index still has the final word on save.
+export async function isUsernameAvailable(username: string): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return true; // fail open — the write path enforces uniqueness anyway
+
+  const { data, error } = await admin
+    .from('profiles')
+    .select('id')
+    .eq('username', username)
+    .limit(1);
+
+  if (error) {
+    console.error('Username availability error:', error.message);
+    return true;
+  }
+
+  return !data || data.length === 0;
+}
+
+// One write completes the wizard: username, birthday, terms timestamp, promo
+// consent, and the completion stamp. Runs on the caller's session client, so
+// the 0020 column grants and the own-row RLS policy are what authorize it.
+export async function completeOnboarding(
+  userId: string,
+  fields: {
+    username: string;
+    dateOfBirth: string;
+    marketingOptIn: boolean;
+  },
+): Promise<{ ok: true } | { ok: false; reason: string; status: number }> {
+  const validation = validateUsername(fields.username);
+  if (!validation.ok) {
+    return { ok: false, reason: validation.reason, status: 400 };
+  }
+
+  const supabase = await db();
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      username: validation.username,
+      date_of_birth: fields.dateOfBirth,
+      terms_accepted_at: new Date().toISOString(),
+      marketing_opt_in: fields.marketingOptIn,
+      onboarding_completed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId);
+
+  if (error) {
+    const taken = error.code === '23505' || /duplicate key|already exists/i.test(error.message);
+    if (taken) return { ok: false, reason: 'That username is taken.', status: 409 };
+
+    // Column missing (0020 not applied) or grants not in place yet.
+    if (
+      error.code === '42703' ||
+      error.code === 'PGRST204' ||
+      error.code === '42P01' ||
+      /permission denied/i.test(error.message)
+    ) {
+      console.error('Onboarding unavailable:', error.message);
+      return {
+        ok: false,
+        reason: 'Setup is temporarily unavailable — please try again in a few minutes.',
+        status: 503,
+      };
+    }
+
+    console.error('Onboarding save error:', error.message);
+    return { ok: false, reason: 'Could not save your setup.', status: 400 };
+  }
+
+  return { ok: true };
 }
 
 // Links a Telegram chat to an account. Only ever called from the bot deep-link
@@ -1347,7 +1474,7 @@ export async function updateConversationStatus(
     await notifyDiscordDiscovery(conversationId, data.title);
     await notifyStaffBriefReady(conversationId, data.title);
     await postOpsEvent('brief_posted', { title: data.title, conversationId });
-    await postPublicActivity('brief_posted');
+    await postPublicActivity('brief_posted', { title: data.title });
   }
 
   return true;
@@ -2768,5 +2895,345 @@ export async function deleteConversationForUser(
   }
 
   return 'deleted';
+}
+
+// ── Marketing queue + campaigns (admin dashboard) ────────────────────────────
+// Service-role access for the two distribution tables. They live here (rather
+// than in the API routes) for the same H7 reason as getFunnelSummary: the
+// privileged client stays confined to this single allow-listed module, and
+// every route proves the caller is an admin before calling in.
+
+export type MarketingPostRow = {
+  id: string;
+  created_at: string;
+  channel: string;
+  target: string;
+  title: string | null;
+  body: string;
+  url: string | null;
+  scheduled_at: string;
+  status: string;
+  attempts: number;
+  posted_at: string | null;
+  permalink: string | null;
+  error: string | null;
+};
+
+const MARKETING_POST_COLUMNS =
+  'id, created_at, channel, target, title, body, url, scheduled_at, status, attempts, posted_at, permalink, error';
+
+export async function listMarketingPosts(): Promise<
+  | { ok: true; posts: MarketingPostRow[]; counts: Record<string, number> }
+  | { ok: false; error: string }
+> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('marketing_posts')
+    .select(MARKETING_POST_COLUMNS)
+    .order('scheduled_at', { ascending: false })
+    .limit(200);
+
+  if (error) {
+    console.error('Marketing queue list error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+
+  const posts = (data ?? []) as MarketingPostRow[];
+  const counts: Record<string, number> = { queued: 0, posted: 0, failed: 0, paused: 0 };
+  for (const post of posts) counts[post.status] = (counts[post.status] ?? 0) + 1;
+
+  return { ok: true, posts, counts };
+}
+
+export async function createMarketingPost(input: {
+  channel: string;
+  target: string;
+  body: string;
+  title: string | null;
+  url: string | null;
+  scheduledAt: string;
+}): Promise<{ ok: true; post: Partial<MarketingPostRow> } | { ok: false; error: string }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('marketing_posts')
+    .insert({
+      channel: input.channel,
+      target: input.target,
+      body: input.body,
+      title: input.title,
+      url: input.url,
+      scheduled_at: input.scheduledAt,
+      status: 'queued',
+    })
+    .select('id, channel, target, title, scheduled_at, status')
+    .single();
+
+  if (error) {
+    console.error('Marketing queue create error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+
+  return { ok: true, post: data as Partial<MarketingPostRow> };
+}
+
+export type MarketingCampaignRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  name: string;
+  kind: string;
+  target_url: string | null;
+  category: string | null;
+  status: string;
+  notes: string | null;
+  live_url: string | null;
+  submitted_at: string | null;
+};
+
+const CAMPAIGN_COLUMNS =
+  'id, created_at, updated_at, name, kind, target_url, category, status, notes, live_url, submitted_at';
+
+function isMissingTable(error: { code?: string | null; message: string }): boolean {
+  return error.code === '42P01' || error.message.includes('Could not find the table');
+}
+
+export async function listMarketingCampaigns(): Promise<
+  | { ok: true; campaigns: MarketingCampaignRow[]; counts: Record<string, number> }
+  | { ok: false; error: 'pending_migration' | 'not_configured' | 'failed' }
+> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('marketing_campaigns')
+    .select(CAMPAIGN_COLUMNS)
+    .order('created_at', { ascending: false })
+    .limit(300);
+
+  if (error) {
+    if (isMissingTable(error)) return { ok: false, error: 'pending_migration' };
+    console.error('Marketing campaigns list error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+
+  const campaigns = (data ?? []) as MarketingCampaignRow[];
+  const counts: Record<string, number> = {};
+  for (const campaign of campaigns) counts[campaign.status] = (counts[campaign.status] ?? 0) + 1;
+
+  return { ok: true, campaigns, counts };
+}
+
+export async function createMarketingCampaign(input: {
+  name: string;
+  kind: string;
+  status: string;
+  category: string | null;
+  notes: string | null;
+  targetUrl: string | null;
+  liveUrl: string | null;
+}): Promise<
+  | { ok: true; campaign: MarketingCampaignRow }
+  | { ok: false; error: 'pending_migration' | 'not_configured' | 'failed' }
+> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const submitted =
+    input.status === 'submitted' || input.status === 'live' ? new Date().toISOString() : null;
+
+  const { data, error } = await admin
+    .from('marketing_campaigns')
+    .insert({
+      name: input.name,
+      kind: input.kind,
+      status: input.status,
+      category: input.category,
+      notes: input.notes,
+      target_url: input.targetUrl,
+      live_url: input.liveUrl,
+      submitted_at: submitted,
+    })
+    .select(CAMPAIGN_COLUMNS)
+    .single();
+
+  if (error) {
+    if (isMissingTable(error)) return { ok: false, error: 'pending_migration' };
+    console.error('Marketing campaign create error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+
+  return { ok: true, campaign: data as MarketingCampaignRow };
+}
+
+export async function updateMarketingCampaign(
+  id: string,
+  patch: Partial<{
+    name: string;
+    kind: string;
+    status: string;
+    category: string | null;
+    notes: string | null;
+    target_url: string | null;
+    live_url: string | null;
+    submitted_at: string | null;
+  }>
+): Promise<
+  | { ok: true; campaign: MarketingCampaignRow }
+  | { ok: false; error: 'pending_migration' | 'not_found' | 'not_configured' | 'failed' }
+> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('marketing_campaigns')
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select(CAMPAIGN_COLUMNS)
+    .single();
+
+  if (error) {
+    if (isMissingTable(error)) return { ok: false, error: 'pending_migration' };
+    if (error.code === 'PGRST116') return { ok: false, error: 'not_found' };
+    console.error('Marketing campaign update error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+
+  return { ok: true, campaign: data as MarketingCampaignRow };
+}
+
+// Unsubscribe: flip profiles.marketing_opt_in off from the email footer link.
+// Service-role because the clicker is signed out and holds only a token; the
+// token itself (lib/unsubscribe-token.js) proves it was minted for this user.
+export async function setMarketingOptIn(userId: string, value: boolean): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+
+  const { error } = await admin
+    .from('profiles')
+    .update({ marketing_opt_in: value })
+    .eq('id', userId);
+
+  if (error) {
+    console.error('Unsubscribe update error:', error.message);
+    return false;
+  }
+  return true;
+}
+
+// ── Marketing queue processor (0019's missing half) ───────────────────────────
+// Publishes every due queued row and writes the outcome back. The kill switch
+// MARKETING_ENABLED must be 'true', and each channel needs its own
+// MARKETING_DISCORD / MARKETING_TELEGRAM / MARKETING_REDDIT flag — default-deny
+// so a shared token can never fire by accident. Payload building and target
+// resolution live in lib/marketing-poster.js; only this allow-listed module
+// reads/writes the queue (H7).
+
+const MARKETING_MAX_ATTEMPTS = 3;
+
+// Discard a draft: only queued/failed rows are deletable — posted history is
+// never removed. not_found also covers "status does not allow deletion".
+export async function deleteMarketingPost(id: string): Promise<{ ok: boolean; error?: string }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('marketing_posts')
+    .delete()
+    .in('status', ['queued', 'failed'])
+    .eq('id', id)
+    .select('id');
+
+  if (error) {
+    console.error('Marketing delete error:', error.message);
+    return { ok: false, error: 'delete_failed' };
+  }
+  if (!data || data.length === 0) return { ok: false, error: 'not_found' };
+  return { ok: true };
+}
+
+export type MarketingRunResult = {
+  ran: boolean;
+  reason?: string;
+  due: number;
+  posted: number;
+  failed: number;
+  retried: number;
+  results: { id: string; channel: string; target: string; status: string; error?: string }[];
+};
+
+export async function runDueMarketingPosts(): Promise<MarketingRunResult> {
+  const empty: MarketingRunResult = { ran: false, due: 0, posted: 0, failed: 0, retried: 0, results: [] };
+
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ...empty, reason: 'not_configured' };
+  if (process.env.MARKETING_ENABLED !== 'true') {
+    return { ...empty, reason: 'MARKETING_ENABLED is not set to true' };
+  }
+
+  const nowIso = new Date().toISOString();
+  const { data, error } = await admin
+    .from('marketing_posts')
+    .select('*')
+    .eq('status', 'queued')
+    .lte('scheduled_at', nowIso)
+    .order('scheduled_at', { ascending: true })
+    .limit(25);
+
+  if (error) {
+    console.error('Marketing queue read error:', error.message);
+    return { ...empty, reason: 'read_failed' };
+  }
+
+  const rows = data ?? [];
+  let posted = 0;
+  let failed = 0;
+  let retried = 0;
+  const results: MarketingRunResult['results'] = [];
+
+  for (const row of rows) {
+    const channelFlag =
+      row.channel === 'discord'
+        ? 'MARKETING_DISCORD'
+        : row.channel === 'telegram'
+          ? 'MARKETING_TELEGRAM'
+          : 'MARKETING_REDDIT';
+
+    const outcome =
+      process.env[channelFlag] === 'true'
+        ? await publishPost(row, process.env)
+        : { ok: false as const, terminal: true, error: `${channelFlag} is not enabled` };
+
+    const attempts = (row.attempts ?? 0) + 1;
+    const errorText = outcome.ok ? null : String(outcome.error ?? 'publish failed').slice(0, 500);
+
+    if (outcome.ok) {
+      await admin
+        .from('marketing_posts')
+        .update({ status: 'posted', posted_at: nowIso, attempts, error: null })
+        .eq('id', row.id);
+      posted += 1;
+      results.push({ id: row.id, channel: row.channel, target: row.target, status: 'posted' });
+    } else if (outcome.terminal || attempts >= MARKETING_MAX_ATTEMPTS) {
+      await admin
+        .from('marketing_posts')
+        .update({ status: 'failed', attempts, error: errorText })
+        .eq('id', row.id);
+      failed += 1;
+      results.push({ id: row.id, channel: row.channel, target: row.target, status: 'failed', error: errorText ?? undefined });
+    } else {
+      await admin
+        .from('marketing_posts')
+        .update({ attempts, error: errorText })
+        .eq('id', row.id);
+      retried += 1;
+      results.push({ id: row.id, channel: row.channel, target: row.target, status: 'queued', error: errorText ?? undefined });
+    }
+  }
+
+  return { ran: true, due: rows.length, posted, failed, retried, results };
 }
 

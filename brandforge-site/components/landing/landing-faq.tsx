@@ -24,6 +24,11 @@ const FAQS = [
     answer:
       'Money only moves on your approval: escrow releases per milestone, and anything unapproved stays with you. Decline any proposal twice and that specialist is out; your brief stays open.',
   },
+  {
+    question: 'Why use BrandForge instead of AI alone?',
+    answer:
+      'AI helps structure your idea, but a human specialist reviews, negotiates, builds, and delivers it. Funding is protected through milestone-based escrow — you only pay after you approve the delivered work. Your brief stays open if you decline twice; the specialist is out, not you.',
+  },
 ];
 
 export function LandingFaq() {
@@ -39,20 +44,20 @@ export function LandingFaq() {
   return (
     <section id="faq" className="bf-section" aria-labelledby="faq-title">
       <div className="mx-auto max-w-3xl">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#b8763b]">Questions</p>
-        <h2 id="faq-title" className="mt-2 font-serif text-3xl text-[#ece7de] sm:text-4xl">
+        <p className="text-xs uppercase tracking-[0.2em] text-copper">Questions</p>
+        <h2 id="faq-title" className="mt-2 font-serif text-3xl text-foreground sm:text-4xl">
           Asked before you ask
         </h2>
         <div className="mt-8 space-y-3">
           {FAQS.map((item) => (
             <details
               key={item.question}
-              className="group rounded-2xl border border-white/10 bg-[#1c2024] px-5 py-4"
+              className="group rounded-2xl border border-line bg-panel px-5 py-4"
             >
-              <summary className="cursor-pointer list-none text-sm font-medium text-[#ece7de]">
+              <summary className="cursor-pointer list-none text-sm font-medium text-foreground">
                 {item.question}
               </summary>
-              <p className="mt-2 text-sm leading-relaxed text-[#9aa0a6]">{item.answer}</p>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{item.answer}</p>
             </details>
           ))}
         </div>

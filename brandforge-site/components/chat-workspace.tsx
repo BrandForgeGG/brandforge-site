@@ -113,19 +113,6 @@ function toChatMessage(message: PersistedMessage): ChatMessage {
   };
 }
 
-// Shortcut prefixes for the new-chat screen. They prefill the composer rather than
-// sending anything - shortcuts, not a rigid form.
-const STARTERS = [
-  { label: "Build a SaaS", prefix: "I want to build a SaaS that " },
-  { label: "Launch a website", prefix: "I want to launch a website for " },
-  { label: "Create an app", prefix: "I want to create an app that " },
-  {
-    label: "Automate a business",
-    prefix: "I want to automate this business process: ",
-  },
-  { label: "Something else", prefix: "" },
-];
-
 const MESSAGE_PAGE_SIZE = 300;
 
 // The slash vocabulary, shared by the Actions menu and the composer autocomplete so the
@@ -178,9 +165,6 @@ export function ChatWorkspace() {
   const pendingPrependRef = useRef<{ height: number; scrollTop: number } | null>(
     null,
   );
-  const [telegramConnected, setTelegramConnected] = useState(false);
-  const [telegramCode, setTelegramCode] = useState("");
-  const [telegramBotUrl, setTelegramBotUrl] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [showInviteForm, setShowInviteForm] = useState(false);
   // Staff proposal composer: the send side of POST /api/proposals. Opens from the
@@ -1305,26 +1289,15 @@ export function ChatWorkspace() {
       const response = await fetchAuthed("/api/identity");
       if (!response.ok) return;
       const data = await response.json();
-      setTelegramConnected(data.telegram_connected === true);
+      // Accounts that never finished onboarding (terms, birthday, username) go
+      // there first; /onboarding sends them back here once it is done.
+      if (data?.onboarding_completed === false) {
+        router.replace("/onboarding");
+      }
     } catch {
       // Identity fetch is best-effort.
     }
-  }, []);
-
-  const handleTelegramConnect = useCallback(async () => {
-    try {
-      const response = await fetchAuthed("/api/identity/telegram-link", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!response.ok) return;
-      const data = await response.json();
-      setTelegramCode(data.code ?? "");
-      setTelegramBotUrl(data.botUrl ?? "");
-    } catch {
-      // Telegram link fetch is best-effort.
-    }
-  }, []);
+  }, [router]);
 
   const handleInvite = useCallback(async () => {
     if (!conversationId || !inviteEmail.trim()) return;
@@ -1417,7 +1390,6 @@ export function ChatWorkspace() {
   ]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadIdentity();
   }, [loadIdentity]);
 
@@ -1764,7 +1736,7 @@ export function ChatWorkspace() {
     return files;
   }, [messages]);
 return (
-      <div className="flex h-screen flex-col overflow-hidden bg-[#14171a] text-[#ece7de]">
+      <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
       <BetaBanner />
       <div className="flex min-h-0 flex-1 overflow-hidden">
       <ConversationRail
@@ -1776,10 +1748,6 @@ return (
         onMobileClose={() => setIsRailOpen(false)}
         isStaff={railMeta.isStaff}
         staffUnseenCount={railMeta.unseenCount}
-        telegramConnected={telegramConnected}
-        onTelegramConnect={handleTelegramConnect}
-        telegramCode={telegramCode}
-        telegramBotUrl={telegramBotUrl}
       />
 
       <main className="relative flex min-w-0 flex-1 flex-col">
@@ -1788,14 +1756,14 @@ return (
             <button
               type="button"
               onClick={() => setIsRailOpen(true)}
-              className="rounded-lg p-2 text-[#9aa0a6] transition hover:bg-white/5 hover:text-[#ece7de] md:hidden"
+              className="rounded-lg p-2 text-muted transition hover:bg-overlay hover:text-foreground md:hidden"
               aria-label="Open navigation"
             >
               <span aria-hidden="true">=</span>
             </button>
             <div className="min-w-0">
               <div className="flex min-w-0 items-baseline gap-2.5">
-                <h1 className="truncate font-serif text-xl text-[#ece7de]">
+                <h1 className="truncate font-serif text-xl text-foreground">
                   {projectLabel}
                 </h1>
                 <span className="bf-chat-status shrink-0">
@@ -1805,7 +1773,7 @@ return (
                     : "Discovery"}
                 </span>
               </div>
-              <p className="mt-0.5 truncate text-xs text-[#9aa0a6]">
+              <p className="mt-0.5 truncate text-xs text-muted">
                 {state
                   ? `${state.requirementsCount} requirement${state.requirementsCount === 1 ? "" : "s"}${
                       taskProgress.total > 0
@@ -1834,7 +1802,10 @@ return (
                 className="bf-participants"
               >
                 <span className="bf-participant-stack" aria-hidden="true">
-                  <span className="bf-stack-item bf-stack-ai">B</span>
+                  <span className="bf-stack-item bf-stack-ai overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- bundled local asset at a fixed size */}
+                    <img src="/discord-server-icon.png" alt="" className="h-full w-full object-cover" />
+                  </span>
                   {taskParticipants.slice(0, 3).map((person) => (
                     <span
                       key={person.userId}
@@ -1861,16 +1832,17 @@ return (
                   <ul className="mt-2 space-y-2.5">
                     <li className="flex items-center gap-2.5">
                       <span
-                        className="bf-stack-item bf-stack-ai"
+                        className="bf-stack-item bf-stack-ai overflow-hidden"
                         aria-hidden="true"
                       >
-                        B
+                        {/* eslint-disable-next-line @next/next/no-img-element -- bundled local asset at a fixed size */}
+                        <img src="/discord-server-icon.png" alt="" className="h-full w-full object-cover" />
                       </span>
                       <span className="min-w-0">
-                        <span className="block truncate text-sm text-[#ece7de]">
+                        <span className="block truncate text-sm text-foreground">
                           BrandForge AI
                         </span>
-                        <span className="block text-[10px] uppercase tracking-[0.14em] text-[#8f959b]">
+                        <span className="block text-[10px] uppercase tracking-[0.14em] text-muted">
                           Execution Assistant
                         </span>
                       </span>
@@ -1888,10 +1860,10 @@ return (
                           {initialsFor(person.displayName)}
                         </span>
                         <span className="min-w-0">
-                          <span className="block truncate text-sm text-[#ece7de]">
+                          <span className="block truncate text-sm text-foreground">
                             {person.displayName}
                           </span>
-                          <span className="block text-[10px] uppercase tracking-[0.14em] text-[#8f959b]">
+                          <span className="block text-[10px] uppercase tracking-[0.14em] text-muted">
                             {formatRole(person.role)}
                           </span>
                         </span>
@@ -1975,12 +1947,12 @@ return (
                       aria-label="Email address to invite"
                       onChange={(event) => setInviteEmail(event.target.value)}
                       placeholder="friend@example.com"
-                      className="min-w-0 flex-1 rounded-lg border border-white/15 bg-[#14171a] px-2 py-1.5 text-sm text-[#ece7de] placeholder:text-[#8f959b]"
+                      className="min-w-0 flex-1 rounded-lg border border-line bg-background px-2 py-1.5 text-sm text-foreground placeholder:text-muted"
                     />
                     <button
                       type="button"
                       onClick={() => void handleInvite()}
-                      className="rounded-lg bg-[#e8571e] px-3 py-1.5 text-xs font-semibold text-[#14171a]"
+                      className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background"
                     >
                       Send
                     </button>
@@ -1999,48 +1971,47 @@ return (
         >
           {isBooting && messages.length === 0 ? (
             <div className="py-10 text-center" role="status" aria-live="polite">
-              <p className="text-sm text-[#9aa0a6]">
+              <p className="text-sm text-muted">
                 Loading your conversation…
               </p>
             </div>
           ) : !conversationId ? (
-            <div className="mx-auto flex h-full w-full max-w-2xl flex-col items-center justify-center py-10 text-center">
+            <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col items-center justify-center text-center">
               <div
-                className="bf-ai-mark flex h-11 w-11 items-center justify-center rounded-xl"
+                className="bf-ai-mark flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl"
                 aria-hidden="true"
               >
-                <span className="font-serif text-xl font-semibold">B</span>
+                {/* eslint-disable-next-line @next/next/no-img-element -- bundled local asset at a fixed size */}
+                <img src="/discord-server-icon.png" alt="" className="h-full w-full object-cover" />
               </div>
-              <h1 className="mt-5 font-serif text-2xl text-[#ece7de] sm:text-3xl">
-                What are you building?
+              <p className="mt-3 text-[10px] uppercase tracking-[0.2em] text-muted">
+                BrandForge AI · Project Operator
+              </p>
+              <h1 className="mt-2 font-serif text-3xl text-foreground sm:text-4xl">
+                Let&apos;s build something.
               </h1>
-              <p className="mt-3 max-w-xl text-sm leading-relaxed text-[#9aa0a6]">
-                Describe the idea in your own words. BrandForge turns it into a
-                structured project and keeps the next step visible in this chat.
+              <p className="mt-3 max-w-md text-sm leading-relaxed text-muted">
+                Start with whatever you have — an idea, a problem, a sketch, or a document.
               </p>
               <div
-                className="mt-6 flex flex-wrap justify-center gap-2"
+                className="mt-5 flex flex-wrap justify-center gap-2"
                 role="group"
-                aria-label="Starter shortcuts"
+                aria-label="Starting points"
               >
-                {STARTERS.map((starter) => (
+                {['I have an idea', 'I have requirements', 'I have a design', 'I have an existing product', "I'm not sure yet"].map((label) => (
                   <button
-                    key={starter.label}
+                    key={label}
                     type="button"
                     onClick={() => {
-                      setInput((current) => current || starter.prefix);
+                      setInput(label === "I'm not sure yet" ? '' : label.replace('I have ', 'I have '));
                       requestAnimationFrame(() => composerRef.current?.focus());
                     }}
-                    className="rounded-full border border-white/10 px-3.5 py-1.5 text-xs text-[#9aa0a6] transition hover:border-[#e8571e] hover:text-[#ece7de]"
+                    className="inline-flex min-h-9 items-center rounded-full border border-line px-3.5 py-1.5 text-xs text-muted transition hover:border-ember hover:text-foreground"
                   >
-                    {starter.label}
+                    {label}
                   </button>
                 ))}
               </div>
-              <p className="mt-5 text-[11px] uppercase tracking-[0.16em] text-[#8f959b]">
-                Tell me what is on your mind — your first message creates the
-                project
-              </p>
             </div>
           ) : (
             <>
@@ -2050,7 +2021,7 @@ return (
                     type="button"
                     onClick={() => void loadOlderMessages()}
                     disabled={isLoadingOlder}
-                    className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-[#9aa0a6] transition hover:border-[#e8571e] hover:text-[#ece7de] disabled:opacity-60"
+                    className="rounded-full border border-line px-3 py-1.5 text-xs text-muted transition hover:border-ember hover:text-foreground disabled:opacity-60"
                   >
                     {isLoadingOlder ? "Loading…" : "↑ Load earlier messages"}
                   </button>
@@ -2165,7 +2136,7 @@ return (
         {commandStatus ? (
           <div className="px-6 pb-2">
             <div
-              className="mx-auto max-w-3xl rounded-xl border border-[#5aa578]/30 bg-[#5aa578]/10 px-4 py-3 text-sm text-[#b9e3c4]"
+              className="mx-auto max-w-3xl rounded-xl border border-trust/30 bg-trust/10 px-4 py-3 text-sm text-trust-light"
               role="status"
             >
               {commandStatus}
@@ -2196,16 +2167,16 @@ return (
             change without interrupting; the animated dot is decorative. */}
         <div className="px-4 sm:px-6">
           <div
-            className="mx-auto flex h-6 max-w-3xl items-center gap-2 text-xs text-[#9aa0a6]"
+            className="mx-auto flex h-6 max-w-3xl items-center gap-2 text-xs text-muted"
             role="status"
             aria-live="polite"
           >
             {typingLabel ? (
               <>
                 <span aria-hidden="true" className="flex gap-1">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#e8571e]" />
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#e8571e] [animation-delay:150ms]" />
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#e8571e] [animation-delay:300ms]" />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ember" />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ember [animation-delay:150ms]" />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ember [animation-delay:300ms]" />
                 </span>
                 <span>{typingLabel}</span>
               </>
@@ -2231,7 +2202,7 @@ return (
               <div
                 role="listbox"
                 aria-label="Slash commands"
-                className="absolute inset-x-0 bottom-full z-40 mb-2 rounded-xl border border-white/10 bg-[#1c2024] p-1 shadow-xl"
+                className="absolute inset-x-0 bottom-full z-40 mb-2 rounded-xl border border-line bg-panel p-1 shadow-xl"
               >
                 {slashMatches.map((item, index) => (
                   <button
@@ -2241,7 +2212,7 @@ return (
                     aria-selected={index === slashHighlight}
                     className={
                       "bf-menu-item w-full text-left" +
-                      (index === slashHighlight ? " bg-white/10 text-[#ece7de]" : "")
+                      (index === slashHighlight ? " bg-overlay text-foreground" : "")
                     }
                     onMouseDown={(event) => {
                       // MouseDown, not click: inserting before the textarea blurs keeps
@@ -2262,7 +2233,7 @@ return (
                 <span className="min-w-0 flex-1 truncate">
                   {attachment.name}
                 </span>
-                <span className="text-[10px] text-[#9aa0a6]">
+                <span className="text-[10px] text-muted">
                   {Math.ceil(attachment.size / 1024)} KB
                 </span>
                 <span
@@ -2282,7 +2253,7 @@ return (
               </div>
             ) : null}
             {isReplyingTo ? (
-              <div className="mb-2 flex items-center justify-between rounded-lg border border-[#e8571e]/30 bg-[#1c2024] px-3 py-2 text-xs text-[#ece7de]">
+              <div className="mb-2 flex items-center justify-between rounded-lg border border-ember/30 bg-panel px-3 py-2 text-xs text-foreground">
                 <span>Replying to message</span>
                 <button
                   type="button"
@@ -2291,7 +2262,7 @@ return (
                     setIsReplyingTo(null);
                     setInput("");
                   }}
-                  className="text-[#9aa0a6] hover:text-[#ece7de]"
+                  className="text-muted hover:text-foreground"
                 >
                   ✕
                 </button>
@@ -2301,7 +2272,7 @@ return (
                 context — but the next move belongs to the team, not another send-for-review. */}
             {state?.status === "READY_FOR_REVIEW" && !railMeta.isStaff ? (
               <div
-                className="mb-2 flex items-center gap-2 rounded-xl border border-[#e8571e]/25 bg-[#e8571e]/10 px-3 py-2 text-xs leading-relaxed text-[#f6d6c3]"
+                className="mb-2 flex items-center gap-2 rounded-xl border border-ember/25 bg-ember/10 px-3 py-2 text-xs leading-relaxed text-ember-light"
                 role="status"
               >
                 <span className="bf-status-dot" aria-hidden="true" />
@@ -2317,7 +2288,7 @@ return (
             {railMeta.isStaff &&
             !isOwnConversation &&
             state?.status === "READY_FOR_REVIEW" ? (
-              <div className="mb-2 rounded-xl border border-[#e8571e]/25 bg-[#1c2024] p-3">
+              <div className="mb-2 rounded-xl border border-ember/25 bg-panel p-3">
                 {/* A plain div, deliberately NOT a <form>: this strip renders inside the
                     composer <form> below and nested forms are invalid HTML — the browser
                     drops the inner form tag, which turned Submit into a native GET
@@ -2346,7 +2317,7 @@ return (
                       onChange={(event) => setProposalTitle(event.target.value)}
                       placeholder="Proposal title, e.g. CRM dashboard build"
                       maxLength={160}
-                      className="w-full rounded-lg border border-white/15 bg-[#14171a] px-3 py-2 text-sm text-[#ece7de] placeholder:text-[#8f959b]"
+                      className="w-full rounded-lg border border-line bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted"
                     />
                     <textarea
                       value={proposalScope}
@@ -2355,10 +2326,10 @@ return (
                       placeholder="Outline your technical stack, architecture, and implementation strategy…"
                       rows={4}
                       maxLength={4000}
-                      className="w-full resize-y rounded-lg border border-white/15 bg-[#14171a] px-3 py-2 text-sm leading-relaxed text-[#ece7de] placeholder:text-[#8f959b]"
+                      className="w-full resize-y rounded-lg border border-line bg-background px-3 py-2 text-sm leading-relaxed text-foreground placeholder:text-muted"
                     />
                     <div className="flex gap-3">
-                      <label className="flex-1 text-[10px] uppercase tracking-[0.14em] text-[#8f959b]">
+                      <label className="flex-1 text-[10px] uppercase tracking-[0.14em] text-muted">
                         Final quote (EUR)
                         <input
                           type="number"
@@ -2368,10 +2339,10 @@ return (
                           value={proposalQuote}
                           onChange={(event) => setProposalQuote(event.target.value)}
                           placeholder="18500"
-                          className="mt-1 w-full rounded-lg border border-white/15 bg-[#14171a] px-3 py-2 text-sm text-[#ece7de] placeholder:text-[#8f959b]"
+                          className="mt-1 w-full rounded-lg border border-line bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted"
                         />
                       </label>
-                      <label className="flex-1 text-[10px] uppercase tracking-[0.14em] text-[#8f959b]">
+                      <label className="flex-1 text-[10px] uppercase tracking-[0.14em] text-muted">
                         Timeline (weeks)
                         <input
                           type="number"
@@ -2381,7 +2352,7 @@ return (
                           value={proposalWeeks}
                           onChange={(event) => setProposalWeeks(event.target.value)}
                           placeholder="6"
-                          className="mt-1 w-full rounded-lg border border-white/15 bg-[#14171a] px-3 py-2 text-sm text-[#ece7de] placeholder:text-[#8f959b]"
+                          className="mt-1 w-full rounded-lg border border-line bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted"
                         />
                       </label>
                     </div>
@@ -2390,14 +2361,14 @@ return (
                         type="button"
                         onClick={() => void handleSendProposal()}
                         disabled={proposalSending}
-                        className="rounded-lg bg-[#e8571e] px-4 py-2 text-xs font-semibold text-[#14171a] disabled:opacity-60"
+                        className="rounded-lg bg-ember px-4 py-2 text-xs font-semibold text-background disabled:opacity-60"
                       >
                         {proposalSending ? "Sending…" : "Submit proposal"}
                       </button>
                       <button
                         type="button"
                         onClick={() => setShowProposalForm(false)}
-                        className="text-xs text-[#9aa0a6] hover:text-[#ece7de]"
+                        className="text-xs text-muted hover:text-foreground"
                       >
                         Back
                       </button>
@@ -2405,7 +2376,7 @@ return (
                   </div>
                 ) : (
                   <div
-                    className="flex items-center gap-2 text-xs leading-relaxed text-[#f6d6c3]"
+                    className="flex items-center gap-2 text-xs leading-relaxed text-ember-light"
                     role="status"
                   >
                     <span className="bf-status-dot" aria-hidden="true" />
@@ -2413,7 +2384,7 @@ return (
                     <button
                       type="button"
                       onClick={() => setShowProposalForm(true)}
-                      className="ml-auto shrink-0 rounded-lg bg-[#e8571e] px-3 py-1.5 text-xs font-semibold text-[#14171a]"
+                      className="ml-auto shrink-0 rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background"
                     >
                       Send proposal
                     </button>
@@ -2585,7 +2556,7 @@ return (
                   ) : null}
                 </div>
               </div>
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[#8f959b]">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-muted">
                 Enter to send
               </p>
             </div>

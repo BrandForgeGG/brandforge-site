@@ -121,17 +121,19 @@ test('a 429 is retried once after the advertised wait', async () => {
 
 // ---------- public feed ----------
 
-test('only the four growth-safe moments have a public template', () => {
+test('only the growth-safe moments have a public template', () => {
   assert.equal(buildPublicPost('brief_posted'), 'A new project brief was posted');
+  assert.equal(buildPublicPost('brief_posted', { title: 'Car Spotting' }), 'A new project brief was posted: Car Spotting');
   assert.equal(buildPublicPost('match_made'), 'A project was matched with a team');
+  assert.equal(buildPublicPost('contract_signed'), 'A contract was signed — a project is about to be funded');
   assert.equal(buildPublicPost('contract_funded'), 'A project was matched and funded');
   assert.equal(buildPublicPost('milestone_released'), 'A milestone shipped');
+  assert.equal(buildPublicPost('member_joined'), 'A new member joined the platform');
   for (const hidden of [
     'proposal_submitted',
     'proposal_accepted',
     'proposal_declined',
     'proposal_countered',
-    'contract_signed',
     'escrow_funded',
     'escrow_rejected',
     'match_made_nope',
@@ -206,7 +208,7 @@ test('postOpsEvent reports network failures without throwing', async () => {
 
 test('postPublicActivity posts content-only lines and refuses private events', async () => {
   const captured = {};
-  const result = await postPublicActivity('match_made', {
+  const result = await postPublicActivity('match_made', {}, {
     env: { DISCORD_LIVE_URL: 'https://discord/live' },
     fetchImpl: okFetch(captured),
   });
@@ -220,26 +222,51 @@ test('postPublicActivity posts content-only lines and refuses private events', a
     called = true;
     return { ok: true };
   };
-  assert.deepEqual(await postPublicActivity('proposal_declined', { env: { DISCORD_LIVE_URL: 'x' }, fetchImpl: never }), {
+  assert.deepEqual(await postPublicActivity('proposal_declined', {}, { env: { DISCORD_LIVE_URL: 'x' }, fetchImpl: never }), {
     sent: false,
     reason: 'not_public',
   });
-  assert.deepEqual(await postPublicActivity('match_made', { env: {}, fetchImpl: never }), {
+  assert.deepEqual(await postPublicActivity('match_made', {}, { env: {}, fetchImpl: never }), {
     sent: false,
     reason: 'not_configured',
   });
   assert.equal(called, false);
 });
 
-test('milestone shipments prefer the milestones channel, else the live feed', async () => {  const captured = {};
-  await postPublicActivity('milestone_released', {
+test('public posts carry the niche for briefs and stay privacy-safe elsewhere', async () => {
+  const captured = {};
+  await postPublicActivity('brief_posted', { title: 'A booking site for my salon' }, {
+    env: { DISCORD_LIVE_URL: 'https://discord/live' },
+    fetchImpl: okFetch(captured),
+  });
+  const body = JSON.parse(captured.init.body);
+  assert.equal(body.content, 'A new project brief was posted: A booking site for my salon');
+
+  const captured2 = {};
+  await postPublicActivity('contract_signed', { title: 'Car Spotting' }, {
+    env: { DISCORD_LIVE_URL: 'https://discord/live' },
+    fetchImpl: okFetch(captured2),
+  });
+  assert.equal(JSON.parse(captured2.init.body).content, 'A contract was signed — a project is about to be funded');
+
+  const captured3 = {};
+  await postPublicActivity('member_joined', {}, {
+    env: { DISCORD_LIVE_URL: 'https://discord/live' },
+    fetchImpl: okFetch(captured3),
+  });
+  assert.equal(JSON.parse(captured3.init.body).content, 'A new member joined the platform');
+});
+
+test('milestone shipments prefer the milestones channel, else the live feed', async () => {
+  const captured = {};
+  await postPublicActivity('milestone_released', {}, {
     env: { DISCORD_MILESTONE_URL: 'https://discord/mile', DISCORD_LIVE_URL: 'https://discord/live' },
     fetchImpl: okFetch(captured),
   });
   assert.equal(captured.url, 'https://discord/mile');
 
   const captured2 = {};
-  await postPublicActivity('milestone_released', {
+  await postPublicActivity('milestone_released', {}, {
     env: { DISCORD_LIVE_URL: 'https://discord/live' },
     fetchImpl: okFetch(captured2),
   });

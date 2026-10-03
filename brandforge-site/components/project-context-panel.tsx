@@ -235,11 +235,11 @@ export function ProjectContextPanel({
     nextDelivery ?? nextDiscoveryStep ?? 'Describe your project in the chat to get started';
 
   return (
-    <aside className="fixed inset-y-0 right-0 z-40 flex w-80 max-w-[85vw] shrink-0 flex-col border-l border-white/10 bg-[#111417] shadow-2xl xl:sticky xl:top-0 xl:z-auto xl:h-screen xl:max-w-none xl:shadow-none">
+    <aside className="fixed inset-y-0 right-0 z-40 flex w-80 max-w-[85vw] shrink-0 flex-col border-l border-line bg-deep shadow-2xl xl:sticky xl:top-0 xl:z-auto xl:h-screen xl:max-w-none xl:shadow-none">
       <div className="bf-panel-header flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs uppercase tracking-[0.2em] text-[#b8763b]">Project</p>
-          <h2 className="mt-1 truncate font-serif text-lg text-[#ece7de]">
+          <p className="text-xs uppercase tracking-[0.2em] text-copper">Project</p>
+          <h2 className="mt-1 truncate font-serif text-lg text-foreground">
             {state?.project.name || state?.title || 'New project'}
           </h2>
         </div>
@@ -260,18 +260,18 @@ export function ProjectContextPanel({
             <div className="grid gap-2">
               {projectPulse.map((item) => (
                 <div key={item.key} className="flex items-start justify-between gap-3 text-xs">
-                  <span className="text-[#9aa0a6]">{item.label}</span>
-                  <span className="text-right text-[#ece7de]">{item.value}</span>
+                  <span className="text-muted">{item.label}</span>
+                  <span className="text-right text-foreground">{item.value}</span>
                 </div>
               ))}
-              {projectPulse.length === 0 ? <p className="text-xs text-[#9aa0a6]">Start the conversation to shape the project.</p> : null}
+              {projectPulse.length === 0 ? <p className="text-xs text-muted">Start the conversation to shape the project.</p> : null}
             </div>
             <button
               type="button"
               onClick={openDetails}
               aria-expanded={detailsOpen}
               aria-controls="bf-project-details"
-              className="mt-3 text-xs font-semibold text-[#b8763b] hover:text-[#ece7de]"
+              className="mt-3 text-xs font-semibold text-copper hover:text-foreground"
             >
               {detailsOpen ? 'Project details expanded' : 'Open project details →'}
             </button>
@@ -281,7 +281,7 @@ export function ProjectContextPanel({
         <div className="bf-panel-section">
           <p className="bf-section-label">Next</p>
           <div className="bf-panel-card bf-panel-card-emphasis">
-            <p className="text-sm leading-relaxed text-[#ece7de]">{nextStepLabel}</p>
+            <p className="text-sm leading-relaxed text-foreground">{nextStepLabel}</p>
           </div>
         </div>
 
@@ -290,21 +290,21 @@ export function ProjectContextPanel({
           <div className="bf-panel-card">
             {state && state.requirements.length > 0 ? (
               <details>
-                <summary className="cursor-pointer text-sm text-[#ece7de]">
+                <summary className="cursor-pointer text-sm text-foreground">
                   {state.requirementsCount}
-                  <span className="text-[#9aa0a6]"> captured</span>
+                  <span className="text-muted"> captured</span>
                 </summary>
                 <ul className="mt-2 space-y-1">
                   {state.requirements.slice(-5).map((requirement) => (
                     <li key={requirement.id} className="flex items-start gap-2 text-xs">
-                      <span className="text-[#5aa578]" aria-hidden="true">✓</span>
-                      <span className="min-w-0 text-[#9aa0a6]">{requirement.title}</span>
+                      <span className="text-trust" aria-hidden="true">✓</span>
+                      <span className="min-w-0 text-muted">{requirement.title}</span>
                     </li>
                   ))}
                 </ul>
               </details>
             ) : (
-              <p className="text-xs text-[#9aa0a6]">Nothing captured yet.</p>
+              <p className="text-xs text-muted">Nothing captured yet.</p>
             )}
           </div>
         </div>
@@ -316,8 +316,8 @@ export function ProjectContextPanel({
               <li className="flex items-center gap-2.5">
                 <span className="bf-stack-item bf-stack-ai" aria-hidden="true">B</span>
                 <span className="min-w-0">
-                  <span className="block truncate text-xs text-[#ece7de]">BrandForge AI</span>
-                  <span className="block text-[10px] uppercase tracking-[0.14em] text-[#8f959b]">Execution Assistant</span>
+                  <span className="block truncate text-xs text-foreground">BrandForge AI</span>
+                  <span className="block text-[10px] uppercase tracking-[0.14em] text-muted">Execution Assistant</span>
                 </span>
               </li>
               {participants.map((person) => (
@@ -326,8 +326,8 @@ export function ProjectContextPanel({
                     {initialsFor(person.displayName)}
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-xs text-[#ece7de]">{person.displayName}</span>
-                    <span className="block text-[10px] uppercase tracking-[0.14em] text-[#8f959b]">{formatRole(person.role)}</span>
+                    <span className="block truncate text-xs text-foreground">{person.displayName}</span>
+                    <span className="block text-[10px] uppercase tracking-[0.14em] text-muted">{formatRole(person.role)}</span>
                   </span>
                 </li>
               ))}
@@ -344,17 +344,17 @@ export function ProjectContextPanel({
                   <li key={file.path}>
                     <a
                       href={`/api/attachments?path=${encodeURIComponent(file.path)}`}
-                      className="flex items-center gap-2 text-xs text-[#ece7de] transition hover:text-[#e8571e]"
+                      className="flex items-center gap-2 text-xs text-foreground transition hover:text-ember"
                     >
                       <span aria-hidden="true">📄</span>
                       <span className="min-w-0 flex-1 truncate">{file.name}</span>
-                      <span className="shrink-0 text-[10px] text-[#9aa0a6]">{Math.ceil(file.size / 1024)} KB</span>
+                      <span className="shrink-0 text-[10px] text-muted">{Math.ceil(file.size / 1024)} KB</span>
                     </a>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-xs text-[#9aa0a6]">No files yet.</p>
+              <p className="text-xs text-muted">No files yet.</p>
             )}
           </div>
         </div>
@@ -369,7 +369,7 @@ export function ProjectContextPanel({
           <div className="mt-4">
         <div className="bf-panel-section">
           <div className={`bf-panel-card ${state?.status && state.status !== 'DISCOVERY' ? 'bf-panel-card-emphasis' : ''}`}>
-            <span className="text-sm text-[#ece7de]">
+            <span className="text-sm text-foreground">
               {state ? STATUS_LABELS[state.status] ?? state.status : '—'}
             </span>
           </div>
@@ -379,22 +379,22 @@ export function ProjectContextPanel({
           <p className="bf-section-label">Discovery</p>
           <div className="bf-panel-card">
             <div className="mb-2 flex items-center gap-2">
-              <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-overlay">
                 <div
-                  className="h-full bg-[#e8571e] transition-[width]"
+                  className="h-full bg-ember transition-[width]"
                   style={{ width: `${discovery?.percent ?? 0}%` }}
                 />
               </div>
-              <span className="text-xs text-[#ece7de]">{discovery?.percent ?? 0}%</span>
+              <span className="text-xs text-foreground">{discovery?.percent ?? 0}%</span>
             </div>
 
             <ul className="space-y-1">
               {(discovery?.checklist ?? []).map((step) => (
                 <li key={step.key} className="flex items-center gap-2 text-xs">
-                  <span className={step.met ? 'text-[#5aa578]' : 'text-[#8f959b]'}>
+                  <span className={step.met ? 'text-trust' : 'text-muted'}>
                     {step.met ? '✓' : '○'}
                   </span>
-                  <span className={step.met ? 'text-[#ece7de]' : 'text-[#9aa0a6]'}>{step.label}</span>
+                  <span className={step.met ? 'text-foreground' : 'text-muted'}>{step.label}</span>
                 </li>
               ))}
             </ul>
@@ -404,19 +404,19 @@ export function ProjectContextPanel({
         <div className="bf-panel-section">
           <p className="bf-section-label">Open questions</p>
           <div className="bf-panel-card">
-            <p className="text-sm text-[#ece7de]">
+            <p className="text-sm text-foreground">
               {state ? state.openQuestions.length : 0}
             </p>
             {state && state.openQuestions.length > 0 ? (
               <ul className="mt-2 space-y-1">
                 {state.openQuestions.slice(0, 4).map((question) => (
-                  <li key={question.id} className="text-xs leading-relaxed text-[#9aa0a6]">
+                  <li key={question.id} className="text-xs leading-relaxed text-muted">
                     • {question.title}
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="mt-1 text-xs text-[#9aa0a6]">No open questions.</p>
+              <p className="mt-1 text-xs text-muted">No open questions.</p>
             )}
           </div>
         </div>
@@ -428,22 +428,22 @@ export function ProjectContextPanel({
               <>
                 <ul className="space-y-2">
                   {state.milestones.map((milestone) => (
-                    <li key={milestone.id} className="text-xs text-[#ece7de]">
-                      <span className="text-[#b8763b]">{milestone.sequence}. </span>
+                    <li key={milestone.id} className="text-xs text-foreground">
+                      <span className="text-copper">{milestone.sequence}. </span>
                       {milestone.title}
-                      <span className="block text-[#9aa0a6]">
+                      <span className="block text-muted">
                         {milestone.estimatedWeeks ? `${milestone.estimatedWeeks} weeks` : 'duration TBD'}
                         {milestone.amount ? ` · ${money(milestone.amount, milestone.currency ?? 'EUR')}` : ''}
                       </span>
                     </li>
                   ))}
                 </ul>
-                <p className="mt-2 text-[10px] uppercase tracking-[0.15em] text-[#8f959b]">
+                <p className="mt-2 text-[10px] uppercase tracking-[0.15em] text-muted">
                   AI-suggested · not final
                 </p>
               </>
             ) : (
-              <p className="text-sm text-[#9aa0a6]">Not drafted yet.</p>
+              <p className="text-sm text-muted">Not drafted yet.</p>
             )}
           </div>
         </div>
@@ -453,20 +453,20 @@ export function ProjectContextPanel({
           {taskProgress && state ? (
             <div className="mb-3 bf-panel-card bf-panel-card-emphasis">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-[#ece7de]">Delivery progress</span>
-                <span className="text-[#5aa578]">{taskProgress.done}/{taskProgress.total} complete</span>
+                <span className="text-foreground">Delivery progress</span>
+                <span className="text-trust">{taskProgress.done}/{taskProgress.total} complete</span>
               </div>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-                  <div className="h-full rounded-full bg-[#5aa578] transition-[width]" style={{ width: `${taskProgress.percent}%` }} />
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-overlay">
+                  <div className="h-full rounded-full bg-trust transition-[width]" style={{ width: `${taskProgress.percent}%` }} />
                 </div>
-              <p className="mt-1 text-[10px] text-[#9aa0a6]">{taskProgress.inProgress} in progress · {taskProgress.review} awaiting review · {taskProgress.queued} queued{taskProgress.overdue ? ` · ${taskProgress.overdue} overdue` : ''}</p>
+              <p className="mt-1 text-[10px] text-muted">{taskProgress.inProgress} in progress · {taskProgress.review} awaiting review · {taskProgress.queued} queued{taskProgress.overdue ? ` · ${taskProgress.overdue} overdue` : ''}</p>
               {describeNextDeliveryAction(state.tasks)}
             </div>
           ) : null}
           <div className="bf-panel-card">
             {state && state.tasks.length > 0 ? (
               <details>
-                <summary className="cursor-pointer text-xs text-[#ece7de]">
+                <summary className="cursor-pointer text-xs text-foreground">
                   {state.tasks.length} tasks · {taskProgress?.done ?? 0}/{taskProgress?.total ?? 0} complete
                 </summary>
                 <ul className="mt-2 space-y-2">
@@ -481,9 +481,9 @@ export function ProjectContextPanel({
                           : 'queued';
 
                   return (
-                    <li key={task.id} className="text-xs text-[#ece7de]">
+                    <li key={task.id} className="text-xs text-foreground">
                       <p className="leading-relaxed">{task.title}</p>
-                      <p className="mt-0.5 text-[#9aa0a6]">
+                      <p className="mt-0.5 text-muted">
                         {statusLabel}
                         {task.assigneeName ? ` · ${task.assigneeName}` : ' · unassigned'}
                         {shortDate(task.dueDate) ? ` · due ${shortDate(task.dueDate)}` : ''}
@@ -503,7 +503,7 @@ export function ProjectContextPanel({
                                 });
                               }
                             }}
-                            className="max-w-full rounded-lg border border-white/10 bg-[#14171a] px-2 py-1 text-[10px] text-[#ece7de] outline-none disabled:opacity-60"
+                            className="max-w-full rounded-lg border border-line bg-background px-2 py-1 text-[10px] text-foreground outline-none disabled:opacity-60"
                           >
                             <option value="">{task.assigneeName ? 'Reassign…' : 'Assign…'}</option>
                             {participants.map((participant) => (
@@ -524,7 +524,7 @@ export function ProjectContextPanel({
                                 dueDate: event.target.value ? event.target.value : null,
                               });
                             }}
-                            className="rounded-lg border border-white/10 bg-[#14171a] px-2 py-1 text-[10px] text-[#ece7de] outline-none disabled:opacity-60"
+                            className="rounded-lg border border-line bg-background px-2 py-1 text-[10px] text-foreground outline-none disabled:opacity-60"
                           />
                         </div>
                       ) : null}
@@ -534,7 +534,7 @@ export function ProjectContextPanel({
                             type="button"
                             onClick={() => runTaskAction(task.id, { action: 'advance' })}
                             disabled={taskControlsDisabled(task.id)}
-                            className="rounded-lg bg-[#5aa578] px-2 py-1 text-[10px] font-semibold text-[#14171a] transition hover:opacity-95 disabled:opacity-60"
+                            className="rounded-lg bg-trust px-2 py-1 text-[10px] font-semibold text-background transition hover:opacity-95 disabled:opacity-60"
                           >
                             Approve
                           </button>
@@ -546,7 +546,7 @@ export function ProjectContextPanel({
                             type="button"
                             onClick={() => runTaskAction(task.id, { action: 'reopen' })}
                             disabled={taskControlsDisabled(task.id)}
-                            className="rounded-lg border border-white/10 px-2 py-1 text-[10px] text-[#9aa0a6] transition hover:border-[#e8571e] disabled:opacity-60"
+                            className="rounded-lg border border-line px-2 py-1 text-[10px] text-muted transition hover:border-ember disabled:opacity-60"
                           >
                             Send back
                           </button>
@@ -558,7 +558,7 @@ export function ProjectContextPanel({
                             type="button"
                             onClick={() => runTaskAction(task.id, { action: 'advance' })}
                             disabled={taskControlsDisabled(task.id)}
-                            className="rounded-lg border border-white/10 px-2 py-1 text-[10px] text-[#ece7de] transition hover:border-[#e8571e] disabled:opacity-60"
+                            className="rounded-lg border border-line px-2 py-1 text-[10px] text-foreground transition hover:border-ember disabled:opacity-60"
                           >
                             {task.status === 'TODO' ? 'Start work' : 'Submit for review'}
                           </button>
@@ -570,7 +570,7 @@ export function ProjectContextPanel({
                 </ul>
               </details>
             ) : (
-              <p className="text-sm text-[#9aa0a6]">No tasks yet.</p>
+              <p className="text-sm text-muted">No tasks yet.</p>
             )}
           </div>
         </div>
@@ -580,33 +580,33 @@ export function ProjectContextPanel({
           <div className="bf-panel-card">
             {state?.estimate ? (
               <>
-                <p className="text-xs text-[#b8763b]">AI-generated · not final</p>
-                <p className="mt-1 text-sm text-[#ece7de]">
+                <p className="text-xs text-copper">AI-generated · not final</p>
+                <p className="mt-1 text-sm text-foreground">
                   {money(state.estimate.costMin, state.estimate.currency)}–{money(state.estimate.costMax, state.estimate.currency)}
                 </p>
-                <p className="mt-1 text-xs text-[#9aa0a6]">
+                <p className="mt-1 text-xs text-muted">
                   {state.estimate.weeksMin ?? '?'}–{state.estimate.weeksMax ?? '?'} weeks delivery
                 </p>
               </>
             ) : (
-              <p className="text-sm text-[#9aa0a6]">Not enough scope yet.</p>
+              <p className="text-sm text-muted">Not enough scope yet.</p>
             )}
           </div>
         </div>
 
         {proposal && !isStaff ? (
-          <div className="mb-6 rounded-xl border border-[#e8571e]/30 bg-[#1c2024] p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-[#b8763b]">BrandForge proposal</p>
-            <h3 className="mt-1 font-serif text-base text-[#ece7de]">{proposal.title}</h3>
-            <p className="mt-2 text-lg tabular-nums text-[#ece7de]">
+          <div className="mb-6 rounded-xl border border-ember/30 bg-panel p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-copper">BrandForge proposal</p>
+            <h3 className="mt-1 font-serif text-base text-foreground">{proposal.title}</h3>
+            <p className="mt-2 text-lg tabular-nums text-foreground">
               {money(proposal.total_amount, proposal.currency)}
-              <span className="ml-2 align-middle text-xs font-normal text-[#9aa0a6]">
+              <span className="ml-2 align-middle text-xs font-normal text-muted">
                 {proposal.estimated_weeks_min ?? '?'}–{proposal.estimated_weeks_max ?? '?'} weeks
               </span>
             </p>
-            <p className="mt-1 text-xs text-[#b8763b]">{describeProposalStatus(proposal.status)}</p>
+            <p className="mt-1 text-xs text-copper">{describeProposalStatus(proposal.status)}</p>
             {typeof proposal.counter_round === 'number' && proposal.counter_round >= 1 ? (
-              <p className="mt-1 text-[11px] text-[#f6d6c3]">
+              <p className="mt-1 text-[11px] text-ember-light">
                 {proposal.counter_round === 1 ? 'Your counter' : 'Final offer from the specialist'}
                 {' · '}
                 {money(proposal.counter_total_amount, proposal.currency)}
@@ -618,7 +618,7 @@ export function ProjectContextPanel({
               <button
                 type="button"
                 onClick={onClose}
-                className="mt-3 w-full rounded-lg border border-[#e8571e]/40 px-3 py-2 text-xs font-semibold text-[#f6d6c3] transition hover:border-[#e8571e]"
+                className="mt-3 w-full rounded-lg border border-ember/40 px-3 py-2 text-xs font-semibold text-ember-light transition hover:border-ember"
               >
                 {proposal.status === 'counter_back'
                   ? 'Answer the counter in chat'
@@ -631,27 +631,27 @@ export function ProjectContextPanel({
         ) : null}
 
         {agreement ? (
-          <div className="mb-6 rounded-xl border border-white/10 bg-[#1c2024] p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-[#b8763b]">Agreement</p>
-            <p className="mt-1 text-sm text-[#ece7de]">
+          <div className="mb-6 rounded-xl border border-line bg-panel p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-copper">Agreement</p>
+            <p className="mt-1 text-sm text-foreground">
               {money(agreement.total_amount, agreement.currency)} · {describeAgreementStatus(agreement.status)}
             </p>
-            <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-[#9aa0a6]">{agreement.terms}</p>
+            <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-muted">{agreement.terms}</p>
 
             {payments.length > 0 ? (
               <ul className="mt-3 space-y-1">
                 {payments.map((payment) => (
-                  <li key={payment.id} className="text-xs text-[#9aa0a6]">
+                  <li key={payment.id} className="text-xs text-muted">
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate">
                         {payment.sequence}. {payment.title}
                       </span>
-                      <span className="ml-2 whitespace-nowrap text-[#ece7de]">
+                      <span className="ml-2 whitespace-nowrap text-foreground">
                         {money(payment.amount, payment.currency)} · {describePaymentStatus(payment.status)}
                       </span>
                     </div>
                     {payment.tx_hash ? (
-                      <p className="mt-0.5 truncate text-[10px] text-[#8f959b]">
+                      <p className="mt-0.5 truncate text-[10px] text-muted">
                         tx {shortHash(payment.tx_hash)}
                         {payment.network ? ` · ${payment.network}` : ''}
                       </p>
@@ -661,7 +661,7 @@ export function ProjectContextPanel({
                         type="button"
                         onClick={() => onPaymentAction({ action: 'release', paymentId: payment.id })}
                         disabled={busyAction !== null}
-                        className="mt-1 rounded-md border border-[#5aa578]/40 px-2 py-1 text-[10px] font-semibold text-[#5aa578] transition hover:bg-[#5aa578]/10 disabled:opacity-60"
+                        className="mt-1 rounded-md border border-trust/40 px-2 py-1 text-[10px] font-semibold text-trust transition hover:bg-trust/10 disabled:opacity-60"
                       >
                         {busyAction === `release-${payment.id}` ? 'Releasing…' : 'Release to operator'}
                       </button>
@@ -672,22 +672,22 @@ export function ProjectContextPanel({
             ) : null}
 
             {agreement.status === 'pending_funding' && fundingSubmitted ? (
-              <div className="mt-3 rounded-lg border border-[#b8763b]/30 bg-[#b8763b]/5 p-3">
-                <p className="text-xs font-semibold text-[#ece7de]">
+              <div className="mt-3 rounded-lg border border-copper/30 bg-copper/5 p-3">
+                <p className="text-xs font-semibold text-foreground">
                   Payment submitted — verification in progress
                 </p>
-                <p className="mt-1 text-xs leading-relaxed text-[#9aa0a6]">
+                <p className="mt-1 text-xs leading-relaxed text-muted">
                   BrandForge is confirming your transfer
                   {submittedNetwork ? ` on ${submittedNetwork}` : ''} on-chain. The project moves to
                   delivery as soon as it is verified.
                 </p>
                 {submittedTx ? (
-                  <p className="mt-1 flex items-center gap-2 break-all font-mono text-[10px] text-[#8f959b]">
+                  <p className="mt-1 flex items-center gap-2 break-all font-mono text-[10px] text-muted">
                     <span className="min-w-0 flex-1 truncate">{submittedTx}</span>
                     <button
                       type="button"
                       onClick={() => copyText(submittedTx, setTxCopied)}
-                      className="shrink-0 rounded border border-white/10 px-1.5 py-0.5 font-sans text-[10px] font-semibold uppercase tracking-wide text-[#9aa0a6] transition hover:border-[#e8571e] hover:text-[#ece7de]"
+                      className="shrink-0 rounded border border-line px-1.5 py-0.5 font-sans text-[10px] font-semibold uppercase tracking-wide text-muted transition hover:border-ember hover:text-foreground"
                     >
                       {txCopied ? 'Copied' : 'Copy'}
                     </button>
@@ -699,7 +699,7 @@ export function ProjectContextPanel({
                       type="button"
                       onClick={() => onPaymentAction({ action: 'verify' })}
                       disabled={busyAction !== null}
-                      className="w-full rounded-lg bg-[#5aa578] px-3 py-2 text-xs font-semibold text-[#14171a] transition hover:opacity-95 disabled:opacity-60"
+                      className="w-full rounded-lg bg-trust px-3 py-2 text-xs font-semibold text-background transition hover:opacity-95 disabled:opacity-60"
                     >
                       {busyAction === 'verify' ? 'Verifying…' : 'Verify on-chain and mark funded'}
                     </button>
@@ -709,7 +709,7 @@ export function ProjectContextPanel({
                       aria-label="Reason for rejecting the transfer"
                       onChange={(event) => setRejectNote(event.target.value)}
                       placeholder="Reason if the transfer does not check out"
-                      className="w-full rounded-md border border-white/10 bg-[#14171a] px-2 py-1.5 text-[11px] text-[#ece7de] outline-none transition placeholder:text-[#8f959b] focus:border-red-500/50"
+                      className="w-full rounded-md border border-line bg-background px-2 py-1.5 text-[11px] text-foreground outline-none transition placeholder:text-muted focus:border-red-500/50"
                     />
                     <button
                       type="button"
@@ -727,32 +727,32 @@ export function ProjectContextPanel({
             ) : null}
 
             {agreement.status === 'pending_funding' && !fundingSubmitted ? (
-              <div className="mt-3 rounded-lg border border-[#e8571e]/30 bg-[#e8571e]/5 p-3">
-                <p className="text-xs font-semibold text-[#ece7de]">Fund in crypto</p>
-                <p className="mt-1 text-xs leading-relaxed text-[#9aa0a6]">
+              <div className="mt-3 rounded-lg border border-ember/30 bg-ember/5 p-3">
+                <p className="text-xs font-semibold text-foreground">Fund in crypto</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted">
                   Send {money(agreement.total_amount, agreement.currency)} in crypto to the
                   BrandForge deposit wallet. The funds are held until you approve each milestone.
                 </p>
                 {depositWallet ? (
-                  <div className="mt-2 rounded-md bg-[#14171a] px-2 py-1.5">
+                  <div className="mt-2 rounded-md bg-background px-2 py-1.5">
                     {depositNetwork ? (
-                      <p className="text-[10px] uppercase tracking-[0.15em] text-[#b8763b]">
+                      <p className="text-[10px] uppercase tracking-[0.15em] text-copper">
                         {depositNetwork}
                       </p>
                     ) : null}
                     <div className="flex items-start gap-2">
-                      <p className="min-w-0 flex-1 break-all font-mono text-[11px] text-[#ece7de]">{depositWallet}</p>
+                      <p className="min-w-0 flex-1 break-all font-mono text-[11px] text-foreground">{depositWallet}</p>
                       <button
                         type="button"
                         onClick={() => copyText(depositWallet, setWalletCopied)}
-                        className="shrink-0 rounded border border-white/10 px-1.5 py-0.5 font-sans text-[10px] font-semibold uppercase tracking-wide text-[#9aa0a6] transition hover:border-[#e8571e] hover:text-[#ece7de]"
+                        className="shrink-0 rounded border border-line px-1.5 py-0.5 font-sans text-[10px] font-semibold uppercase tracking-wide text-muted transition hover:border-ember hover:text-foreground"
                       >
                         {walletCopied ? 'Copied' : 'Copy'}
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <p className="mt-2 text-xs text-[#9aa0a6]">
+                  <p className="mt-2 text-xs text-muted">
                     Deposit details are shared in this chat.
                   </p>
                 )}
@@ -768,7 +768,7 @@ export function ProjectContextPanel({
                 >
                   <label
                     htmlFor="tx-hash-input"
-                    className="text-[10px] uppercase tracking-[0.15em] text-[#9aa0a6]"
+                    className="text-[10px] uppercase tracking-[0.15em] text-muted"
                   >
                     Transaction hash after sending
                   </label>
@@ -778,16 +778,16 @@ export function ProjectContextPanel({
                     value={txInput}
                     onChange={(event) => setTxInput(event.target.value)}
                     placeholder="Paste the transaction hash"
-                    className="mt-1 w-full rounded-md border border-white/10 bg-[#14171a] px-2 py-1.5 font-mono text-[11px] text-[#ece7de] outline-none transition placeholder:text-[#8f959b] focus:border-[#e8571e]"
+                    className="mt-1 w-full rounded-md border border-line bg-background px-2 py-1.5 font-mono text-[11px] text-foreground outline-none transition placeholder:text-muted focus:border-ember"
                   />
                   <button
                     type="submit"
                     disabled={busyAction !== null || !txInput.trim()}
-                    className="mt-2 w-full rounded-lg bg-[#e8571e] px-3 py-2 text-xs font-semibold text-[#14171a] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="mt-2 w-full rounded-lg bg-ember px-3 py-2 text-xs font-semibold text-background transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {busyAction === 'fund' ? 'Submitting…' : 'Submit payment for verification'}
                   </button>
-                  <p className="mt-1.5 text-[10px] leading-relaxed text-[#8f959b]">
+                  <p className="mt-1.5 text-[10px] leading-relaxed text-muted">
                     BrandForge verifies the transfer on-chain before marking the project funded.
                   </p>
                 </form>
@@ -808,19 +808,19 @@ export function ProjectContextPanel({
         ) : null}
 
         <div className="bf-panel-section">
-          <p className="bf-section-label">Talk to humans</p>
+          <p className="bf-section-label">Talk to the manager</p>
           <div className="bf-panel-card">
             <ul className="space-y-1.5">
-              {[COMMUNITY_LINKS.discord, COMMUNITY_LINKS.telegramGroup, COMMUNITY_LINKS.telegramChannel].map((link) => (
+              {[COMMUNITY_LINKS.discord, COMMUNITY_LINKS.telegramGroup, COMMUNITY_LINKS.telegramChannel, COMMUNITY_LINKS.telegramManager].map((link) => (
                 <li key={link.href}>
                   <a
                     href={link.href}
                     target="_blank"
                     rel="noreferrer"
-                    className="block text-xs text-[#ece7de] transition hover:text-[#e8571e]"
+                    className="block text-xs text-foreground transition hover:text-ember"
                   >
                     {link.label}
-                    <span className="block text-[10px] font-normal text-[#9aa0a6]">{link.description}</span>
+                    <span className="block text-[10px] font-normal text-muted">{link.description}</span>
                   </a>
                 </li>
               ))}

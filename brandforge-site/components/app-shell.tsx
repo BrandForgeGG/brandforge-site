@@ -12,10 +12,12 @@ const ConversationRail = dynamic(
 export function AppShell({
   title,
   subtitle,
+  actions,
   children,
 }: {
   title: string;
   subtitle: string;
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const [isRailOpen, setIsRailOpen] = useState(false);
@@ -32,26 +34,27 @@ export function AppShell({
         </Suspense>
 
         <main className="flex min-w-0 flex-1 flex-col p-4 sm:p-6 lg:p-8">
-          <header className="mb-6 flex items-center justify-between gap-3 border-b border-white/10 pb-6">
+          <header className="mb-6 flex items-center justify-between gap-3 border-b border-line pb-6">
             <div className="flex min-w-0 items-center gap-3">
               <button
                 type="button"
                 onClick={() => setIsRailOpen(true)}
-                className="rounded-lg p-2 text-[#9aa0a6] transition hover:bg-white/5 hover:text-[#ece7de] md:hidden"
+                className="rounded-lg p-2 text-muted transition hover:bg-overlay hover:text-foreground md:hidden"
                 aria-label="Open navigation"
               >
                 <span aria-hidden="true">≡</span>
               </button>
               <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-[0.25em] text-[#b8763b]">
+                <p className="text-[10px] uppercase tracking-[0.25em] text-copper">
                   BrandForge
                 </p>
-                <h1 className="mt-2 truncate font-serif text-3xl text-[#ece7de]">{title}</h1>
+                <h1 className="mt-2 truncate font-serif text-3xl text-foreground">{title}</h1>
               </div>
             </div>
+            {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
           </header>
 
-          <div className="mb-6 bf-surface p-4 text-sm text-[#9aa0a6]" role="status">
+          <div className="mb-6 bf-surface p-4 text-sm text-muted" role="status">
             {subtitle}
           </div>
 

@@ -42,7 +42,7 @@ test('buildMessage returns null for unknown events', () => {
 test('buildMessage covers every wired event with its key detail', () => {
   const cases = [
     ['review_requested', { percent: 80 }, '80%'],
-    ['application_submitted', { email: 'a@b.co' }, 'a@b.co'],
+    ['application_submitted', {}, 'New operator application received'],
     ['proposal_sent', { title: 'Landing page', totalAmount: 4000, currency: 'EUR' }, 'Landing page'],
     ['proposal_answered', { title: 'Landing page', status: 'accepted' }, 'accepted'],
     ['proposal_countered', { title: 'Landing page', totalAmount: 3200, currency: 'EUR', weeks: '4 weeks', by: 'founder' }, 'founder'],

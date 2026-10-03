@@ -149,7 +149,7 @@ export default function AdminApplicationsPage() {
   if (loading) {
     return (
       <AppShell title="Applications" subtitle="Review specialist applications.">
-        <p className="text-sm text-[#9aa0a6]">Loading applications…</p>
+        <p className="text-sm text-muted">Loading applications…</p>
       </AppShell>
     );
   }
@@ -157,16 +157,16 @@ export default function AdminApplicationsPage() {
   if (!allowed) {
     return (
       <AppShell title="Applications" subtitle="Review specialist applications.">
-        <div className="max-w-xl rounded-2xl border border-white/10 bg-[#1c2024] p-6">
-          <h2 className="font-serif text-2xl text-[#ece7de]">Admins only</h2>
-          <p className="mt-2 text-sm leading-relaxed text-[#9aa0a6]">
+        <div className="max-w-xl rounded-2xl border border-line bg-panel p-6">
+          <h2 className="font-serif text-2xl text-foreground">Admins only</h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
             This page is for BrandForge admins. Sign in with an admin account, or go back to
             chat.
           </p>
           <button
             type="button"
             onClick={() => router.push('/chat')}
-            className="mt-5 rounded-xl border border-white/10 bg-[#14171a] px-4 py-2 text-sm text-[#ece7de] transition hover:border-[#e8571e]"
+            className="mt-5 rounded-xl border border-line bg-background px-4 py-2 text-sm text-foreground transition hover:border-ember"
           >
             Back to chat
           </button>
@@ -190,23 +190,23 @@ export default function AdminApplicationsPage() {
       ) : null}
 
       <section>
-        <h2 className="text-xs uppercase tracking-[0.2em] text-[#8f959b]">
+        <h2 className="text-xs uppercase tracking-[0.2em] text-muted">
           Pending ({pending.length})
         </h2>
 
         {pending.length === 0 ? (
-          <p className="mt-3 text-sm text-[#9aa0a6]">No pending applications.</p>
+          <p className="mt-3 text-sm text-muted">No pending applications.</p>
         ) : (
           <ul className="mt-3 space-y-4">
             {pending.map((app) => (
               <li
                 key={app.id}
-                className="rounded-2xl border border-white/10 bg-[#1c2024] p-5"
+                className="rounded-2xl border border-line bg-panel p-5"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="text-sm font-medium text-[#ece7de]">{app.email}</p>
-                    <p className="text-xs text-[#8f959b]">
+                    <p className="text-sm font-medium text-foreground">{app.email}</p>
+                    <p className="text-xs text-muted">
                       {new Date(app.created_at).toLocaleString()}
                     </p>
                   </div>
@@ -215,7 +215,7 @@ export default function AdminApplicationsPage() {
                       type="button"
                       onClick={() => void act(app.id, 'accept')}
                       disabled={busyId === app.id}
-                      className="rounded-xl bg-[#e8571e] px-4 py-2 text-sm font-semibold text-[#14171a] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Accept
                     </button>
@@ -223,7 +223,7 @@ export default function AdminApplicationsPage() {
                       type="button"
                       onClick={() => void act(app.id, 'decline')}
                       disabled={busyId === app.id}
-                      className="rounded-xl border border-white/10 px-4 py-2 text-sm text-[#9aa0a6] transition hover:border-red-500/40 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-xl border border-line px-4 py-2 text-sm text-muted transition hover:border-red-500/40 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Decline
                     </button>
@@ -234,14 +234,14 @@ export default function AdminApplicationsPage() {
                         setError('');
                       }}
                       disabled={busyId === app.id}
-                      className="rounded-xl border border-white/10 px-4 py-2 text-sm text-[#ece7de] transition hover:border-[#e8571e] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Invite to chat…
                     </button>
                   </div>
                 </div>
 
-                <p className="mt-3 whitespace-pre-wrap rounded-xl border border-white/10 bg-[#14171a] p-4 text-sm text-[#ece7de]">
+                <p className="mt-3 whitespace-pre-wrap rounded-xl border border-line bg-background p-4 text-sm text-foreground">
                   {app.message}
                 </p>
 
@@ -250,7 +250,7 @@ export default function AdminApplicationsPage() {
                     <div className="min-w-[240px] flex-1">
                       <label
                         htmlFor={`invite-${app.id}`}
-                        className="block text-xs uppercase tracking-[0.15em] text-[#8f959b]"
+                        className="block text-xs uppercase tracking-[0.15em] text-muted"
                       >
                         Conversation
                       </label>
@@ -258,7 +258,7 @@ export default function AdminApplicationsPage() {
                         id={`invite-${app.id}`}
                         value={inviteConversation}
                         onChange={(e) => setInviteConversation(e.target.value)}
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-[#14171a] px-3 py-2 text-sm text-[#ece7de] outline-none focus:border-[#e8571e]"
+                        className="mt-2 w-full rounded-xl border border-line bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ember"
                       >
                         <option value="">Select a conversation…</option>
                         {conversations.map((conversation) => (
@@ -272,11 +272,11 @@ export default function AdminApplicationsPage() {
                       type="button"
                       onClick={() => void invite(app.id)}
                       disabled={busyId === app.id || !inviteConversation}
-                      className="rounded-xl bg-[#e8571e] px-4 py-2 text-sm font-semibold text-[#14171a] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Send invite
                     </button>
-                    <p className="w-full text-xs text-[#8f959b]">
+                    <p className="w-full text-xs text-muted">
                       Accept first — invite adds the specialist to the chat as an operator.
                     </p>
                   </div>
@@ -288,22 +288,22 @@ export default function AdminApplicationsPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="text-xs uppercase tracking-[0.2em] text-[#8f959b]">
+        <h2 className="text-xs uppercase tracking-[0.2em] text-muted">
           Reviewed ({reviewed.length})
         </h2>
 
         {reviewed.length === 0 ? (
-          <p className="mt-3 text-sm text-[#9aa0a6]">Nothing reviewed yet.</p>
+          <p className="mt-3 text-sm text-muted">Nothing reviewed yet.</p>
         ) : (
           <ul className="mt-3 space-y-3">
             {reviewed.map((app) => (
               <li
                 key={app.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#1c2024] p-4"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel p-4"
               >
                 <div>
-                  <p className="text-sm text-[#ece7de]">{app.email}</p>
-                  <p className="text-xs text-[#8f959b]">
+                  <p className="text-sm text-foreground">{app.email}</p>
+                  <p className="text-xs text-muted">
                     {app.message.slice(0, 120)}
                     {app.message.length > 120 ? '…' : ''}
                   </p>
@@ -312,7 +312,7 @@ export default function AdminApplicationsPage() {
                   className={`rounded-full border px-3 py-1 text-xs uppercase tracking-[0.15em] ${
                     app.status === 'accepted'
                       ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
-                      : 'border-white/10 bg-[#14171a] text-[#9aa0a6]'
+                      : 'border-line bg-background text-muted'
                   }`}
                 >
                   {app.status}

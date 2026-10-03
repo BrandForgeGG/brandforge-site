@@ -151,7 +151,7 @@ export default function ApplyPage() {
   if (loading) {
     return (
       <AppShell title="Apply" subtitle="Join BrandForge as a specialist.">
-        <p className="text-sm text-[#9aa0a6]">Loading…</p>
+        <p className="text-sm text-muted">Loading…</p>
       </AppShell>
     );
   }
@@ -159,15 +159,15 @@ export default function ApplyPage() {
   if (!signedIn) {
     return (
       <AppShell title="Apply" subtitle="Join BrandForge as a specialist.">
-        <div className="max-w-xl rounded-2xl border border-white/10 bg-[#1c2024] p-6">
-          <h2 className="font-serif text-2xl text-[#ece7de]">Sign in first</h2>
-          <p className="mt-2 text-sm leading-relaxed text-[#9aa0a6]">
+        <div className="max-w-xl rounded-2xl border border-line bg-panel p-6">
+          <h2 className="font-serif text-2xl text-foreground">Sign in first</h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
             Applications are tied to your account. Sign in with Google, then come back here.
           </p>
           <button
             type="button"
             onClick={() => router.push('/login')}
-            className="mt-5 rounded-xl bg-[#e8571e] px-4 py-2 text-sm font-semibold text-[#14171a] transition hover:opacity-95"
+            className="mt-5 rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-95"
           >
             Sign in
           </button>
@@ -181,33 +181,33 @@ export default function ApplyPage() {
 
     return (
       <AppShell title="Apply" subtitle="Join BrandForge as a specialist.">
-        <div className="max-w-xl rounded-2xl border border-white/10 bg-[#1c2024] p-6">
-          <p className="text-xs uppercase tracking-[0.2em] text-[#b8763b]">
+        <div className="max-w-xl rounded-2xl border border-line bg-panel p-6">
+          <p className="text-xs uppercase tracking-[0.2em] text-copper">
             {application.status}
           </p>
-          <h2 className="mt-2 font-serif text-2xl text-[#ece7de]">{copy.title}</h2>
-          <p className="mt-2 text-sm leading-relaxed text-[#9aa0a6]">{copy.body}</p>
+          <h2 className="mt-2 font-serif text-2xl text-foreground">{copy.title}</h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted">{copy.body}</p>
 
           {application.status === 'pending' ? (
-            <div className="mt-5 rounded-xl border border-white/10 bg-[#14171a] p-4">
-              <p className="text-xs uppercase tracking-[0.15em] text-[#8f959b]">What happens next</p>
+            <div className="mt-5 rounded-xl border border-line bg-background p-4">
+              <p className="text-xs uppercase tracking-[0.15em] text-muted">What happens next</p>
               <ol className="mt-3 space-y-3">
                 {NEXT_STEPS.map((step, index) => (
                   <li key={step.title} className="flex gap-3">
                     <span
                       aria-hidden="true"
-                      className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/15 text-[10px] font-semibold text-[#9aa0a6]"
+                      className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-line text-[10px] font-semibold text-muted"
                     >
                       {index + 1}
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-sm font-medium text-[#ece7de]">{step.title}</span>
-                      <span className="mt-0.5 block text-xs leading-relaxed text-[#9aa0a6]">{step.body}</span>
+                      <span className="block text-sm font-medium text-foreground">{step.title}</span>
+                      <span className="mt-0.5 block text-xs leading-relaxed text-muted">{step.body}</span>
                     </span>
                   </li>
                 ))}
               </ol>
-              <p className="mt-4 border-t border-white/10 pt-3 text-xs leading-relaxed text-[#8f959b]">
+              <p className="mt-4 border-t border-line pt-3 text-xs leading-relaxed text-muted">
                 This page always shows your current status — reload it any time to check whether your
                 application has been accepted or declined. You do not need to email us to follow up.
               </p>
@@ -215,18 +215,18 @@ export default function ApplyPage() {
           ) : null}
 
           {application.status === 'accepted' ? (
-            <div className="mt-5 rounded-xl border border-white/10 bg-[#14171a] p-4">
-              <p className="text-xs uppercase tracking-[0.15em] text-[#8f959b]">Your next step</p>
+            <div className="mt-5 rounded-xl border border-line bg-background p-4">
+              <p className="text-xs uppercase tracking-[0.15em] text-muted">Your next step</p>
               <ol className="mt-3 space-y-3">
                 <li className="flex gap-3">
-                  <span aria-hidden="true" className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/15 text-[10px] font-semibold text-[#9aa0a6]">1</span>
-                  <span className="text-xs leading-relaxed text-[#9aa0a6]">
+                  <span aria-hidden="true" className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-line text-[10px] font-semibold text-muted">1</span>
+                  <span className="text-xs leading-relaxed text-muted">
                     Link Telegram in Settings if you want to be told when a chat needs you. It is optional.
                   </span>
                 </li>
                 <li className="flex gap-3">
-                  <span aria-hidden="true" className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/15 text-[10px] font-semibold text-[#9aa0a6]">2</span>
-                  <span className="text-xs leading-relaxed text-[#9aa0a6]">
+                  <span aria-hidden="true" className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-line text-[10px] font-semibold text-muted">2</span>
+                  <span className="text-xs leading-relaxed text-muted">
                     Start a project of your own in chat, or wait to be invited into a founder’s conversation.
                   </span>
                 </li>
@@ -234,9 +234,9 @@ export default function ApplyPage() {
             </div>
           ) : null}
 
-          <div className="mt-5 rounded-xl border border-white/10 bg-[#14171a] p-4">
-            <p className="text-xs uppercase tracking-[0.15em] text-[#8f959b]">Your note</p>
-            <p className="mt-2 whitespace-pre-wrap text-sm text-[#ece7de]">
+          <div className="mt-5 rounded-xl border border-line bg-background p-4">
+            <p className="text-xs uppercase tracking-[0.15em] text-muted">Your note</p>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
               {application.message}
             </p>
           </div>
@@ -244,13 +244,13 @@ export default function ApplyPage() {
           <div className="mt-5 flex flex-wrap gap-3">
             <Link
               href="/chat"
-              className="rounded-xl border border-white/10 bg-[#14171a] px-4 py-2 text-sm text-[#ece7de] transition hover:border-[#e8571e]"
+              className="rounded-xl border border-line bg-background px-4 py-2 text-sm text-foreground transition hover:border-ember"
             >
               Back to chat
             </Link>
             <Link
               href="/"
-              className="rounded-xl border border-white/10 px-4 py-2 text-sm text-[#9aa0a6] transition hover:border-[#e8571e] hover:text-[#ece7de]"
+              className="rounded-xl border border-line px-4 py-2 text-sm text-muted transition hover:border-ember hover:text-foreground"
             >
               Home
             </Link>
@@ -262,9 +262,9 @@ export default function ApplyPage() {
 
   return (
     <AppShell title="Apply" subtitle="Join BrandForge as a specialist.">
-      <div className="max-w-xl rounded-2xl border border-white/10 bg-[#1c2024] p-6">
-        <h2 className="font-serif text-2xl text-[#ece7de]">Work with us</h2>
-        <p className="mt-2 text-sm leading-relaxed text-[#9aa0a6]">
+      <div className="max-w-xl rounded-2xl border border-line bg-panel p-6">
+        <h2 className="font-serif text-2xl text-foreground">Work with us</h2>
+        <p className="mt-2 text-sm leading-relaxed text-muted">
           Designers, developers, reverse engineers and marketers: tell us how you work. An admin
           reviews every application and, if it is a fit, invites you into a project chat.
         </p>
@@ -273,7 +273,7 @@ export default function ApplyPage() {
           <div>
             <label
               htmlFor="apply-message"
-              className="block text-xs uppercase tracking-[0.15em] text-[#8f959b]"
+              className="block text-xs uppercase tracking-[0.15em] text-muted"
             >
               How you work
             </label>
@@ -284,7 +284,7 @@ export default function ApplyPage() {
               rows={6}
               maxLength={4000}
               placeholder="What you build, how you deliver, links to work…"
-              className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-[#14171a] px-4 py-3 text-sm text-[#ece7de] placeholder-[#8f959b] outline-none transition focus:border-[#e8571e]"
+              className="mt-2 w-full resize-none rounded-xl border border-line bg-background px-4 py-3 text-sm text-foreground placeholder-muted outline-none transition focus:border-ember"
             />
           </div>
 
@@ -323,13 +323,13 @@ export default function ApplyPage() {
             <button
               type="submit"
               disabled={submitting || !message.trim()}
-              className="rounded-xl bg-[#e8571e] px-5 py-2 text-sm font-semibold text-[#14171a] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl bg-ember px-5 py-2 text-sm font-semibold text-background transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitting ? 'Submitting…' : 'Submit application'}
             </button>
             <Link
               href="/chat"
-              className="rounded-xl border border-white/10 px-4 py-2 text-sm text-[#9aa0a6] transition hover:border-[#e8571e] hover:text-[#ece7de]"
+              className="rounded-xl border border-line px-4 py-2 text-sm text-muted transition hover:border-ember hover:text-foreground"
             >
               Back to chat
             </Link>

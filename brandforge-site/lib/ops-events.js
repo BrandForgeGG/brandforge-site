@@ -209,19 +209,26 @@ function buildOpsEmbedBody(event, details = {}) {
 }
 
 /**
- * Anonymized one-line public post. Only the four growth-safe moments return text;
- * everything else returns null and is never posted publicly.
+ * Anonymized one-line public post. Only the growth-safe moments return text;
+ * everything else returns null and is never posted publicly. No names, emails,
+ * amounts or counters — the niche (project title) is the only project detail
+ * that may appear, and only for the brief-posted moment.
  */
-function buildPublicPost(event) {
+function buildPublicPost(event, details = {}) {
+  const title = clip(details.title, 60);
   switch (event) {
     case 'brief_posted':
-      return 'A new project brief was posted';
+      return title ? `A new project brief was posted: ${title}` : 'A new project brief was posted';
     case 'match_made':
       return 'A project was matched with a team';
+    case 'contract_signed':
+      return 'A contract was signed — a project is about to be funded';
     case 'contract_funded':
       return 'A project was matched and funded';
     case 'milestone_released':
       return 'A milestone shipped';
+    case 'member_joined':
+      return 'A new member joined the platform';
     default:
       return null;
   }
@@ -369,9 +376,9 @@ async function postViaBot({ channelId, embed, details = {}, env, fetchImpl }) {
  * Milestone shipments prefer the dedicated milestones channel when configured,
  * everything else shares the live feed.
  */
-async function postPublicActivity(event, opts = {}) {
+async function postPublicActivity(event, details = {}, opts = {}) {
   const { env = process.env, fetchImpl = fetch } = opts;
-  const text = buildPublicPost(event);
+  const text = buildPublicPost(event, details);
   if (!text) return { sent: false, reason: 'not_public' };
   const webhookUrl =
     event === 'milestone_released' && env.DISCORD_MILESTONE_URL

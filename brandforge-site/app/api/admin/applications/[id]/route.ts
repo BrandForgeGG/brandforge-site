@@ -86,8 +86,8 @@ export async function POST(
           await sendEmail({
             to,
             subject: 'You are in — BrandForge specialist',
-            text: `Your application was accepted. Open your staff inbox and watch for new briefs — each one you open is yours to propose on.\n\n${inboxUrl}\n\nLink Telegram from the sidebar to get pinged the moment a brief lands.`,
-            html: `<p>Your application was accepted.</p><p>Open your <a href="${inboxUrl}">staff inbox</a> and watch for new briefs — each one you open is yours to propose on.</p><p>Link Telegram from the sidebar to get pinged the moment a brief lands.</p>`,
+             text: `Your application was accepted. Open your staff inbox and watch for new briefs — each one you open is yours to propose on.\n\n${inboxUrl}\n\nLink Telegram from Settings to get pinged the moment a brief lands.`,
+             html: `<p>Your application was accepted.</p><p>Open your <a href="${inboxUrl}">staff inbox</a> and watch for new briefs — each one you open is yours to propose on.</p><p>Link Telegram from Settings to get pinged the moment a brief lands.</p>`,
           });
         }
       } catch {

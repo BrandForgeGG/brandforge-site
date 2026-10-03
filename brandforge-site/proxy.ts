@@ -18,6 +18,7 @@ const protectedRoutes = [
   '/settings',
   '/apply',
   '/admin',
+  '/onboarding',
 ];
 
 export default async function proxy(request: NextRequest) {
@@ -144,7 +145,7 @@ export default async function proxy(request: NextRequest) {
     return withAuthCookies(NextResponse.redirect(new URL('/chat', request.url)));
   }
 
-  // Legacy /signup links now land on the Google-only login card.
+  // Legacy /signup links now land on the split sign-in page.
   if (pathname === '/signup') {
     return withAuthCookies(NextResponse.redirect(new URL('/login', request.url)));
   }
@@ -158,6 +159,7 @@ export const config = {
     '/settings/:path*',
     '/apply',
     '/admin/:path*',
+    '/onboarding',
     '/login',
     '/signup',
     '/api/:path*',
