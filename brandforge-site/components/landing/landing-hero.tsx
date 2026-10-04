@@ -21,7 +21,7 @@ const PACKAGES = [
   { key: 'scale', name: 'Scale', desc: 'Keep building after launch.', items: ['Features', 'AI', 'Automation', 'Growth'], price: 'Custom' },
 ] as const;
 
-export function LandingHero() {
+export function LandingHero({ blueprintEnabled = false }: { blueprintEnabled?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [input, setInput] = useState(() => {
@@ -47,9 +47,20 @@ export function LandingHero() {
     setNotice('');
     setIsSignedOut(false);
 
-    trackEvent('chat_started', { source: 'landing_hero' });
-
     const { data: { session } } = await supabase.auth.getSession();
+
+    // Free-first: a signed-out visitor who describes a problem goes straight to
+    // the blueprint surface (their text travels via sessionStorage), and the
+    // funnel counts blueprint_started server-side instead of chat_started here.
+    if (!session?.user && blueprintEnabled) {
+      try {
+        window.sessionStorage.setItem('brandforge:blueprint-idea', trimmed);
+      } catch {}
+      router.push('/blueprint');
+      return;
+    }
+
+    trackEvent('chat_started', { source: 'landing_hero' });
 
     if (!session?.user) {
       try {
@@ -151,6 +162,16 @@ export function LandingHero() {
           No freelancer hunting. No juggling five people.{' '}
           <span className="text-foreground">One project. One accountable team.</span>
         </p>
+
+        {blueprintEnabled ? (
+          <p className="mt-3 text-sm text-muted">
+            Not ready to start?{' '}
+            <a href="/blueprint" className="text-ember underline-offset-2 hover:underline">
+              Get a free blueprint first
+            </a>{' '}
+            — no account needed.
+          </p>
+        ) : null}
 
         {notice ? (
           <div className="mx-auto mt-4 max-w-xl rounded-2xl border border-ember/30 bg-ember/10 p-5" role={isSignedOut ? 'status' : 'alert'}>

@@ -2998,7 +2998,14 @@ const CAMPAIGN_COLUMNS =
   'id, created_at, updated_at, name, kind, target_url, category, status, notes, live_url, submitted_at';
 
 function isMissingTable(error: { code?: string | null; message: string }): boolean {
-  return error.code === '42P01' || error.message.includes('Could not find the table');
+  // PGRST205: "Could not find the table ... in the schema cache" or a missing
+  // column of a table that exists — both mean the migration has not been
+  // applied (or was applied from an older copy of the file).
+  return (
+    error.code === '42P01' ||
+    error.message.includes('Could not find the table') ||
+    error.message.includes('in the schema cache')
+  );
 }
 
 export async function listMarketingCampaigns(): Promise<
@@ -3265,6 +3272,7 @@ export type BlueprintRow = {
   session_id: string;
   user_id: string | null;
   conversation_id: string | null;
+  input: string;
   version: number;
   status: 'draft' | 'validated' | 'saved' | 'proposed';
   lane: string | null;
@@ -3362,7 +3370,11 @@ export async function recordBlueprintRun(
   return blueprintDbResult(error, 'quota write');
 }
 
-export async function createBlueprintRow(sessionId: string, document: Record<string, unknown>): Promise<
+export async function createBlueprintRow(
+  sessionId: string,
+  document: Record<string, unknown>,
+  input: string
+): Promise<
   | { ok: true; blueprint: Pick<BlueprintRow, 'id' | 'version' | 'status' | 'created_at'> }
   | { ok: false; error: BlueprintDbError }
 > {
@@ -3371,7 +3383,7 @@ export async function createBlueprintRow(sessionId: string, document: Record<str
 
   const { data, error } = await admin
     .from('blueprints')
-    .insert({ session_id: sessionId, document })
+    .insert({ session_id: sessionId, document, input })
     .select('id, version, status, created_at')
     .single();
 
@@ -3391,7 +3403,7 @@ export async function getBlueprintRow(id: string, sessionId: string): Promise<
 
   const { data, error } = await admin
     .from('blueprints')
-    .select('id, session_id, user_id, conversation_id, version, status, lane, confidence, email, document, created_at, updated_at')
+    .select('id, session_id, user_id, conversation_id, input, version, status, lane, confidence, email, document, created_at, updated_at')
     .eq('id', id)
     .eq('session_id', sessionId)
     .maybeSingle();
@@ -3408,6 +3420,7 @@ export async function saveBlueprintResult(input: {
   lane: string | null;
   confidence: string | null;
   status: 'validated' | 'saved' | 'proposed';
+  version?: number;
 }): Promise<
   | { ok: true; blueprint: BlueprintRow }
   | { ok: false; error: BlueprintDbError | 'not_found' }
@@ -3415,23 +3428,53 @@ export async function saveBlueprintResult(input: {
   const admin = createSupabaseAdminClient();
   if (!admin) return { ok: false, error: 'not_configured' };
 
+  const patch: Record<string, unknown> = {
+    document: input.document,
+    lane: input.lane,
+    confidence: input.confidence,
+    status: input.status,
+    updated_at: new Date().toISOString(),
+  };
+  if (Number.isInteger(input.version) && (input.version ?? 0) >= 1) {
+    patch.version = input.version;
+  }
+
   const { data, error } = await admin
     .from('blueprints')
-    .update({
-      document: input.document,
-      lane: input.lane,
-      confidence: input.confidence,
-      status: input.status,
-      updated_at: new Date().toISOString(),
-    })
+    .update(patch)
     .eq('id', input.id)
     .eq('session_id', input.sessionId)
-    .select('id, session_id, user_id, conversation_id, version, status, lane, confidence, email, document, created_at, updated_at');
+    .select('id, session_id, user_id, conversation_id, input, version, status, lane, confidence, email, document, created_at, updated_at');
 
   const mapped = blueprintDbResult(error, 'blueprint save');
   if (!mapped.ok) return mapped;
   const row = ((data ?? []) as BlueprintRow[])[0];
   if (!row) return { ok: false, error: 'not_found' };
   return { ok: true, blueprint: row };
+}
+
+// Immutable history: one row per validated version so a refine never loses the
+// previous document (brief 4.7). Best-effort by design — the validated
+// document is already saved on the blueprint row, so a history failure logs
+// and continues instead of failing the visitor's request.
+export async function createBlueprintRevision(
+  blueprintId: string,
+  version: number,
+  document: Record<string, unknown>
+): Promise<{ ok: true } | { ok: false; error: BlueprintDbError }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { error } = await admin
+    .from('blueprint_revisions')
+    .insert({ blueprint_id: blueprintId, version, document });
+
+  if (error && error.code === '23505') {
+    // Same version recorded twice (e.g. a retried request): the history exists
+    // already, which is exactly what this table is for.
+    return { ok: true };
+  }
+
+  return blueprintDbResult(error, 'revision insert');
 }
 

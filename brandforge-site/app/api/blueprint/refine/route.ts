@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { blueprintConfig } from '@/lib/blueprint-config';
 import { verifySessionToken, consumeQuota } from '@/lib/blueprint-session';
 import { normalizeBlueprint, validateBlueprint } from '@/lib/blueprint-schema';
-import { SYSTEM, buildRunPrompt, buildRepairPrompt, parseModelJson } from '@/lib/blueprint-prompt';
+import { SYSTEM, buildRefinePrompt, buildRepairPrompt, parseModelJson } from '@/lib/blueprint-prompt';
 import { completeJson } from '@/lib/blueprint-llm';
 import {
   createBlueprintRevision,
@@ -16,21 +16,20 @@ import { checkRateLimit } from '@/lib/rate-limit';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-// POST /api/blueprint/run — second half of the anonymous flow: turn a stored
-// draft into a validated blueprint document with one LLM synthesis call (plus
-// at most one repair pass when validation fails).
+// POST /api/blueprint/refine — brief 4.7: the visitor's note revises the
+// validated blueprint into a new version. Same gates as /run (flag, rate,
+// session, quota, ownership), plus: the blueprint must be in a validated
+// state, and the note must be a real note.
 //
-// Gates, in order: feature flag -> per-IP hourly backstop -> JSON body ->
-// signed session cookie -> durable per-session daily quota -> ownership ->
-// LLM -> validation -> save. Quota is only consumed when the provider
-// actually returned work, so an outage never burns a visitor's runs.
-//
-// The document that lands in the response is exactly the document that was
-// validated: normalisation computes the server-side fields (exits, cost,
-// timestamps) and validation then signs off on the final shape.
+// Version discipline: the document is fully re-validated like any run (a
+// refine that breaks the contract is repaired once, then rejected), the
+// version increments, and the previous version is preserved in
+// blueprint_revisions — never overwritten in place.
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const RUN_RATE_LIMIT = { limit: 10, windowMs: 3_600_000 };
+const REFINE_RATE_LIMIT = { limit: 10, windowMs: 3_600_000 };
+const NOTE_MIN_CHARS = 3;
+const NOTE_MAX_CHARS = 500;
 
 function clientIp(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for');
@@ -64,7 +63,7 @@ export async function POST(request: NextRequest) {
   }
 
   const ip = clientIp(request);
-  const rate = checkRateLimit(`bp:run:${ip}`, RUN_RATE_LIMIT);
+  const rate = checkRateLimit(`bp:refine:${ip}`, REFINE_RATE_LIMIT);
   if (!rate.allowed) {
     return NextResponse.json(
       { error: 'Too many requests, try again later.', retryAfterSeconds: rate.retryAfterSeconds },
@@ -72,7 +71,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: { blueprintId?: unknown } = {};
+  let body: { blueprintId?: unknown; note?: unknown } = {};
   try {
     body = await request.json();
   } catch {
@@ -84,7 +83,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'blueprintId must be a uuid.' }, { status: 400 });
   }
 
-  // Session: an HMAC-valid cookie that still resolves to a live row.
+  const note = typeof body.note === 'string' ? body.note.trim() : '';
+  if (note.length < NOTE_MIN_CHARS || note.length > NOTE_MAX_CHARS) {
+    return NextResponse.json(
+      { error: `Tell us what to change in ${NOTE_MIN_CHARS}–${NOTE_MAX_CHARS} characters.` },
+      { status: 400 }
+    );
+  }
+
   const cookie = request.cookies.get(config.sessionCookieName)?.value ?? null;
   const sessionId = verifySessionToken(cookie, config.sessionSecret);
   if (!sessionId) {
@@ -96,10 +102,8 @@ export async function POST(request: NextRequest) {
   if (!sessionResult.session) {
     return NextResponse.json({ error: 'Session expired, start again.' }, { status: 401 });
   }
-  const session = sessionResult.session;
 
-  // Durable daily quota per session (UTC day, rolled in lib/blueprint-session).
-  const quota = consumeQuota(session, { limit: config.runsPerSessionPerDay });
+  const quota = consumeQuota(sessionResult.session, { limit: config.runsPerSessionPerDay });
   if (!quota.allowed) {
     return NextResponse.json(
       { error: 'Daily blueprint limit reached for this device. Come back tomorrow.', retryAfterSeconds: 3600 },
@@ -113,8 +117,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Blueprint not found.' }, { status: 404 });
   }
   const blueprint = owned.blueprint;
-  if (blueprint.status !== 'draft' && blueprint.status !== 'validated') {
-    return NextResponse.json({ error: 'This blueprint is locked after conversion.' }, { status: 409 });
+  if (blueprint.status !== 'validated') {
+    return NextResponse.json({ error: 'Only a validated blueprint can be refined.' }, { status: 409 });
   }
 
   const apiKey = process.env.OPENROUTER_API_KEY;
@@ -123,11 +127,14 @@ export async function POST(request: NextRequest) {
   }
 
   const seed = blueprint.document as { sources?: unknown };
-  const prompt = buildRunPrompt({
+  const prompt = buildRefinePrompt({
     input: blueprint.input,
     sources: Array.isArray(seed.sources) ? (seed.sources as Array<Record<string, unknown>>) : [],
+    document: blueprint.document,
+    note,
   });
 
+  const nextVersion = blueprint.version + 1;
   let workDone = false;
 
   try {
@@ -142,7 +149,7 @@ export async function POST(request: NextRequest) {
       });
       workDone = true;
     } catch (error) {
-      console.error('Blueprint run: primary LLM call failed:', error instanceof Error ? error.message : error);
+      console.error('Blueprint refine: primary LLM call failed:', error instanceof Error ? error.message : error);
       return NextResponse.json(
         { error: 'The planner is busy right now. Try again in a moment.' },
         { status: 502 }
@@ -150,14 +157,11 @@ export async function POST(request: NextRequest) {
     }
 
     const raw = parseModelJson(completion.text);
-    let document = raw ? normalizeBlueprint(raw, { version: blueprint.version, cost: completion }) : null;
+    let document = raw ? normalizeBlueprint(raw, { version: nextVersion, cost: completion }) : null;
     let validation = document
       ? validateBlueprint(document, { fetchedUrls: [] })
       : { ok: false, errors: ['model output was not a JSON object'] };
 
-    // One repair pass (brief 4.6): everything the validator rejected — up to
-    // and including an unparseable response — goes back to the model once. A
-    // second failure is terminal for this attempt.
     if (!validation.ok) {
       let repair;
       try {
@@ -169,14 +173,14 @@ export async function POST(request: NextRequest) {
           timeoutMs: config.llmTimeoutMs,
         });
       } catch (error) {
-        console.error('Blueprint run: repair LLM call failed:', error instanceof Error ? error.message : error);
+        console.error('Blueprint refine: repair LLM call failed:', error instanceof Error ? error.message : error);
         repair = null;
       }
 
       if (repair) {
         const repairedRaw = parseModelJson(repair.text);
         const repaired = repairedRaw
-          ? normalizeBlueprint(repairedRaw, { version: blueprint.version, cost: repair })
+          ? normalizeBlueprint(repairedRaw, { version: nextVersion, cost: repair })
           : null;
         const repairedValidation = repaired
           ? validateBlueprint(repaired, { fetchedUrls: [] })
@@ -185,15 +189,15 @@ export async function POST(request: NextRequest) {
           document = repaired;
           validation = repairedValidation;
         } else {
-          console.error('Blueprint run: repair still invalid:', repairedValidation.errors.slice(0, 8).join(' | '));
+          console.error('Blueprint refine: repair still invalid:', repairedValidation.errors.slice(0, 8).join(' | '));
         }
       }
     }
 
     if (!document || !validation.ok) {
-      console.error('Blueprint run: validation failed after repair:', validation.errors.slice(0, 8).join(' | '));
+      console.error('Blueprint refine: validation failed after repair:', validation.errors.slice(0, 8).join(' | '));
       return NextResponse.json(
-        { error: 'Could not assemble a blueprint from that description. Try rephrasing it.' },
+        { error: 'That change could not be applied cleanly. Word it differently and try again.' },
         { status: 502 }
       );
     }
@@ -205,14 +209,13 @@ export async function POST(request: NextRequest) {
       lane: String(document.lane),
       confidence: document.confidence === null ? null : String(document.confidence),
       status: 'validated',
+      version: nextVersion,
     });
     if (!saved.ok) return dbError(saved.error);
 
-    // History: every validated version lands in blueprint_revisions (v1 here,
-    // v2+ in refine) so nothing is ever overwritten without a trace.
-    const revision = await createBlueprintRevision(blueprintId, saved.blueprint.version, document);
+    const revision = await createBlueprintRevision(blueprintId, nextVersion, document);
     if (!revision.ok) {
-      console.error('Blueprint run: revision insert failed:', revision.error);
+      console.error('Blueprint refine: revision insert failed:', revision.error);
     }
 
     return NextResponse.json({
@@ -224,15 +227,13 @@ export async function POST(request: NextRequest) {
       document: saved.blueprint.document,
     });
   } finally {
-    // Consume the run only when the provider actually did work: an outage
-    // costs us nothing to retry from the visitor's side.
     if (workDone) {
       const persisted = await recordBlueprintRun(sessionId, {
         quotaDate: quota.quotaDate,
         quotaCount: quota.quotaCount,
       });
       if (!persisted.ok) {
-        console.error('Blueprint run: quota write failed:', persisted.error);
+        console.error('Blueprint refine: quota write failed:', persisted.error);
       }
     }
   }

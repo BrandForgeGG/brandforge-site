@@ -8,6 +8,7 @@ import { LandingAiFlow } from '@/components/landing/landing-ai-flow';
 import { LandingProof } from '@/components/landing/landing-proof';
 import { BetaBanner } from '@/components/beta-banner';
 import { SiteFooter } from '@/components/site-footer';
+import { blueprintConfig } from '@/lib/blueprint-config';
 
 export const metadata = {
   title: 'BrandForge — Turn an idea into something real',
@@ -39,7 +40,7 @@ export default function Home() {
       <LandingNav />
       <main>
         <Suspense>
-          <LandingHero />
+          <LandingHero blueprintEnabled={blueprintConfig().enabled} />
         </Suspense>
         <LandingAiFlow />
         <LandingSections />

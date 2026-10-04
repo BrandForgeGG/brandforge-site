@@ -1,5 +1,6 @@
 -- Blueprint Engine (master brief 2026-10-04, slices S1-S2): anonymous sessions
--- and blueprint documents. PROPOSED — awaiting founder apply via SQL editor.
+-- and blueprint documents. STATUS: an earlier copy was applied 2026-10-04 (before `input`
+-- existed); this version adds an idempotent ALTER, so re-running the whole file completes it.
 --
 -- WHAT THIS DOES: three tables.
 -- * blueprint_sessions — an anonymous visitor: an opaque id (carried in the
@@ -51,6 +52,10 @@ create table if not exists public.blueprints (
   session_id uuid not null references public.blueprint_sessions(id) on delete cascade,
   user_id uuid references auth.users(id) on delete set null,
   conversation_id uuid references public.conversations(id) on delete set null,
+  -- The visitor's original intake, kept out of the JSONB document on purpose:
+  -- refine prompts need the source text even after `run` replaces the draft,
+  -- and user text must never enter the document the validator scans.
+  input text not null default '',
   version integer not null default 1,
   status text not null default 'draft'
     check (status in ('draft', 'validated', 'saved', 'proposed')),
@@ -83,6 +88,13 @@ create index if not exists blueprints_conversation_id_idx
   on public.blueprints (conversation_id) where conversation_id is not null;
 create index if not exists blueprint_revisions_blueprint_idx
   on public.blueprint_revisions (blueprint_id, version desc);
+
+-- Additive for re-runs: 0022 may already be applied from an earlier copy of
+-- this file (before the input column existed). `create table if not exists`
+-- cannot add a column to a live table, so the column ships as an idempotent
+-- ALTER — safe to run on a fresh database and on an already-applied one.
+alter table public.blueprints
+  add column if not exists input text not null default '';
 
 -- Locked down by default: RLS enabled with NO policies, so anon/authenticated
 -- clients are denied everything and only the service role touches these tables.

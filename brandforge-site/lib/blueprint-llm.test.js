@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { SYSTEM, buildRunPrompt, buildRepairPrompt, parseModelJson } = require('./blueprint-prompt.js');
+const { SYSTEM, buildRunPrompt, buildRefinePrompt, buildRepairPrompt, parseModelJson } = require('./blueprint-prompt.js');
 const { completeJson } = require('./blueprint-llm.js');
 
 test('the system prompt pins the contract the validator enforces', () => {
@@ -25,6 +25,23 @@ test('the run prompt carries the intake and the source pack ids verbatim', () =>
 
   const empty = buildRunPrompt({ input: 'x', sources: [] });
   assert.equal(empty.includes('(none)'), true);
+});
+
+test('the refine prompt carries intake, current document and the note', () => {
+  const prompt = buildRefinePrompt({
+    input: 'A booking page for my restaurant',
+    sources: [{ id: 'src_input', kind: 'text', label: 'booking page' }],
+    document: { lane: 'deliver_now', mirror: 'You want a booking page.' },
+    note: 'Make the timeline tighter',
+  });
+  assert.equal(prompt.includes('A booking page for my restaurant'), true);
+  assert.equal(prompt.includes('"lane": "deliver_now"'), true);
+  assert.equal(prompt.includes('Make the timeline tighter'), true);
+  assert.equal(prompt.indexOf('CURRENT BLUEPRINT') < prompt.indexOf('REFINEMENT NOTE'), true);
+
+  // A hostile note is clipped to the cap, never passed through whole.
+  const long = buildRefinePrompt({ input: 'x', sources: [], document: {}, note: 'a'.repeat(900) });
+  assert.equal(long.includes('a'.repeat(501)), false);
 });
 
 test('the repair prompt lists every validator error and the rejected output', () => {

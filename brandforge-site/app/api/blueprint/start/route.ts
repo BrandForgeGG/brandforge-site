@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
     sessionId = created.session.id;
   }
 
-  const draft = await createBlueprintRow(sessionId, seedBlueprintDocument(text));
+  const draft = await createBlueprintRow(sessionId, seedBlueprintDocument(text), text);
   if (!draft.ok) return dbError(draft.error);
 
   // First step of the free-first journey. Recorded from the server so the

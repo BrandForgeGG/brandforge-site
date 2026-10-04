@@ -1,10 +1,12 @@
 import type { MetadataRoute } from 'next';
+import { blueprintConfig } from '@/lib/blueprint-config';
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://brandforge.gg';
 
-// Public pages only: the product itself (/chat, /settings, /admin) requires sign-in
+// Public pages only: the product itself (/chat, /settings /admin) requires sign-in
 // and stays out of the index. /login is deliberately omitted — it is a door, not
-// content, and a ranked login page helps nobody.
+// content, and a ranked login page helps nobody. /blueprint appears only while
+// BLUEPRINT_ENABLED is on, so a dormant surface is never advertised to crawlers.
 export default function sitemap(): MetadataRoute.Sitemap {
   const pages: Array<{ path: string; frequency: 'weekly' | 'monthly'; priority: number }> = [
     { path: '/', frequency: 'weekly', priority: 1.0 },
@@ -18,6 +20,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '/privacy', frequency: 'monthly', priority: 0.3 },
     { path: '/refunds', frequency: 'monthly', priority: 0.3 },
   ];
+  if (blueprintConfig().enabled) {
+    pages.splice(3, 0, { path: '/blueprint', frequency: 'weekly', priority: 0.9 });
+  }
   return pages.map(({ path, frequency, priority }) => ({
     url: `${SITE}${path}`,
     changeFrequency: frequency,

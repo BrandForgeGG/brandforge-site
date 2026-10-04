@@ -85,6 +85,22 @@ function buildRepairPrompt({ previousJson, errors }) {
   ].join('\n');
 }
 
+// Refine (brief 4.7): same contract, same system prompt — the current document
+// plus the visitor's note. The model revises in place; the server still
+// re-validates, re-normalises and bumps the version. Never trust a refine to
+// "only touch one thing".
+function buildRefinePrompt({ input, sources, document, note }) {
+  return [
+    buildRunPrompt({ input, sources }),
+    '',
+    'CURRENT BLUEPRINT (revise this; keep everything the note does not touch):',
+    JSON.stringify(document ?? {}, null, 2).slice(0, 24000),
+    '',
+    'REFINEMENT NOTE (apply exactly this, nothing else):',
+    String(note ?? '').trim().slice(0, 500),
+  ].join('\n');
+}
+
 // Pull the JSON object out of whatever the model actually returned: strip
 // fences, tolerate leading prose, take the outermost braces. Unparseable -> null.
 function parseModelJson(raw) {
@@ -110,4 +126,4 @@ function parseModelJson(raw) {
   }
 }
 
-module.exports = { SYSTEM, buildRunPrompt, buildRepairPrompt, parseModelJson };
+module.exports = { SYSTEM, buildRunPrompt, buildRefinePrompt, buildRepairPrompt, parseModelJson };
