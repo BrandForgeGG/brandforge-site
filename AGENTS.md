@@ -395,6 +395,19 @@ BrandForge/
   credential.helper= -c "credential.helper=!C:/Users/user/AppData/Local/Programs/gh/bin/gh.exe
   auth git-credential" push origin main` — plain `git push` fails with "Repository not found"
   (no stored https credentials; gh is authed as BrandForgeGG).
+  **Delivery read-back (2026-10-04)**: every post from that night was confirmed *inside the
+  channel* with a temporary CRON_SECRET-guarded probe (deployed, used, deleted — 404 after):
+  the release embed in dev-log + public-changelog and the milestone draft in milestones, with
+  Discord's own message ids/timestamps. Gotchas: (1) `vercel env pull`/`env run` return the
+  literal string `[SENSITIVE]` for vars typed **Secret** — the CLI can only write them, never
+  read; values live in the dashboard (or re-add via pipe from a file); (2) the bot
+  (Execution Assistant) has **no Message Content intent**, so `GET /channels/{id}/messages`
+  returns `content:""` and empty embeds — read via the webhook's own token instead
+  (`GET /webhooks/{id}/{token}/messages/{messageId}`), which ignores intents; (3) `vercel
+  logs` effectively retains ~30 minutes (since/limit are accepted but the backend truncates) —
+  verify deliveries via GitHub hook deliveries or a read-back probe, never logs; (4) all three
+  webhooks are named "Execution Assistant" (created by the app) but route differently
+  (tails 4526 devlog / 1885 changelog / 7288 milestones).
 - **Open auth**: any Google account can sign in (login allowlist removed). Staff/admin access
   is `profiles.role` (`admin` / `operator`), not email.
 - Operator pipeline: specialists apply at `/apply`; admin reviews at `/admin/applications`
