@@ -42,6 +42,19 @@ BrandForge/
 
 - Live: https://brandforge.gg (Vercel, `brandforge-site` production).
 - Chat-first product: landing -> chat -> AI-structured project -> human proposal -> escrow.
+- **Blueprint Engine S0–S2 (2026-10-04, code complete, flag-dormant in prod)**: master brief v1.0
+  (sections 0–5 only — **sections 6–18 still need pasting**) Phase 0 audit + first three slices as
+  code: `lib/blueprint-{config,session,schema,prompt,llm}.js` (+`.d.ts`, 38 new tests → **348/348**,
+  tsc/eslint/build green), H7 wrappers in `project-db.ts`, `POST /api/blueprint/start` (anonymous
+  HMAC `bf_bp` cookie session + draft row, no auth.users) and `POST /api/blueprint/run` (one real
+  synthesis call + one repair pass, whole-document validation: lane/confidence/estimate pairing,
+  word caps, guarantee-language ban, server-computed exits; quota consumed only when the provider
+  did work), 7 funnel events (`blueprint_*` + `quick_win_*`), migration
+  **`0022_blueprint_sessions_and_blueprints.sql` PROPOSED — founder must run it in the SQL editor**.
+  Prod deploy leaves `BLUEPRINT_ENABLED` **absent (off)** → routes 404 until (a) 0022 applied and
+  (b) `BLUEPRINT_ENABLED=true` set in Vercel — deploy order is safe either way. Real-LLM e2e passed
+  first try (gpt-4o-mini: valid `deliver_now` document, $0.0007). Next: founder applies 0022 +
+  pastes brief sections 6–18, then S3 (landing surface, gate, `/blueprint` page).
 - **Chat Workspace UX 2.0 (2026-09-26, deployed to brandforge.gg)**: conversation-centric 3-pane workspace.
   AI answers render as editorial content through a sanitising markdown renderer; each turn carries a
   collapsible **Thoughts** strip built only from `activity` SSE events (steps that really ran);

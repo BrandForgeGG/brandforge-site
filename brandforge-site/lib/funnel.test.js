@@ -8,11 +8,19 @@ test('the funnel event list is the closed set the brief asked for', () => {
     'proposal_received', 'counter_offered', 'proposal_accepted', 'funding_submitted', 'funding_verified',
     'milestone_completed', 'payment_released', 'repeat_project_started',
     'apply_started', 'apply_submitted', 'application_approved',
+    'blueprint_started', 'blueprint_first_screen', 'blueprint_email_captured', 'blueprint_exit_tapped',
+    'blueprint_proposed', 'quick_win_started', 'quick_win_delivered',
   ]) {
     assert.equal(isFunnelEvent(event), true, event);
   }
   assert.equal(isFunnelEvent('nope'), false);
   assert.equal(isFunnelEvent(''), false);
+});
+
+test('blueprint lane and gate experiment survive sanitizing', () => {
+  const cleaned = sanitizeProperties({ lane: 'deliver_now', gate: 'before_price' });
+  assert.equal(cleaned.lane, 'deliver_now');
+  assert.equal(cleaned.gate, 'before_price');
 });
 
 test('the negotiation round survives sanitizing as a small int', () => {

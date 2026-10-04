@@ -322,6 +322,51 @@ CREATE TABLE blockers (
 );
 ```
 
+### blueprint_sessions, blueprints, blueprint_revisions (migration 0022 — awaiting founder apply)
+
+Free-first Blueprint Engine storage (anonymous visitors, no auth.users rows). RLS **on with zero
+policies** like `marketing_posts`: the service role (`lib/project-db.ts`, H7 allowlist) is the only
+reader/writer; clients never touch these tables. Code is dormant (`BLUEPRINT_ENABLED` unset) until
+the migration is applied.
+
+```sql
+-- blueprint_sessions: one anonymous visitor (id carried in the HMAC-signed bf_bp cookie).
+CREATE TABLE blueprint_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  quota_date DATE NOT NULL DEFAULT (now() at time zone 'utc')::date,  -- UTC-day run quota
+  quota_count INTEGER NOT NULL DEFAULT 0,
+  ip_hash TEXT,                      -- salted HMAC, per-IP hourly cap
+  merged_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,   -- set on sign-in (S6)
+  purge_after TIMESTAMPTZ            -- hard-delete date for anon sessions
+);
+
+-- blueprints: the document itself (JSONB), owned by a session until conversion.
+CREATE TABLE blueprints (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id UUID NOT NULL REFERENCES blueprint_sessions(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  conversation_id UUID REFERENCES conversations(id) ON DELETE SET NULL,  -- only after conversion
+  version INTEGER NOT NULL DEFAULT 1,
+  status TEXT NOT NULL DEFAULT 'draft',   -- draft | validated | saved | proposed
+  lane TEXT, confidence TEXT, email TEXT,
+  document JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- blueprint_revisions: immutable validated history (refine keeps the old version).
+CREATE TABLE blueprint_revisions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  blueprint_id UUID NOT NULL REFERENCES blueprints(id) ON DELETE CASCADE,
+  version INTEGER NOT NULL,
+  document JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (blueprint_id, version)
+);
+```
+
 ## Key Relationships
 
 ```

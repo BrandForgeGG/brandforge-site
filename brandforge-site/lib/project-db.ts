@@ -3237,3 +3237,201 @@ export async function runDueMarketingPosts(): Promise<MarketingRunResult> {
   return { ran: true, due: rows.length, posted, failed, retried, results };
 }
 
+// ---------------------------------------------------------------------------
+// Blueprint Engine (master brief 2026-10-04) — H7 service-role boundary.
+//
+// Anonymous sessions and blueprint documents. RLS is on with zero policies
+// (migration 0022), so these wrappers are the only path in or out — routes
+// never import the admin client themselves.
+//
+// Every result is a discriminated union: `pending_migration` means 0022 has
+// not been applied yet, which routes surface as a 503 with a hint instead of a
+// silent failure.
+// ---------------------------------------------------------------------------
+
+export type BlueprintSessionRow = {
+  id: string;
+  created_at: string;
+  last_seen_at: string;
+  quota_date: string;
+  quota_count: number;
+  ip_hash: string | null;
+  merged_user_id: string | null;
+  purge_after: string | null;
+};
+
+export type BlueprintRow = {
+  id: string;
+  session_id: string;
+  user_id: string | null;
+  conversation_id: string | null;
+  version: number;
+  status: 'draft' | 'validated' | 'saved' | 'proposed';
+  lane: string | null;
+  confidence: string | null;
+  email: string | null;
+  document: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+type BlueprintDbError = 'not_configured' | 'pending_migration' | 'failed';
+
+function blueprintDbResult(error: { code?: string | null; message: string } | null, label: string):
+  | { ok: true }
+  | { ok: false; error: BlueprintDbError } {
+  if (!error) return { ok: true };
+  console.error(`Blueprint ${label} error:`, error.message);
+  if (isMissingTable(error)) return { ok: false, error: 'pending_migration' };
+  return { ok: false, error: 'failed' };
+}
+
+export async function createBlueprintSession(input: {
+  ipHash: string | null;
+  retentionDays: number;
+}): Promise<{ ok: true; session: BlueprintSessionRow } | { ok: false; error: BlueprintDbError }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const purgeAfter = new Date(Date.now() + input.retentionDays * 86400_000).toISOString();
+  const { data, error } = await admin
+    .from('blueprint_sessions')
+    .insert({ ip_hash: input.ipHash, purge_after: purgeAfter })
+    .select('id, created_at, last_seen_at, quota_date, quota_count, ip_hash, merged_user_id, purge_after')
+    .single();
+
+  const mapped = blueprintDbResult(error, 'session create');
+  if (!mapped.ok) return mapped;
+  return { ok: true, session: data as BlueprintSessionRow };
+}
+
+export async function getBlueprintSession(id: string): Promise<
+  | { ok: true; session: BlueprintSessionRow | null }
+  | { ok: false; error: BlueprintDbError }
+> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('blueprint_sessions')
+    .select('id, created_at, last_seen_at, quota_date, quota_count, ip_hash, merged_user_id, purge_after')
+    .eq('id', id)
+    .maybeSingle();
+
+  const mapped = blueprintDbResult(error, 'session read');
+  if (!mapped.ok) return mapped;
+  return { ok: true, session: (data as BlueprintSessionRow | null) ?? null };
+}
+
+// Per-IP hourly limit: counts sessions created from one ip hash since a
+// timestamp. The hash is salted HMAC, so this counts, never identifies.
+export async function countBlueprintSessionsSince(ipHash: string, sinceIso: string): Promise<
+  | { ok: true; count: number }
+  | { ok: false; error: BlueprintDbError }
+> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { count, error } = await admin
+    .from('blueprint_sessions')
+    .select('id', { count: 'exact', head: true })
+    .eq('ip_hash', ipHash)
+    .gte('created_at', sinceIso);
+
+  const mapped = blueprintDbResult(error, 'session count');
+  if (!mapped.ok) return mapped;
+  return { ok: true, count: count ?? 0 };
+}
+
+export async function recordBlueprintRun(
+  id: string,
+  quota: { quotaDate: string; quotaCount: number }
+): Promise<{ ok: true } | { ok: false; error: BlueprintDbError }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { error } = await admin
+    .from('blueprint_sessions')
+    .update({
+      quota_date: quota.quotaDate,
+      quota_count: quota.quotaCount,
+      last_seen_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+
+  return blueprintDbResult(error, 'quota write');
+}
+
+export async function createBlueprintRow(sessionId: string, document: Record<string, unknown>): Promise<
+  | { ok: true; blueprint: Pick<BlueprintRow, 'id' | 'version' | 'status' | 'created_at'> }
+  | { ok: false; error: BlueprintDbError }
+> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('blueprints')
+    .insert({ session_id: sessionId, document })
+    .select('id, version, status, created_at')
+    .single();
+
+  const mapped = blueprintDbResult(error, 'blueprint create');
+  if (!mapped.ok) return mapped;
+  return { ok: true, blueprint: data as Pick<BlueprintRow, 'id' | 'version' | 'status' | 'created_at'> };
+}
+
+// Owned-by-session read: the eq on session_id is the IDOR guard — a blueprint
+// id from another visitor's cookie comes back as not_found, not as data.
+export async function getBlueprintRow(id: string, sessionId: string): Promise<
+  | { ok: true; blueprint: BlueprintRow | null }
+  | { ok: false; error: BlueprintDbError }
+> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('blueprints')
+    .select('id, session_id, user_id, conversation_id, version, status, lane, confidence, email, document, created_at, updated_at')
+    .eq('id', id)
+    .eq('session_id', sessionId)
+    .maybeSingle();
+
+  const mapped = blueprintDbResult(error, 'blueprint read');
+  if (!mapped.ok) return mapped;
+  return { ok: true, blueprint: (data as BlueprintRow | null) ?? null };
+}
+
+export async function saveBlueprintResult(input: {
+  id: string;
+  sessionId: string;
+  document: Record<string, unknown>;
+  lane: string | null;
+  confidence: string | null;
+  status: 'validated' | 'saved' | 'proposed';
+}): Promise<
+  | { ok: true; blueprint: BlueprintRow }
+  | { ok: false; error: BlueprintDbError | 'not_found' }
+> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('blueprints')
+    .update({
+      document: input.document,
+      lane: input.lane,
+      confidence: input.confidence,
+      status: input.status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', input.id)
+    .eq('session_id', input.sessionId)
+    .select('id, session_id, user_id, conversation_id, version, status, lane, confidence, email, document, created_at, updated_at');
+
+  const mapped = blueprintDbResult(error, 'blueprint save');
+  if (!mapped.ok) return mapped;
+  const row = ((data ?? []) as BlueprintRow[])[0];
+  if (!row) return { ok: false, error: 'not_found' };
+  return { ok: true, blueprint: row };
+}
+

@@ -39,6 +39,8 @@ const ALLOWED_PROPERTY_KEYS = new Set([
   'task_count',
   'round',            // negotiation round (counter_round 1|2), a small int enum
   'signed_in',
+  'lane',             // blueprint triage lane (deliver_now | scope_first | reframe | ...)
+  'gate',             // blueprint email-gate position experiment (before_price | after_price | at_save)
 ]);
 
 // The complete, closed set of events we record. Anything else is rejected so a typo at a call site
@@ -60,6 +62,14 @@ const FUNNEL_EVENTS = Object.freeze([
   'milestone_completed',
   'payment_released',
   'repeat_project_started',
+  // Blueprint Engine funnel (master brief 2026-10-04, free-first journey)
+  'blueprint_started',
+  'blueprint_first_screen',
+  'blueprint_email_captured',
+  'blueprint_exit_tapped',
+  'blueprint_proposed',
+  'quick_win_started',
+  'quick_win_delivered',
   // Specialist funnel
   'apply_started',
   'apply_submitted',
