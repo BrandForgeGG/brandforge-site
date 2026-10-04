@@ -151,7 +151,17 @@ function normalizeBlueprint(raw, { version = 1, cost = null, now = Date.now() } 
     mirror: typeof raw.mirror === 'string' ? raw.mirror : '',
     sources: Array.isArray(raw.sources) ? raw.sources.filter(isPlainObject) : [],
     findings: Array.isArray(raw.findings) ? raw.findings.filter(isPlainObject) : [],
-    blocks: Array.isArray(raw.blocks) ? raw.blocks.filter(isPlainObject) : [],
+    // Estimate shape is server territory: `kind: 'fixed'` means one number, so
+    // a model that also emits `high` (observed repeating through the repair
+    // pass on live runs) has its redundant bound dropped here — dropping noise
+    // is normalisation; inventing a bound would not be.
+    blocks: Array.isArray(raw.blocks)
+      ? raw.blocks
+          .filter(isPlainObject)
+          .map((block) =>
+            block.type === 'estimate' && block.kind === 'fixed' ? { ...block, high: null } : block
+          )
+      : [],
     quickWins,
     clarifyingQuestion: isPlainObject(raw.clarifyingQuestion) ? raw.clarifyingQuestion : null,
     exits: exitsForLane(lane, quickWins.length),

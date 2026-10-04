@@ -189,6 +189,37 @@ test('estimate kind is pinned per lane and the label is exact', () => {
   assert.match(validateBlueprint(wrong).errors.join(), /lane deliver_now requires estimate kind/);
 });
 
+test('a fixed estimate carrying a model-emitted high is normalised away', () => {
+  // Live observation (prod, 2026-10-04): the model emitted kind: 'fixed'
+  // together with a high bound, and repeated the same mistake through the
+  // repair pass — both attempts failed validation with the same single
+  // error. The normaliser now drops the redundant bound before validation.
+  const noisy = JSON.parse(JSON.stringify(baseDoc()));
+  const estimate = noisy.blocks.find((block) => block.type === 'estimate');
+  estimate.high = 4500;
+
+  const doc = normalizeBlueprint(noisy, {
+    version: 1,
+    cost: { tokensIn: 1, tokensOut: 1, searches: 0, usdEstimate: 0.01 },
+    now: NOW,
+  });
+  const normalised = doc.blocks.find((block) => block.type === 'estimate');
+  assert.equal(normalised.high, null, 'fixed keeps a single number');
+  assert.equal(normalised.low, 4000, 'the fixed low is untouched');
+  assert.deepEqual(validateBlueprint(doc).errors, []);
+
+  // Non-fixed kinds keep their bounds — normalisation must not overreach.
+  const ranged = JSON.parse(
+    JSON.stringify(baseDoc({ lane: 'scope_first', confidence: 'needs_discovery' }))
+  );
+  const rangedEst = ranged.blocks.find((block) => block.type === 'estimate');
+  rangedEst.kind = 'discovery_sprint';
+  rangedEst.low = 800;
+  rangedEst.high = 1500;
+  const doc2 = normalizeBlueprint(ranged, { version: 1, cost: { usdEstimate: 0.01 }, now: NOW });
+  assert.equal(doc2.blocks.find((block) => block.type === 'estimate').high, 1500);
+});
+
 test('guarantee language is blocked anywhere, honest negations pass', () => {
   assert.equal(hasGuaranteeLanguage('We guarantee results in 30 days'), true);
   assert.equal(hasGuaranteeLanguage('100% success rate'), true);
