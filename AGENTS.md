@@ -64,9 +64,11 @@ BrandForge/
   HMAC `bf_bp` cookie session + draft row, no auth.users) and `POST /api/blueprint/run` (one real
   synthesis call + one repair pass, whole-document validation: lane/confidence/estimate pairing,
   word caps, guarantee-language ban, server-computed exits; quota consumed only when the provider
-  did work),   7 funnel events (`blueprint_*` + `quick_win_*`), migration
+  did work), 7 funnel events (`blueprint_*` + `quick_win_*`), migration
   **`0022_blueprint_sessions_and_blueprints.sql` applied by founder 2026-10-04 — but the
-  pre-`input` copy; the file's idempotent ALTER must be re-run before first run**.
+  pre-`input` copy; the file's idempotent ALTER must be re-run before first run — re-run proven
+  on PGlite (15/15: fresh apply, prod-state re-run old→new adds `input` with no duplicate columns
+  or indexes, double re-run is a clean no-op; harness `run0022.js`)**.
   Prod deploy leaves `BLUEPRINT_ENABLED` **absent (off)** → routes 404 until (a) 0022 complete and
   (b) `BLUEPRINT_ENABLED=true` set in Vercel — deploy order is safe either way. Real-LLM e2e passed
   first try (gpt-4o-mini: valid `deliver_now` document, $0.0007). S3 (landing surface + `/blueprint`
