@@ -376,6 +376,25 @@ BrandForge/
   tells us to send), **draft discard** added (`DELETE /api/admin/marketing/[id]`, queued/
   failed only, posted history protected — the queue was create-only before), and a
   2026-10-03 blog entry ("The landing page finally proves it"). e2e 9/9 + auth probe green.
+- **Publish go-live + repo pushed + v0.1.1 + daily cron (2026-10-03, founder's three yeses,
+  all verified)**: the three drafts **posted for real** (`due:3, posted:3, failed:0`).
+  **Cron**: `vercel.json` → `/api/cron/marketing` daily at **10:00 UTC** (`0 10 * * *` — Vercel
+  Hobby rejects anything more frequent than daily), guarded by `CRON_SECRET` (no secret → 503,
+  wrong → 401, right → 200 — probed; value only in Vercel + temp, never in the repo). Admin
+  **Publish due posts** remains the immediate path. **Repo**: committed + pushed to `main`
+  (`fd1bb21` = all rounds since 09-28, `721360d` = lint fix) — first CI run failed on the
+  6-error `scripts/prod/*.js` require() baseline, fixed by giving `scripts/**/*.js` the same
+  `no-require-imports` exemption `lib/**` already had; **CI green** (lint · typecheck · 310
+  tests · build). **Release `v0.1.1`** cut at the CI-green commit (`v0.1.0` already existed
+  from 09-28 — founder-touched, left alone). **Release webhook finally works**: deliveries had
+  *never* succeeded (every one 403 — GitHub's stored secret ≠ Vercel's and REST edits wouldn't
+  apply it); recreated the hook as **`691785071`** with a fresh secret mirrored into Vercel
+  (`GITHUB_WEBHOOK_SECRET` rotated + redeployed), now all deliveries **200** and
+  `release/published` returned `{"posted":true}` — v0.1.1 announced itself in #dev-log +
+  #public-changelog. Pushing from a fresh session (no git-config changes): `git -c
+  credential.helper= -c "credential.helper=!C:/Users/user/AppData/Local/Programs/gh/bin/gh.exe
+  auth git-credential" push origin main` — plain `git push` fails with "Repository not found"
+  (no stored https credentials; gh is authed as BrandForgeGG).
 - **Open auth**: any Google account can sign in (login allowlist removed). Staff/admin access
   is `profiles.role` (`admin` / `operator`), not email.
 - Operator pipeline: specialists apply at `/apply`; admin reviews at `/admin/applications`
