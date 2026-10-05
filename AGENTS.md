@@ -55,17 +55,22 @@ BrandForge/
   validates research evidence only against really-fetched `fetchedUrls`, and adds searches + research
   dollars into `cost`; refine derives `fetchedUrls` from the document's own cited research
   (`carriedResearch`) so a researched blueprint keeps validating across refinements.
-  **Live on prod behind `BLUEPRINT_RESEARCH=true` with the free provider**: the founder's key
-  belongs to **Linkup** (`app.linkup.so` — it authenticates, but the org has $0 credits:
-  429 INSUFFICIENT_FUNDS at 0.005/search), so on his "use free providers" call S4 runs on a
-  new **keyless DuckDuckGo lite adapter** (`SEARCH_PROVIDER=ddg`, the config default): GET of
-  `lite.duckduckgo.com/lite/`, browser UA, sponsored rows (`tr.result-sponsored`) stripped,
-  `uddg=` redirects unwrapped, 202 anomaly pages → coded error (never cached as empty),
-  zero cost per search. Serper/tavily/linkup adapters stay for a keyed switch (set
-  `SEARCH_PROVIDER` + `SEARCH_API_KEY`). Live chain proven before deploy: plan → 2 free
-  searches → 2 SSRF-checked page fetches with real titles + text. Remaining S4 AC: the
-  golden-set run (§14 "zero ungrounded findings") once a batch of real blueprints has been
-  eyeballed for citations.
+  **Live on prod (`BLUEPRINT_RESEARCH=true`, `SEARCH_PROVIDER=serper`)**: the founder's original
+  key belongs to **Linkup** (`app.linkup.so` — authenticates, but org has $0 credits: 429
+  INSUFFICIENT_FUNDS at 0.005/search) and his "use free providers" call first shipped a
+  **keyless DuckDuckGo lite adapter** — which proved to **403 Vercel's datacenter IPs**
+  (worked from local, blocked from prod; every public SearXNG instance and free proxy failed
+  too). He then grabbed the **Serper free tier (2,500 searches, no card)** — now live:
+  serper adapter (`X-API-KEY`, `organic[]`), config default provider `serper` (no key →
+  research inert, zero calls; keyless `ddg` only when `SEARCH_PROVIDER=ddg` explicitly).
+  Page-quality rules landed with it: **social/login-wall domains sort last and pages with
+  <120 chars of extractable text are skipped** (overfetch +2 attempts so one wall doesn't
+  empty the pack), research budget **14s** / stream cap **2.5MB** (real marketing pages take
+  seconds and megabytes; original 8s/500KB starved the pack). Live prod proof: run →
+  `cost.searches=2` + a finding citing `bakesy.app/...` (server validates citations only
+  against really-fetched urls), refine kept validating; full suite green (17/17 + gate 25/25
+  + walk 12/12 + auth probe + CI). Remaining S4 AC: the golden-set run (§14 "zero ungrounded
+  findings") once a batch of real blueprints has been eyeballed for citations.
 - **Blueprint Engine S11 email gate + return link (2026-10-05, code complete)**:
   the free-first promise survives leaving. Result screen gains a Save card **right before the
   Estimate block** (founder default `gate_position: before_price` — the price never appears

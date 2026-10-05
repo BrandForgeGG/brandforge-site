@@ -14,16 +14,17 @@ test('research is a separate switch and stays off by default', () => {
   assert.equal(blueprintConfig({ BLUEPRINT_RESEARCH: 'true' }).researchEnabled, true);
 });
 
-test('research defaults to the free keyless provider with zero cost', () => {
+test('research defaults to keyed serper, inert without a key; ddg is opt-in free', () => {
   const config = blueprintConfig({});
-  assert.equal(config.searchProvider, 'ddg', 'free DuckDuckGo lite out of the box');
+  assert.equal(config.searchProvider, 'serper', 'keyed default: no key means no research calls');
   assert.equal(config.searchApiKey, '');
-  assert.equal(config.searchCostUsd, 0, 'the free provider bills nothing');
+  assert.equal(config.searchCostUsd, 0.001);
 
-  const serper = blueprintConfig({ SEARCH_PROVIDER: 'serper' });
-  assert.equal(serper.searchProvider, 'serper');
-  assert.equal(serper.searchCostUsd, 0.001, 'keyed providers assume the per-search price');
+  const free = blueprintConfig({ SEARCH_PROVIDER: 'ddg' });
+  assert.equal(free.searchProvider, 'ddg');
+  assert.equal(free.searchCostUsd, 0, 'the free provider bills nothing');
 
+  assert.equal(blueprintConfig({ SEARCH_PROVIDER: 'serper' }).searchProvider, 'serper');
   assert.equal(blueprintConfig({ SEARCH_COST_USD: '0.004' }).searchCostUsd, 0.004, 'env always wins');
 });
 

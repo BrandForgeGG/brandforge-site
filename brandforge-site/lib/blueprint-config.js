@@ -29,9 +29,10 @@ function envNum(name, fallback, env = process.env) {
 
 function blueprintConfig(env = process.env) {
   const chatModel = env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
-  // Research provider: free and keyless by default (DuckDuckGo lite). Keyed
-  // adapters (serper/tavily/linkup) engage only when SEARCH_API_KEY is set.
-  const searchProvider = env.SEARCH_PROVIDER || 'ddg';
+  // Research provider: keyed APIs by default (no key -> research inert, zero
+  // calls). The free keyless adapter engages only when explicitly selected
+  // with SEARCH_PROVIDER=ddg; serper/tavily/linkup need SEARCH_API_KEY.
+  const searchProvider = env.SEARCH_PROVIDER || 'serper';
 
   return {
     enabled: envFlag('BLUEPRINT_ENABLED', env),

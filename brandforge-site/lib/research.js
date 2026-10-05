@@ -6,11 +6,12 @@
 // and SSRF protections are this module's acceptance criteria).
 //
 // Design notes:
-// - Provider adapters are env-shaped: SEARCH_PROVIDER (default "ddg") and
+// - Provider adapters are env-shaped: SEARCH_PROVIDER (default "serper") and
 //   SEARCH_API_KEY. Serper/tavily/linkup are keyed APIs; "ddg" is the free,
-//   keyless default (DuckDuckGo lite — no account, no credits). Responses
-//   normalize to one result shape {url, title, snippet, position} so the rest
-//   of the pipeline never sees a provider-specific payload.
+//   keyless opt-in (DuckDuckGo lite — no account, no credits — but it blocks
+//   datacenter IPs, so prod uses a keyed provider). Responses normalize to
+//   one result shape {url, title, snippet, position} so the rest of the
+//   pipeline never sees a provider-specific payload.
 // - Every network call takes an injectable fetch and DNS lookup, so node:test
 //   exercises the full contract without touching the network.
 // - SSRF rules are default-deny: http/https only, no credentials in the URL,
