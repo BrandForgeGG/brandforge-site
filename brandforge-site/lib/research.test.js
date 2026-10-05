@@ -507,7 +507,9 @@ test('runResearch plans, searches, fetches and costs the run', async () => {
       });
     }
     urlsFetched.push(target);
-    return htmlResponse('<title>Guide</title><p>Useful citable content.</p>');
+    return htmlResponse(
+      `<title>Guide</title><p>${'Useful citable content about bakery ordering systems. '.repeat(4)}</p>`
+    );
   };
 
   const result = await runResearch({
@@ -558,7 +560,7 @@ test('runResearch goes live keyless with ddg and costs nothing', async () => {
     fetchImpl: async (url) =>
       String(url).includes('lite.duckduckgo.com')
         ? new Response(DDG_FIXTURE, { status: 200, headers: { 'Content-Type': 'text/html' } })
-        : new Response('<title>P</title><p>readable text</p>', {
+        : new Response(`<title>P</title><p>${'readable citable text for the pack. '.repeat(6)}</p>`, {
             status: 200,
             headers: { 'Content-Type': 'text/html' },
           }),
@@ -569,7 +571,7 @@ test('runResearch goes live keyless with ddg and costs nothing', async () => {
   assert.equal(result.queries.length, 1);
   assert.equal(result.pages.length, 2, 'both fixture results are fetched, within the cap');
   assert.equal(result.pages[0].url, 'https://real.example/guide?a=1');
-  assert.equal(result.pages[0].text.includes('readable text'), true);
+  assert.equal(result.pages[0].text.includes('readable citable text'), true);
   assert.equal(result.pages[1].url, 'https://second.example/');
   assert.equal(result.usdEstimate, 0, 'the free provider bills nothing');
 });
@@ -587,7 +589,7 @@ test('runResearch survives search failures, empty plans and deadline exhaustion'
         if (searchCalls === 1) return jsonResponse({}, 500);
         return jsonResponse({ organic: [{ position: 1, link: 'https://ok.example/p', title: 'OK', snippet: 's' }] });
       }
-      return htmlResponse('<title>OK</title><p>text</p>');
+      return htmlResponse(`<title>OK</title><p>${'enough extractable text to cite. '.repeat(6)}</p>`);
     },
     lookupImpl: PUBLIC_LOOKUP,
   });
@@ -641,10 +643,65 @@ test('runResearch respects the fetch cap', async () => {
         });
       }
       fetched.push(String(url));
-      return htmlResponse('<title>P</title><p>t</p>');
+      return htmlResponse(`<title>P</title><p>${'citable page text. '.repeat(10)}</p>`);
     },
     lookupImpl: PUBLIC_LOOKUP,
   });
   assert.equal(result.pages.length, 1);
   assert.equal(fetched.length, 1);
+});
+
+test('runResearch skips login walls and prefers citable domains', async () => {
+  const fetched = [];
+  // Candidate 1 is a wall with almost no text; candidate 2 is real content.
+  // With researchMaxFetches=1 the wall must not eat the only slot.
+  const walls = await runResearch({
+    input: 'x',
+    config: { ...CONFIG, researchMaxFetches: 1 },
+    ask: async () => '["q"]',
+    fetchImpl: async (url) => {
+      const target = String(url);
+      if (target.includes('google.serper.dev')) {
+        return jsonResponse({
+          organic: [
+            { position: 1, link: 'https://wall.example/login', title: 'Wall', snippet: 'x' },
+            { position: 2, link: 'https://good.example/guide', title: 'Good', snippet: 'y' },
+          ],
+        });
+      }
+      fetched.push(target);
+      if (target.includes('wall.example')) {
+        return htmlResponse('<title>Sign in</title><p>Log in to continue</p>');
+      }
+      return htmlResponse(`<title>Guide</title><p>${'citable content for the blueprint. '.repeat(6)}</p>`);
+    },
+    lookupImpl: PUBLIC_LOOKUP,
+  });
+  assert.deepEqual(fetched, ['https://wall.example/login', 'https://good.example/guide'], 'the wall is attempted, then replaced');
+  assert.equal(walls.pages.length, 1);
+  assert.equal(walls.pages[0].url, 'https://good.example/guide');
+
+  // Social domains sort behind citable ones even when their text is fine.
+  // (A different query so the first run's search cache doesn't leak in.)
+  const social = await runResearch({
+    input: 'x',
+    config: { ...CONFIG, researchMaxFetches: 1 },
+    ask: async () => '["second query"]',
+    fetchImpl: async (url) => {
+      const target = String(url);
+      if (target.includes('google.serper.dev')) {
+        return jsonResponse({
+          organic: [
+            { position: 1, link: 'https://www.reddit.com/r/x/comments/abc/', title: 'Thread', snippet: 'x' },
+            { position: 2, link: 'https://good.example/other', title: 'Other', snippet: 'y' },
+          ],
+        });
+      }
+      fetched.push(target);
+      return htmlResponse(`<title>Page</title><p>${'plenty of extractable text here. '.repeat(6)}</p>`);
+    },
+    lookupImpl: PUBLIC_LOOKUP,
+  });
+  assert.equal(social.pages.length, 1);
+  assert.equal(social.pages[0].url, 'https://good.example/other', 'reddit was fetched last despite full text');
 });

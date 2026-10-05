@@ -62,7 +62,9 @@ function blueprintConfig(env = process.env) {
     researchMaxQueries: envInt('BLUEPRINT_RESEARCH_QUERIES', 2, env),
     researchMaxSearches: envInt('BLUEPRINT_RESEARCH_SEARCHES', 3, env),
     researchMaxFetches: envInt('BLUEPRINT_RESEARCH_FETCHES', 2, env),
-    researchTimeoutMs: envInt('BLUEPRINT_RESEARCH_TIMEOUT_MS', 8000, env),
+    // Real marketing pages need seconds to fetch; 14s keeps the whole run
+    // comfortably inside the route's 60s budget alongside the LLM calls.
+    researchTimeoutMs: envInt('BLUEPRINT_RESEARCH_TIMEOUT_MS', 14000, env),
     // Free providers cost nothing; keyed APIs assume $0.001 per search until
     // SEARCH_COST_USD says otherwise.
     searchCostUsd: envNum('SEARCH_COST_USD', searchProvider === 'ddg' ? 0 : 0.001, env),

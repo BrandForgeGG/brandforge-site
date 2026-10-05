@@ -36,10 +36,10 @@ const BROWSER_UA =
 const CACHE_MAX_ENTRIES = 200;
 const SEARCH_CACHE_TTL_MS = 15 * 60 * 1000;
 const PAGE_CACHE_TTL_MS = 60 * 60 * 1000;
-// Modern marketing pages routinely ship 0.5-1.5MB of HTML; the cap only has
-// to bound memory while streaming, since the extracted text is clipped to a
-// few thousand chars afterwards.
-const MAX_BYTES_DEFAULT = 1_500_000;
+// Modern marketing pages routinely ship 0.5-2.5MB of HTML and take seconds
+// to respond; the cap only has to bound memory while streaming, since the
+// extracted text is clipped to a few thousand chars afterwards.
+const MAX_BYTES_DEFAULT = 2_500_000;
 const MAX_REDIRECTS_DEFAULT = 3;
 
 // ---------------------------------------------------------------- cache ----
@@ -567,6 +567,23 @@ async function planQueries({ input, ask, maxQueries = 2, timeoutMs = 4000 }) {
   }
 }
 
+// Domains that routinely serve login walls / JS shells to a plain fetch:
+// deprioritized so citable content gets fetched first, still eligible as a
+// fallback.
+const SOCIAL_HOST_RE =
+  /(^|\.)(facebook\.com|instagram\.com|twitter\.com|x\.com|tiktok\.com|linkedin\.com|reddit\.com|pinterest\.[a-z.]+|youtube\.com|threads\.net)$/i;
+// A fetched page with almost no extractable text (login wall, JS shell) is
+// not citable evidence: skip it and try the next candidate.
+const MIN_PAGE_TEXT_CHARS = 120;
+
+function isSocialHost(rawUrl) {
+  try {
+    return SOCIAL_HOST_RE.test(new URL(String(rawUrl)).hostname);
+  } catch {
+    return false;
+  }
+}
+
 // --------------------------------------------------------- orchestrator ----
 
 // The whole research stage for one run: plan -> search -> fetch, inside a
@@ -626,28 +643,33 @@ async function runResearch({
     return out;
   }
 
-  const picks = candidates.slice(0, config.researchMaxFetches || 2);
-  const settled = await Promise.allSettled(
-    picks.map((pick) =>
-      fetchPage(pick.url, {
+  // Fetch in preference order (non-social first), accept only pages with real
+  // text, and overfetch a little so one login wall doesn't empty the pack.
+  const maxFetches = config.researchMaxFetches || 2;
+  const attemptCap = maxFetches + 2;
+  const ordered = [...candidates].sort((a, b) => Number(isSocialHost(a.url)) - Number(isSocialHost(b.url)));
+  let attempts = 0;
+  for (const pick of ordered) {
+    // Stop when the slots are full, the attempts are spent, or too little
+    // budget remains for a real page fetch to succeed.
+    if (out.pages.length >= maxFetches || attempts >= attemptCap || remaining() < 1500) break;
+    attempts += 1;
+    try {
+      const page = await fetchPage(pick.url, {
         fetchImpl,
         lookupImpl,
         timeoutMs: Math.min(5000, remaining()),
         maxChars: config.pageTextMaxChars || 4000,
         now,
-      })
-    )
-  );
-  for (let index = 0; index < settled.length; index += 1) {
-    const item = settled[index];
-    if (item.status === 'fulfilled') {
-      out.pages.push({
-        url: item.value.url,
-        title: item.value.title || picks[index].title || '',
-        text: item.value.text,
       });
-    } else {
-      console.error('Blueprint research: fetch failed:', item.reason && item.reason.message ? item.reason.message : item.reason);
+      if ((page.text || '').length < MIN_PAGE_TEXT_CHARS) continue;
+      out.pages.push({
+        url: page.url,
+        title: page.title || pick.title || '',
+        text: page.text,
+      });
+    } catch (error) {
+      console.error('Blueprint research: fetch failed:', error && error.message ? error.message : error);
     }
   }
 
