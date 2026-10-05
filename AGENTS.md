@@ -78,8 +78,14 @@ BrandForge/
   and `brandforge-site/brandforge-master-brief-sections-6-18.md` — read those for §4–§18
   fidelity, not this file's bullets. **S11 gaps vs §4.10 open**: compressed onboarding (fresh
   magic-link signups still get the full 4-step wizard; auto username + progressive promise cards
-  = next slice), `gate_position` is a constant (env flag + `after_price`/`at_save` variants not
+  = next slice),   `gate_position` is a constant (env flag + `after_price`/`at_save` variants not
   built), email stored on submit not per keystroke (one-field form, honest reading).
+  **Fidelity fix deployed `oha5c9k02` (2026-10-05)**: reconciled against the restored brief —
+  the gate had shipped *after* the Estimate while labelled `before_price`, and had no terms
+  line; it now renders **right before the Estimate block** (`beforeEstimate` slot in
+  `blueprint-document.tsx`) with the §4.10 Terms/Privacy line. Walk asserts
+  gate-before-estimate + terms link: local 12/12, prod 12/12; gate e2e 25/25; CI green;
+  auth probe green.
 - **Blueprint Engine S3+S5 — LIVE on brandforge.gg (2026-10-05)**: founder completed both go-live
   steps (re-ran `0022` → `input` column present; `BLUEPRINT_ENABLED=true` in Vercel + redeploy).
   The public surface — `/blueprint` (`force-dynamic`; intake → running → result state machine in
