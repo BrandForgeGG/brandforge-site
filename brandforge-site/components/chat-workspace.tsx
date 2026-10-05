@@ -1127,13 +1127,19 @@ export function ChatWorkspace() {
 
       if (!conversationId) {
         // Someone opened /chat directly: the first message creates the project.
+        // A guest (no rail user — signed-out visitors reach /chat via a valid bf_bp
+        // session cookie) opts in explicitly so anonymous POSTs without the flag
+        // keep their 401 contract on the server.
         setIsCreatingConversation(true);
 
         try {
           const response = await fetchAuthed("/api/conversations", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ initialMessage: text }),
+            body: JSON.stringify({
+              initialMessage: text,
+              ...(railMeta.userId ? {} : { guest: true }),
+            }),
           });
           const data = await response.json().catch(() => ({}));
 
@@ -1166,6 +1172,7 @@ export function ChatWorkspace() {
       isStreaming,
       loadRecents,
       railMeta.isStaff,
+      railMeta.userId,
       refreshMessages,
       router,
       runTurn,

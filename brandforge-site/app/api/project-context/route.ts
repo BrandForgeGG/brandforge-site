@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { canAccessConversation, isStaffAccount } from '@/lib/project-db';
+import {
+  canAccessConversation,
+  getConversationOwnerSession,
+  isStaffAccount,
+  runAsGuestSession,
+} from '@/lib/project-db';
+import { resolveGuestSession } from '@/lib/guest-session';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import {
   buildClientState,
@@ -13,8 +19,9 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser(request);
+    const guest = user ? null : await resolveGuestSession(request);
 
-    if (!user) {
+    if (!user && !guest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
@@ -22,6 +29,29 @@ export async function GET(request: NextRequest) {
 
     if (!conversationId) {
       return NextResponse.json({ error: 'conversationId is required' }, { status: 400 });
+    }
+
+    if (guest) {
+      const owner = await getConversationOwnerSession(conversationId);
+      if (owner !== guest.sessionId) {
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      }
+
+      const result = await runAsGuestSession(guest.sessionId, async () => {
+        const snapshot = await getConversationSnapshot(conversationId);
+        if (!snapshot) return null;
+        const discovery = await syncDiscoveryCompleteness(conversationId);
+        return buildClientState(snapshot, discovery);
+      });
+
+      if (!result) {
+        return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
+      }
+      return NextResponse.json({ state: result, guest: true });
+    }
+
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     const [isStaff, hasAccess] = await Promise.all([

@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   addMessage,
   createConversation,
+  createGuestConversation,
   deleteConversationForUser,
+  getSessionConversationSummaries,
   getUserConversationSummaries,
   isStaffAccount,
   recordFunnelEvent,
 } from '@/lib/project-db';
+import { attachGuestCookies, ensureGuestSession, resolveGuestSession } from '@/lib/guest-session';
 import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -19,11 +22,86 @@ export const dynamic = 'force-dynamic';
 // idea, and the first message is persisted immediately so Recents reflects reality.
 export async function POST(request: NextRequest) {
   try {
+    let body: { initialMessage?: string; source?: string; guest?: unknown } = {};
+
+    try {
+      body = await request.json();
+    } catch {
+      body = {};
+    }
+
     const user = await getAuthenticatedUser(request);
 
-    if (!user) {
+    // Guest creation is explicitly opt-in (`guest: true`) so the default
+    // contract for anonymous POSTs stays 401 — probes and integrations that
+    // omit the flag keep failing closed, while the hero asks for it by name.
+    if (!user && body.guest !== true) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
+
+    const initialMessage = String(body.initialMessage ?? '').trim().slice(0, 8000);
+    // Traffic classification: probes and e2e runs self-declare `source: 'test'` so
+    // revenue metrics stay clean. Anything else reads as organic; claiming 'test'
+    // only excludes the caller from aggregates, so there is nothing to gain by lying.
+
+    // ---- Guest path: anonymous bf_bp session owns the conversation (0023). ----
+    if (!user) {
+      const ensured = await ensureGuestSession(request);
+      if (!ensured.ok) {
+        const headers = ensured.retryAfterSeconds
+          ? { 'Retry-After': String(ensured.retryAfterSeconds) }
+          : undefined;
+        return NextResponse.json({ error: ensured.error }, { status: ensured.status, headers });
+      }
+
+      const createRate = checkRateLimit(
+        `conversations-create:guest:${ensured.sessionId}`,
+        CONVERSATION_CREATE_RATE_LIMIT
+      );
+      if (!createRate.allowed) {
+        return NextResponse.json(
+          { error: 'Too many new chats — please try again later.' },
+          { status: 429, headers: { 'Retry-After': String(createRate.retryAfterSeconds) } }
+        );
+      }
+
+      const created = await createGuestConversation(ensured.sessionId, {
+        source: typeof body.source === 'string' ? body.source : undefined,
+        initialMessage,
+      });
+      if (!created.ok) {
+        if (created.error === 'pending_migration') {
+          return NextResponse.json(
+            { error: 'Guest chat storage is not set up yet. Has migration 0023 been applied?' },
+            { status: 503 }
+          );
+        }
+        if (created.error === 'not_configured') {
+          return NextResponse.json({ error: 'Guest chat storage is not configured.' }, { status: 503 });
+        }
+        return NextResponse.json({ error: 'Failed to create conversation' }, { status: 500 });
+      }
+
+      if (created.messageId) {
+        // Server-side, same as the signed-in path: the funnel counts real stored
+        // first messages, never the client's claim, and only the length context travels.
+        await recordFunnelEvent('project_described', {
+          signedIn: false,
+          properties: { source: 'first_message', percent: 0 },
+        });
+      }
+
+      const response = NextResponse.json({
+        conversationId: created.conversationId,
+        messageId: created.messageId,
+        hasInitialMessage: Boolean(created.messageId),
+        guest: true,
+      });
+      attachGuestCookies(response, ensured.sessionId);
+      return response;
+    }
+
+    // ---- Signed-in path (unchanged). ----
 
     // Throttled after authentication so signed-out callers keep their 401
     // instead of burning quota (per-instance window — see lib/rate-limit.js).
@@ -34,19 +112,6 @@ export async function POST(request: NextRequest) {
         { status: 429, headers: { 'Retry-After': String(createRate.retryAfterSeconds) } }
       );
     }
-
-    let body: { initialMessage?: string; source?: string } = {};
-
-    try {
-      body = await request.json();
-    } catch {
-      body = {};
-    }
-
-    const initialMessage = String(body.initialMessage ?? '').trim().slice(0, 8000);
-    // Traffic classification: probes and e2e runs self-declare `source: 'test'` so
-    // revenue metrics stay clean. Anything else reads as organic; claiming 'test'
-    // only excludes the caller from aggregates, so there is nothing to gain by lying.
 
     // Read the founder's existing projects *before* creating the new one, so "returning founder"
     // is a fact rather than a guess. A staff member opening their own chat is not a returning
@@ -114,7 +179,12 @@ export async function GET(request: NextRequest) {
     const user = await getAuthenticatedUser(request);
 
     if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      const guest = await resolveGuestSession(request);
+      if (!guest) {
+        return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      }
+      const conversations = await getSessionConversationSummaries(guest.sessionId);
+      return NextResponse.json({ conversations, guest: true });
     }
 
     const conversations = await getUserConversationSummaries(user.id);

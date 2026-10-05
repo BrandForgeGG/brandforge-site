@@ -6,6 +6,7 @@ const {
   verifySessionToken,
   hashIp,
   consumeQuota,
+  consumeChatQuota,
   sessionCookieOptions,
 } = require('./blueprint-session.js');
 
@@ -100,6 +101,37 @@ test('the quota resets when the day changes or the session is fresh', () => {
   const junk = consumeQuota({ quota_date: '2026-10-04', quota_count: 'NaN' }, { limit: 5 });
   assert.equal(junk.allowed, true, 'a corrupt count must not lock a visitor out');
   assert.equal(junk.quotaCount, 1);
+});
+
+test('the chat quota rolls independently of the blueprint run quota', () => {
+  const day = Date.UTC(2026, 9, 4, 12, 0, 0);
+
+  // Blueprint runs already burned the whole daily run quota: chat must not care.
+  const session = {
+    quota_date: '2026-10-04',
+    quota_count: 99,
+    chat_quota_date: '2026-10-04',
+    chat_quota_count: 1,
+  };
+  const next = consumeChatQuota(session, { limit: 3, now: day });
+  assert.deepEqual(next, { allowed: true, quotaDate: '2026-10-04', quotaCount: 2, remaining: 1 });
+
+  const blocked = consumeChatQuota({ ...session, chat_quota_count: 3 }, { limit: 3, now: day });
+  assert.equal(blocked.allowed, false);
+  assert.equal(blocked.quotaCount, 3, 'a blocked turn does not increment the stored count');
+
+  // Chat counters reset on a new UTC day even when the run counters are stale.
+  const rolled = consumeChatQuota(
+    { chat_quota_date: '2026-10-03', chat_quota_count: 99 },
+    { limit: 3, now: day }
+  );
+  assert.equal(rolled.allowed, true);
+  assert.equal(rolled.quotaCount, 1);
+
+  // A visitor with blueprint runs recorded but no chat columns yet (0023 pending).
+  const legacy = consumeChatQuota({ quota_date: '2026-10-04', quota_count: 5 }, { limit: 3, now: day });
+  assert.equal(legacy.allowed, true, 'missing chat columns must not lock a visitor out');
+  assert.equal(legacy.quotaCount, 1);
 });
 
 test('the cookie is HttpOnly, path-wide and Secure only in production', () => {

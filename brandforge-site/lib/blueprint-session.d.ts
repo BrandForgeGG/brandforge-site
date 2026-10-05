@@ -23,4 +23,8 @@ export declare function consumeQuota(
   session: { quota_date?: string | null; quota_count?: number | null } | null | undefined,
   options: { limit: number; now?: number }
 ): QuotaDecision;
+export declare function consumeChatQuota(
+  session: { chat_quota_date?: string | null; chat_quota_count?: number | null } | null | undefined,
+  options: { limit: number; now?: number }
+): QuotaDecision;
 export declare function sessionCookieOptions(ttlDays: number, isSecure?: boolean): SessionCookieOptions;

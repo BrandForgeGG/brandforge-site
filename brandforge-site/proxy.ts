@@ -6,6 +6,8 @@ import {
   sessionUserFromCookiePairs,
   stripAuthCookieDeletions,
 } from '@/lib/auth-cookies';
+import { blueprintConfig } from '@/lib/blueprint-config';
+import { verifySessionToken } from '@/lib/blueprint-session';
 
 type AuthCookieUpdate = {
   name: string;
@@ -20,6 +22,19 @@ const protectedRoutes = [
   '/admin',
   '/onboarding',
 ];
+
+// Anonymous guest chat: an /chat page may render when the request carries a
+// cryptographically valid bf_bp blueprint-session cookie. Checked offline
+// (HMAC only — no database round-trip from the proxy); the API routes still
+// re-resolve the session row and enforce ownership per conversation. Every
+// other protected route keeps requiring a signed-in user.
+function hasGuestChatAccess(request: NextRequest, pathname: string): boolean {
+  if (pathname !== '/chat' && !pathname.startsWith('/chat/')) return false;
+  const config = blueprintConfig();
+  if (!config.enabled || !config.sessionSecret) return false;
+  const token = request.cookies.get(config.sessionCookieName)?.value ?? null;
+  return Boolean(verifySessionToken(token, config.sessionSecret));
+}
 
 export default async function proxy(request: NextRequest) {
   const cookieUpdates: AuthCookieUpdate[] = [];
@@ -138,7 +153,9 @@ export default async function proxy(request: NextRequest) {
   );
 
   if (isProtectedRoute && !hasValidUser) {
-    return withAuthCookies(NextResponse.redirect(new URL('/login', request.url)));
+    if (!hasGuestChatAccess(request, pathname)) {
+      return withAuthCookies(NextResponse.redirect(new URL('/login', request.url)));
+    }
   }
 
   if ((pathname === '/login' || pathname === '/signup') && hasValidUser) {

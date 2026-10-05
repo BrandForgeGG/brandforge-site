@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
+  getSessionConversationSummaries,
   getStaffConversationSummaries,
   getUserConversationSummaries,
   isStaffAccount,
   getProfileRole,
 } from '@/lib/project-db';
+import { resolveGuestSession } from '@/lib/guest-session';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { getUserRoleFromEmail } from '@/lib/user-roles';
 
@@ -16,12 +18,30 @@ export const dynamic = 'force-dynamic';
 // a user already belongs to them, nobody has to join it by hand - plus how many of those chats
 // nobody has picked up yet (drives the staff "new chats" badge). Only conversations with real
 // messages are listed, so landing on /chat never creates a phantom entry.
+//
+// Guests (anonymous bf_bp session) see exactly the conversations their session owns, with
+// role 'guest' and no staff flags — the rail renders the plain founder chrome for them.
 export async function GET(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser(request);
 
     if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      const guest = await resolveGuestSession(request);
+      if (!guest) {
+        return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      }
+
+      const conversations = await getSessionConversationSummaries(guest.sessionId);
+      return NextResponse.json({
+        conversations,
+        isStaff: false,
+        unseenCount: 0,
+        userId: null,
+        name: null,
+        email: null,
+        role: 'guest',
+        guest: true,
+      });
     }
 
     const isStaff = await isStaffAccount(user.id);

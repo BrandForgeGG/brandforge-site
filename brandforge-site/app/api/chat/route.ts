@@ -5,9 +5,15 @@ import {
   addMessage,
   canAccessConversation,
   downloadConversationAttachment,
+  getConversationOwnerSession,
+  getGuestChatQuota,
   getMessages,
+  persistGuestChatQuota,
+  runAsGuestSession,
   updateConversationTitle,
 } from "@/lib/project-db";
+import { consumeChatQuota } from "@/lib/blueprint-session";
+import { resolveGuestSession } from "@/lib/guest-session";
 import { buildFileContextBlock, isDirectlyReadable } from "@/lib/file-context";
 import {
   buildClientState,
@@ -27,6 +33,13 @@ const MAX_HISTORY = 40;
 // H8: each turn burns paid LLM tokens. Cap per signed-in user (per instance —
 // see lib/rate-limit.js for the serverless caveat).
 const CHAT_RATE_LIMIT = { limit: 30, windowMs: 10 * 60 * 1000 };
+
+// Guest turns are capped per session per UTC day in the database (durable
+// across instances, unlike the in-memory limiter above). Override for tests.
+const GUEST_CHAT_MESSAGE_LIMIT = Math.max(
+  1,
+  Number(process.env.GUEST_CHAT_MESSAGE_LIMIT) || 15
+);
 
 // User-safe activity labels for tool calls that genuinely ran this turn. These are
 // progress/status summaries for the "Thoughts" strip — never hidden reasoning, and
@@ -147,24 +160,29 @@ async function collectFileContext(
 // Response: server-sent events with { type: 'start' | 'delta' | 'message' | 'state' | 'done' | 'error' }.
 export async function POST(request: NextRequest) {
   const user = await getAuthenticatedUser(request);
+  // Guest identity only when there is no signed-in user: the bf_bp HMAC
+  // cookie plus its live blueprint_sessions row (resolveGuestSession).
+  const guest = user ? null : await resolveGuestSession(request);
 
-  if (!user) {
+  if (!user && !guest) {
     return NextResponse.json(
       { error: "Authentication required" },
       { status: 401 },
     );
   }
 
-  const rate = checkRateLimit(`chat:${user.id}`, CHAT_RATE_LIMIT);
+  if (user) {
+    const rate = checkRateLimit(`chat:${user.id}`, CHAT_RATE_LIMIT);
 
-  if (!rate.allowed) {
-    return NextResponse.json(
-      { error: "Too many messages — give BrandForge a moment and try again." },
-      {
-        status: 429,
-        headers: { "Retry-After": String(rate.retryAfterSeconds) },
-      },
-    );
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: "Too many messages — give BrandForge a moment and try again." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(rate.retryAfterSeconds) },
+        },
+      );
+    }
   }
 
   let body: { conversationId?: string; message?: string } = {};
@@ -187,10 +205,51 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const hasAccess = await canAccessConversation(user.id, conversationId);
+  if (user) {
+    const hasAccess = await canAccessConversation(user.id, conversationId);
 
-  if (!hasAccess) {
-    return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+  }
+
+  if (guest) {
+    // The session must own the conversation (0023) before anything else, so a
+    // guessed id can neither read nor burn quota.
+    const owner = await getConversationOwnerSession(conversationId);
+    if (owner !== guest.sessionId) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    // Durable daily guest quota (separate counters from blueprint runs).
+    const quotaState = await getGuestChatQuota(guest.sessionId);
+    if (!quotaState.ok) {
+      if (quotaState.error === "pending_migration") {
+        return NextResponse.json(
+          { error: "Guest chat storage is not set up yet. Has migration 0023 been applied?" },
+          { status: 503 },
+        );
+      }
+      return NextResponse.json(
+        { error: "Guest chat storage is not configured." },
+        { status: 503 },
+      );
+    }
+
+    const decision = consumeChatQuota(quotaState.quota, {
+      limit: GUEST_CHAT_MESSAGE_LIMIT,
+    });
+    if (!decision.allowed) {
+      return NextResponse.json(
+        { error: "Daily guest message limit reached. Sign in to keep chatting.", retryAfterSeconds: 3600 },
+        { status: 429, headers: { "Retry-After": "3600" } },
+      );
+    }
+
+    const persisted = await persistGuestChatQuota(guest.sessionId, decision);
+    if (!persisted.ok) {
+      console.warn(`Guest chat quota write failed for session ${guest.sessionId}: ${persisted.error}`);
+    }
   }
 
   const aiService = getAIService();
@@ -205,15 +264,23 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Every database call below runs either as the signed-in caller (RLS) or,
+  // for a guest, inside the verified session's service-role scope. The scope
+  // is per-call so a guest turn touches nothing outside its own conversation.
+  const scope = <T,>(fn: () => Promise<T>): Promise<T> =>
+    guest ? runAsGuestSession(guest.sessionId, fn) : fn();
+
   if (message) {
-    const storedMessageId = await addMessage({
-      conversation_id: conversationId,
-      sender_type: "user",
-      sender_id: user.id,
-      sender_name: getActorName(user),
-      content: message,
-      content_type: "text",
-    });
+    const storedMessageId = await scope(() =>
+      addMessage({
+        conversation_id: conversationId,
+        sender_type: "user",
+        sender_id: user?.id ?? null,
+        sender_name: user ? getActorName(user) : "Guest",
+        content: message,
+        content_type: "text",
+      }),
+    );
 
     if (!storedMessageId) {
       return NextResponse.json(
@@ -223,7 +290,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const snapshot = await getConversationSnapshot(conversationId);
+  const snapshot = await scope(() => getConversationSnapshot(conversationId));
 
   if (!snapshot) {
     return NextResponse.json(
@@ -232,7 +299,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const history = await getMessages(conversationId, { limit: MAX_HISTORY, includeDeleted: false });
+  const history = await scope(() =>
+    getMessages(conversationId, { limit: MAX_HISTORY, includeDeleted: false }),
+  );
   const conversational = history.filter(
     (entry) =>
       !entry.deleted_at &&
@@ -253,7 +322,7 @@ export async function POST(request: NextRequest) {
   let fileBlock = "";
   let fileLabels: string[] = [];
   try {
-    const fileContext = await collectFileContext(conversationId);
+    const fileContext = await scope(() => collectFileContext(conversationId));
     fileBlock = buildFileContextBlock(fileContext.items);
     fileLabels = fileContext.labels;
   } catch {
@@ -302,7 +371,7 @@ export async function POST(request: NextRequest) {
             if (label) {
               send({ type: "activity", label });
             }
-            return executeTool(conversationId, toolCall);
+            return scope(() => executeTool(conversationId, toolCall));
           },
           {
             onDelta: (chunk) => send({ type: "delta", chunk }),
@@ -315,14 +384,16 @@ export async function POST(request: NextRequest) {
         const content = answer.content.trim();
 
         if (content) {
-          const assistantMessageId = await addMessage({
-            conversation_id: conversationId,
-            sender_type: "ai",
-            sender_name: "BrandForge AI",
-            content,
-            content_type: "text",
-            artifact_data: { source: "ai", status: "pending" },
-          });
+          const assistantMessageId = await scope(() =>
+            addMessage({
+              conversation_id: conversationId,
+              sender_type: "ai",
+              sender_name: "BrandForge AI",
+              content,
+              content_type: "text",
+              artifact_data: { source: "ai", status: "pending" },
+            }),
+          );
 
           if (assistantMessageId) {
             send({ type: "message", id: assistantMessageId });
@@ -336,8 +407,10 @@ export async function POST(request: NextRequest) {
           send({ type: "error", error: "BrandForge AI returned an empty answer. Please try again." });
         }
 
-        const discovery = await syncDiscoveryCompleteness(conversationId);
-        let refreshed = await getConversationSnapshot(conversationId);
+        const discovery = await scope(() =>
+          syncDiscoveryCompleteness(conversationId),
+        );
+        let refreshed = await scope(() => getConversationSnapshot(conversationId));
 
         // A project gets its name from the conversation itself, never from a placeholder.
         if (
@@ -354,11 +427,13 @@ export async function POST(request: NextRequest) {
             "";
 
           if (fallbackTitle.trim()) {
-            await updateConversationTitle(
-              conversationId,
-              fallbackTitle.trim().slice(0, 60),
+            await scope(() =>
+              updateConversationTitle(
+                conversationId,
+                fallbackTitle.trim().slice(0, 60),
+              ),
             );
-            refreshed = await getConversationSnapshot(conversationId);
+            refreshed = await scope(() => getConversationSnapshot(conversationId));
           }
         }
 

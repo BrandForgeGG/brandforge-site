@@ -290,3 +290,33 @@ strip are all live and checkable. Post it as-is; do not soften "really reads it"
 we do not have.
 
 
+
+---
+
+## 2026-10-05 — Blueprint Engine Slice A: guest chat foundation (code complete, foundation)
+
+**Dev change:** signed-out visitors can now own chat conversations. New `bf_bp`-session ownership
+(`conversations.owner_session_id`, migration 0023), service-role scope for guest turns
+(AsyncLocalStorage), durable 15-messages-per-day guest quota, guest branches across
+conversations/messages/chat/project-context/stats routes, `/chat` proxy gate opened to valid guest
+cookies, and `fetchAuthed` no longer bounces guests to /login on endpoint 401s. 377/377 tests,
+tsc/eslint/build green. No public surface change yet — the entry point lands with Slice B/C.
+
+**Marketing move (draft, hold until the guest entry point ships):**
+
+> Talk to BrandForge first, sign up when it counts.
+>
+> Describe your project in the chat and get a real AI answer before you make an account. When you
+> decide it is worth keeping, sign in and the whole conversation comes with you — no re-explaining.
+
+**Changelog line (founder-facing):** "You can now try the chat without an account — your
+conversation carries over when you sign in."
+
+**Demo note:** open brandforge.gg/chat signed out ? type an idea ? AI answers ? sign in later and
+the guest chats appear in Recents (merge proof).
+
+**Publish status:** held. Not posted anywhere: the signed-out /chat entry point ships in Slice C
+(hero rewrite). Post the draft with the Slice C deploy, not before.
+
+**Explicitly no marketing angle:** migration 0023 columns, ALS scope, proxy gate — internal
+plumbing; the loop is closed by the held draft above.

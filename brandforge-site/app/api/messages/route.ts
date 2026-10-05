@@ -2,13 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   getMessages,
   canAccessConversation,
+  getConversationOwnerSession,
   mutateOwnedMessage,
+  runAsGuestSession,
   toggleMessageReaction,
 } from '@/lib/project-db';
 import {
   normalizeMessageEdit,
   normalizeReactionEmoji,
 } from '@/lib/message-actions';
+import { resolveGuestSession } from '@/lib/guest-session';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -26,10 +29,39 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Newest page first; older history loads with `before=<oldest created_at>`.
+    const limitRaw = Number(searchParams.get('limit'));
+    const limit = Number.isFinite(limitRaw) && limitRaw > 0
+      ? Math.min(Math.floor(limitRaw), 1000)
+      : 300;
+    const before = searchParams.get('before');
+
     const user = await getAuthenticatedUser(request);
-    
+
     if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      // Guest transcript: the HMAC session must own the conversation, then the
+      // read runs inside the guest scope (service role — RLS sees no rows).
+      const guest = await resolveGuestSession(request);
+      if (!guest) {
+        return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      }
+      const owner = await getConversationOwnerSession(conversationId);
+      if (owner !== guest.sessionId) {
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      }
+
+      const messages = await runAsGuestSession(guest.sessionId, () =>
+        getMessages(conversationId, {
+          limit,
+          before: before && !Number.isNaN(Date.parse(before)) ? before : undefined,
+          excludeAiDrafts: true,
+        })
+      );
+      return NextResponse.json({
+        messages,
+        hasMore: messages.length >= limit,
+        guest: true,
+      });
     }
 
     // BrandForge staff read any founder's history: the team reviews a chat before entering it.
@@ -38,13 +70,6 @@ export async function GET(request: NextRequest) {
     if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
-
-    // Newest page first; older history loads with `before=<oldest created_at>`.
-    const limitRaw = Number(searchParams.get('limit'));
-    const limit = Number.isFinite(limitRaw) && limitRaw > 0
-      ? Math.min(Math.floor(limitRaw), 1000)
-      : 300;
-    const before = searchParams.get('before');
 
     const messages = await getMessages(conversationId, {
       viewerId: user.id,

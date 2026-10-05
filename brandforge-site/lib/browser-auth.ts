@@ -109,12 +109,38 @@ async function refreshWithTimeout() {
   }
 }
 
+// Mirrors GUEST_MARKER_COOKIE in lib/guest-session.ts without importing it
+// (see the note in fetchAuthed).
+const GUEST_MARKER_COOKIE = 'bf_guest';
+
+async function isMarkedGuestWithoutSession(): Promise<boolean> {
+  try {
+    if (typeof document === 'undefined') return false;
+    const marked = document.cookie
+      .split('; ')
+      .some((part) => part.startsWith(`${GUEST_MARKER_COOKIE}=`));
+    if (!marked) return false;
+    const user = await getSessionUser();
+    return user === null;
+  } catch {
+    return false;
+  }
+}
+
 export async function fetchAuthed(
   input: RequestInfo | URL,
   init?: RequestInit,
 ): Promise<Response> {
   const response = await fetchWithTimeout(input, init);
   if (response.status !== 401) return response;
+
+  // A guest (anonymous bf_bp chat, marked by the readable bf_guest cookie) has
+  // no Supabase session to refresh: a 401 from a guest-incompatible endpoint
+  // (identity, proposals, …) is its final answer — never attempt a refresh and
+  // never park the visitor on /login. Signed-in browsers with a stale marker
+  // keep the normal refresh path. Must stay a literal here: this module is
+  // client-side and must not import lib/guest-session (server-only graph).
+  if (await isMarkedGuestWithoutSession()) return response;
 
   try {
     const { data, error } = await refreshWithTimeout();

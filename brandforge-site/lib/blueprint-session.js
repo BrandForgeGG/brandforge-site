@@ -63,15 +63,26 @@ function hashIp(ip, secret) {
 // Pure quota decision: the day rolls on UTC, the count starts over, the limit
 // is per session per day (brief 4.10). Returns the values to persist when the
 // run is allowed, or the current values when it is not.
-function consumeQuota(session, { limit, now = Date.now() }) {
+function rollQuota(session, dateField, countField, { limit, now = Date.now() }) {
   const today = new Date(now).toISOString().slice(0, 10);
-  const sameDay = session && session.quota_date === today;
-  const used = sameDay ? Math.max(0, Number(session.quota_count) || 0) : 0;
+  const sameDay = session && session[dateField] === today;
+  const used = sameDay ? Math.max(0, Number(session[countField]) || 0) : 0;
 
   if (used >= limit) {
     return { allowed: false, quotaDate: today, quotaCount: used, remaining: 0 };
   }
   return { allowed: true, quotaDate: today, quotaCount: used + 1, remaining: limit - (used + 1) };
+}
+
+function consumeQuota(session, options) {
+  return rollQuota(session, 'quota_date', 'quota_count', options);
+}
+
+// Guest chat quota: same roll, separate counters (chat_quota_date/count on
+// blueprint_sessions) so a blueprint run never eats the chat allowance and a
+// chat turn never burns the blueprint run quota.
+function consumeChatQuota(session, options) {
+  return rollQuota(session, 'chat_quota_date', 'chat_quota_count', options);
 }
 
 // Cookie attributes for the bf_bp cookie: HttpOnly so script cannot read it,
@@ -93,5 +104,6 @@ module.exports = {
   verifySessionToken,
   hashIp,
   consumeQuota,
+  consumeChatQuota,
   sessionCookieOptions,
 };

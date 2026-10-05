@@ -10,6 +10,7 @@
 import { createSupabaseServerClient } from './supabase/server';
 import { createSupabaseAdminClient } from './supabase/admin';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { track } from './funnel.js';
 import { safeDownloadName } from './message-actions.js';
 import { notifyDiscordDiscovery } from './discord';
@@ -213,7 +214,34 @@ export async function recordFunnelEvent(
   return result;
 }
 
+// Guest-chat scope (chat-first redesign, slice A). A signed-out visitor's
+// conversation is owned by an anonymous bf_bp session and matches no RLS
+// policy (user_id is null), so every query for it must run with the service
+// role. Instead of threading a flag through ~40 functions, routes wrap the
+// request's work in runAsGuestSession() AFTER they have verified the HMAC
+// session owns the conversation; while that dynamic scope is active, db()
+// resolves to the admin client. AsyncLocalStorage is per-async-context, so
+// concurrent requests on the same instance never inherit each other's scope,
+// and a request that never entered the scope keeps RLS exactly as before.
+const guestScope = new AsyncLocalStorage<{ sessionId: string }>();
+
+export async function runAsGuestSession<T>(sessionId: string, fn: () => Promise<T>): Promise<T> {
+  return guestScope.run({ sessionId }, fn);
+}
+
 async function db(): Promise<ProjectDbClient> {
+  const guest = guestScope.getStore();
+  if (guest) {
+    const admin = createSupabaseAdminClient();
+    if (admin) {
+      // The service-role client is API-compatible; the cast only satisfies the generated types.
+      return admin as unknown as ProjectDbClient;
+    }
+    // No service role configured: fall through to the session client, which
+    // sees nothing of the guest's rows — fail closed, never widen.
+    console.error('[guest-scope] service role client not configured; falling back to session client');
+  }
+
   // Route handlers cannot always expose their NextRequest here, so read the
   // middleware-forwarded cookie header from next/headers instead.
   const headerStore = await headers();
@@ -3552,6 +3580,21 @@ export async function mergeBlueprintSessionToUser(
   const mapped = blueprintDbResult(error, 'blueprint merge');
   if (!mapped.ok) return mapped;
 
+  // Guest chats (slice A) follow the same rule: conversations the session
+  // created while anonymous become the account's. Idempotent by construction
+  // (.is('user_id', null)); messages keep sender_id null (the FK allows it)
+  // and are identified by sender_name, so nothing needs rewriting. The column
+  // only exists after migration 0023 — before that the merge is a no-op for
+  // conversations (there are none) and must not fail the callback.
+  const { error: conversationError } = await admin
+    .from('conversations')
+    .update({ user_id: userId })
+    .eq('owner_session_id', sessionId)
+    .is('user_id', null);
+  if (conversationError && !isMissingTable(conversationError)) {
+    console.error('Guest conversation merge error:', conversationError.message);
+  }
+
   const { error: sessionError } = await admin
     .from('blueprint_sessions')
     .update({ merged_user_id: userId })
@@ -3562,5 +3605,234 @@ export async function mergeBlueprintSessionToUser(
   }
 
   return { ok: true, merged: (data ?? []).length };
+}
+
+// ---------------------------------------------------------------------------
+// Guest chat (chat-first redesign, slice A) — H7 service-role boundary for
+// anonymous conversations. RLS never sees these rows: the route verifies the
+// bf_bp HMAC session first, then every call below runs with the service role
+// (or inside runAsGuestSession, which makes db() the service role).
+// ---------------------------------------------------------------------------
+
+export type GuestDbError = 'not_configured' | 'pending_migration' | 'failed';
+
+function guestDbResult(error: { code?: string | null; message: string } | null, label: string):
+  | { ok: true }
+  | { ok: false; error: GuestDbError } {
+  if (!error) return { ok: true };
+  console.error(`Guest chat ${label} error:`, error.message);
+  if (
+    isMissingTable(error) ||
+    error.code === 'PGRST204' ||
+    error.code === 'PGRST205' ||
+    error.code === '42703'
+  ) {
+    return { ok: false, error: 'pending_migration' };
+  }
+  return { ok: false, error: 'failed' };
+}
+
+// Ownership probe for a guest conversation: the session that created it.
+// Returns null when the row is not a guest row (or 0023 is not applied), so
+// callers fail closed — a signed-in conversation is never reachable as guest.
+export async function getConversationOwnerSession(conversationId: string): Promise<string | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+
+  const { data, error } = await admin
+    .from('conversations')
+    .select('owner_session_id')
+    .eq('id', conversationId)
+    .maybeSingle();
+
+  if (error) {
+    guestDbResult(error, 'owner session read');
+    return null;
+  }
+  return (data?.owner_session_id as string | null) ?? null;
+}
+
+// Create a guest conversation (and optionally its first message) in one
+// service-role path: user_id null, owner_session_id set. Returns
+// pending_migration until 0023 is applied instead of silently creating an
+// unowned row.
+export async function createGuestConversation(
+  sessionId: string,
+  options: { title?: string; source?: string; initialMessage?: string | null } = {}
+): Promise<
+  | { ok: true; conversationId: string; messageId: string | null }
+  | { ok: false; error: GuestDbError }
+> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const cleanSource = options.source === 'test' ? 'test' : 'organic';
+  const { data: conversation, error } = await admin
+    .from('conversations')
+    .insert({
+      user_id: null,
+      owner_session_id: sessionId,
+      title: options.title ?? 'New Project',
+      status: 'DISCOVERY',
+      source: cleanSource,
+    })
+    .select('id')
+    .maybeSingle();
+
+  const mapped = guestDbResult(error, 'conversation create');
+  if (!mapped.ok) return mapped;
+  const conversationId = String((conversation as { id?: unknown } | null)?.id ?? '');
+  if (!conversationId) return { ok: false, error: 'failed' };
+
+  const text = String(options.initialMessage ?? '').trim();
+  if (!text) return { ok: true, conversationId, messageId: null };
+
+  const { data: message, error: messageError } = await admin
+    .from('messages')
+    .insert({
+      conversation_id: conversationId,
+      sender_type: 'user',
+      sender_id: null,
+      sender_name: 'Guest',
+      content: text.slice(0, 8000),
+      content_type: 'text',
+    })
+    .select('id')
+    .maybeSingle();
+
+  if (messageError) {
+    console.error('Guest chat first message error:', messageError.message);
+    return { ok: false, error: 'failed' };
+  }
+
+  return { ok: true, conversationId, messageId: (message as { id?: string } | null)?.id ?? null };
+}
+
+// The rail's Recents feed for an anonymous session: only conversations with a
+// real message count as projects (same rule as the signed-in RPC), built with
+// service-role reads because no RLS policy grants anything here. Queries are
+// bounded: a guest session is young and its conversations are few.
+export async function getSessionConversationSummaries(
+  sessionId: string
+): Promise<ConversationSummary[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+
+  const { data: conversations, error } = await admin
+    .from('conversations')
+    .select('id, title, status, created_at, updated_at, user_id')
+    .eq('owner_session_id', sessionId)
+    .order('updated_at', { ascending: false })
+    .limit(30);
+
+  if (error) {
+    guestDbResult(error, 'session summaries read');
+    return [];
+  }
+
+  const rows = conversations ?? [];
+  if (rows.length === 0) return [];
+  const ids = rows.map((row) => row.id);
+
+  // One bounded pass over the session's messages supplies message counts,
+  // previews and the first user line (the title fallback chain).
+  const { data: messages, error: messagesError } = await admin
+    .from('messages')
+    .select('conversation_id, content, content_type, sender_type, created_at')
+    .in('conversation_id', ids)
+    .is('deleted_at', null)
+    .neq('content_type', 'ai_draft')
+    .order('created_at', { ascending: true })
+    .limit(500);
+
+  if (messagesError) {
+    guestDbResult(messagesError, 'session summary messages read');
+    return [];
+  }
+
+  const byConversation = new Map<string, ConversationMessage[]>();
+  for (const row of messages ?? []) {
+    const list = byConversation.get(row.conversation_id) ?? [];
+    list.push(row as ConversationMessage);
+    byConversation.set(row.conversation_id, list);
+  }
+
+  const summaries: ConversationSummary[] = [];
+  for (const row of rows) {
+    const list = byConversation.get(row.id);
+    if (!list || list.length === 0) continue; // no message = not a project yet
+
+    const last = list[list.length - 1];
+    const firstUser = list.find((entry) => entry.sender_type === 'user');
+    const storedTitle = String(row.title ?? '').trim();
+    const title =
+      (storedTitle && storedTitle !== 'New Project' ? storedTitle : '') ||
+      truncate(firstUser?.content ?? storedTitle, 60) ||
+      'New conversation';
+
+    summaries.push({
+      id: row.id,
+      title,
+      status: row.status ?? 'DISCOVERY',
+      messageCount: list.length,
+      lastActivity: last.created_at ?? row.updated_at ?? null,
+      preview: truncate(last.content ?? '', 90) || null,
+      ownerId: '',
+      staffViewedAt: null,
+      staffViewedBy: null,
+      isUnseen: false,
+    });
+  }
+
+  return summaries.sort((a, b) =>
+    String(b.lastActivity ?? '').localeCompare(String(a.lastActivity ?? ''))
+  );
+}
+
+// Durable daily guest-chat quota (separate columns from the blueprint run
+// quota — see consumeChatQuota). pending_migration until 0023 is applied.
+export async function getGuestChatQuota(sessionId: string): Promise<
+  | { ok: true; quota: { chat_quota_date: string; chat_quota_count: number } | null }
+  | { ok: false; error: GuestDbError }
+> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('blueprint_sessions')
+    .select('chat_quota_date, chat_quota_count')
+    .eq('id', sessionId)
+    .maybeSingle();
+
+  const mapped = guestDbResult(error, 'chat quota read');
+  if (!mapped.ok) return mapped;
+  if (!data) return { ok: true, quota: null };
+
+  return {
+    ok: true,
+    quota: {
+      chat_quota_date: String(data.chat_quota_date ?? ''),
+      chat_quota_count: Number(data.chat_quota_count ?? 0),
+    },
+  };
+}
+
+export async function persistGuestChatQuota(
+  sessionId: string,
+  quota: { quotaDate: string; quotaCount: number }
+): Promise<{ ok: true } | { ok: false; error: GuestDbError }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { error } = await admin
+    .from('blueprint_sessions')
+    .update({
+      chat_quota_date: quota.quotaDate,
+      chat_quota_count: quota.quotaCount,
+      last_seen_at: new Date().toISOString(),
+    })
+    .eq('id', sessionId);
+
+  return guestDbResult(error, 'chat quota write');
 }
 

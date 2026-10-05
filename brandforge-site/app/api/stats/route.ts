@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isStaffAccount, isAdminAccount } from '@/lib/project-db';
+import { resolveGuestSession } from '@/lib/guest-session';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
@@ -19,6 +20,12 @@ export async function GET(request: NextRequest) {
     const user = await getAuthenticatedUser(request);
 
     if (!user) {
+      // A guest session is never staff and never admin; answer instead of 401 so
+      // the rail's boot poll does not log auth failures for a signed-out chat.
+      const guest = await resolveGuestSession(request);
+      if (guest) {
+        return NextResponse.json({ isStaff: false, isAdmin: false, guest: true });
+      }
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
