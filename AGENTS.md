@@ -65,9 +65,16 @@ BrandForge/
   (brief's `/[id]` style not adopted); event store stays `funnel_events` (brief's
   `blueprint_events` folded into it); brief columns `saved_at/proposed_at/expires_at/language/
   jobs/usage_ledger/consents/sources/quick_wins/pricing_catalog/ethics_*` backlogged to migration
-  0023 with their slices. **Brief text loss: sections 0–5 AND 6–18 verbatim did not survive
-  summarization — founder re-paste needed for S4/S6/S8 fidelity** (section notes survive in this
-  file's bullets).
+  0023 with their slices. **Verified on prod** (`dpl_267m5c5sl`): the untouched 17/17 golden-path
+  e2e still green + gate e2e **25/25** (real LLM, save → 200 `emailed`, local-signed return token
+  redeems on prod, draft → 409, foreign session → 404) + browser walk **10/10** (gate before
+  refine, sent state, fresh-context restore — screenshot `bp-gate-sent.png`); funnel rows
+  `blueprint_gate_shown` ×7 (`gate: before_price`) + `blueprint_email_captured` ×7; auth probe
+  green. `blueprint_magic_link_clicked` is still 0 — it needs one real click from a founder
+  inbox (manual check: sign in with the blueprint's address once, then look for
+  `OAuth callback: blueprint merge` in the Vercel logs). **Brief text loss: sections 0–5 AND
+  6–18 verbatim did not survive summarization — founder re-paste needed for S4/S6/S8 fidelity**
+  (section notes survive in this file's bullets).
 - **Blueprint Engine S3+S5 — LIVE on brandforge.gg (2026-10-05)**: founder completed both go-live
   steps (re-ran `0022` → `input` column present; `BLUEPRINT_ENABLED=true` in Vercel + redeploy).
   The public surface — `/blueprint` (`force-dynamic`; intake → running → result state machine in
