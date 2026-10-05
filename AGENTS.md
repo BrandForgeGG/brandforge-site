@@ -42,21 +42,24 @@ BrandForge/
 
 - Live: https://brandforge.gg (Vercel, `brandforge-site` production).
 - Chat-first product: landing -> chat -> AI-structured project -> human proposal -> escrow.
-- **Blueprint Engine S3+S5 (2026-10-04, code complete, flag-dormant in prod)**: the public surface —
-  `/blueprint` (`force-dynamic`, `notFound()` while `BLUEPRINT_ENABLED` off; intake → running →
-  result state machine in `components/blueprint/blueprint-flow.tsx`, document renderer in
+- **Blueprint Engine S3+S5 — LIVE on brandforge.gg (2026-10-05)**: founder completed both go-live
+  steps (re-ran `0022` → `input` column present; `BLUEPRINT_ENABLED=true` in Vercel + redeploy).
+  The public surface — `/blueprint` (`force-dynamic`; intake → running → result state machine in
+  `components/blueprint/blueprint-flow.tsx`, document renderer in
   `components/blueprint/blueprint-document.tsx` with the `AI draft, not final` badge and
   no-guarantees footer), landing integration (signed-out hero **"Get a free blueprint first"**
   link carrying the typed idea via `brandforge:blueprint-idea`, conditional `/blueprint` sitemap
   entry, hero `chat_started` moved after the blueprint branch), `POST /api/blueprint/refine` (S5:
   note 3–500 chars, status must be `validated`, version+1 revision, quota discipline shared with
-  run), funnel events `blueprint_first_screen` + `blueprint_exit_tapped`, and `isMissingTable`
-  broadened so a missing schema returns 503 `pending_migration` with the 0022 hint. 349/349 tests,
-  tsc/eslint/build green; Playwright visual check 12/12. **Founder step 1: re-run the updated
-  `0022` file** (he applied a pre-`input` copy — live DB rejected the `input` column; the file now
-  carries an idempotent `alter table ... add column if not exists input`). **Step 2: then
-  `BLUEPRINT_ENABLED=true` in Vercel + redeploy for live e2e.** Scope held back on purpose:
-  convert exit hidden until S6, email gate to S11, quickWins `[]` until S8.
+  run), funnel events `blueprint_first_screen` + `blueprint_exit_tapped`. **First live run hit a
+  real bug**: the model emitted `kind: 'fixed'` with a `high` bound and repeated it through the
+  repair pass → every `/run` 502'd; fixed by normalising fixed-estimate `high` to null in
+  `normalizeBlueprint` (`6cf05bb`, +1 test → **350/350**, tsc/eslint/build green). **Verified on
+  prod**: API e2e 17/17 (start → run 12s real LLM → refine v2 → 401/400/401/404 negatives),
+  Playwright walk 12/12 (hero link → idea carry → intake → result → refine panel), funnel events
+  landing (`blueprint_started` ×7, `blueprint_first_screen` ×8), auth probe green. Scope held back
+  on purpose: convert exit hidden until S6, email gate to S11, quickWins `[]` until S8; **brief
+  sections 6–18 still needed**.
 - **Blueprint Engine S0–S2 (2026-10-04, code complete, flag-dormant in prod)**: master brief v1.0
   (sections 0–5 only — **sections 6–18 still need pasting**) Phase 0 audit + first three slices as
   code: `lib/blueprint-{config,session,schema,prompt,llm}.js` (+`.d.ts`, 38 new tests → **348/348**,
@@ -65,13 +68,12 @@ BrandForge/
   synthesis call + one repair pass, whole-document validation: lane/confidence/estimate pairing,
   word caps, guarantee-language ban, server-computed exits; quota consumed only when the provider
   did work), 7 funnel events (`blueprint_*` + `quick_win_*`), migration
-  **`0022_blueprint_sessions_and_blueprints.sql` applied by founder 2026-10-04 — but the
-  pre-`input` copy; the file's idempotent ALTER must be re-run before first run — re-run proven
-  on PGlite (15/15: fresh apply, prod-state re-run old→new adds `input` with no duplicate columns
-  or indexes, double re-run is a clean no-op; harness `run0022.js`)**.
-  Prod deploy leaves `BLUEPRINT_ENABLED` **absent (off)** → routes 404 until (a) 0022 complete and
-  (b) `BLUEPRINT_ENABLED=true` set in Vercel — deploy order is safe either way. Real-LLM e2e passed
-  first try (gpt-4o-mini: valid `deliver_now` document, $0.0007). S3 (landing surface + `/blueprint`
+  **`0022_blueprint_sessions_and_blueprints.sql` applied by founder 2026-10-04 — the earlier
+  run lacked `input`, the idempotent re-run completed it (re-run proven on PGlite, 15/15: fresh
+  apply, prod-state old→new adds `input` with no duplicate columns or indexes, double re-run is
+  a clean no-op; harness `run0022.js`)**. `BLUEPRINT_ENABLED=true` set 2026-10-05 — the engine
+  is live; Real-LLM e2e passed first try
+  (gpt-4o-mini: valid `deliver_now` document, $0.0007). S3 (landing surface + `/blueprint`
   page) and S5 (refine) shipped same day — see the S3+S5 bullet above.
 - **Chat Workspace UX 2.0 (2026-09-26, deployed to brandforge.gg)**: conversation-centric 3-pane workspace.
   AI answers render as editorial content through a sanitising markdown renderer; each turn carries a

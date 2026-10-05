@@ -322,7 +322,7 @@ CREATE TABLE blockers (
 );
 ```
 
-### blueprint_sessions, blueprints, blueprint_revisions (migration 0022 — applied 2026-10-04, pre-`input` copy; re-run the file's idempotent `add column if not exists input`)
+### blueprint_sessions, blueprints, blueprint_revisions (migration 0022 — fully applied 2026-10-04: founder ran the original, then the idempotent re-run added `input`)
 
 Free-first Blueprint Engine storage (anonymous visitors, no auth.users rows). RLS **on with zero
 policies** like `marketing_posts`: the service role (`lib/project-db.ts`, H7 allowlist) is the only
