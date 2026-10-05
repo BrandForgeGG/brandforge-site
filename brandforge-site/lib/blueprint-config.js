@@ -7,8 +7,7 @@
 //
 // 1. Dormant by default. The engine only answers when BLUEPRINT_ENABLED=true,
 //    so deploying the code cannot open a public unauthenticated AI endpoint by
-//    accident. Research stays a second, separate switch (section 7 of the brief
-//    has not arrived yet).
+//    accident. Research stays a second, separate switch (BLUEPRINT_RESEARCH).
 // 2. Model tiers, never model names. Business logic names *roles* (extract,
 //    synth); the concrete provider/model string comes from env so the founder
 //    can change vendors without touching code. Defaults fall back to whatever
@@ -30,6 +29,9 @@ function envNum(name, fallback, env = process.env) {
 
 function blueprintConfig(env = process.env) {
   const chatModel = env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
+  // Research provider: free and keyless by default (DuckDuckGo lite). Keyed
+  // adapters (serper/tavily/linkup) engage only when SEARCH_API_KEY is set.
+  const searchProvider = env.SEARCH_PROVIDER || 'ddg';
 
   return {
     enabled: envFlag('BLUEPRINT_ENABLED', env),
@@ -52,15 +54,18 @@ function blueprintConfig(env = process.env) {
     llmTimeoutMs: envInt('BLUEPRINT_LLM_TIMEOUT_MS', 60000, env),
 
     // Research stage (brief 4.5): provider adapter + per-run budgets. The
-    // stage only runs when BOTH the research switch is on and a search key is
-    // present, so deploying this code cannot start burning search credits.
-    searchProvider: env.SEARCH_PROVIDER || 'serper',
+    // stage runs when the research switch is on AND (the provider is keyless
+    // or a search key is present), so the free default can go live with a
+    // single env var.
+    searchProvider,
     searchApiKey: env.SEARCH_API_KEY || '',
     researchMaxQueries: envInt('BLUEPRINT_RESEARCH_QUERIES', 2, env),
     researchMaxSearches: envInt('BLUEPRINT_RESEARCH_SEARCHES', 3, env),
     researchMaxFetches: envInt('BLUEPRINT_RESEARCH_FETCHES', 2, env),
     researchTimeoutMs: envInt('BLUEPRINT_RESEARCH_TIMEOUT_MS', 8000, env),
-    searchCostUsd: envNum('SEARCH_COST_USD', 0.001, env),
+    // Free providers cost nothing; keyed APIs assume $0.001 per search until
+    // SEARCH_COST_USD says otherwise.
+    searchCostUsd: envNum('SEARCH_COST_USD', searchProvider === 'ddg' ? 0 : 0.001, env),
     pageTextMaxChars: envInt('BLUEPRINT_RESEARCH_CHARS', 4000, env),
 
     // Anonymous session signing. Falls back to the service-role key so the
@@ -72,4 +77,4 @@ function blueprintConfig(env = process.env) {
   };
 }
 
-module.exports = { blueprintConfig, envFlag, envInt };
+module.exports = { blueprintConfig, envFlag, envInt, envNum };

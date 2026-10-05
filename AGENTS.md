@@ -54,11 +54,18 @@ BrandForge/
   plans→searches→fetches **before** synthesis, feeds pages into a `RESEARCH_PACK` prompt section,
   validates research evidence only against really-fetched `fetchedUrls`, and adds searches + research
   dollars into `cost`; refine derives `fetchedUrls` from the document's own cited research
-  (`carriedResearch`) so a researched blueprint keeps validating across refinements. **Inert until
-  `BLUEPRINT_RESEARCH=true` + `SEARCH_API_KEY`** (empty pack, prompt reads `(none)`). Blocked on
-  the founder's key `23b93231-…` — rejected by 9 candidate providers (Serper 403, Exa/ScaleSerp/
-  SearchApi/SerpApi/Firecrawl/Kagi/Jina 401, Brave 422); awaiting which dashboard issued it before
-  the live e2e + golden-set AC (§14 "zero ungrounded findings") can run.
+  (`carriedResearch`) so a researched blueprint keeps validating across refinements.
+  **Live on prod behind `BLUEPRINT_RESEARCH=true` with the free provider**: the founder's key
+  belongs to **Linkup** (`app.linkup.so` — it authenticates, but the org has $0 credits:
+  429 INSUFFICIENT_FUNDS at 0.005/search), so on his "use free providers" call S4 runs on a
+  new **keyless DuckDuckGo lite adapter** (`SEARCH_PROVIDER=ddg`, the config default): GET of
+  `lite.duckduckgo.com/lite/`, browser UA, sponsored rows (`tr.result-sponsored`) stripped,
+  `uddg=` redirects unwrapped, 202 anomaly pages → coded error (never cached as empty),
+  zero cost per search. Serper/tavily/linkup adapters stay for a keyed switch (set
+  `SEARCH_PROVIDER` + `SEARCH_API_KEY`). Live chain proven before deploy: plan → 2 free
+  searches → 2 SSRF-checked page fetches with real titles + text. Remaining S4 AC: the
+  golden-set run (§14 "zero ungrounded findings") once a batch of real blueprints has been
+  eyeballed for citations.
 - **Blueprint Engine S11 email gate + return link (2026-10-05, code complete)**:
   the free-first promise survives leaving. Result screen gains a Save card **right before the
   Estimate block** (founder default `gate_position: before_price` — the price never appears

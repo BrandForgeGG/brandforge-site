@@ -48,6 +48,8 @@ export type ResearchLookup = (host: string) => Promise<Array<{ address: string; 
 
 export declare const SERPER_ENDPOINT: string;
 export declare const TAVILY_ENDPOINT: string;
+export declare const LINKUP_ENDPOINT: string;
+export declare const DDG_ENDPOINT: string;
 export declare const PLANNER_SYSTEM: string;
 
 export declare function isPublicIp(ip: string): boolean;
@@ -57,6 +59,8 @@ export declare function assertSafeUrl(
 ): Promise<URL>;
 export declare function normalizeQuery(query: unknown): string;
 export declare function canonicalUrl(raw: unknown): string | null;
+export declare function unwrapDdgHref(raw: unknown): string | null;
+export declare function parseDdgHtml(html: unknown, max?: number): SearchResult[];
 export declare function normalizeSearchResults(
   provider: string,
   payload: unknown

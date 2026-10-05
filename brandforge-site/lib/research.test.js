@@ -6,6 +6,8 @@ const {
   assertSafeUrl,
   normalizeQuery,
   canonicalUrl,
+  unwrapDdgHref,
+  parseDdgHtml,
   normalizeSearchResults,
   searchWeb,
   fetchPage,
@@ -18,6 +20,31 @@ const {
 } = require('./research.js');
 
 beforeEach(() => clearResearchCache());
+
+const DDG_FIXTURE = `
+<table border="0">
+  <tr class="result-sponsored">
+    <td>1.&nbsp;<a href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fads.example%2Fpromo&amp;rut=x" class="result-link">Ad result</a></td>
+  </tr>
+  <tr class="result-sponsored">
+    <td class="result-snippet">Ad snippet</td>
+  </tr>
+  <tr>
+    <td>1.&nbsp;<a href="//duckduckgo.com/l/?uddg=https%3A%2F%2Freal.example%2Fguide%3Fa%3D1&amp;rut=y" class="result-link"><span class="link-text">Real Guide &amp; More</span></a></td>
+  </tr>
+  <tr>
+    <td class="result-snippet">A <b>real</b> snippet &amp; facts</td>
+  </tr>
+  <tr>
+    <td>2.&nbsp;<a rel="nofollow" href="https://duckduckgo.com/duckduckgo-help-pages/" class="result-link">more info</a></td>
+  </tr>
+  <tr>
+    <td>3.&nbsp;<a href="https://duckduckgo.com/l/?uddg=https%3A%2F%2Fsecond.example%2F" class="result-link">Second result</a></td>
+  </tr>
+  <tr>
+    <td class="result-snippet">Second snippet</td>
+  </tr>
+</table>`;
 
 const PUBLIC_LOOKUP = async () => [{ address: '93.184.216.34', family: 4 }];
 
@@ -121,6 +148,40 @@ test('query normalization and canonical URLs', () => {
   assert.equal(canonicalUrl('nonsense'), null);
 });
 
+test('duckduckgo result links unwrap to real public URLs', () => {
+  assert.equal(
+    unwrapDdgHref('//duckduckgo.com/l/?uddg=https%3A%2F%2Fwww.example.com%2Fpage&amp;rut=abc'),
+    'https://www.example.com/page'
+  );
+  assert.equal(
+    unwrapDdgHref('https://duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Fa%3Fb%3D1&rut=x'),
+    'https://example.com/a?b=1'
+  );
+  assert.equal(unwrapDdgHref('https://duckduckgo.com/duckduckgo-help-pages/'), null, 'no uddg marker');
+  assert.equal(unwrapDdgHref('//duckduckgo.com/l/?uddg=javascript%3Aalert(1)'), null, 'non-http target');
+  assert.equal(unwrapDdgHref('//duckduckgo.com/l/?uddg=https%3A%2F%2Fduckduckgo.com%2Fabout'), null, 'self links');
+  assert.equal(unwrapDdgHref('//duckduckgo.com/l/?uddg=%E0%A4%A'), null, 'broken encoding dropped');
+});
+
+test('parseDdgHtml strips sponsored rows, unwraps links, pairs snippets', () => {
+  const results = parseDdgHtml(DDG_FIXTURE, 10);
+  assert.equal(results.length, 2, 'sponsored rows and disclosure links are dropped');
+  assert.deepEqual(
+    results.map((item) => item.url),
+    ['https://real.example/guide?a=1', 'https://second.example/']
+  );
+  assert.equal(results[0].title, 'Real Guide & More');
+  assert.equal(results[0].snippet, 'A real snippet & facts');
+  assert.equal(results[1].title, 'Second result');
+  assert.equal(results[1].snippet, 'Second snippet');
+  assert.equal(results[0].position, 1);
+
+  assert.deepEqual(parseDdgHtml('<html>anomaly page</html>'), []);
+  assert.deepEqual(parseDdgHtml(''), []);
+  assert.deepEqual(parseDdgHtml(null, 5), []);
+  assert.equal(parseDdgHtml(DDG_FIXTURE, 1).length, 1, 'max clips results');
+});
+
 // -------------------------------------------------------------- search -----
 
 test('searchWeb adapts the serper payload to one result shape', async () => {
@@ -158,6 +219,44 @@ test('searchWeb adapts the serper payload to one result shape', async () => {
   assert.equal(again.results.length, 2);
 });
 
+test('searchWeb ddg works without any API key and caches like the rest', async () => {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push({ url, init });
+    return new Response(DDG_FIXTURE, { status: 200, headers: { 'Content-Type': 'text/html' } });
+  };
+
+  const first = await searchWeb({ query: 'cake ordering', provider: 'ddg', fetchImpl });
+  assert.equal(calls[0].url.startsWith('https://lite.duckduckgo.com/lite/?q='), true);
+  assert.equal(calls[0].url.includes('cake%20ordering'), true);
+  assert.equal(typeof calls[0].init.headers['User-Agent'], 'string', 'lite needs a browser UA');
+  assert.equal(first.cached, false);
+  assert.equal(first.calls, 1);
+  assert.equal(first.results.length, 2);
+  assert.equal(first.results[0].url, 'https://real.example/guide?a=1');
+  assert.equal(first.results[0].title, 'Real Guide & More');
+
+  const again = await searchWeb({ query: ' cake   ORDERING ', provider: 'ddg', fetchImpl });
+  assert.equal(again.cached, true);
+  assert.equal(again.calls, 0);
+  assert.equal(calls.length, 1);
+
+  await assert.rejects(
+    searchWeb({ query: 'challenge', provider: 'ddg', fetchImpl: async () => new Response('x', { status: 202 }) }),
+    { message: 'search_http_202' },
+    'the anomaly page is an error, never cached as empty results'
+  );
+  await assert.rejects(
+    searchWeb({
+      query: 'empty',
+      provider: 'ddg',
+      fetchImpl: async () => new Response('<html>nothing here</html>', { status: 200 }),
+    }),
+    { message: 'search_bad_response' }
+  );
+  await assert.rejects(searchWeb({ query: 'still needs key' }), { message: 'search_disabled' });
+});
+
 test('searchWeb adapts the tavily payload and maps failures to coded errors', async () => {
   const results = normalizeSearchResults('tavily', {
     results: [{ url: 'https://c.example/', title: 'C', content: 'body text' }],
@@ -187,6 +286,55 @@ test('searchWeb adapts the tavily payload and maps failures to coded errors', as
       },
     }),
     { message: 'research_network' }
+  );
+});
+
+test('searchWeb speaks linkup: Bearer auth, depth fast, text results only', async () => {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push({ url, init });
+    return jsonResponse({
+      results: [
+        { type: 'text', name: 'Ordering guide', url: 'https://linkup.example/guide', content: 'facts here', favicon: '' },
+        { type: 'image', name: 'chart', url: 'https://linkup.example/img.png', favicon: '' },
+      ],
+    });
+  };
+
+  const { results, cached, calls: paid } = await searchWeb({
+    query: 'cake ordering',
+    apiKey: 'lu-key',
+    provider: 'linkup',
+    fetchImpl,
+  });
+  assert.equal(calls[0].url, 'https://api.linkup.so/v1/search');
+  assert.equal(calls[0].init.method, 'POST');
+  assert.equal(calls[0].init.headers.Authorization, 'Bearer lu-key');
+  const body = JSON.parse(calls[0].init.body);
+  assert.deepEqual(
+    { q: body.q, depth: body.depth, outputType: body.outputType, maxResults: body.maxResults },
+    { q: 'cake ordering', depth: 'fast', outputType: 'searchResults', maxResults: 5 }
+  );
+  assert.equal(results.length, 1, 'image results are dropped');
+  assert.equal(results[0].url, 'https://linkup.example/guide');
+  assert.equal(results[0].title, 'Ordering guide');
+  assert.equal(results[0].snippet, 'facts here');
+  assert.equal(cached, false);
+  assert.equal(paid, 1);
+
+  const again = await searchWeb({ query: ' cake   ORDERING ', apiKey: 'lu-key', provider: 'linkup', fetchImpl });
+  assert.equal(again.cached, true);
+  assert.equal(again.calls, 0);
+  assert.equal(calls.length, 1);
+
+  await assert.rejects(
+    searchWeb({
+      query: 'x',
+      apiKey: 'k',
+      provider: 'linkup',
+      fetchImpl: async () => jsonResponse({ error: { code: 'INSUFFICIENT_FUNDS_CREDITS' } }, 429),
+    }),
+    { message: 'search_http_429' }
   );
 });
 
@@ -396,6 +544,34 @@ test('runResearch is inert without the switch or the key', async () => {
   const noKey = await runResearch({ input: 'x', config: { ...CONFIG, searchApiKey: '' }, ask, fetchImpl });
   assert.deepEqual(noKey, { pages: [], searches: 0, queries: [], usdEstimate: 0 });
   assert.equal(asked, 0);
+});
+
+test('runResearch goes live keyless with ddg and costs nothing', async () => {
+  let asked = 0;
+  const result = await runResearch({
+    input: 'x',
+    config: { ...CONFIG, searchProvider: 'ddg', searchApiKey: '', searchCostUsd: 0 },
+    ask: async () => {
+      asked += 1;
+      return '["free search query"]';
+    },
+    fetchImpl: async (url) =>
+      String(url).includes('lite.duckduckgo.com')
+        ? new Response(DDG_FIXTURE, { status: 200, headers: { 'Content-Type': 'text/html' } })
+        : new Response('<title>P</title><p>readable text</p>', {
+            status: 200,
+            headers: { 'Content-Type': 'text/html' },
+          }),
+    lookupImpl: PUBLIC_LOOKUP,
+  });
+  assert.equal(asked, 1);
+  assert.equal(result.searches, 1);
+  assert.equal(result.queries.length, 1);
+  assert.equal(result.pages.length, 2, 'both fixture results are fetched, within the cap');
+  assert.equal(result.pages[0].url, 'https://real.example/guide?a=1');
+  assert.equal(result.pages[0].text.includes('readable text'), true);
+  assert.equal(result.pages[1].url, 'https://second.example/');
+  assert.equal(result.usdEstimate, 0, 'the free provider bills nothing');
 });
 
 test('runResearch survives search failures, empty plans and deadline exhaustion', async () => {

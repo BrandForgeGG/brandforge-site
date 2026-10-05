@@ -6,10 +6,11 @@
 // and SSRF protections are this module's acceptance criteria).
 //
 // Design notes:
-// - Provider adapters are env-shaped: SEARCH_PROVIDER (default "serper") and
-//   SEARCH_API_KEY. Responses normalize to one result shape
-//   {url, title, snippet, position} so the rest of the pipeline never sees a
-//   provider-specific payload.
+// - Provider adapters are env-shaped: SEARCH_PROVIDER (default "ddg") and
+//   SEARCH_API_KEY. Serper/tavily/linkup are keyed APIs; "ddg" is the free,
+//   keyless default (DuckDuckGo lite — no account, no credits). Responses
+//   normalize to one result shape {url, title, snippet, position} so the rest
+//   of the pipeline never sees a provider-specific payload.
 // - Every network call takes an injectable fetch and DNS lookup, so node:test
 //   exercises the full contract without touching the network.
 // - SSRF rules are default-deny: http/https only, no credentials in the URL,
@@ -26,10 +27,19 @@ const net = require('node:net');
 
 const SERPER_ENDPOINT = 'https://google.serper.dev/search';
 const TAVILY_ENDPOINT = 'https://api.tavily.com/search';
+const LINKUP_ENDPOINT = 'https://api.linkup.so/v1/search';
+const DDG_ENDPOINT = 'https://lite.duckduckgo.com/lite/';
+// Providers that authenticate nothing: no SEARCH_API_KEY required.
+const KEYLESS_PROVIDERS = new Set(['ddg']);
+const BROWSER_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 const CACHE_MAX_ENTRIES = 200;
 const SEARCH_CACHE_TTL_MS = 15 * 60 * 1000;
 const PAGE_CACHE_TTL_MS = 60 * 60 * 1000;
-const MAX_BYTES_DEFAULT = 500 * 1000;
+// Modern marketing pages routinely ship 0.5-1.5MB of HTML; the cap only has
+// to bound memory while streaming, since the extracted text is clipped to a
+// few thousand chars afterwards.
+const MAX_BYTES_DEFAULT = 1_500_000;
 const MAX_REDIRECTS_DEFAULT = 3;
 
 // ---------------------------------------------------------------- cache ----
@@ -248,9 +258,109 @@ async function readCapped(response, maxBytes) {
 
 // --------------------------------------------------------------- search ----
 
+// DuckDuckGo lite result links are redirects of the form
+// //duckduckgo.com/l/?uddg=<url-encoded target>&rut=... — unwrap to the real
+// URL, once (single encoding in organic results; anything unparseable is
+// dropped rather than fetched).
+function unwrapDdgHref(raw) {
+  const value = String(raw || '').replace(/&amp;/g, '&');
+  const marker = 'uddg=';
+  const at = value.indexOf(marker);
+  if (at < 0) return null;
+  const encoded = value.slice(at + marker.length).split('&')[0];
+  if (!encoded) return null;
+  let decoded;
+  try {
+    decoded = decodeURIComponent(encoded);
+  } catch {
+    return null;
+  }
+  try {
+    const url = new URL(decoded);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    if (url.hostname.toLowerCase() === 'duckduckgo.com') return null;
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+
+// Parse the lite HTML result page: strip sponsored rows (their links and
+// snippets live in <tr class="result-sponsored">), then pair every organic
+// result link with the snippet that follows it. Titles/snippets come back
+// entity-decoded and tag-stripped.
+function parseDdgHtml(html, max = 10) {
+  let page = String(html || '');
+  // Sponsored blocks are marked per row (link row + snippet row); strip until
+  // none remain so their uddg links never look organic.
+  for (;;) {
+    const stripped = page.replace(
+      /<tr[^>]*class=["'][^"']*result-sponsored[^"']*["'][\s\S]*?<\/tr>/gi,
+      ''
+    );
+    if (stripped === page) break;
+    page = stripped;
+  }
+
+  const anchors = [];
+  const anchorRe = /<a\s[^>]*>[\s\S]*?<\/a>/gi;
+  let match;
+  while ((match = anchorRe.exec(page)) !== null) {
+    const tag = match[0];
+    if (!/class=["']result-link["']/.test(tag)) continue;
+    const hrefMatch = /href=["']([^"']+)["']/i.exec(tag);
+    if (!hrefMatch) continue;
+    const url = unwrapDdgHref(hrefMatch[1]);
+    if (!url) continue;
+    const inner = tag.replace(/^<a\s[^>]*>/i, '').replace(/<\/a>$/i, '');
+    const title = decodeEntities(inner)
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 200);
+    anchors.push({ index: match.index, url, title, snippet: '' });
+  }
+
+  // Pair each snippet cell with the nearest preceding result link.
+  const snippetRe = /<td[^>]*class=["'][^"']*result-snippet[^"']*["'][^>]*>([\s\S]*?)<\/td>/gi;
+  while ((match = snippetRe.exec(page)) !== null) {
+    let best = null;
+    for (const anchor of anchors) {
+      if (anchor.index < match.index && !anchor.snippet) best = anchor;
+    }
+    if (!best) continue;
+    best.snippet = decodeEntities(match[1])
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 300);
+  }
+
+  const seen = new Set();
+  const out = [];
+  for (const anchor of anchors) {
+    if (seen.has(anchor.url)) continue;
+    seen.add(anchor.url);
+    out.push({ url: anchor.url, title: anchor.title, snippet: anchor.snippet, position: out.length + 1 });
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
 // Provider payloads -> one shape. Unknown providers fall through the serper
 // shape so a new adapter is one branch, not a pipeline change.
 function normalizeSearchResults(provider, payload) {
+  if (provider === 'linkup') {
+    const list = Array.isArray(payload && payload.results) ? payload.results : [];
+    return list
+      .filter((item) => item && item.type !== 'image' && item.url)
+      .map((item, index) => ({
+        url: String(item.url),
+        title: String(item.name || ''),
+        snippet: String(item.content || '').slice(0, 300),
+        position: index + 1,
+      }));
+  }
   if (provider === 'tavily') {
     const list = Array.isArray(payload && payload.results) ? payload.results : [];
     return list
@@ -283,25 +393,57 @@ async function searchWeb({
   cacheTtlMs = SEARCH_CACHE_TTL_MS,
   now = Date.now,
 }) {
-  if (!apiKey) throw new Error('search_disabled');
+  if (!apiKey && !KEYLESS_PROVIDERS.has(provider)) throw new Error('search_disabled');
 
   const cacheKey = `q:${provider}:${normalizeQuery(query)}`;
   const hit = cacheGet(cacheKey, now());
   if (hit) return { results: hit, cached: true, calls: 0 };
 
-  const endpoint = provider === 'tavily' ? TAVILY_ENDPOINT : SERPER_ENDPOINT;
-  const init =
-    provider === 'tavily'
-      ? {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ api_key: apiKey, query, max_results: num }),
-        }
-      : {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
-          body: JSON.stringify({ q: query, num }),
-        };
+  if (provider === 'ddg') {
+    const url = `${DDG_ENDPOINT}?q=${encodeURIComponent(query)}`;
+    const response = await timedFetch(
+      url,
+      {
+        headers: {
+          'User-Agent': BROWSER_UA,
+          'Accept-Language': 'en-US,en;q=0.9',
+          Accept: 'text/html,application/xhtml+xml',
+        },
+      },
+      fetchImpl,
+      timeoutMs
+    );
+    // A 202 here is DuckDuckGo's anomaly/challenge page, not results.
+    if (response.status !== 200) throw new Error(`search_http_${response.status}`);
+    const html = await response.text();
+    const results = parseDdgHtml(html, num);
+    if (results.length === 0) throw new Error('search_bad_response');
+    cacheSet(cacheKey, results, cacheTtlMs, now());
+    return { results, cached: false, calls: 1 };
+  }
+
+  const endpoint =
+    provider === 'linkup' ? LINKUP_ENDPOINT : provider === 'tavily' ? TAVILY_ENDPOINT : SERPER_ENDPOINT;
+  let init;
+  if (provider === 'linkup') {
+    init = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({ q: query, depth: 'fast', outputType: 'searchResults', maxResults: num }),
+    };
+  } else if (provider === 'tavily') {
+    init = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: apiKey, query, max_results: num }),
+    };
+  } else {
+    init = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
+      body: JSON.stringify({ q: query, num }),
+    };
+  }
 
   const response = await timedFetch(endpoint, init, fetchImpl, timeoutMs);
   if (!response.ok) throw new Error(`search_http_${response.status}`);
@@ -439,7 +581,8 @@ async function runResearch({
   now = Date.now,
 }) {
   const out = { pages: [], searches: 0, queries: [], usdEstimate: 0 };
-  if (!config || !config.researchEnabled || !config.searchApiKey) return out;
+  if (!config || !config.researchEnabled) return out;
+  if (!config.searchApiKey && !KEYLESS_PROVIDERS.has(config.searchProvider)) return out;
 
   const deadline = now() + Math.max(1000, config.researchTimeoutMs || 8000);
   const remaining = () => Math.max(250, deadline - now());
@@ -515,11 +658,15 @@ async function runResearch({
 module.exports = {
   SERPER_ENDPOINT,
   TAVILY_ENDPOINT,
+  LINKUP_ENDPOINT,
+  DDG_ENDPOINT,
   PLANNER_SYSTEM,
   isPublicIp,
   assertSafeUrl,
   normalizeQuery,
   canonicalUrl,
+  unwrapDdgHref,
+  parseDdgHtml,
   normalizeSearchResults,
   searchWeb,
   fetchPage,

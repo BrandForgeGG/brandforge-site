@@ -14,6 +14,19 @@ test('research is a separate switch and stays off by default', () => {
   assert.equal(blueprintConfig({ BLUEPRINT_RESEARCH: 'true' }).researchEnabled, true);
 });
 
+test('research defaults to the free keyless provider with zero cost', () => {
+  const config = blueprintConfig({});
+  assert.equal(config.searchProvider, 'ddg', 'free DuckDuckGo lite out of the box');
+  assert.equal(config.searchApiKey, '');
+  assert.equal(config.searchCostUsd, 0, 'the free provider bills nothing');
+
+  const serper = blueprintConfig({ SEARCH_PROVIDER: 'serper' });
+  assert.equal(serper.searchProvider, 'serper');
+  assert.equal(serper.searchCostUsd, 0.001, 'keyed providers assume the per-search price');
+
+  assert.equal(blueprintConfig({ SEARCH_COST_USD: '0.004' }).searchCostUsd, 0.004, 'env always wins');
+});
+
 test('model tiers default to the chat model and override per tier', () => {
   const fallback = blueprintConfig({});
   assert.equal(fallback.extractModel, 'openai/gpt-4o-mini');
