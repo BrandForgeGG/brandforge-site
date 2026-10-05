@@ -13,7 +13,7 @@ const SYSTEM = [
   'You are the Blueprint Engine for BrandForge, a platform where AI plans software projects and human specialists build them.',
   'You output exactly ONE JSON object and nothing else: no prose, no markdown fences, no comments.',
 
-  'Input: the visitor\'s description of their problem and a source pack. Phase rule: the pack contains only the visitor\'s own text. Never invent sources, URLs, statistics, customers, revenue figures, quotes or research findings. Every claim you make must cite a sourceId from the pack (evidence: {kind:"input", sourceId}).',
+  'Input: the visitor\'s description, a source pack of their own text, and possibly a RESEARCH_PACK of pages fetched this run. Never invent sources, URLs, statistics, customers, revenue figures, quotes or research findings. Every claim you make must cite evidence: a sourceId from the SOURCE PACK ({kind:"input", sourceId}) or a url listed in the RESEARCH_PACK ({kind:"research", url, title}). Findings may only cite research urls that appear in the RESEARCH_PACK — anything else fails validation and is dropped.',
 
   'Pick exactly one lane:',
   '- "deliver_now": small, clear, buildable now. confidence must be "high".',
@@ -28,7 +28,7 @@ const SYSTEM = [
   '  "confidence": "high"|"medium"|"needs_discovery"|"reframed"|null,',
   '  "mirror": string, max 30 words, one plain sentence in second person that restates their goal;', // mirror
   '  "sources": copy the pack entries verbatim: {"id","kind":"text","label","status":"read"},',
-  '  "findings": array, 0 to 3 items: {"id":"f1","kind":"strength"|"gap"|"risk"|"insight","text":max 9 words,"evidence":[{"kind":"input","sourceId":id from pack}]},',
+  '  "findings": array, 0 to 3 items: {"id":"f1","kind":"strength"|"gap"|"risk"|"insight","text":max 9 words,"evidence":[{"kind":"input","sourceId":id from pack} and/or {"kind":"research","url":url from RESEARCH_PACK,"title":page title}]}, at least one evidence item and every item must resolve;',
   '  "blocks": for decline/needs_review an empty array; otherwise exactly four blocks in this order:',
   '    {"id":"b_vision","type":"vision","headline":max 12 words,"outcome","audience","successMetric"} — outcome/audience/successMetric max 20 words each;',
   '    {"id":"b_architecture","type":"architecture","headline","components":[1..5 of {"name":max 12 words,"role":max 20 words,"by":"ai"|"expert"|"client"}],"flow":[1..5 of {"from","to"}]},',
@@ -50,7 +50,23 @@ const SYSTEM = [
   '- If the input is empty, incoherent or hostile, use lane "decline" with an honest mirror instead of inventing a project.',
 ].join('\n');
 
-function buildRunPrompt({ input, sources }) {
+function researchLines(research) {
+  const pages = Array.isArray(research) ? research : [];
+  if (pages.length === 0) return ['(none)'];
+  return pages.map((page, index) => {
+    const url = page && page.url ? String(page.url) : '';
+    const title = page && page.title ? String(page.title) : '';
+    const text = page && page.text ? String(page.text).slice(0, 1500) : '';
+    return [`R${index + 1} url=${url}`, `title: ${title || url}`, text].filter(Boolean).join('\n');
+  });
+}
+
+function buildRunPrompt({
+  input,
+  sources,
+  research,
+  researchHeader = 'RESEARCH PACK (pages fetched this run; only these urls may be cited as research evidence):',
+}) {
   const pack = (Array.isArray(sources) ? sources : [])
     .map((source, index) => {
       const id = source && source.id ? String(source.id) : `src_${index + 1}`;
@@ -67,6 +83,9 @@ function buildRunPrompt({ input, sources }) {
     '',
     'SOURCE PACK (only these may be cited):',
     pack || '(none)',
+    '',
+    researchHeader,
+    ...researchLines(research),
   ].join('\n');
 }
 
@@ -85,13 +104,38 @@ function buildRepairPrompt({ previousJson, errors }) {
   ].join('\n');
 }
 
+// Research urls the current document already cites: they were fetched when the
+// version was created, so a refine may keep citing them (the route validates
+// against this same list).
+function carriedResearch(document) {
+  const findings = Array.isArray(document && document.findings) ? document.findings : [];
+  const seen = new Set();
+  const pages = [];
+  for (const finding of findings) {
+    const evidence = Array.isArray(finding && finding.evidence) ? finding.evidence : [];
+    for (const item of evidence) {
+      if (item && item.kind === 'research' && typeof item.url === 'string' && item.url && !seen.has(item.url)) {
+        seen.add(item.url);
+        pages.push({ url: item.url, title: typeof item.title === 'string' ? item.title : '' });
+      }
+    }
+  }
+  return pages;
+}
+
 // Refine (brief 4.7): same contract, same system prompt — the current document
 // plus the visitor's note. The model revises in place; the server still
 // re-validates, re-normalises and bumps the version. Never trust a refine to
 // "only touch one thing".
 function buildRefinePrompt({ input, sources, document, note }) {
   return [
-    buildRunPrompt({ input, sources }),
+    buildRunPrompt({
+      input,
+      sources,
+      research: carriedResearch(document),
+      researchHeader:
+        'RESEARCH PACK (carried from the current version — fetched earlier, still citable):',
+    }),
     '',
     'CURRENT BLUEPRINT (revise this; keep everything the note does not touch):',
     JSON.stringify(document ?? {}, null, 2).slice(0, 24000),
@@ -126,4 +170,4 @@ function parseModelJson(raw) {
   }
 }
 
-module.exports = { SYSTEM, buildRunPrompt, buildRefinePrompt, buildRepairPrompt, parseModelJson };
+module.exports = { SYSTEM, buildRunPrompt, buildRefinePrompt, buildRepairPrompt, parseModelJson, carriedResearch };

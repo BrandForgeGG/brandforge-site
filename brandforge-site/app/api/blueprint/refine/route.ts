@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { blueprintConfig } from '@/lib/blueprint-config';
 import { verifySessionToken, consumeQuota } from '@/lib/blueprint-session';
 import { normalizeBlueprint, validateBlueprint } from '@/lib/blueprint-schema';
-import { SYSTEM, buildRefinePrompt, buildRepairPrompt, parseModelJson } from '@/lib/blueprint-prompt';
+import { SYSTEM, buildRefinePrompt, buildRepairPrompt, parseModelJson, carriedResearch } from '@/lib/blueprint-prompt';
 import { completeJson } from '@/lib/blueprint-llm';
 import {
   createBlueprintRevision,
@@ -129,6 +129,10 @@ export async function POST(request: NextRequest) {
   }
 
   const seed = blueprint.document as { sources?: unknown };
+  // Research urls already cited by this document were fetched when the version
+  // was created: the model may keep citing them across a refine, so the
+  // validator's "was it fetched" check resolves against this carried list.
+  const fetchedUrls = carriedResearch(blueprint.document).map((page) => page.url);
   const prompt = buildRefinePrompt({
     input: blueprint.input,
     sources: Array.isArray(seed.sources) ? (seed.sources as Array<Record<string, unknown>>) : [],
@@ -161,7 +165,7 @@ export async function POST(request: NextRequest) {
     const raw = parseModelJson(completion.text);
     let document = raw ? normalizeBlueprint(raw, { version: nextVersion, cost: completion }) : null;
     let validation = document
-      ? validateBlueprint(document, { fetchedUrls: [] })
+      ? validateBlueprint(document, { fetchedUrls })
       : { ok: false, errors: ['model output was not a JSON object'] };
 
     if (!validation.ok) {
@@ -185,7 +189,7 @@ export async function POST(request: NextRequest) {
           ? normalizeBlueprint(repairedRaw, { version: nextVersion, cost: repair })
           : null;
         const repairedValidation = repaired
-          ? validateBlueprint(repaired, { fetchedUrls: [] })
+          ? validateBlueprint(repaired, { fetchedUrls })
           : { ok: false, errors: ['repair output was not a JSON object'] };
         if (repaired && repairedValidation.ok) {
           document = repaired;

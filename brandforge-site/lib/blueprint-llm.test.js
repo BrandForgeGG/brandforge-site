@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { SYSTEM, buildRunPrompt, buildRefinePrompt, buildRepairPrompt, parseModelJson } = require('./blueprint-prompt.js');
+const { SYSTEM, buildRunPrompt, buildRefinePrompt, buildRepairPrompt, parseModelJson, carriedResearch } = require('./blueprint-prompt.js');
 const { completeJson } = require('./blueprint-llm.js');
 
 test('the system prompt pins the contract the validator enforces', () => {
@@ -25,6 +25,50 @@ test('the run prompt carries the intake and the source pack ids verbatim', () =>
 
   const empty = buildRunPrompt({ input: 'x', sources: [] });
   assert.equal(empty.includes('(none)'), true);
+});
+
+test('the run prompt carries the research pack with citable urls only', () => {
+  const prompt = buildRunPrompt({
+    input: 'x',
+    sources: [],
+    research: [{ url: 'https://research.example/guide', title: 'Guide', text: 'Citable facts.' }],
+  });
+  assert.equal(prompt.includes('RESEARCH PACK'), true);
+  assert.equal(prompt.includes('R1 url=https://research.example/guide'), true);
+  assert.equal(prompt.includes('title: Guide'), true);
+  assert.equal(prompt.includes('Citable facts.'), true);
+
+  const none = buildRunPrompt({ input: 'x', sources: [], research: [] });
+  assert.equal(none.includes('RESEARCH PACK'), true);
+  assert.equal(none.includes('(none)'), true);
+});
+
+test('carriedResearch extracts and dedupes the research urls the document cites', () => {
+  const document = {
+    findings: [
+      { evidence: [{ kind: 'input', sourceId: 'src_input' }, { kind: 'research', url: 'https://a.example/', title: 'A' }] },
+      { evidence: [{ kind: 'research', url: 'https://a.example/', title: 'A dup' }, { kind: 'research', url: 'https://b.example/', title: 'B' }] },
+      {},
+      null,
+    ],
+  };
+  assert.deepEqual(carriedResearch(document), [
+    { url: 'https://a.example/', title: 'A' },
+    { url: 'https://b.example/', title: 'B' },
+  ]);
+  assert.deepEqual(carriedResearch(undefined), []);
+  assert.deepEqual(carriedResearch({ findings: 'nope' }), []);
+
+  const prompt = buildRefinePrompt({
+    input: 'x',
+    sources: [],
+    document,
+    note: 'tighter',
+  });
+  assert.equal(prompt.includes('carried from the current version'), true);
+  assert.equal(prompt.includes('https://a.example/'), true);
+  assert.equal(prompt.includes('https://b.example/'), true);
+  assert.equal(prompt.includes('https://a.example/', prompt.indexOf('RESEARCH PACK') + 1), true, 'first match still inside the pack');
 });
 
 test('the refine prompt carries intake, current document and the note', () => {

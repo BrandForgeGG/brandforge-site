@@ -4,6 +4,7 @@ import { verifySessionToken, consumeQuota } from '@/lib/blueprint-session';
 import { normalizeBlueprint, validateBlueprint } from '@/lib/blueprint-schema';
 import { SYSTEM, buildRunPrompt, buildRepairPrompt, parseModelJson } from '@/lib/blueprint-prompt';
 import { completeJson } from '@/lib/blueprint-llm';
+import { runResearch, PLANNER_SYSTEM } from '@/lib/research';
 import {
   createBlueprintRevision,
   getBlueprintSession,
@@ -123,9 +124,40 @@ export async function POST(request: NextRequest) {
   }
 
   const seed = blueprint.document as { sources?: unknown };
+  const sources = Array.isArray(seed.sources) ? (seed.sources as Array<Record<string, unknown>>) : [];
+
+  // Research stage (brief 4.5): plan queries with the cheap tier, search and
+  // fetch inside a small wall-clock budget. runResearch never throws and
+  // returns an empty pack unless BLUEPRINT_RESEARCH is on and SEARCH_API_KEY
+  // is set, so this code is inert until the founder wires a provider.
+  const research = await runResearch({
+    input: blueprint.input,
+    config,
+    ask: async (plannerPrompt, timeoutMs) => {
+      const plan = await completeJson({
+        apiKey,
+        model: config.extractModel,
+        system: PLANNER_SYSTEM,
+        user: plannerPrompt,
+        timeoutMs: timeoutMs ?? 4000,
+      });
+      return plan.text;
+    },
+  });
+  const fetchedUrls = research.pages.map((page) => page.url);
+  // Token counts come from whichever LLM call produced the document; search
+  // counts and research dollars belong to the run and are added either way.
+  const runCost = (tokens: { tokensIn: number; tokensOut: number; usdEstimate?: number }) => ({
+    tokensIn: tokens.tokensIn,
+    tokensOut: tokens.tokensOut,
+    searches: research.searches,
+    usdEstimate: (Number(tokens.usdEstimate) || 0) + research.usdEstimate,
+  });
+
   const prompt = buildRunPrompt({
     input: blueprint.input,
-    sources: Array.isArray(seed.sources) ? (seed.sources as Array<Record<string, unknown>>) : [],
+    sources,
+    research: research.pages,
   });
 
   let workDone = false;
@@ -150,9 +182,9 @@ export async function POST(request: NextRequest) {
     }
 
     const raw = parseModelJson(completion.text);
-    let document = raw ? normalizeBlueprint(raw, { version: blueprint.version, cost: completion }) : null;
+    let document = raw ? normalizeBlueprint(raw, { version: blueprint.version, cost: runCost(completion) }) : null;
     let validation = document
-      ? validateBlueprint(document, { fetchedUrls: [] })
+      ? validateBlueprint(document, { fetchedUrls })
       : { ok: false, errors: ['model output was not a JSON object'] };
 
     // One repair pass (brief 4.6): everything the validator rejected — up to
@@ -176,10 +208,10 @@ export async function POST(request: NextRequest) {
       if (repair) {
         const repairedRaw = parseModelJson(repair.text);
         const repaired = repairedRaw
-          ? normalizeBlueprint(repairedRaw, { version: blueprint.version, cost: repair })
+          ? normalizeBlueprint(repairedRaw, { version: blueprint.version, cost: runCost(repair) })
           : null;
         const repairedValidation = repaired
-          ? validateBlueprint(repaired, { fetchedUrls: [] })
+          ? validateBlueprint(repaired, { fetchedUrls })
           : { ok: false, errors: ['repair output was not a JSON object'] };
         if (repaired && repairedValidation.ok) {
           document = repaired;

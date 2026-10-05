@@ -23,6 +23,11 @@ function envInt(name, fallback, env = process.env) {
   return Number.isFinite(raw) && raw > 0 ? raw : fallback;
 }
 
+function envNum(name, fallback, env = process.env) {
+  const raw = Number.parseFloat(String(env[name] ?? ''));
+  return Number.isFinite(raw) && raw >= 0 ? raw : fallback;
+}
+
 function blueprintConfig(env = process.env) {
   const chatModel = env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
 
@@ -45,6 +50,18 @@ function blueprintConfig(env = process.env) {
     intakeMaxChars: 4000,
 
     llmTimeoutMs: envInt('BLUEPRINT_LLM_TIMEOUT_MS', 60000, env),
+
+    // Research stage (brief 4.5): provider adapter + per-run budgets. The
+    // stage only runs when BOTH the research switch is on and a search key is
+    // present, so deploying this code cannot start burning search credits.
+    searchProvider: env.SEARCH_PROVIDER || 'serper',
+    searchApiKey: env.SEARCH_API_KEY || '',
+    researchMaxQueries: envInt('BLUEPRINT_RESEARCH_QUERIES', 2, env),
+    researchMaxSearches: envInt('BLUEPRINT_RESEARCH_SEARCHES', 3, env),
+    researchMaxFetches: envInt('BLUEPRINT_RESEARCH_FETCHES', 2, env),
+    researchTimeoutMs: envInt('BLUEPRINT_RESEARCH_TIMEOUT_MS', 8000, env),
+    searchCostUsd: envNum('SEARCH_COST_USD', 0.001, env),
+    pageTextMaxChars: envInt('BLUEPRINT_RESEARCH_CHARS', 4000, env),
 
     // Anonymous session signing. Falls back to the service-role key so the
     // engine works with one env var set; BLUEPRINT_SESSION_SECRET exists so the
