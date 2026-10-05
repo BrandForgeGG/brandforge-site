@@ -1,14 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import type { BlueprintDocument } from '@/lib/blueprint-schema';
 import { trackEvent } from '@/lib/funnel-client';
 import { BlueprintDocumentView } from './blueprint-document';
 
 // The anonymous blueprint journey (brief 4.10): intake -> one honest loading
-// state -> the rendered document -> refine. Plain fetch throughout: these
-// endpoints are deliberately unauthenticated, and fetchAuthed would bounce a
-// signed-out visitor to /login on any hiccup.
+// state -> the rendered document -> save gate -> refine. Plain fetch
+// throughout: these endpoints are deliberately unauthenticated, and
+// fetchAuthed would bounce a signed-out visitor to /login on any hiccup.
 //
 // Failure keeps the visitor's text (never clear the textarea on an error) and
 // a failed run retries against the blueprint that already exists, so retries
@@ -16,6 +17,11 @@ import { BlueprintDocumentView } from './blueprint-document';
 
 const IDEA_KEY = 'brandforge:blueprint-idea';
 const NOTE_MAX = 500;
+const EMAIL_MAX_CHARS = 254;
+// Founder default for the gate position (master brief 16): before the exits.
+// Must match the server's fallback in app/api/blueprint/save/route.ts.
+const GATE_POSITION = 'before_price';
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type Stage = 'intake' | 'running' | 'result';
 
@@ -24,6 +30,11 @@ interface RunResponse {
   version?: number;
   document?: BlueprintDocument;
   error?: string;
+}
+
+interface CurrentResponse extends RunResponse {
+  status?: string;
+  hasEmail?: boolean;
 }
 
 export function BlueprintFlow({
@@ -42,6 +53,15 @@ export function BlueprintFlow({
   const [refineOpen, setRefineOpen] = useState(false);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+  const [saveEmail, setSaveEmail] = useState('');
+  const [saveState, setSaveState] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const stageRef = useRef<Stage>('intake');
+  const interactedRef = useRef(false);
+  const gateTrackedRef = useRef(false);
+
+  useEffect(() => {
+    stageRef.current = stage;
+  }, [stage]);
 
   useEffect(() => {
     trackEvent('blueprint_first_screen');
@@ -55,6 +75,41 @@ export function BlueprintFlow({
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Return link (master brief 6): a visitor holding the session cookie (from
+  // /api/blueprint/return or an earlier visit) reopens their saved document
+  // instead of an empty intake. A quiet 404 means nothing to restore. The
+  // guards keep it from stealing the screen from someone already typing.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch('/api/blueprint/current');
+        const data: CurrentResponse = await response.json().catch(() => ({}));
+        if (cancelled || !response.ok || !data.blueprintId || !data.document) return;
+        if (stageRef.current !== 'intake' || interactedRef.current) return;
+        setBlueprintId(data.blueprintId);
+        setDocument(data.document);
+        setVersion(data.version ?? 1);
+        if (data.hasEmail) setSaveState('sent');
+        setStage('result');
+      } catch {
+        // Nothing to restore, or storage unreachable: intake stays.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // The gate impression: once per result screen (refined documents update in
+  // place and must not recount).
+  useEffect(() => {
+    if (stage === 'result' && document && !gateTrackedRef.current) {
+      gateTrackedRef.current = true;
+      trackEvent('blueprint_gate_shown', { gate: GATE_POSITION });
+    }
+  }, [stage, document]);
 
   async function runExisting(id: string): Promise<BlueprintDocument> {
     const response = await fetch('/api/blueprint/run', {
@@ -147,6 +202,35 @@ export function BlueprintFlow({
     }
   }
 
+  async function saveBlueprint(event: React.FormEvent) {
+    event.preventDefault();
+    if (!blueprintId || saveState !== 'idle' || busy) return;
+    const trimmed = saveEmail.trim().toLowerCase();
+    if (trimmed.length > EMAIL_MAX_CHARS || !EMAIL_PATTERN.test(trimmed)) {
+      setError('Enter a valid email address so the link has somewhere to go.');
+      return;
+    }
+
+    setSaveState('sending');
+    setError('');
+
+    try {
+      const response = await fetch('/api/blueprint/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blueprintId, email: trimmed, gate: GATE_POSITION }),
+      });
+      const data: { ok?: boolean; error?: string } = await response.json().catch(() => ({}));
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || 'Could not send the link. Try again.');
+      }
+      setSaveState('sent');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send the link. Try again.');
+      setSaveState('idle');
+    }
+  }
+
   function startOver() {
     setStage('intake');
     setBlueprintId(null);
@@ -156,6 +240,10 @@ export function BlueprintFlow({
     setError('');
     setRefineOpen(false);
     setNote('');
+    setSaveEmail('');
+    setSaveState('idle');
+    interactedRef.current = false;
+    gateTrackedRef.current = false;
   }
 
   if (stage === 'result' && document) {
@@ -183,6 +271,58 @@ export function BlueprintFlow({
           </div>
 
           <BlueprintDocumentView document={document} />
+
+          {/* Email gate (master brief 6): sits before every exit, per the
+              founder's default gate position. */}
+          <div className="rounded-2xl border border-line bg-panel p-6">
+            {saveState === 'sent' ? (
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  Return link sent{saveEmail ? ` to ${saveEmail}` : ''}.
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-muted">
+                  Open it any time to come back to this blueprint — no account needed. To keep it
+                  with your account,{' '}
+                  <Link
+                    href="/login?next=%2Fblueprint"
+                    className="text-copper underline underline-offset-2 transition hover:text-foreground"
+                  >
+                    sign in with the same address
+                  </Link>
+                  .
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={saveBlueprint}>
+                <label htmlFor="save-email" className="text-sm font-semibold text-foreground">
+                  Save this blueprint
+                </label>
+                <p className="mt-1 text-xs leading-relaxed text-muted">
+                  Send yourself a return link — open it any time, no account needed.
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <input
+                    id="save-email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    value={saveEmail}
+                    onChange={(e) => setSaveEmail(e.target.value)}
+                    placeholder="you@company.com"
+                    maxLength={EMAIL_MAX_CHARS}
+                    className="w-full max-w-xs rounded-xl border border-line bg-background px-4 py-2.5 text-sm text-foreground placeholder-muted outline-none transition focus:border-ember focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  />
+                  <button
+                    type="submit"
+                    disabled={saveState === 'sending' || busy || !saveEmail.trim()}
+                    className="rounded-lg bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {saveState === 'sending' ? 'Sending…' : 'Email me a return link'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
 
           <div className="rounded-2xl border border-line bg-panel p-6">
             {refineOpen ? (
@@ -281,7 +421,10 @@ export function BlueprintFlow({
         <textarea
           id="blueprint-intake"
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => {
+            interactedRef.current = true;
+            setInput(e.target.value);
+          }}
           maxLength={intakeMaxChars}
           rows={5}
           placeholder="A few sentences is enough. What is the problem, who has it, and what should be different when it works?"

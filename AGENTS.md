@@ -42,6 +42,32 @@ BrandForge/
 
 - Live: https://brandforge.gg (Vercel, `brandforge-site` production).
 - Chat-first product: landing -> chat -> AI-structured project -> human proposal -> escrow.
+- **Blueprint Engine S11 email gate + return link (2026-10-05, code complete)**:
+  the free-first promise survives leaving. Result screen gains a Save card **before every exit**
+  (founder default `gate_position: before_price`): `POST /api/blueprint/save` (flag / rate 6-per-min
+  / session / ownership gates; refuses `draft` and `proposed`; stores `email` + status `saved`
+  **first**, then sends the return-link email — a Resend failure is an honest 502 and a retry
+  re-sends), `GET /api/blueprint/return?token=` (same HMAC as `bf_bp` → reinstalls the cookie →
+  302 `/blueprint`; every path lands on intake-looking `/blueprint`, never an error page),
+  `GET /api/blueprint/current` (newest non-`draft` row for the session; the flow restores the saved
+  document + sent state on mount — 404 = quiet "nothing to restore"). Magic-link merge:
+  `auth/callback` verifies the incoming `bf_bp` cookie and runs `mergeBlueprintSessionToUser`
+  (idempotent `.is('user_id', null)`: blueprints take the account, session marked `merged_user_id`;
+  never blocks the redirect); `/login` now honours `?next=` and tags OTP redirects `&bp=email`, so
+  `blueprint_magic_link_clicked` counts only real magic links (Google merges silently). Refine now
+  accepts `saved` too and **keeps** `saved` (never regresses to `validated`; save refuses `draft`
+  so a seed document can never be restored as real). Funnel: `blueprint_gate_shown` +
+  `blueprint_magic_link_clicked` added (9 blueprint events total). New email case `blueprint_saved`
+  ("Your blueprint is saved", return-link CTA, keep-with-account line). 353/353 (+3 tests),
+  tsc/eslint/build green; local e2e 25/25 (real LLM, real Resend send, return-link redeem loop) +
+  browser walk 10/10 (gate before refine, sent state, fresh-context restore). **Brief §8
+  reconciliation**: shipped flat routes `/api/blueprint/{start,run,refine,save,return,current}`
+  (brief's `/[id]` style not adopted); event store stays `funnel_events` (brief's
+  `blueprint_events` folded into it); brief columns `saved_at/proposed_at/expires_at/language/
+  jobs/usage_ledger/consents/sources/quick_wins/pricing_catalog/ethics_*` backlogged to migration
+  0023 with their slices. **Brief text loss: sections 0–5 AND 6–18 verbatim did not survive
+  summarization — founder re-paste needed for S4/S6/S8 fidelity** (section notes survive in this
+  file's bullets).
 - **Blueprint Engine S3+S5 — LIVE on brandforge.gg (2026-10-05)**: founder completed both go-live
   steps (re-ran `0022` → `input` column present; `BLUEPRINT_ENABLED=true` in Vercel + redeploy).
   The public surface — `/blueprint` (`force-dynamic`; intake → running → result state machine in

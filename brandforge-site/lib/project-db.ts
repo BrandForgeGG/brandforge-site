@@ -3478,3 +3478,89 @@ export async function createBlueprintRevision(
   return blueprintDbResult(error, 'revision insert');
 }
 
+// Email gate (master brief 6): the visitor's address lands on the blueprint
+// row and the status moves to 'saved'. The status policy (which transitions
+// are allowed) lives in the route; this wrapper only writes what it is told.
+export async function saveBlueprintEmail(
+  id: string,
+  sessionId: string,
+  email: string
+): Promise<
+  | { ok: true; blueprint: Pick<BlueprintRow, 'id' | 'status' | 'email' | 'version'> }
+  | { ok: false; error: BlueprintDbError | 'not_found' }
+> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('blueprints')
+    .update({ status: 'saved', email, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('session_id', sessionId)
+    .select('id, status, email, version')
+    .maybeSingle();
+
+  const mapped = blueprintDbResult(error, 'blueprint email save');
+  if (!mapped.ok) return mapped;
+  const row = (data as Pick<BlueprintRow, 'id' | 'status' | 'email' | 'version'> | null) ?? null;
+  if (!row) return { ok: false, error: 'not_found' };
+  return { ok: true, blueprint: row };
+}
+
+// Return link (master brief 6): whatever this session last produced, newest
+// first, so a saved blueprint reopens instead of an empty intake. The eq on
+// session_id is the same IDOR guard as getBlueprintRow.
+export async function getCurrentBlueprintForSession(sessionId: string): Promise<
+  | { ok: true; blueprint: BlueprintRow | null }
+  | { ok: false; error: BlueprintDbError }
+> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('blueprints')
+    .select('id, session_id, user_id, conversation_id, input, version, status, lane, confidence, email, document, created_at, updated_at')
+    .eq('session_id', sessionId)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const mapped = blueprintDbResult(error, 'blueprint current read');
+  if (!mapped.ok) return mapped;
+  return { ok: true, blueprint: (data as BlueprintRow | null) ?? null };
+}
+
+// Email-gate merge (master brief 6): a signed-in visitor carrying the
+// anonymous bf_bp cookie takes the session's blueprints into their account.
+// Idempotent by construction — .is('user_id', null) means a second callback
+// (magic link and Google on the same device) updates zero rows, never
+// reassigns ownership. The session mark is bookkeeping: the blueprint rows
+// are the merge that matters, so its failure logs and does not fail.
+export async function mergeBlueprintSessionToUser(
+  sessionId: string,
+  userId: string
+): Promise<{ ok: true; merged: number } | { ok: false; error: BlueprintDbError }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('blueprints')
+    .update({ user_id: userId })
+    .eq('session_id', sessionId)
+    .is('user_id', null)
+    .select('id');
+  const mapped = blueprintDbResult(error, 'blueprint merge');
+  if (!mapped.ok) return mapped;
+
+  const { error: sessionError } = await admin
+    .from('blueprint_sessions')
+    .update({ merged_user_id: userId })
+    .eq('id', sessionId)
+    .is('merged_user_id', null);
+  if (sessionError) {
+    blueprintDbResult(sessionError, 'session merge mark');
+  }
+
+  return { ok: true, merged: (data ?? []).length };
+}
+

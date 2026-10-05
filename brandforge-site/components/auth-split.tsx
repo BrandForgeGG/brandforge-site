@@ -46,7 +46,14 @@ export function AuthSplit() {
       process.env.NEXT_PUBLIC_SITE_URL ||
         (typeof window !== 'undefined' ? window.location.origin : '')
     );
-    return buildOAuthRedirectUrl('/chat', siteUrl);
+    // Honour ?next= so a deep link (e.g. the blueprint email gate's
+    // "keep with your account") returns to where it started; buildOAuthRedirectUrl
+    // sanitises the path — junk falls back to /chat.
+    const next =
+      typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('next')
+        : null;
+    return buildOAuthRedirectUrl(next || '/chat', siteUrl);
   }
 
   async function handleGoogleSignIn() {
@@ -101,7 +108,9 @@ export function AuthSplit() {
 
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email: trimmed,
-      options: { emailRedirectTo: redirectUrl() },
+      // bp=email marks the callback as a magic-link arrival so the blueprint
+      // merge (anonymous session -> account) is counted in the funnel.
+      options: { emailRedirectTo: `${redirectUrl()}&bp=email` },
     });
 
     if (otpError) {

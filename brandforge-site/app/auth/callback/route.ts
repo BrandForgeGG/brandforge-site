@@ -2,7 +2,8 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { sanitizeNextPath } from '@/lib/auth-utils';
-import { countRegisteredProfiles } from '@/lib/project-db';
+import { countRegisteredProfiles, mergeBlueprintSessionToUser, recordFunnelEvent } from '@/lib/project-db';
+import { verifySessionToken } from '@/lib/blueprint-session';
 import { isFreshSignup, postRegistrationNotice } from '@/lib/registration-notice';
 import { postPublicActivity } from '@/lib/ops-events';
 import { sendStageEmail } from '@/lib/email';
@@ -96,6 +97,44 @@ export async function GET(request: Request) {
   if (!user) {
     console.warn('OAuth callback: exchange succeeded but no user returned');
     return redirectWithCookies(new URL('/login', request.url));
+  }
+
+  // Blueprint email-gate merge (master brief 6): a signed-in visitor holding
+  // the anonymous bf_bp cookie takes the session's blueprints into their
+  // account. Best-effort like every other side effect here — any failure logs
+  // and continues; signing in must never break over a merge.
+  const blueprintSecret =
+    process.env.BLUEPRINT_SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  const bpCookie = cookieStore.get('bf_bp')?.value ?? null;
+  if (bpCookie && blueprintSecret) {
+    try {
+      const bpSessionId = verifySessionToken(bpCookie, blueprintSecret);
+      if (bpSessionId) {
+        const merged = await mergeBlueprintSessionToUser(bpSessionId, user.id);
+        if (merged.ok) {
+          console.log('OAuth callback: blueprint merge', {
+            blueprintSession: bpSessionId,
+            blueprints: merged.merged,
+          });
+        } else {
+          console.warn('OAuth callback: blueprint merge failed:', merged.error);
+        }
+        // Counted only for the email flow (bp=email is appended by the login
+        // page's OTP redirect); a Google sign-in on the same device merges
+        // too, but it is not a magic-link click.
+        if (requestUrl.searchParams.get('bp') === 'email') {
+          await recordFunnelEvent('blueprint_magic_link_clicked', {
+            signedIn: true,
+            properties: { source: 'email' },
+          });
+        }
+      }
+    } catch (error) {
+      console.error(
+        'OAuth callback: blueprint merge threw:',
+        error instanceof Error ? error.message : error
+      );
+    }
   }
 
   // First sign-in: welcome the new member to the registration channel. Best-effort and

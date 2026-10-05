@@ -97,6 +97,39 @@ test('welcome email is short — two paragraphs, no wall of text', () => {
   assert.ok(blocks[2].startsWith('https://'), 'last block is the url');
 });
 
+test('blueprint saved email carries the return link as the cta', () => {
+  const email = buildStageEmail('blueprint_saved', {
+    returnUrl: 'https://brandforge.gg/api/blueprint/return?token=abc.def',
+    keepUrl: 'https://brandforge.gg/login?next=%2Fblueprint',
+  });
+  assert.ok(email, 'builds');
+  assert.equal(email.subject, 'Your blueprint is saved');
+  assert.ok(email.subject.split(' ').length <= 8, 'subject is at most eight words');
+  assert.ok(
+    email.html.includes('href="https://brandforge.gg/api/blueprint/return?token=abc.def"'),
+    'cta is the return link'
+  );
+  assert.ok(email.html.includes('Open your blueprint'), 'cta label');
+  assert.ok(email.text.includes('https://brandforge.gg/api/blueprint/return?token=abc.def'), 'text carries the return url');
+  assert.ok(email.text.includes('https://brandforge.gg/login?next=%2Fblueprint'), 'text carries the keep url');
+});
+
+test('blueprint saved email without a usable return link skips the cta', () => {
+  for (const bad of ['javascript:alert(1)', '/relative/path', '']) {
+    const email = buildStageEmail('blueprint_saved', { returnUrl: bad });
+    assert.ok(email, `builds for ${JSON.stringify(bad)}`);
+    assert.ok(!email.html.includes('href=""'), `no empty cta for ${JSON.stringify(bad)}`);
+    assert.ok(!email.html.includes('javascript:'), `non-https url never becomes a link for ${JSON.stringify(bad)}`);
+    assert.ok(!email.text.includes('javascript:'), `non-https url never enters the text for ${JSON.stringify(bad)}`);
+  }
+});
+
+test('blueprint saved email is short — two paragraphs, no wall of text', () => {
+  const email = buildStageEmail('blueprint_saved', { returnUrl: 'https://brandforge.gg/x' });
+  const body = email.text.split('--\n')[0].trim();
+  assert.ok(body.length < 500, `body should be short, got ${body.length}`);
+});
+
 test('every email carries the footer links (site, policies, community, socials)', () => {
   for (const event of EVENTS) {
     const details = event === 'contract_accepted' ? { side: 'team' } : {};

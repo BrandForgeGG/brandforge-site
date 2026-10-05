@@ -326,8 +326,14 @@ CREATE TABLE blockers (
 
 Free-first Blueprint Engine storage (anonymous visitors, no auth.users rows). RLS **on with zero
 policies** like `marketing_posts`: the service role (`lib/project-db.ts`, H7 allowlist) is the only
-reader/writer; clients never touch these tables. Code is dormant (`BLUEPRINT_ENABLED` unset) until
-the migration is applied.
+reader/writer; clients never touch these tables. Live on brandforge.gg since 2026-10-05
+(`BLUEPRINT_ENABLED=true`).
+
+Status flow: `draft` (start row, seed document) → `validated` (run/refine produced a real document)
+→ `saved` (email gate captured an address — refine keeps `saved`, never regresses) → `proposed`
+(conversion to the team, S6 — not wired yet). The save gate refuses `draft` (nothing to save) and
+`proposed` (already with the team); the return link reopens `validated`/`saved`/`proposed` rows via
+`GET /api/blueprint/current` (newest row per session, seed-only `draft` rows are never restored).
 
 ```sql
 -- blueprint_sessions: one anonymous visitor (id carried in the HMAC-signed bf_bp cookie).
@@ -338,7 +344,7 @@ CREATE TABLE blueprint_sessions (
   quota_date DATE NOT NULL DEFAULT (now() at time zone 'utc')::date,  -- UTC-day run quota
   quota_count INTEGER NOT NULL DEFAULT 0,
   ip_hash TEXT,                      -- salted HMAC, per-IP hourly cap
-  merged_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,   -- set on sign-in (S6)
+  merged_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,   -- set on sign-in (S11 email gate, live)
   purge_after TIMESTAMPTZ            -- hard-delete date for anon sessions
 );
 

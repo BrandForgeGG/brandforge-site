@@ -223,6 +223,40 @@ function buildCore(event, details = {}) {
       };
     }
 
+    case 'blueprint_saved': {
+      // Transactional receipt for the email gate: the return link is the
+      // product here, so only a real https URL ever becomes the CTA.
+      const returnUrl =
+        typeof details.returnUrl === 'string' && /^https:\/\/\S+$/.test(details.returnUrl.trim())
+          ? details.returnUrl.trim()
+          : '';
+      const keepUrl =
+        typeof details.keepUrl === 'string' && /^https:\/\/\S+$/.test(details.keepUrl.trim())
+          ? details.keepUrl.trim()
+          : '';
+      const paragraphs = [
+        'Your blueprint is saved with this address. The link below opens it again any time — no account needed.',
+        'To keep it with your account, sign in with this same address and the blueprint follows you.',
+      ];
+      const subject = 'Your blueprint is saved';
+      const textLines = [paragraphs.join('\n\n')];
+      if (returnUrl) textLines.push(`Open your blueprint: ${returnUrl}`);
+      if (keepUrl) textLines.push(`Keep it with your account: ${keepUrl}`);
+      return {
+        subject,
+        text: textLines.join('\n\n'),
+        html: card(
+          'Blueprint saved',
+          'Your blueprint is saved',
+          paragraphs,
+          returnUrl ? 'Open your blueprint' : null,
+          returnUrl,
+          'This link is your blueprint — open it from any browser.',
+          unsubscribeUrlFrom(details)
+        ),
+      };
+    }
+
     default:
       return null;
   }

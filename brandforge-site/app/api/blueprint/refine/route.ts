@@ -18,8 +18,8 @@ export const maxDuration = 60;
 
 // POST /api/blueprint/refine — brief 4.7: the visitor's note revises the
 // validated blueprint into a new version. Same gates as /run (flag, rate,
-// session, quota, ownership), plus: the blueprint must be in a validated
-// state, and the note must be a real note.
+// session, quota, ownership), plus: the blueprint must be in a validated or
+// saved state, and the note must be a real note.
 //
 // Version discipline: the document is fully re-validated like any run (a
 // refine that breaks the contract is repaired once, then rejected), the
@@ -117,7 +117,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Blueprint not found.' }, { status: 404 });
   }
   const blueprint = owned.blueprint;
-  if (blueprint.status !== 'validated') {
+  // 'saved' (email captured) stays refineable — the visitor saved first and is
+  // still shaping the document; only a converted blueprint leaves the lane.
+  if (blueprint.status !== 'validated' && blueprint.status !== 'saved') {
     return NextResponse.json({ error: 'Only a validated blueprint can be refined.' }, { status: 409 });
   }
 
@@ -208,7 +210,9 @@ export async function POST(request: NextRequest) {
       document,
       lane: String(document.lane),
       confidence: document.confidence === null ? null : String(document.confidence),
-      status: 'validated',
+      // Refining a saved blueprint keeps it saved (the email stays attached);
+      // a first draft stays validated. Never regress a status.
+      status: blueprint.status === 'saved' ? 'saved' : 'validated',
       version: nextVersion,
     });
     if (!saved.ok) return dbError(saved.error);

@@ -8,7 +8,8 @@ test('the funnel event list is the closed set the brief asked for', () => {
     'proposal_received', 'counter_offered', 'proposal_accepted', 'funding_submitted', 'funding_verified',
     'milestone_completed', 'payment_released', 'repeat_project_started',
     'apply_started', 'apply_submitted', 'application_approved',
-    'blueprint_started', 'blueprint_first_screen', 'blueprint_email_captured', 'blueprint_exit_tapped',
+    'blueprint_started', 'blueprint_first_screen', 'blueprint_gate_shown', 'blueprint_email_captured',
+    'blueprint_magic_link_clicked', 'blueprint_exit_tapped',
     'blueprint_proposed', 'quick_win_started', 'quick_win_delivered',
   ]) {
     assert.equal(isFunnelEvent(event), true, event);

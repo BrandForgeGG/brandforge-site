@@ -65,7 +65,9 @@ const FUNNEL_EVENTS = Object.freeze([
   // Blueprint Engine funnel (master brief 2026-10-04, free-first journey)
   'blueprint_started',
   'blueprint_first_screen',
+  'blueprint_gate_shown',
   'blueprint_email_captured',
+  'blueprint_magic_link_clicked',
   'blueprint_exit_tapped',
   'blueprint_proposed',
   'quick_win_started',
