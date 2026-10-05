@@ -105,7 +105,17 @@ function EvidenceLine({ finding, sources }: { finding: Row; sources: Row[] }) {
   );
 }
 
-export function BlueprintDocumentView({ document }: { document: BlueprintDocument }) {
+export function BlueprintDocumentView({
+  document,
+  beforeEstimate,
+}: {
+  document: BlueprintDocument;
+  // Master brief 4.10: the default gate position (`before_price`) sits right
+  // before the Estimate block opens. The flow passes the save card in here so
+  // the price never appears before the ask; without a gate (or in lanes with
+  // no estimate) it simply renders where the estimate would be.
+  beforeEstimate?: ReactNode;
+}) {
   const lane = str(document.lane);
   const presentation = LANE_PRESENTATION[lane] ?? { label: lane, tone: 'border-line text-muted' };
   const sources = rows(document.sources);
@@ -243,6 +253,8 @@ export function BlueprintDocumentView({ document }: { document: BlueprintDocumen
           <p className="mt-3 text-xs text-muted">{OWNER_LABELS[str(roadmap.owner)] ?? ''}</p>
         </section>
       ) : null}
+
+      {beforeEstimate}
 
       {estimate ? (
         <section className="rounded-2xl border border-ember/30 bg-panel p-6" aria-label="The estimate">

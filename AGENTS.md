@@ -43,8 +43,9 @@ BrandForge/
 - Live: https://brandforge.gg (Vercel, `brandforge-site` production).
 - Chat-first product: landing -> chat -> AI-structured project -> human proposal -> escrow.
 - **Blueprint Engine S11 email gate + return link (2026-10-05, code complete)**:
-  the free-first promise survives leaving. Result screen gains a Save card **before every exit**
-  (founder default `gate_position: before_price`): `POST /api/blueprint/save` (flag / rate 6-per-min
+  the free-first promise survives leaving. Result screen gains a Save card **right before the
+  Estimate block** (founder default `gate_position: before_price` — the price never appears
+  before the ask; the card carries the Terms/Privacy line from §4.10): `POST /api/blueprint/save` (flag / rate 6-per-min
   / session / ownership gates; refuses `draft` and `proposed`; stores `email` + status `saved`
   **first**, then sends the return-link email — a Resend failure is an honest 502 and a retry
   re-sends), `GET /api/blueprint/return?token=` (same HMAC as `bf_bp` → reinstalls the cookie →
@@ -72,9 +73,13 @@ BrandForge/
   `blueprint_gate_shown` ×7 (`gate: before_price`) + `blueprint_email_captured` ×7; auth probe
   green. `blueprint_magic_link_clicked` is still 0 — it needs one real click from a founder
   inbox (manual check: sign in with the blueprint's address once, then look for
-  `OAuth callback: blueprint merge` in the Vercel logs). **Brief text loss: sections 0–5 AND
-  6–18 verbatim did not survive summarization — founder re-paste needed for S4/S6/S8 fidelity**
-  (section notes survive in this file's bullets).
+  `OAuth callback: blueprint merge` in the Vercel logs). **Brief restored**: founder re-pasted
+  both files, now committed hash-verified at `brandforge-site/brandforge-master-brief.md` (full)
+  and `brandforge-site/brandforge-master-brief-sections-6-18.md` — read those for §4–§18
+  fidelity, not this file's bullets. **S11 gaps vs §4.10 open**: compressed onboarding (fresh
+  magic-link signups still get the full 4-step wizard; auto username + progressive promise cards
+  = next slice), `gate_position` is a constant (env flag + `after_price`/`at_save` variants not
+  built), email stored on submit not per keystroke (one-field form, honest reading).
 - **Blueprint Engine S3+S5 — LIVE on brandforge.gg (2026-10-05)**: founder completed both go-live
   steps (re-ran `0022` → `input` column present; `BLUEPRINT_ENABLED=true` in Vercel + redeploy).
   The public surface — `/blueprint` (`force-dynamic`; intake → running → result state machine in

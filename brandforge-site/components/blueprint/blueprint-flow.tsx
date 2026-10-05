@@ -18,7 +18,8 @@ import { BlueprintDocumentView } from './blueprint-document';
 const IDEA_KEY = 'brandforge:blueprint-idea';
 const NOTE_MAX = 500;
 const EMAIL_MAX_CHARS = 254;
-// Founder default for the gate position (master brief 16): before the exits.
+// Master brief 16: the founder's default gate position. The card renders
+// inside the document, right before the Estimate block (brief 4.10).
 // Must match the server's fallback in app/api/blueprint/save/route.ts.
 const GATE_POSITION = 'before_price';
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -247,6 +248,78 @@ export function BlueprintFlow({
   }
 
   if (stage === 'result' && document) {
+    // The save gate (master brief 4.10): one field, terms visible, positioned
+    // `before_price` — passed into the document so it lands right before the
+    // Estimate block. Lanes without an estimate get it after the roadmap.
+    const gateCard = (
+      <div className="rounded-2xl border border-line bg-panel p-6">
+        {saveState === 'sent' ? (
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              Return link sent{saveEmail ? ` to ${saveEmail}` : ''}.
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-muted">
+              Open it any time to come back to this blueprint — no account needed. To keep it
+              with your account,{' '}
+              <Link
+                href="/login?next=%2Fblueprint"
+                className="text-copper underline underline-offset-2 transition hover:text-foreground"
+              >
+                sign in with the same address
+              </Link>
+              .
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={saveBlueprint}>
+            <label htmlFor="save-email" className="text-sm font-semibold text-foreground">
+              Save this blueprint
+            </label>
+            <p className="mt-1 text-xs leading-relaxed text-muted">
+              Send yourself a return link — open it any time, no account needed.
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <input
+                id="save-email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={saveEmail}
+                onChange={(e) => setSaveEmail(e.target.value)}
+                placeholder="you@company.com"
+                maxLength={EMAIL_MAX_CHARS}
+                className="w-full max-w-xs rounded-xl border border-line bg-background px-4 py-2.5 text-sm text-foreground placeholder-muted outline-none transition focus:border-ember focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              />
+              <button
+                type="submit"
+                disabled={saveState === 'sending' || busy || !saveEmail.trim()}
+                className="rounded-lg bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {saveState === 'sending' ? 'Sending…' : 'Email me a return link'}
+              </button>
+            </div>
+            <p className="mt-3 text-xs leading-relaxed text-muted">
+              By continuing you agree to our{' '}
+              <Link
+                href="/terms"
+                className="text-copper underline underline-offset-2 transition hover:text-foreground"
+              >
+                Terms
+              </Link>{' '}
+              and{' '}
+              <Link
+                href="/privacy"
+                className="text-copper underline underline-offset-2 transition hover:text-foreground"
+              >
+                Privacy Policy
+              </Link>
+              .
+            </p>
+          </form>
+        )}
+      </div>
+    );
+
     return (
       <div className="mt-10">
         {error ? (
@@ -270,59 +343,7 @@ export function BlueprintFlow({
             </p>
           </div>
 
-          <BlueprintDocumentView document={document} />
-
-          {/* Email gate (master brief 6): sits before every exit, per the
-              founder's default gate position. */}
-          <div className="rounded-2xl border border-line bg-panel p-6">
-            {saveState === 'sent' ? (
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  Return link sent{saveEmail ? ` to ${saveEmail}` : ''}.
-                </p>
-                <p className="mt-1 text-xs leading-relaxed text-muted">
-                  Open it any time to come back to this blueprint — no account needed. To keep it
-                  with your account,{' '}
-                  <Link
-                    href="/login?next=%2Fblueprint"
-                    className="text-copper underline underline-offset-2 transition hover:text-foreground"
-                  >
-                    sign in with the same address
-                  </Link>
-                  .
-                </p>
-              </div>
-            ) : (
-              <form onSubmit={saveBlueprint}>
-                <label htmlFor="save-email" className="text-sm font-semibold text-foreground">
-                  Save this blueprint
-                </label>
-                <p className="mt-1 text-xs leading-relaxed text-muted">
-                  Send yourself a return link — open it any time, no account needed.
-                </p>
-                <div className="mt-3 flex flex-wrap items-center gap-3">
-                  <input
-                    id="save-email"
-                    type="email"
-                    inputMode="email"
-                    autoComplete="email"
-                    value={saveEmail}
-                    onChange={(e) => setSaveEmail(e.target.value)}
-                    placeholder="you@company.com"
-                    maxLength={EMAIL_MAX_CHARS}
-                    className="w-full max-w-xs rounded-xl border border-line bg-background px-4 py-2.5 text-sm text-foreground placeholder-muted outline-none transition focus:border-ember focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                  />
-                  <button
-                    type="submit"
-                    disabled={saveState === 'sending' || busy || !saveEmail.trim()}
-                    className="rounded-lg bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {saveState === 'sending' ? 'Sending…' : 'Email me a return link'}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
+          <BlueprintDocumentView document={document} beforeEstimate={gateCard} />
 
           <div className="rounded-2xl border border-line bg-panel p-6">
             {refineOpen ? (
