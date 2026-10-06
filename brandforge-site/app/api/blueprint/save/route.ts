@@ -6,6 +6,7 @@ import {
   getBlueprintRow,
   saveBlueprintEmail,
   recordFunnelEvent,
+  updateBlueprintEmbedMessage,
 } from '@/lib/project-db';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { isValidEmail } from '@/lib/auth-utils';
@@ -134,11 +135,32 @@ export async function POST(request: NextRequest) {
       : DEFAULT_GATE_POSITION;
   await recordFunnelEvent('blueprint_email_captured', { properties: { gate } });
 
+  // Chat embedding (redesign slice B): the card in the conversation flips to
+  // its emailed state so a reload doesn't ask again. Best-effort — the save
+  // itself already landed and the client holds its own sent state.
+  const conversationId = owned.blueprint.conversation_id ?? null;
+  if (conversationId) {
+    const embedUpdate = await updateBlueprintEmbedMessage(conversationId, blueprintId, {
+      type: 'blueprint',
+      id: blueprintId,
+      status: saved.blueprint.status,
+      version: saved.blueprint.version,
+      document: owned.blueprint.document,
+      emailed: true,
+    });
+    if (!embedUpdate.ok) {
+      console.error('Blueprint save: embed message update failed:', embedUpdate.error);
+    }
+  }
+
+  // The sign-in destination now points at the conversation the blueprint
+  // lives in (or the chat shell's blueprint panel when attach could not run).
   const origin = new URL(request.url).origin;
   const returnUrl = `${origin}/api/blueprint/return?token=${encodeURIComponent(
     createSessionToken(sessionId, config.sessionSecret)
   )}`;
-  const keepUrl = `${origin}/login?next=${encodeURIComponent('/blueprint')}`;
+  const nextPath = conversationId ? `/chat?conversationId=${encodeURIComponent(conversationId)}` : '/chat?blueprint=1';
+  const keepUrl = `${origin}/login?next=${encodeURIComponent(nextPath)}`;
 
   const sent = await sendStageEmail('blueprint_saved', email, { returnUrl, keepUrl });
   if (!sent.ok) {

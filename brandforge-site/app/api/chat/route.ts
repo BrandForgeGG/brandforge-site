@@ -4,6 +4,7 @@ import { getActorName, getAuthenticatedUser } from "@/lib/supabase-server";
 import {
   addMessage,
   canAccessConversation,
+  db,
   downloadConversationAttachment,
   getConversationOwnerSession,
   getGuestChatQuota,
@@ -296,6 +297,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "Conversation not found" },
       { status: 404 },
+    );
+  }
+
+  // AI participation can be disabled per conversation (migration 0024).
+  // When disabled, the AI does not automatically reply or update project context.
+  const convData = await scope(async () => {
+    const { data } = await (await db()).from('conversations').select('ai_enabled').eq('id', conversationId).single();
+    return data;
+  });
+  const aiEnabled = convData?.ai_enabled !== false;
+  if (!aiEnabled) {
+    return NextResponse.json(
+      { error: "AI participation is disabled for this conversation" },
+      { status: 403 },
     );
   }
 

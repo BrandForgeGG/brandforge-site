@@ -259,6 +259,8 @@ export function ChatWorkspace() {
   // Autocomplete: highlighted row + whether the reader dismissed the popup for this text.
   const [slashIndex, setSlashIndex] = useState(0);
   const [slashClosed, setSlashClosed] = useState(false);
+  // AI participation: when false, the AI does not automatically reply or update project context.
+  const [aiEnabled, setAiEnabled] = useState(true);
 
   // Matches only when the composer starts with a slash word: typing "/" anywhere else
   // is just prose and must never summon the popup.
@@ -1701,6 +1703,13 @@ export function ChatWorkspace() {
   const activeConversation =
     recents.find((conversation) => conversation.id === conversationId) ?? null;
 
+  // Sync AI enabled state from the conversation data.
+  useEffect(() => {
+    if (activeConversation?.aiEnabled !== undefined) {
+      setAiEnabled(activeConversation.aiEnabled);
+    }
+  }, [activeConversation?.aiEnabled]);
+
   // Role labels: staff see "admin" or "staff"; regular users see no role badge.
   // The rail reports the profiles.role value ('admin'), with the legacy email hint
   // ('founder') as fallback for rows that predate it.
@@ -1799,6 +1808,29 @@ return (
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                const next = !aiEnabled;
+                setAiEnabled(next);
+                if (conversationId) {
+                  void fetchAuthed(`/api/conversations/${conversationId}/ai-toggle`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ aiEnabled: next }),
+                  }).catch(() => {
+                    setAiEnabled(!next);
+                  });
+                }
+              }}
+              aria-pressed={aiEnabled}
+              aria-label={aiEnabled ? 'Disable AI participation' : 'Enable AI participation'}
+              title={aiEnabled ? 'AI is on — click to turn off' : 'AI is off — click to turn on'}
+              className="bf-composer-tool"
+            >
+              <span aria-hidden="true">{aiEnabled ? '◉' : '○'}</span>
+              AI
+            </button>
             {/* Project team: real participants plus BrandForge AI - never a fabricated roster. */}
             <div className="bf-menu-root relative">
               <button

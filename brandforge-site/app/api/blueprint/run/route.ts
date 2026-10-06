@@ -6,12 +6,14 @@ import { SYSTEM, buildRunPrompt, buildRepairPrompt, parseModelJson } from '@/lib
 import { completeJson } from '@/lib/blueprint-llm';
 import { runResearch, PLANNER_SYSTEM } from '@/lib/research';
 import {
+  attachBlueprintConversation,
   createBlueprintRevision,
   getBlueprintSession,
   getBlueprintRow,
   recordBlueprintRun,
   saveBlueprintResult,
 } from '@/lib/project-db';
+import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -247,6 +249,38 @@ export async function POST(request: NextRequest) {
       console.error('Blueprint run: revision insert failed:', revision.error);
     }
 
+    // Chat embedding (redesign slice B): the finished blueprint lands in a
+    // conversation as a system embed message — signed-in runs own the
+    // conversation (it shows up in Recents), bf_bp guests own it through the
+    // session until 0023 exists. Attachment is best-effort: a missing
+    // migration or a conversation write failure must never lose the document
+    // that just cost an LLM call, so the client falls back to the inline
+    // result screen when conversationId comes back null.
+    let conversationId: string | null = null;
+    try {
+      const user = await getAuthenticatedUser(request);
+      const attached = await attachBlueprintConversation({
+        blueprintId: saved.blueprint.id,
+        sessionId,
+        userId: user?.id ?? null,
+        senderName: user ? getActorName(user) : null,
+        title: blueprint.input,
+        input: blueprint.input,
+        document: saved.blueprint.document,
+        version: saved.blueprint.version,
+        status: saved.blueprint.status,
+        emailed: Boolean(saved.blueprint.email),
+        conversationId: blueprint.conversation_id ?? null,
+      });
+      if (attached.ok) {
+        conversationId = attached.conversationId;
+      } else {
+        console.error('Blueprint run: conversation attach failed:', attached.error);
+      }
+    } catch (error) {
+      console.error('Blueprint run: conversation attach threw:', error instanceof Error ? error.message : error);
+    }
+
     return NextResponse.json({
       blueprintId: saved.blueprint.id,
       version: saved.blueprint.version,
@@ -254,6 +288,7 @@ export async function POST(request: NextRequest) {
       lane: saved.blueprint.lane,
       confidence: saved.blueprint.confidence,
       document: saved.blueprint.document,
+      conversationId,
     });
   } finally {
     // Consume the run only when the provider actually did work: an outage

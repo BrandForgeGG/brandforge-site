@@ -18,6 +18,7 @@ import {
 //
 // The companion `bf_guest` cookie is deliberately NOT HttpOnly: lib/browser-auth
 // reads it to tell "this browser is in guest mode" apart from "the session died",
+// reads it to tell "this browser is in guest mode" apart from "the session died",
 // so a 401 from a guest-incompatible endpoint never parks the visitor on /login.
 
 export const GUEST_MARKER_COOKIE = 'bf_guest';

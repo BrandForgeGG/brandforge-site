@@ -229,7 +229,7 @@ export async function runAsGuestSession<T>(sessionId: string, fn: () => Promise<
   return guestScope.run({ sessionId }, fn);
 }
 
-async function db(): Promise<ProjectDbClient> {
+export async function db(): Promise<ProjectDbClient> {
   const guest = guestScope.getStore();
   if (guest) {
     const admin = createSupabaseAdminClient();
@@ -321,6 +321,8 @@ export interface ConversationSummary {
   staffViewedBy: string | null;
   /** True while no staff member has opened the chat (drives the staff "new chats" badge). */
   isUnseen: boolean;
+  /** AI participation enabled for this conversation (migration 0024). */
+  aiEnabled: boolean;
 }
 
 export interface ConversationMessage {
@@ -1027,6 +1029,36 @@ export async function inviteProposalAuthor(proposal: {
     content_type: 'system',
   });
 
+  // AI welcome message: when AI is enabled, post a natural welcome that summarizes the project.
+  const { data: convData } = await supabase
+    .from('conversations')
+    .select('ai_enabled')
+    .eq('id', proposal.conversation_id)
+    .maybeSingle();
+
+  if (convData?.ai_enabled !== false) {
+    const { data: projectContext } = await supabase
+      .from('project_context')
+      .select('project_name, problem_statement')
+      .eq('conversation_id', proposal.conversation_id)
+      .maybeSingle();
+
+    const projectName = projectContext?.project_name || 'this project';
+    const problem = projectContext?.problem_statement;
+
+    const welcomeContent = problem
+      ? `Welcome ${displayName}. You're joining the BrandForge project for ${projectName}. Here's what we're building: ${problem}`
+      : `Welcome ${displayName}. You're joining the BrandForge project for ${projectName}. Here's what we're building and where things currently stand.`;
+
+    await addMessage({
+      conversation_id: proposal.conversation_id,
+      sender_type: 'ai',
+      sender_name: 'BrandForge AI',
+      content: welcomeContent,
+      content_type: 'text',
+    });
+  }
+
   return { displayName, already: false };
 }
 
@@ -1589,6 +1621,7 @@ async function buildConversationSummaries(userId?: string): Promise<Conversation
       staffViewedAt: row.staff_joined_at || null,
       staffViewedBy,
       isUnseen: row.staff_joined_at == null,
+      aiEnabled: (row as Record<string, unknown>).ai_enabled !== false,
     });
   }
 
@@ -3558,6 +3591,170 @@ export async function getCurrentBlueprintForSession(sessionId: string): Promise<
   return { ok: true, blueprint: (data as BlueprintRow | null) ?? null };
 }
 
+// ---------------------------------------------------------------------------
+// Chat embedding (redesign slice B): a validated blueprint lands in its chat
+// conversation as a system embed message, and blueprints.conversation_id
+// links the two. Writes run with the service role — the calling route has
+// already verified the bf_bp session owns the blueprint — so neither RLS nor
+// the caller's auth state decides whether the card can be written. The whole
+// payload is always written whole (never merged), so refine/save updates
+// survive a reload.
+
+export type BlueprintEmbedPayload = {
+  type: 'blueprint';
+  id: string;
+  status: string;
+  version: number;
+  document: unknown;
+  emailed: boolean;
+};
+
+export async function updateBlueprintEmbedMessage(
+  conversationId: string,
+  blueprintId: string,
+  payload: BlueprintEmbedPayload
+): Promise<{ ok: true; updated: boolean } | { ok: false; error: 'not_configured' | 'failed' }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data: rows, error: findError } = await admin
+    .from('messages')
+    .select('id')
+    .eq('conversation_id', conversationId)
+    .contains('artifact_data', { type: 'blueprint', id: blueprintId })
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (findError) {
+    console.error('Blueprint embed update: locate failed:', findError.message);
+    return { ok: false, error: 'failed' };
+  }
+  const row = rows?.[0] as { id?: unknown } | undefined;
+  if (!row || typeof row.id !== 'string') return { ok: true, updated: false };
+
+  const { error: updateError } = await admin
+    .from('messages')
+    .update({ artifact_data: payload })
+    .eq('id', row.id);
+
+  if (updateError) {
+    console.error('Blueprint embed update: write failed:', updateError.message);
+    return { ok: false, error: 'failed' };
+  }
+  return { ok: true, updated: true };
+}
+
+export async function attachBlueprintConversation(input: {
+  blueprintId: string;
+  sessionId: string;
+  userId?: string | null;
+  senderName?: string | null;
+  title: string;
+  input: string;
+  document: unknown;
+  version: number;
+  status: string;
+  emailed: boolean;
+  /** Already-linked conversation: the embed message is refreshed in place. */
+  conversationId?: string | null;
+}): Promise<
+  { ok: true; conversationId: string; created: boolean }
+  | { ok: false; error: BlueprintDbError }
+> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const payload: BlueprintEmbedPayload = {
+    type: 'blueprint',
+    id: input.blueprintId,
+    status: input.status,
+    version: input.version,
+    document: input.document,
+    emailed: input.emailed,
+  };
+
+  if (input.conversationId) {
+    const updated = await updateBlueprintEmbedMessage(
+      input.conversationId,
+      input.blueprintId,
+      payload
+    );
+    if (!updated.ok) {
+      return { ok: false, error: updated.error === 'not_configured' ? 'not_configured' : 'failed' };
+    }
+    return { ok: true, conversationId: input.conversationId, created: false };
+  }
+
+  const title = input.title.trim().slice(0, 60) || 'New Project';
+  const insertRow: Record<string, unknown> = {
+    ...(input.userId ? { user_id: input.userId } : { owner_session_id: input.sessionId }),
+    title,
+    status: 'DISCOVERY',
+    source: 'organic',
+  };
+
+  const attempt = () =>
+    admin.from('conversations').insert(insertRow).select('id').maybeSingle();
+  let { data: conversation, error } = await attempt();
+
+  if (error && (error.code === 'PGRST204' || error.code === '42703')) {
+    delete insertRow.source; // migration 0018 (source label) may be absent
+    ({ data: conversation, error } = await attempt());
+    if (error && (error.code === 'PGRST204' || error.code === '42703')) {
+      // Still an unknown column. For a guest row that can only be
+      // owner_session_id (migration 0023 not applied yet) — fail closed with
+      // the honest reason so the flow falls back to its inline result.
+      console.error('Blueprint attach: conversation insert failed:', error.message);
+      return { ok: false, error: input.userId ? 'failed' : 'pending_migration' };
+    }
+  }
+  if (error || !conversation || typeof conversation.id !== 'string') {
+    console.error('Blueprint attach: conversation create failed:', error?.message ?? 'no id');
+    return { ok: false, error: 'failed' };
+  }
+  const conversationId = conversation.id;
+
+  // The founder's own line first, so the card answers a real message and the
+  // chat turn guard ("waiting for an answer") sees user -> ai in order.
+  const { error: intakeError } = await admin.from('messages').insert({
+    conversation_id: conversationId,
+    sender_type: 'user',
+    sender_id: input.userId ?? null,
+    sender_name: input.userId ? (input.senderName?.trim() || null) : 'Guest',
+    content: input.input.trim().slice(0, 8000),
+    content_type: 'text',
+  });
+  if (intakeError) {
+    console.error('Blueprint attach: intake message failed:', intakeError.message);
+  }
+
+  const { error: embedError } = await admin.from('messages').insert({
+    conversation_id: conversationId,
+    sender_type: 'ai',
+    sender_id: null,
+    sender_name: 'BrandForge AI',
+    content:
+      'Your free blueprint is ready — the plan, timeline and a first price range from your description alone.',
+    content_type: 'system',
+    artifact_data: payload,
+  });
+  if (embedError) {
+    console.error('Blueprint attach: embed message failed:', embedError.message);
+    return { ok: false, error: 'failed' };
+  }
+
+  const { error: linkError } = await admin
+    .from('blueprints')
+    .update({ conversation_id: conversationId })
+    .eq('id', input.blueprintId)
+    .eq('session_id', input.sessionId);
+  if (linkError) {
+    console.error('Blueprint attach: conversation link failed:', linkError.message);
+  }
+
+  return { ok: true, conversationId, created: true };
+}
+
 // Email-gate merge (master brief 6): a signed-in visitor carrying the
 // anonymous bf_bp cookie takes the session's blueprints into their account.
 // Idempotent by construction — .is('user_id', null) means a second callback
@@ -3781,6 +3978,7 @@ export async function getSessionConversationSummaries(
       staffViewedAt: null,
       staffViewedBy: null,
       isUnseen: false,
+      aiEnabled: (row as { ai_enabled?: boolean | null }).ai_enabled !== false,
     });
   }
 

@@ -10,6 +10,7 @@ import {
   getBlueprintRow,
   recordBlueprintRun,
   saveBlueprintResult,
+  updateBlueprintEmbedMessage,
 } from '@/lib/project-db';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -226,6 +227,28 @@ export async function POST(request: NextRequest) {
       console.error('Blueprint refine: revision insert failed:', revision.error);
     }
 
+    // Chat embedding (redesign slice B): a refined blueprint must show v2 on
+    // the next reload, so the conversation's embed message is rewritten in
+    // place. Best-effort — the response already carries the new document, so
+    // the open card updates even if the row write fails.
+    if (blueprint.conversation_id) {
+      const embedUpdate = await updateBlueprintEmbedMessage(
+        blueprint.conversation_id,
+        blueprintId,
+        {
+          type: 'blueprint',
+          id: blueprintId,
+          status: saved.blueprint.status,
+          version: saved.blueprint.version,
+          document: saved.blueprint.document,
+          emailed: Boolean(saved.blueprint.email),
+        }
+      );
+      if (!embedUpdate.ok) {
+        console.error('Blueprint refine: embed message update failed:', embedUpdate.error);
+      }
+    }
+
     return NextResponse.json({
       blueprintId: saved.blueprint.id,
       version: saved.blueprint.version,
@@ -233,6 +256,7 @@ export async function POST(request: NextRequest) {
       lane: saved.blueprint.lane,
       confidence: saved.blueprint.confidence,
       document: saved.blueprint.document,
+      conversationId: blueprint.conversation_id ?? null,
     });
   } finally {
     if (workDone) {

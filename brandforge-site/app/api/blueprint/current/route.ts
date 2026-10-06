@@ -62,5 +62,9 @@ export async function GET(request: NextRequest) {
     confidence: row.confidence,
     document: row.document,
     hasEmail: Boolean(row.email),
+    // Redesign slice B: a blueprint that already lives in a conversation is
+    // restored by opening that conversation (the card renders from its embed
+    // message) instead of the inline result screen.
+    conversationId: row.conversation_id ?? null,
   });
 }

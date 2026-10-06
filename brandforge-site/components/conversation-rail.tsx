@@ -21,6 +21,8 @@ export interface RecentConversation {
   staffViewedBy?: string | null;
   /** Staff view only: nobody from the team has opened this chat yet. */
   isUnseen?: boolean;
+  /** AI participation enabled for this conversation (migration 0024). */
+  aiEnabled?: boolean;
 }
 
 // Recents show real timestamps from persisted messages, never a hardcoded "Just now".
@@ -288,6 +290,27 @@ onMobileClose,
                 : "New Chat"}
           </button>
         </div>
+
+        {isCollapsed ? null : (
+          <div className="shrink-0 px-4 pb-2">
+            <nav aria-label="Workspace" className="flex flex-col gap-0.5">
+              <Link
+                href="/studio"
+                onClick={onMobileClose}
+                className="rounded-lg px-3 py-2 text-sm text-muted transition hover:bg-overlay hover:text-foreground"
+              >
+                AI Studio
+              </Link>
+              <Link
+                href="/projects"
+                onClick={onMobileClose}
+                className="rounded-lg px-3 py-2 text-sm text-muted transition hover:bg-overlay hover:text-foreground"
+              >
+                Projects
+              </Link>
+            </nav>
+          </div>
+        )}
 
         {isCollapsed ? (
           /* Collapsed rail: recents stay one click away as letter chips with tooltips. */

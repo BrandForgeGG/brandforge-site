@@ -1,12 +1,37 @@
 @import "tailwindcss";
 
 :root {
-  /* Default theme: light. The dark "Forge" theme is opt-in via data-theme='original'. */
+  /* Default theme: dark. Near-black #0D0D0D with warm off-white typography. */
+  color-scheme: dark;
+  --background: #0d0d0d;
+  --foreground: #ece7de;
+  --font-sans: var(--font-inter), "Inter", sans-serif;
+  --font-serif: var(--font-fraunces), "Fraunces", serif;
+  --panel: #141414;
+  --panel-2: #1a1a1a;
+  --line: rgba(236, 231, 222, 0.08);
+  --muted: #8a8a8a;
+  --ember: #e8571e;
+  --ember-soft: rgba(232, 87, 30, 0.12);
+  --ember-light: #f6d6c3;
+  --copper: #b8763b;
+  --trust: #5aa578;
+  --trust-light: #d9f7ea;
+  --focus: #f6a07a;
+  --deep: #0a0a0a;
+  --overlay: rgba(236, 231, 222, 0.03);
+  --danger-fg: #fca5a5;
+  --success-fg: #d9f7ea;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+}
+
+/* Light theme: opt-in via data-theme='light'. */
+:root[data-theme='light'] {
   color-scheme: light;
   --background: #faf9f7;
   --foreground: #1c1f22;
-  --font-sans: var(--font-inter), "Inter", sans-serif;
-  --font-serif: var(--font-fraunces), "Fraunces", serif;
   --panel: #ffffff;
   --panel-2: #f4f2ef;
   --line: rgba(28, 31, 34, 0.12);
@@ -22,31 +47,6 @@
   --overlay: rgba(28, 31, 34, 0.04);
   --danger-fg: #b91c1c;
   --success-fg: #166534;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-}
-
-/* The Forge theme: the original dark BrandForge surface. Chosen in Settings. */
-:root[data-theme='original'] {
-  color-scheme: dark;
-  --background: #14171a;
-  --foreground: #ece7de;
-  --panel: #1c2024;
-  --panel-2: #20262b;
-  --line: rgba(236, 231, 222, 0.1);
-  --muted: #9aa0a6;
-  --ember: #e8571e;
-  --ember-soft: rgba(232, 87, 30, 0.14);
-  --ember-light: #f6d6c3;
-  --copper: #b8763b;
-  --trust: #5aa578;
-  --trust-light: #d9f7ea;
-  --focus: #f6a07a;
-  --deep: #111417;
-  --overlay: rgba(236, 231, 222, 0.04);
-  --danger-fg: #fecaca;
-  --success-fg: #d9f7ea;
 }
 
 @theme inline {

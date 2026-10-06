@@ -6,6 +6,8 @@ import { avatarLabel, avatarTone, initialsFor } from "@/lib/identity-display";
 import { isDirectlyReadable } from "@/lib/file-context";
 import { RichContent } from "@/components/rich-content";
 
+import { BlueprintEmbedCard } from "@/components/blueprint/blueprint-embed-card";
+
 export type ChatEmbedAction =
   | "accept"
   | "decline"
@@ -36,6 +38,15 @@ export type ChatEmbed =
     }
   | { type: "agreement"; agreementId: string; status: string }
   | { type: "review_request"; conversationId: string; percent?: number; complete?: boolean }
+  | {
+      type: "blueprint";
+      blueprintId: string;
+      canEdit?: boolean;
+      emailed?: boolean;
+      document?: any;
+      title?: string;
+      body?: string;
+    }
   | {
       type: "funding";
       agreementId: string;
@@ -136,6 +147,7 @@ function SystemEmbedCard({
   canDecide,
   isStaff,
   contract,
+  canEdit,
   proposal,
   embedBusy,
   onEmbedAction,
@@ -143,6 +155,7 @@ function SystemEmbedCard({
   message: ChatMessage;
   canDecide?: boolean;
   isStaff?: boolean;
+  canEdit?: boolean;
   contract: ContractSummary | null;
   /** Live proposal row: binds action buttons and the status pill to reality. */
   proposal?: { id: string; status: string } | null;
@@ -169,14 +182,19 @@ function SystemEmbedCard({
     Number.isFinite(counterWeeksValue) &&
     counterWeeksValue >= 1;
 
-  const embed = message.embed;
-  if (!embed) return null;
+   const embed = message.embed;
+   if (!embed) return null;
 
-  // Signature state only binds when the loaded contract IS this card's agreement.
-  const ownContract =
-    embed.type === "agreement" && contract && contract.id === embed.agreementId
-      ? contract
-      : null;
+   // Handle blueprint embeds
+   if (embed.type === "blueprint") {
+     return <BlueprintEmbedCard embed={embed} canEdit={canEdit} blueprintId={embed.blueprintId} />;
+   }
+
+   // Signature state only binds when the loaded contract IS this card's agreement.
+   const ownContract =
+     embed.type === "agreement" && contract && contract.id === embed.agreementId
+       ? contract
+       : null;
   const founderSigned = Boolean(ownContract?.founder_accepted_at);
   const teamSigned = Boolean(ownContract?.team_accepted_at);
   const bothSigned = founderSigned && teamSigned;
@@ -1153,6 +1171,7 @@ export function ChatTranscript({
                 message={message}
                 canDecide={canDecide}
                 isStaff={isStaff}
+                canEdit={canDecide}
                 contract={agreement ?? null}
                 proposal={proposal ?? null}
                 embedBusy={embedBusy}
