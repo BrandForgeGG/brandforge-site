@@ -417,3 +417,9 @@ we do not have.
 **Change:** the chat header lost its border, the serif title became a quiet one-line label, the "Discovery" pill became a status dot (words in the tooltip), the requirements line moved into the title tooltip (the project panel still shows the counts), and the AI switch is a sparkle icon. "Name joined" shows only when a specialist actually joined.
 
 **Distribution move:** none (UI polish).
+
+## 2026-10-07 — Funnel events for the free-first loop + hero chip fix
+
+**Change:** five new allowlisted funnel events: `tool_page_viewed` (source = tool slug), `guest_save_clicked`, `next_step_clicked` (source = which chip), `invite_link_copied`, `team_joined` (server-side on a redeemed invite). With the existing `chat_started` (source `landing_hero` / `tool_*`) and `onboarding_completed` this gives the full path: visit, first chat, save click, signup, invite, teammate joined. The hero chip "Audit my landing page: https://" now puts the cursor after the slashes and refuses to send an empty address.
+
+**Distribution move:** none to announce; this is the measurement layer. Weekly read: tool page views to chat_started by source, chat_started to guest_save_clicked to onboarding_completed, and team_joined per invite_link_copied.

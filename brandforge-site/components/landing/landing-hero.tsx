@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { fetchAuthed } from '@/lib/browser-auth';
@@ -30,6 +30,7 @@ export function LandingHero() {
     const match = PACKAGES.find((p) => p.key === pkg);
     return match ? `I'm interested in ${match.name.toLowerCase()} — ${match.items[0]?.toLowerCase()}` : '';
   });
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [isSignedOut, setIsSignedOut] = useState(false);
@@ -42,6 +43,13 @@ export function LandingHero() {
     e.preventDefault();
     const trimmed = input.trim();
     if (!trimmed || busy) return;
+
+    // A chip like "Audit my landing page: https://" is a starting point, not a question.
+    if (/https?:\/\/$/i.test(trimmed)) {
+      setNotice('Add the full web address after https:// first.');
+      textareaRef.current?.focus();
+      return;
+    }
 
     setBusy(true);
     setNotice('');
@@ -92,6 +100,7 @@ export function LandingHero() {
         <form onSubmit={handleSubmit} className="mx-auto mt-7 max-w-xl">
           <div className="relative">
             <textarea
+              ref={textareaRef}
               value={input}
               aria-label="Describe your project"
               onChange={(e) => setInput(e.target.value)}
@@ -114,7 +123,16 @@ export function LandingHero() {
             <button
               key={prompt}
               type="button"
-              onClick={() => setInput(prompt)}
+              onClick={() => {
+                setInput(prompt);
+                // Cursor lands at the end so the visitor can finish the sentence (or paste a URL).
+                requestAnimationFrame(() => {
+                  const box = textareaRef.current;
+                  if (!box) return;
+                  box.focus();
+                  box.setSelectionRange(prompt.length, prompt.length);
+                });
+              }}
               className="inline-flex min-h-9 items-center rounded-full border border-line px-3 py-1.5 text-xs text-muted transition hover:border-ember hover:text-foreground"
             >
               {prompt}

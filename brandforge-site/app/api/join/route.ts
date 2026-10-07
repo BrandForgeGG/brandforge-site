@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
-import { joinConversationAsMember } from '@/lib/project-db';
+import { joinConversationAsMember, recordFunnelEvent } from '@/lib/project-db';
 import { blueprintConfig } from '@/lib/blueprint-config';
 import { verifyJoinToken } from '@/lib/join-token';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -32,6 +32,9 @@ export async function POST(request: NextRequest) {
       { error: joined.error === 'not_found' ? 'That chat no longer exists.' : 'Could not join the chat.' },
       { status: joined.error === 'not_found' ? 404 : 500 },
     );
+  }
+  if (!joined.already) {
+    await recordFunnelEvent('team_joined', { signedIn: true, properties: { source: 'invite_link' } }).catch(() => undefined);
   }
   return NextResponse.json({ conversationId, already: joined.already });
 }

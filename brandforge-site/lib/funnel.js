@@ -72,6 +72,12 @@ const FUNNEL_EVENTS = Object.freeze([
   'blueprint_proposed',
   'quick_win_started',
   'quick_win_delivered',
+  // Free-tools and team loop (2026-10-07)
+  'tool_page_viewed',
+  'guest_save_clicked',
+  'next_step_clicked',
+  'invite_link_copied',
+  'team_joined',
   // Specialist funnel
   'apply_started',
   'apply_submitted',

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { trackEvent } from '@/lib/funnel-client';
 
 const DISMISS_KEY = 'brandforge:guest-save-dismissed';
 
@@ -45,6 +46,7 @@ export function GuestSaveBar({
         <div className="flex shrink-0 items-center gap-2">
           <Link
             href={`/login?next=${next}`}
+            onClick={() => trackEvent('guest_save_clicked', { source: 'save_bar' })}
             className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background transition hover:opacity-90"
           >
             Save chat

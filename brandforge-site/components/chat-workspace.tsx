@@ -19,6 +19,7 @@ import { summarizeTaskProgress } from "@/lib/task-board";
 import { shapeTaskRoster } from "@/lib/task-board";
 import { isNearBottom } from "@/lib/chat-scroll";
 import { fetchAuthed } from "@/lib/browser-auth";
+import { trackEvent } from "@/lib/funnel-client";
 import { GuestSaveBar } from "@/components/guest-save-bar";
 import { NextStepChips } from "@/components/next-step-chips";
 import { ChatTranscript, type ChatMessage } from "@/components/chat-transcript";
@@ -1355,6 +1356,7 @@ export function ChatWorkspace() {
         return;
       }
       await navigator.clipboard.writeText(data.url);
+      trackEvent('invite_link_copied');
       setInviteNote("Team link copied — anyone with it can join after signing in.");
     } catch {
       setInviteNote("Could not copy the link.");

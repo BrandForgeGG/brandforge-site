@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { fetchAuthed } from '@/lib/browser-auth';
@@ -34,6 +34,10 @@ export function ToolStarter({
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    trackEvent('tool_page_viewed', { source: slug });
+  }, [slug]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();

@@ -1,5 +1,7 @@
 'use client';
 
+import { trackEvent } from '@/lib/funnel-client';
+
 type Step = { label: string; text?: string; action?: 'invite' };
 
 const STEPS: Step[] = [
@@ -35,7 +37,11 @@ export function NextStepChips({
           <button
             key={step.label}
             type="button"
-            onClick={() => (step.action === 'invite' ? onInvite() : onPick(step.text ?? ''))}
+            onClick={() => {
+              trackEvent('next_step_clicked', { source: step.action ?? step.label.toLowerCase().replace(/[^a-z]+/g, '_') });
+              if (step.action === 'invite') onInvite();
+              else onPick(step.text ?? '');
+            }}
             className="inline-flex min-h-8 items-center rounded-full border border-line px-3 py-1 text-xs text-muted transition hover:border-ember hover:text-foreground"
           >
             {step.label}
