@@ -2666,7 +2666,6 @@ return (
                   </div>
                 </div>
                   <div className="flex items-center gap-3">
-                  <span className="hidden text-[10px] uppercase tracking-[0.16em] text-muted sm:inline">Enter to send</span>
                   <button
                     type="submit"
                     disabled={isBusy || (!input.trim() && !attachment)}

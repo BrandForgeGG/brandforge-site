@@ -405,3 +405,9 @@ we do not have.
 **Change:** Attach and Actions are now icon-only (paperclip, slash) with accessible labels and tooltips; the message box is one row tall, send button smaller. Sidebar header: a proper chevron to collapse on desktop and an X to close the drawer on phones (the old "<<" did nothing there). Open beta banner removed earlier today.
 
 **Distribution move:** none (UI polish); fold into the next changelog.
+
+## 2026-10-07 — One-line composer
+
+**Change:** the message box is a single row: attach and actions icons on the left, text input in the middle, send on the right (grows upward when you type more). "Enter to send" hint removed; the save-chat bar is one line ("Save chat").
+
+**Distribution move:** none (UI polish).

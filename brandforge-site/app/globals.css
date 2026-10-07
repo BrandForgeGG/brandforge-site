@@ -208,6 +208,10 @@ body {
 
 .bf-composer {
   position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.125rem;
+  padding: 0.25rem 0.375rem;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--panel);
@@ -221,12 +225,30 @@ body {
   box-shadow: 0 0 0 3px rgba(232, 87, 30, 0.14);
 }
 
+/* One line: tools, input, send. The bar wrapper dissolves so its two groups sit either
+   side of the textarea. */
 .bf-composer-bar {
+  display: contents;
+}
+
+.bf-composer-bar > :first-child {
+  order: 1;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0 0.375rem 0.375rem 0.5rem;
+  height: 2.25rem;
+}
+
+.bf-composer-bar > :last-child {
+  order: 3;
+  display: flex;
+  align-items: center;
+  height: 2.25rem;
+}
+
+.bf-composer-input {
+  order: 2;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .bf-chat-header {
@@ -383,18 +405,18 @@ body {
 
 .bf-composer-input {
   display: block;
-  width: 100%;
-  min-height: 2.75rem;
+  width: auto;
+  min-height: 2.25rem;
   /* Cap the growth: without a ceiling a long pasted brief expands the composer until
      the transcript is pushed off screen. Past the cap the box scrolls instead. */
   max-height: 10rem;
   overflow-y: auto;
   resize: none;
   border: 0;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  border-radius: var(--radius-lg);
   background: transparent;
   color: var(--foreground);
-  padding: 0.625rem 0.875rem 0.125rem;
+  padding: 0.4375rem 0.5rem;
   /* 16px: below that iOS Safari zooms the page when the composer is focused. */
   font-size: 1rem;
   line-height: 1.45;

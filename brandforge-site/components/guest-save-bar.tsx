@@ -40,14 +40,14 @@ export function GuestSaveBar({
         aria-label="Save this chat"
       >
         <p className="min-w-0 text-sm text-foreground">
-          Keep this chat and add your team. <span className="text-muted">Free, takes 10 seconds.</span>
+          Keep this chat and add your team. <span className="hidden text-muted sm:inline">Free, takes 10 seconds.</span>
         </p>
         <div className="flex shrink-0 items-center gap-2">
           <Link
             href={`/login?next=${next}`}
             className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background transition hover:opacity-90"
           >
-            Save with Google or email
+            Save chat
           </Link>
           <button
             type="button"
