@@ -495,3 +495,9 @@ we do not have.
 **Change:** like "Create an image:", the Actions item "Create a video" drops the prefix into the box; type the topic and send. The AI makes three portrait scene images in one go (hook, benefit, call to action), each with a short caption, and replies in four lines or fewer. As soon as a chat holds two or more images a "N images ready for a video / Make video" bar appears above the message box; the maker opens with the captions already filled in, and exports MP4. Images in one round are generated in parallel (3 scenes in roughly the time of one). +1 test (410).
 
 **Distribution move:** this is the clip to record: type "Create a video: <your product>" and show the whole flow in 30 seconds. Honest framing for the caption: AI-generated images set to motion and captions; not generated footage.
+
+## 2026-10-08 — Video scenes use the fast image model
+
+**Change:** three FLUX.2 images at once took 48 s (two timed out and were rescued by FLUX.1), too close to the 60 s request limit. Captioned images (video scenes) now go straight to FLUX.1 schnell, and each Cloudflare model waits at most 20 s. Same prompt: 37 s, three images, no fallbacks, clear sharp scenes. 411 tests. Note: schnell returns square images; the video maker crops them to the chosen format.
+
+**Distribution move:** include the coffee-roaster scenes in the "Create a video:" demo clip. Honest caption: AI-generated images set to motion and captions.
