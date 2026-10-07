@@ -39,7 +39,7 @@ function renderInlines(inlines: MarkdownInline[], keyPrefix: string) {
 function headingInlines(token: MarkdownToken): MarkdownInline[] | null {
   if (token.type === 'heading' && token.depth <= 4) return token.inlines;
   if (token.type === 'paragraph') {
-    const parts = token.inlines.filter((inline) => !(inline.type === 'text' && /^[s:]*$/.test(inline.text)));
+    const parts = token.inlines.filter((inline) => !(inline.type === 'text' && /^[\s:]*$/.test(inline.text)));
     if (parts.length === 1 && parts[0].type === 'strong' && parts[0].text.length <= 70) return parts;
   }
   return null;

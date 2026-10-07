@@ -68,7 +68,7 @@ function researchLabel(rawArguments: string | undefined): string {
   try {
     const args = JSON.parse(rawArguments || "{}") as { url?: unknown; query?: unknown };
     if (typeof args.url === "string" && args.url) {
-      return `Read ${new URL(args.url).hostname.replace(/^www./, "")}`;
+      return `Read ${new URL(args.url).hostname.replace(/^www\./, "")}`;
     }
     if (typeof args.query === "string" && args.query) {
       return `Searched the web: ${args.query.slice(0, 48)}`;

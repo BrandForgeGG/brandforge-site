@@ -270,7 +270,7 @@ export function ProjectContextPanel({
           <div className="bf-panel-section">
             <p className="bf-section-label">Latest answer</p>
             {outline.assumptions ? (
-              <p className="mb-2 text-xs leading-relaxed text-muted">Assuming: {outline.assumptions.replace(/^Assuming:?s*/i, '')}</p>
+              <p className="mb-2 text-xs leading-relaxed text-muted">Assuming: {outline.assumptions.replace(/^Assuming:?\s*/i, '')}</p>
             ) : null}
             <ul className="bf-panel-card space-y-1.5">
               {outline.sections.map((section) => (
