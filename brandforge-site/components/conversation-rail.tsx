@@ -258,13 +258,27 @@ onMobileClose,
               </>
             )}
           </Link>
+          {/* Desktop: collapse to the icon rail. Phone: the drawer closes instead; a collapse
+              control does nothing there. */}
           <button
             type="button"
             onClick={toggleCollapsed}
-            className="rounded-lg p-2 text-muted transition hover:bg-overlay hover:text-foreground"
+            className="hidden rounded-lg p-2 text-muted transition hover:bg-overlay hover:text-foreground md:inline-flex"
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            <span aria-hidden="true">{isCollapsed ? ">>" : "<<"}</span>
+            <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d={isCollapsed ? "M7 4l6 6-6 6" : "M13 4l-6 6 6 6"} />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={onMobileClose}
+            className="inline-flex rounded-lg p-2 text-muted transition hover:bg-overlay hover:text-foreground md:hidden"
+            aria-label="Close navigation"
+          >
+            <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+              <path d="M5 5l10 10M15 5L5 15" />
+            </svg>
           </button>
         </div>
 
