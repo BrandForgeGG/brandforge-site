@@ -12,6 +12,12 @@ const OPTIONS = [
       'Read {url} and build a ready-to-run ad pack: for each of Meta, Google, TikTok and LinkedIn give 3 hooks, 3 headlines and 2 primary texts, then a 20-second video script with a shot list. Use only claims that appear on the page; use [brackets] for anything I need to confirm.',
   },
   {
+    id: 'visuals',
+    label: 'Ad visuals',
+    hint: 'Image creatives for your ads',
+    prompt: 'Create 2 different ad visuals for this, one image each, with no text inside the images: {detail}',
+  },
+  {
     id: 'calendar',
     label: '30-day content calendar',
     hint: 'Posts per platform, export to any scheduler',

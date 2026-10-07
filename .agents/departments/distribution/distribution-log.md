@@ -453,3 +453,9 @@ we do not have.
 **Change:** the "Next: Turn this into ads / 30-day calendar / Audit a URL" row under every answer is gone. Those three (plus Invite my team for signed-in users) now sit under "Next steps" at the top of the Actions menu (the slash icon in the message box), above the slash commands. Same click tracking (`next_step_clicked`).
 
 **Distribution move:** none (UI polish).
+
+## 2026-10-07 — Free image generation with automatic fallback
+
+**Change:** the chat can now make images (`generate_image`): ad visuals, logo concepts, mockups, shown inline labelled AI-generated with a Download link, saved with the chat (guests can see their own). `lib/image-gen.js` (+8 tests, 407) tries providers in order and falls back automatically: Cloudflare Workers AI (needs CF_ACCOUNT_ID + CF_API_TOKEN), Hugging Face (HF_TOKEN), Pollinations (free, no key, small watermark), OpenRouter (only if IMAGE_OPENROUTER=true and credits). Failed providers cool down; non-image responses are rejected by byte sniffing; basic prompt blocklist. Free caps per chat: 4 images for guests, 12 for signed-in. New entries: Create > Image or logo concept, Distribute > Ad visuals, Actions > Make an image.
+
+**Distribution move:** headline for the next changelog once live-verified: "Free AI images inside your chat: ad visuals and logo concepts, no credits needed." Honest limits to state: free images carry a provider watermark until a Cloudflare key is added; video comes next as an in-browser maker.

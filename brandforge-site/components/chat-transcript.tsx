@@ -79,6 +79,7 @@ export interface ChatMessage {
     name: string;
     size: number;
     contentType: string;
+    generated?: boolean;
   } | null;
   embed?: ChatEmbed | null;
   /**
@@ -1290,7 +1291,28 @@ export function ChatTranscript({
                       }`
                 }
               >
-                {artifact ? (
+                {artifact?.generated ? (
+                  <figure className="mb-1">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- authenticated runtime path */}
+                    <img
+                      src={`/api/attachments?path=${encodeURIComponent(artifact.path)}`}
+                      alt={message.content || "AI-generated image"}
+                      className="max-h-96 max-w-full rounded-xl border border-line object-contain"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                    <figcaption className="mt-1.5 flex items-center gap-2 text-xs text-muted">
+                      <span>AI-generated</span>
+                      <a
+                        href={`/api/attachments?path=${encodeURIComponent(artifact.path)}`}
+                        download={artifact.name}
+                        className="text-ember underline-offset-2 hover:underline"
+                      >
+                        Download
+                      </a>
+                    </figcaption>
+                  </figure>
+                ) : artifact ? (
                   <div className="mb-2">
                     {artifact.contentType?.startsWith("audio/") ? (
                       <audio

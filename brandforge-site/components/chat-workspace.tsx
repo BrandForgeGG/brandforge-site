@@ -109,6 +109,7 @@ function toChatMessage(message: PersistedMessage): ChatMessage {
             name: string;
             size: number;
             contentType: string;
+            generated?: boolean;
           })
         : null,
     embed: parseChatEmbed(message.artifact_data) as ChatMessage["embed"],
@@ -129,6 +130,7 @@ const SLASH_COMMANDS = [
 
 // Suggested next moves live in the Actions menu, not as a row under every answer.
 const NEXT_STEP_ACTIONS = [
+  { key: 'image', label: 'Make an image', text: 'Create an image: ' },
   { key: 'ads', label: 'Turn this into ads', text: 'Turn this into ready-to-run ads for Meta, Google and TikTok.' },
   { key: 'calendar', label: '30-day calendar', text: 'Build a 30-day content calendar from this, as a table I can export.' },
   { key: 'audit', label: 'Audit a URL', text: 'Audit this site and tell me what to fix first: https://' },

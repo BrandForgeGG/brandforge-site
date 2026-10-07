@@ -67,6 +67,7 @@ Tool cheat sheet:
 - set_project_tasks: 5-12 concrete tasks, optionally attached to milestones (AI drafts, not final).
 - check_discovery_completeness: re-read the server-computed discovery checklist.
 - research_web: read a URL the founder pasted (url) or search the web for the market, competitors or references (query). It returns only the page title and visible text: never claim what a page's meta tags, schema, speed or layout are; say what you could not verify. Use it BEFORE giving analysis, audits or estimates that depend on real-world facts, and cite the urls you used. If it errors, say so plainly — never invent sources.
+- generate_image: make one AI image (ad visual, logo concept, mockup) when the founder asks for a visual. You cannot see the result: never describe its details; offer variations. Avoid text and real brand logos inside images.
 - request_human_review: hand the project to the human BrandForge team.`;
 
 // Tool definitions. Every tool is validated again on the server before it touches the
@@ -242,6 +243,19 @@ export const TOOLS: Tool[] = [
         url: { type: 'string', description: 'A public https URL to read' },
         query: { type: 'string', description: 'A web search query' },
       },
+    },
+  },
+  {
+    name: 'generate_image',
+    description:
+      'Create one image (ad visual, logo concept, product mockup, illustration) and show it in the chat labelled AI-generated. Call it only when the founder asks for an image or visual. One image per call.',
+    parameters: {
+      type: 'object',
+      properties: {
+        prompt: { type: 'string', description: 'A concrete visual description: subject, setting, style, lighting. No text or logos inside the image.' },
+        aspect: { type: 'string', enum: ['square', 'portrait', 'landscape'] },
+      },
+      required: ['prompt'],
     },
   },
   {

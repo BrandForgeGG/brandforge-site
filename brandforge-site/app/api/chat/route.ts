@@ -60,6 +60,7 @@ const TOOL_ACTIVITY: Record<string, string> = {
   set_project_tasks: "Updated the delivery plan",
   check_discovery_completeness: "Checked discovery completeness",
   request_human_review: "Requested human review",
+  generate_image: "Creating an image",
 };
 
 // research_web labels carry the page host or the search the model asked for, read from the
@@ -416,7 +417,12 @@ export async function POST(request: NextRequest) {
             if (label) {
               send({ type: "activity", label });
             }
-            return scope(() => executeTool(conversationId, toolCall));
+            return scope(() =>
+              executeTool(conversationId, toolCall, {
+                ownerId: user?.id ?? guest?.sessionId,
+                guest: !user,
+              }),
+            );
           },
           {
             onDelta: (chunk) => send({ type: "delta", chunk }),

@@ -8,6 +8,8 @@ import type { ToolCall } from './ai-service';
 import {
   addMessage,
   addOpenQuestion,
+  countGeneratedImages,
+  storeGeneratedImage,
   addRequirement,
   recordDecision,
   replaceDraftMilestones,
@@ -21,6 +23,7 @@ import {
 } from './project-db';
 import { blueprintConfig } from './blueprint-config';
 import { fetchPage, searchWeb } from './research';
+import { generateImage } from './image-gen';
 import { syncDiscoveryCompleteness } from './conversation-state';
 import { isDiscoveryComplete } from './discovery';
 
@@ -62,7 +65,18 @@ function positiveNumber(value: unknown): number | null {
   return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null;
 }
 
-export async function executeTool(conversationId: string, toolCall: ToolCall): Promise<string> {
+export type ToolContext = { ownerId?: string; guest?: boolean };
+
+// Free images are capped per chat so a free tool cannot be farmed; the cap is generous enough
+// for real iteration (a logo, a few ad visuals, a variation or two).
+const IMAGE_LIMIT_GUEST = 4;
+const IMAGE_LIMIT_MEMBER = 12;
+
+export async function executeTool(
+  conversationId: string,
+  toolCall: ToolCall,
+  context: ToolContext = {},
+): Promise<string> {
   const name = toolCall.function.name;
   let args: Record<string, unknown> = {};
 
@@ -394,6 +408,55 @@ export async function executeTool(conversationId: string, toolCall: ToolCall): P
       } catch (error) {
         return JSON.stringify({ error: error instanceof Error ? error.message.slice(0, 200) : 'Research failed' });
       }
+    }
+
+    case 'generate_image': {
+      const prompt = toolText(args.prompt, 600);
+      const aspect = ['square', 'portrait', 'landscape'].includes(String(args.aspect))
+        ? (String(args.aspect) as 'square' | 'portrait' | 'landscape')
+        : 'square';
+      if (prompt.length < 8) {
+        return JSON.stringify({ error: 'Describe the image in at least a short sentence.' });
+      }
+      if (!context.ownerId) {
+        return JSON.stringify({ error: 'Image creation is not available in this chat.' });
+      }
+      const limit = context.guest ? IMAGE_LIMIT_GUEST : IMAGE_LIMIT_MEMBER;
+      if ((await countGeneratedImages(conversationId)) >= limit) {
+        return JSON.stringify({
+          error: context.guest
+            ? 'This chat has used its free images. Tell the person to save the chat (free) for more.'
+            : 'This chat has reached its image limit. Say so and suggest starting a new chat.',
+        });
+      }
+      const result = await generateImage({ prompt, aspect });
+      if (!result.ok) {
+        return JSON.stringify({
+          error:
+            result.reason === 'blocked'
+              ? 'That image request is not allowed. Offer a different, safe direction.'
+              : 'Image creation is busy right now. Say so plainly and offer to describe the visual in words instead.',
+        });
+      }
+      const stored = await storeGeneratedImage(conversationId, context.ownerId, result.bytes, result.contentType);
+      if (!stored) {
+        return JSON.stringify({ error: 'The image could not be saved. Say so plainly.' });
+      }
+      const messageId = await addMessage({
+        conversation_id: conversationId,
+        sender_type: 'ai',
+        sender_name: 'BrandForge',
+        content: prompt.slice(0, 200),
+        content_type: 'text',
+        artifact_data: { ...stored, generated: true, provider: result.provider, source: 'ai' },
+      });
+      if (!messageId) {
+        return JSON.stringify({ error: 'The image could not be shown in the chat. Say so plainly.' });
+      }
+      return JSON.stringify({
+        success: true,
+        note: 'The image is now visible in the chat labelled AI-generated. You cannot see it: do not describe its details; refer to it as the image above and offer variations.',
+      });
     }
 
     case 'request_human_review': {

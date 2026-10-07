@@ -1687,6 +1687,40 @@ export async function uploadConversationAttachment(
   return { path, name: file.name.slice(0, 120), size: file.size, contentType: file.type || 'application/octet-stream' };
 }
 
+// Stores an AI-generated image in the same private bucket as uploads. The second path segment is
+// the owner id (account or guest session), which keeps the existing path shape and access checks.
+export async function storeGeneratedImage(
+  conversationId: string,
+  ownerId: string,
+  bytes: Uint8Array,
+  contentType: string,
+): Promise<{ path: string; name: string; size: number; contentType: string } | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const extension = contentType === 'image/jpeg' ? 'jpg' : contentType === 'image/webp' ? 'webp' : 'png';
+  const name = `ai-image.${extension}`;
+  const path = `conversation-${conversationId}/${ownerId}/${crypto.randomUUID()}-${name}`;
+  const { error } = await admin.storage.from('conversation-attachments').upload(path, bytes, {
+    contentType,
+    upsert: false,
+  });
+  if (error) {
+    console.error('Error storing generated image:', error.message);
+    return null;
+  }
+  return { path, name, size: bytes.length, contentType };
+}
+
+export async function countGeneratedImages(conversationId: string): Promise<number> {
+  const supabase = await db();
+  const { count } = await supabase
+    .from('messages')
+    .select('id', { count: 'exact', head: true })
+    .eq('conversation_id', conversationId)
+    .contains('artifact_data', { generated: true });
+  return count ?? 0;
+}
+
 export async function removeConversationAttachment(path: string): Promise<boolean> {
   const admin = createSupabaseAdminClient();
   if (!admin) return false;

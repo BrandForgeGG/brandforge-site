@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { displayAttachmentName, safeDownloadName } from '@/lib/message-actions';
-import { canAccessConversation, downloadConversationAttachment, removeConversationAttachment, uploadConversationAttachment, addMessage } from '@/lib/project-db';
+import { resolveGuestSession } from '@/lib/guest-session';
+import { canAccessConversation, getConversationOwnerSession, downloadConversationAttachment, removeConversationAttachment, uploadConversationAttachment, addMessage } from '@/lib/project-db';
 import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -19,14 +20,18 @@ const ALLOWED_TYPES = new Set([
 
 export async function GET(request: NextRequest) {
   const user = await getAuthenticatedUser(request);
-  if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  // A signed-out guest may view files of the conversation their own session owns (AI images).
+  const guest = user ? null : await resolveGuestSession(request);
+  if (!user && !guest) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   const path = request.nextUrl.searchParams.get('path') ?? '';
   const match = path.match(/^conversation-([0-9a-f-]{36})\//i);
-  if (
-    !ATTACHMENT_PATH.test(path) ||
-    !match ||
-    !(await canAccessConversation(user.id, match[1], { allowStaff: true }))
-  ) {
+  const allowed =
+    ATTACHMENT_PATH.test(path) &&
+    Boolean(match) &&
+    (user
+      ? await canAccessConversation(user.id, match![1], { allowStaff: true })
+      : (await getConversationOwnerSession(match![1])) === guest!.sessionId);
+  if (!allowed) {
     return NextResponse.json({ error: 'Attachment not found' }, { status: 404 });
   }
   const data = await downloadConversationAttachment(path);

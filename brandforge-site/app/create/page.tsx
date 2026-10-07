@@ -12,6 +12,12 @@ const OPTIONS = [
       'Audit this website: {url}. Read the page first, then give a prioritised fix list covering messaging, SEO, conversion and trust. Cite what you read. Put the three highest-impact fixes first with the exact change to make. You can only see the page title and visible text: do not state facts about meta tags, schema, speed, mobile layout or backlinks. List those under "Check these yourself" instead, and only quote customers or logos that appear on the page.',
   },
   {
+    id: 'image',
+    label: 'Image or logo concept',
+    hint: 'Free AI image, saved in the chat',
+    prompt: 'Create an image: {detail}',
+  },
+  {
     id: 'blueprint',
     label: 'Project plan',
     hint: 'Idea to scope, roadmap and estimate',
