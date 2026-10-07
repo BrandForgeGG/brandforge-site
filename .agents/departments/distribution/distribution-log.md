@@ -351,3 +351,9 @@ we do not have.
 **Change:** Chat menu → Invite → **Copy team link** (also the email invite now carries the same link). `/join?token=` verifies a signed, 14-day, HMAC token, signs the visitor in if needed, adds them as a `member` participant and drops them in the chat with a "joined the team" line. Before this, the email invite sent a link the invitee could not open. No migration (token is stateless; `participants.role` is free text). +4 tests (392).
 
 **Distribution move:** Discord changelog: "Teams are here. Open any chat → Invite → Copy team link. Your co-founder, designer or marketer joins the same conversation, sees the research and plan, and works with the AI and each other." Demo note: two browser windows, one chat, both typing. Honest limit: members share the chat; per-member permissions and group creation from scratch are next.
+
+## 2026-10-07 — Hero chips show the whole product
+
+**Change:** landing suggestion chips now span the product (URL audit, launch plan, ads, a build) instead of only "build me an app". Copy-only; no new capability.
+
+**Distribution move:** no standalone announcement — folded into the next changelog line. Demo note: the first chip pre-fills a URL audit, a good 10-second screen recording for socials.

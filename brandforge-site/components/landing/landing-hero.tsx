@@ -8,10 +8,10 @@ import { trackEvent } from '@/lib/funnel-client';
 import { COMMUNITY_LINKS } from '@/lib/community';
 
 const SUGGESTIONS = [
+  'Audit my landing page: https://',
+  'Launch plan for my SaaS',
+  'Ads for my online store',
   'A booking site for my salon',
-  'A SaaS that lets restaurants manage reservations',
-  'An app for my fitness business',
-  'A dashboard for support tickets',
 ];
 
 const PACKAGES = [
