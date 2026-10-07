@@ -483,3 +483,9 @@ we do not have.
 **Change:** the Commands list (progress report, send to review, agreement steps, how to attach, list commands) is gone from the Actions menu; it now shows Make an image, Turn this into ads, 30-day calendar, Audit a URL, Make a video and (signed in) Invite my team. Typing `/` in the box still completes those commands for anyone who knows them. The video maker now records MP4 (H.264) when the browser supports it, so clips upload directly to Instagram, TikTok and YouTube; WebM stays as the fallback.
 
 **Distribution move:** none (UI polish); mention MP4 export in the next changelog.
+
+## 2026-10-07 — Actions work like "Create an image:"
+
+**Change:** every Actions item now drops a short prefix into the message box with the cursor after the colon ("Create an image: ", "Create ads: ", "Create a 30-day content calendar: ", "Audit this URL: https://") and the person finishes the sentence; "Create a video" still opens the maker. Labels are verbs in the same style.
+
+**Distribution move:** none (UI polish).

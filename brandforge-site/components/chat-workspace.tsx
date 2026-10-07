@@ -131,11 +131,13 @@ const SLASH_COMMANDS = [
 ];
 
 // Suggested next moves live in the Actions menu, not as a row under every answer.
+// Every action works like "Create an image:": a short prefix lands in the box with the cursor after
+// the colon, and the person finishes the sentence.
 const NEXT_STEP_ACTIONS = [
-  { key: 'image', label: 'Make an image', text: 'Create an image: ' },
-  { key: 'ads', label: 'Turn this into ads', text: 'Turn this into ready-to-run ads for Meta, Google and TikTok.' },
-  { key: 'calendar', label: '30-day calendar', text: 'Build a 30-day content calendar from this, as a table I can export.' },
-  { key: 'audit', label: 'Audit a URL', text: 'Audit this site and tell me what to fix first: https://' },
+  { key: 'image', label: 'Create an image', text: 'Create an image: ' },
+  { key: 'ads', label: 'Create ads', text: 'Create ads: ' },
+  { key: 'calendar', label: 'Create a 30-day calendar', text: 'Create a 30-day content calendar: ' },
+  { key: 'audit', label: 'Audit a URL', text: 'Audit this URL: https://' },
 ] as const;
 
 const CHAT_STARTERS = [
@@ -2662,7 +2664,13 @@ return (
                               setCommandsOpen(false);
                               trackEvent("next_step_clicked", { source: item.key });
                               setInput(item.text);
-                              requestAnimationFrame(() => composerRef.current?.focus());
+                              // Cursor after the prefix so typing continues the sentence.
+                              requestAnimationFrame(() => {
+                                const box = composerRef.current;
+                                if (!box) return;
+                                box.focus();
+                                box.setSelectionRange(item.text.length, item.text.length);
+                              });
                             }}
                           >
                             {item.label}
@@ -2694,7 +2702,7 @@ return (
                             setIsVideoOpen(true);
                           }}
                         >
-                          Make a video
+                          Create a video
                           {videoImages.length === 0 ? <span className="bf-menu-hint">needs an image</span> : null}
                         </button>
                       </div>
