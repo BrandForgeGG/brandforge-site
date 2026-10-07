@@ -7,6 +7,7 @@ import { COMMUNITY_LINKS } from '@/lib/community';
 
 const NAV_LINKS = [
   { label: 'Features', href: '/features' },
+  { label: 'Free tools', href: '/tools/website-audit' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Work', href: '/#work' },
   { label: 'Community', href: '/#community' },

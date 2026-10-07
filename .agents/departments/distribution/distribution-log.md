@@ -375,3 +375,9 @@ we do not have.
 **Change:** under every AI answer (while the chat is young and the composer is empty) a "Next" row offers Turn this into ads / 30-day calendar / Audit a URL / Invite my team; chips fill the composer, nothing sends itself. The empty Projects page now offers four starting points instead of a dead end. Intent: a reason to keep going after the first answer (return rate), and a push toward inviting the team.
 
 **Distribution move:** Discord changelog: "After every answer BrandForge now suggests the next step: ads, a 30-day calendar, a URL audit, or inviting your team." Measure: chip clicks via composer sends starting with the template text; invites sent per active chat.
+
+## 2026-10-07 — Free tools: /tools/website-audit and /tools/ad-pack
+
+**Change:** two public, indexable pages (own title/description/canonical, WebApplication schema, in sitemap and nav as "Free tools"). Paste a URL → a guest chat opens with the request pre-sent (read the page with `research_web`, then deliver the audit / ad pack). No account needed; the save bar offers to keep it. Source tagged `tool_<slug>` for funnel attribution. Mobile checked on landing and chat: no horizontal overflow.
+
+**Distribution move:** these are the shareable assets. Post the two URLs in Discord/Telegram with a one-line hook ("Paste your site, get ads in a minute, no signup"), submit to the directories in the campaign tracker, and run each against a few real community sites for public before/after screenshots (with owners' consent). Honest limit: output quality depends on the page being readable (JS-only or login-walled sites return thin results; the AI says so).
