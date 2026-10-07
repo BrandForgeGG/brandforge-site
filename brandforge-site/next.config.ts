@@ -20,6 +20,11 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // The standalone Blueprint page is gone: the same research and planning run inside chat.
+  // Old links (including saved-blueprint return emails) land in the chat.
+  async redirects() {
+    return [{ source: "/blueprint", destination: "/chat", permanent: false }];
+  },
   async headers() {
     return [
       {

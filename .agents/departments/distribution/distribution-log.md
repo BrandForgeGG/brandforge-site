@@ -339,3 +339,9 @@ we do not have.
 **Change:** left rail now New chat, Create, Distribute, Optimize, Connect, Projects, Recents. Create and Distribute launch real chats from starter templates (blueprint, URL audit, ad pack, competitor snapshot, brand kit, calendar, launch plan, outreach). Optimize and Connect are honest about what is not wired yet. The placeholder AI Studio is gone.
 
 **Distribution move:** Discord changelog: "New sidebar: Create, Distribute, Optimize, Connect. Pick a starting point, add a URL or notes, and the work opens in a chat your team can join. Tell us which channel to connect first." Demo note: screen-record Create → URL audit → chat.
+
+## 2026-10-07 — Blueprint moves into chat; /blueprint removed; chat can research
+
+**Change:** `/blueprint` page and its flow components deleted (old links redirect to `/chat`). Signed-out visitors now start a **guest chat** straight from the hero (no sign-in wall before the first answer). The chat AI gained `research_web`: it reads a pasted URL or searches the web before it audits, plans or estimates, and cites what it used. The blueprint/save/return APIs stay dormant for now.
+
+**Distribution move:** Discord changelog: "No more separate blueprint page. Type your idea (or paste a URL) on the homepage and the answer, with research behind it, happens in the chat. Invite your team into that same chat when you're ready." Demo note: paste a competitor URL on the homepage, show the cited audit in chat.

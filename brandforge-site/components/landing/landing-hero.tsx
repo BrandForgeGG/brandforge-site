@@ -51,21 +51,12 @@ export function LandingHero() {
 
     trackEvent('chat_started', { source: 'landing_hero' });
 
-    if (!session?.user) {
-      try {
-        window.sessionStorage.setItem('brandforge:pending-message', trimmed);
-      } catch {}
-      setBusy(false);
-      setIsSignedOut(true);
-      setNotice('Sign in with Google first — your idea becomes a project once you are in.');
-      return;
-    }
-
     try {
       const response = await fetchAuthed('/api/conversations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ initialMessage: trimmed }),
+        // Signed-out visitors start a guest chat right here: no wall before the first answer.
+        body: JSON.stringify({ initialMessage: trimmed, source: 'landing_hero', guest: !session?.user }),
       });
 
       const data = await response.json().catch(() => ({}));

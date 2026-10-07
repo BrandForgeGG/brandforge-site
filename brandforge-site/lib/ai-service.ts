@@ -64,6 +64,7 @@ Tool cheat sheet:
 - set_project_milestones: 3-6 delivery milestones for the current scope (AI-suggested, not final).
 - set_project_tasks: 5-12 concrete tasks, optionally attached to milestones (AI drafts, not final).
 - check_discovery_completeness: re-read the server-computed discovery checklist.
+- research_web: read a URL the founder pasted (url) or search the web for the market, competitors or references (query). Use it BEFORE giving analysis, audits or estimates that depend on real-world facts, and cite the urls you used. If it errors, say so plainly — never invent sources.
 - request_human_review: hand the project to the human BrandForge team.`;
 
 // Tool definitions. Every tool is validated again on the server before it touches the
@@ -227,6 +228,18 @@ export const TOOLS: Tool[] = [
         },
       },
       required: ['tasks'],
+    },
+  },
+  {
+    name: 'research_web',
+    description:
+      'Read one public URL (url) or search the web (query) and return page text. Read-only; never changes the project.',
+    parameters: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'A public https URL to read' },
+        query: { type: 'string', description: 'A web search query' },
+      },
     },
   },
   {

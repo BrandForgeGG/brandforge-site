@@ -19,6 +19,8 @@ import {
   type ProjectContext,
   type Requirement,
 } from './project-db';
+import { blueprintConfig } from './blueprint-config';
+import { fetchPage, searchWeb } from './research';
 import { syncDiscoveryCompleteness } from './conversation-state';
 import { isDiscoveryComplete } from './discovery';
 
@@ -350,6 +352,48 @@ export async function executeTool(conversationId: string, toolCall: ToolCall): P
         checklist: discovery.checklist.map((step) => ({ label: step.label, met: step.met })),
         ready_for_human_review: isDiscoveryComplete(discovery.completeness),
       });
+    }
+
+    case 'research_web': {
+      // Read-only: touches no project state. fetchPage is SSRF default-deny
+      // (private/loopback/metadata hosts refused before any request).
+      const url = toolText(args.url, 500);
+      const query = toolText(args.query, 200);
+      if (!url && !query) {
+        return JSON.stringify({ error: 'Provide a url to read or a query to search' });
+      }
+      const config = blueprintConfig();
+      const clip = (text: string) => text.slice(0, 3000);
+      try {
+        if (url) {
+          const page = await fetchPage(url, { timeoutMs: 8000, maxChars: 6000 });
+          return JSON.stringify({ pages: [{ url: page.url, title: page.title, text: clip(page.text) }] });
+        }
+        if (!config.searchApiKey || !config.researchEnabled) {
+          return JSON.stringify({ error: 'Web search is not configured. Say so, and work from what the founder told you.' });
+        }
+        const found = await searchWeb({
+          query,
+          num: 5,
+          provider: config.searchProvider,
+          apiKey: config.searchApiKey,
+          timeoutMs: 6000,
+        });
+        const top = found.results.slice(0, 2);
+        const pages = await Promise.all(
+          top.map((result) =>
+            fetchPage(result.url, { timeoutMs: 6000, maxChars: 4000 })
+              .then((page) => ({ url: page.url, title: page.title, text: clip(page.text) }))
+              .catch(() => ({ url: result.url, title: result.title, text: result.snippet })),
+          ),
+        );
+        return JSON.stringify({
+          results: found.results.map((r) => ({ url: r.url, title: r.title, snippet: r.snippet })),
+          pages,
+        });
+      } catch (error) {
+        return JSON.stringify({ error: error instanceof Error ? error.message.slice(0, 200) : 'Research failed' });
+      }
     }
 
     case 'request_human_review': {
