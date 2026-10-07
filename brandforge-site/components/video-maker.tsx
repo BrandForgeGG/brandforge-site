@@ -162,6 +162,14 @@ export function VideoMaker({ images, onClose }: { images: VideoImage[]; onClose:
         requestAnimationFrame(tick);
       });
 
+      // Hold the last frame briefly so the recorder flushes it instead of clipping the end.
+      if (!cancelRef.current) {
+        const last = chosen.length - 1;
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, w, h);
+        drawSlide(ctx, bitmaps[last], w, h, 1, chosen[last].caption, 1);
+        await new Promise((resolve) => setTimeout(resolve, 450));
+      }
       recorder.stop();
       const blob = await finished;
       stream.getTracks().forEach((track) => track.stop());
