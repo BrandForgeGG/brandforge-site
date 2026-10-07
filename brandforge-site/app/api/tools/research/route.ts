@@ -26,8 +26,8 @@ export async function POST(request: NextRequest) {
     const rate = checkRateLimit(`xray:${ip}`, XRAY_RATE_LIMIT);
     if (!rate.allowed) {
       return NextResponse.json(
-        { error: 'Rate limit exceeded', retryAfterSeconds: rate.retryAfter },
-        { status: 429, headers: { 'Retry-After': String(rate.retryAfter) } }
+        { error: 'Rate limit exceeded', retryAfterSeconds: rate.retryAfterSeconds },
+        { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } }
       );
     }
 

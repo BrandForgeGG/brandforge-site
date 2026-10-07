@@ -23,14 +23,15 @@ export async function POST(request: NextRequest) {
 
     if (edits) {
       const normalized = normalizeBrandKitInput(edits);
+      if (!normalized) {
+        return NextResponse.json({ error: 'Invalid brand kit data' }, { status: 400 });
+      }
       const admin = createSupabaseAdminClient();
       if (!admin) {
         return NextResponse.json({ error: 'Storage not configured' }, { status: 503 });
       }
-      const { error } = await admin.from('brand_kits').insert({
-        domain: String(body.domain || 'manual'),
-        ...normalized,
-      });
+      const row = { domain: String(body.domain || 'manual') ?? 'manual', ...(normalized as NonNullable<typeof normalized>) };
+      const { error } = await admin.from('brand_kits').insert(row);
       if (error) {
         return NextResponse.json({ error: 'Save failed' }, { status: 500 });
       }
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
     }
 
     const admin = createSupabaseAdminClient();
-    if (admin) {
+    if (admin && result.brandKit) {
       await admin.from('brand_kits').insert(result.brandKit);
     }
 
