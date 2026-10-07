@@ -20,6 +20,7 @@ import { shapeTaskRoster } from "@/lib/task-board";
 import { isNearBottom } from "@/lib/chat-scroll";
 import { fetchAuthed } from "@/lib/browser-auth";
 import { BetaBanner } from "@/components/beta-banner";
+import { GuestSaveBar } from "@/components/guest-save-bar";
 import { ChatTranscript, type ChatMessage } from "@/components/chat-transcript";
 import {
   ConversationRail,
@@ -123,6 +124,14 @@ const SLASH_COMMANDS = [
   { command: "/contract", label: "Agreement steps" },
   { command: "/attach", label: "How to attach a file" },
   { command: "/help", label: "List all commands" },
+];
+
+const CHAT_STARTERS = [
+  { label: 'Plan my idea', text: 'I have an idea: ' },
+  { label: 'Audit a URL', text: 'Audit this site and tell me what to fix first: https://' },
+  { label: 'Write ads', text: 'Write ads for ' },
+  { label: 'Launch plan', text: 'Make a launch plan for ' },
+  { label: 'Not sure yet', text: '' },
 ];
 
 export function ChatWorkspace() {
@@ -2059,19 +2068,19 @@ return (
                 Let&apos;s build something.
               </h1>
               <p className="mt-3 max-w-md text-sm leading-relaxed text-muted">
-                Start with whatever you have — an idea, a problem, a sketch, or a document.
+                Type an idea, paste a URL, or attach a file.
               </p>
               <div
                 className="mt-5 flex flex-wrap justify-center gap-2"
                 role="group"
                 aria-label="Starting points"
               >
-                {['I have an idea', 'I have requirements', 'I have a design', 'I have an existing product', "I'm not sure yet"].map((label) => (
+                {CHAT_STARTERS.map(({ label, text }) => (
                   <button
                     key={label}
                     type="button"
                     onClick={() => {
-                      setInput(label === "I'm not sure yet" ? '' : label.replace('I have ', 'I have '));
+                      setInput(text);
                       requestAnimationFrame(() => composerRef.current?.focus());
                     }}
                     className="inline-flex min-h-9 items-center rounded-full border border-line px-3.5 py-1.5 text-xs text-muted transition hover:border-ember hover:text-foreground"
@@ -2230,6 +2239,11 @@ return (
             </div>
           </div>
         ) : null}
+
+        <GuestSaveBar
+          conversationId={conversationId}
+          hasReply={!isStreaming && messages.some((message) => message.sender === "ai" && !message.streaming)}
+        />
 
         {/* Typing + who-else-is-here. One polite live region so a screen reader announces the
             change without interrupting; the animated dot is decorative. */}

@@ -79,6 +79,8 @@ onMobileClose,
     username: string | null;
   } | null>(null);
   const [accountId, setAccountId] = useState("");
+  // The readable bf_guest cookie marks an anonymous browser (rail is client-only, no SSR mismatch).
+  const isGuestBrowser = typeof document !== "undefined" && document.cookie.includes("bf_guest=");
   const [isSelfStaff, setIsSelfStaff] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [unseenCount, setUnseenCount] = useState(0);
@@ -477,7 +479,7 @@ onMobileClose,
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium text-foreground">
-                  {account?.name ?? "BrandForge"}
+                  {account?.name ?? (isGuestBrowser ? "Guest" : "BrandForge")}
                 </span>
                 {account?.username ? (
                   <span className="block truncate text-[11px] text-muted">
@@ -485,12 +487,21 @@ onMobileClose,
                   </span>
                 ) : null}
                 <span className="block truncate text-[10px] uppercase tracking-[0.15em] text-muted">
-                  {account ? account.role : "Signed in"}
+                  {account ? account.role : isGuestBrowser ? "Not saved yet" : "Signed in"}
                 </span>
               </span>
             </button>
             {dropdownOpen ? (
               <div className="absolute bottom-full left-0 mb-2 w-56 rounded-xl border border-line bg-panel p-3 shadow-xl">
+                {isGuestBrowser && !account ? (
+                  <Link
+                    href={`/login?next=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname + window.location.search : "/chat")}`}
+                    onClick={() => setDropdownOpen(false)}
+                    className="mb-1 block rounded-lg bg-ember px-3 py-2 text-center text-sm font-semibold text-background transition hover:opacity-90"
+                  >
+                    Save my chats
+                  </Link>
+                ) : null}
                 <Link
                   href="/settings"
                   onClick={() => setDropdownOpen(false)}

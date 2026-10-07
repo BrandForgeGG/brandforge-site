@@ -13,22 +13,10 @@ import {
 
 // The right-side diagram: what actually happens between an idea and shipped work.
 const FLOW = [
-  {
-    title: 'Describe it',
-    body: 'One message in chat. The AI asks the sharp questions and structures the brief.',
-  },
-  {
-    title: 'Get a proposal',
-    body: 'A vetted specialist sends scope, price, and timeline. Accept, counter, or decline.',
-  },
-  {
-    title: 'Fund escrow',
-    body: 'Crypto in, verified on-chain. You are not charged before you approve anything.',
-  },
-  {
-    title: 'Ship and release',
-    body: 'Milestones are approved by you. Payment releases only when the work passes.',
-  },
+  { title: 'Describe it', body: 'Type, paste a URL or drop a file.' },
+  { title: 'Get the plan', body: 'AI researches it and structures the work.' },
+  { title: 'Build together', body: 'Invite your team into the same chat.' },
+  { title: 'Ship and spread', body: 'Create the assets and distribute them.' },
 ];
 
 export function AuthSplit() {
@@ -134,10 +122,10 @@ export function AuthSplit() {
           </Link>
 
           <h1 className="mt-8 font-serif text-3xl text-foreground sm:text-4xl">
-            Sign in to BrandForge
+            Continue to BrandForge
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-muted">
-            Open the chat, describe what you want to build, and get a priced proposal.
+            New or returning, same buttons. Free to start, no card.
           </p>
 
           <div className="mt-8 space-y-4">
@@ -194,11 +182,11 @@ export function AuthSplit() {
           </div>
 
           <p className="mt-6 text-xs leading-relaxed text-muted">
-            By continuing, you acknowledge our{' '}
+            By continuing you agree to our{' '}
             <Link href="/terms" className="text-ember underline-offset-2 hover:underline">
-              policies
+              terms and privacy policy
             </Link>
-            . You must accept the Terms of Service when you set up your account.
+            .
           </p>
 
           <p className="mt-6 text-sm text-muted">
@@ -216,9 +204,9 @@ export function AuthSplit() {
         aria-hidden="true"
       >
         <div className="mx-auto w-full max-w-sm">
-          <p className="text-[11px] uppercase tracking-[0.2em] text-copper">How a project moves</p>
+          <p className="text-[11px] uppercase tracking-[0.2em] text-copper">What happens next</p>
           <h2 className="mt-2 font-serif text-2xl text-foreground">
-            From idea to shipped
+            Idea to audience
           </h2>
 
           <ol className="mt-8 space-y-6">
@@ -239,7 +227,7 @@ export function AuthSplit() {
           </ol>
 
           <p className="mt-10 text-xs uppercase tracking-[0.15em] text-muted">
-            Escrow-protected · Two-sided contracts · Approve before payment
+            Your work is saved the moment you sign in
           </p>
         </div>
       </aside>

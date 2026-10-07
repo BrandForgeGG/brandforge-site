@@ -363,3 +363,9 @@ we do not have.
 **Change:** the four pillars are now small animated scenes (roadmap filling in, video frame, posts scheduling with ticks, a chart drawing up) fed by a flow line from one idea; each card is a two-word label plus a six-word line. Hero sub-line cut to one sentence. Motion plays as it scrolls into view and is off for reduced-motion users. Home and /pricing got new meta + canonical. Also: team-invite e2e (`scripts/prod/team-invite-e2e.js`, local-only, throwaway users) passes 10/10 incl. RLS (member can post, outsider cannot).
 
 **Distribution move:** Discord/X clip: screen-record the landing scroll (flow line → four scenes animate). Caption: "One idea. Four things you can ship." Changelog line: "Landing page rebuilt around what you ship, not paragraphs about it."
+
+## 2026-10-07 — Sign in and stay: guest save bar, 1-screen onboarding, deliver-first AI
+
+**Change:** (1) Signed-out visitors get the answer first; once the AI replies a slim bar offers "Save with Google or email" (dismissible), and the sidebar account block says Guest / Not saved yet with a "Save my chats" button instead of "Signed in". (2) Onboarding cut from 4 steps to one screen (birthday + terms), username auto-picked (editable in Settings), promise cards dropped. (3) Login page: "Continue to BrandForge", one line of copy, shorter four-step visual. (4) Chat empty state starters now Plan my idea / Audit a URL / Write ads / Launch plan. (5) AI rule 0: deliver the first version (ads, plan, audit) in the reply instead of a requirements recap.
+
+**Distribution move:** changelog: "Try BrandForge without an account: type an idea, get the work back, then save it with one click. Signing up is now one screen." Measure: guest chats started, "save" clicks (`/login?next=/chat…`), onboarding completion rate before/after.
