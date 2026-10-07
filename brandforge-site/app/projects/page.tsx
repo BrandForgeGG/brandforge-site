@@ -28,7 +28,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 // Previews are the start of an AI answer, which is markdown: show it as plain text.
 function plain(text: string): string {
-  return text.replace(/[*_`#>]+/g, '').replace(/s+/g, ' ').trim();
+  return text.replace(/[*_`#>]+/g, '').replace(/\s+/g, ' ').trim();
 }
 
 const STARTERS: [string, string][] = [
