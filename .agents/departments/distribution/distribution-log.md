@@ -399,3 +399,9 @@ we do not have.
 **Change:** the top "Open beta / Real specialists are online / @headstartup / Discord" strip is gone from the landing page, chat, projects and app shell. The @headstartup hiring card and Discord/Telegram links remain in the landing Community section and nav.
 
 **Distribution move:** none needed (removal). One caution: the strip was the only place on every page that sent people to @headstartup; watch Telegram inbound volume and re-add a link in the footer or nav if it drops.
+
+## 2026-10-07 — Smaller composer with icon tools; sidebar close button on phones
+
+**Change:** Attach and Actions are now icon-only (paperclip, slash) with accessible labels and tooltips; the message box is one row tall, send button smaller. Sidebar header: a proper chevron to collapse on desktop and an X to close the drawer on phones (the old "<<" did nothing there). Open beta banner removed earlier today.
+
+**Distribution move:** none (UI polish); fold into the next changelog.

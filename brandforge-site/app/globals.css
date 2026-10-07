@@ -226,7 +226,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.25rem 0.5rem 0.5rem 0.75rem;
+  padding: 0 0.375rem 0.375rem 0.5rem;
 }
 
 .bf-chat-header {
@@ -384,7 +384,7 @@ body {
 .bf-composer-input {
   display: block;
   width: 100%;
-  min-height: 3.25rem;
+  min-height: 2.75rem;
   /* Cap the growth: without a ceiling a long pasted brief expands the composer until
      the transcript is pushed off screen. Past the cap the box scrolls instead. */
   max-height: 10rem;
@@ -394,10 +394,10 @@ body {
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   background: transparent;
   color: var(--foreground);
-  padding: 0.75rem 1rem 0.25rem;
+  padding: 0.625rem 0.875rem 0.125rem;
   /* 16px: below that iOS Safari zooms the page when the composer is focused. */
   font-size: 1rem;
-  line-height: 1.5;
+  line-height: 1.45;
   outline: none;
   transition:
     border-color 150ms ease,
@@ -411,8 +411,8 @@ body {
 
 .bf-composer-send {
   display: inline-flex;
-  height: 2rem;
-  width: 2rem;
+  height: 1.75rem;
+  width: 1.75rem;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
@@ -1481,10 +1481,11 @@ footer p {
 /* Composer footer tools. */
 .bf-composer-tool {
   display: inline-flex;
+  height: 1.75rem;
+  width: 1.75rem;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.35rem 0.7rem;
-  border: 1px solid var(--line);
+  justify-content: center;
+  border: 0;
   border-radius: 999px;
   font-size: 12px;
   color: var(--muted);
@@ -1495,7 +1496,7 @@ footer p {
 
 .bf-composer-tool:hover:not(:disabled),
 .bf-composer-tool[aria-expanded="true"] {
-  border-color: rgba(232, 87, 30, 0.55);
+  background: var(--overlay);
   color: var(--foreground);
 }
 

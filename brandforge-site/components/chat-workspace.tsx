@@ -2541,7 +2541,7 @@ return (
                       ? "Ask anything…"
                       : "Describe what you want to build…"
                 }
-                rows={2}
+                rows={1}
                 disabled={isBusy}
                 className="bf-composer-input"
                 onKeyDown={(event) => {
@@ -2590,6 +2590,7 @@ return (
                       type="button"
                       className="bf-composer-tool"
                       aria-expanded={attachMenuOpen}
+                    aria-label="Attach a file"
                       aria-haspopup="menu"
                       disabled={!conversationId}
                       title={
@@ -2599,7 +2600,7 @@ return (
                       }
                       onClick={() => setAttachMenuOpen((value) => !value)}
                     >
-                      <span aria-hidden="true">＋</span> Attach
+                      <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15.5 9.5l-5.6 5.6a3.4 3.4 0 01-4.8-4.8l6-6a2.3 2.3 0 013.2 3.2l-6 6a1.1 1.1 0 01-1.6-1.6l5.4-5.4" /></svg>
                     </button>
                     {attachMenuOpen ? (
                       <div
@@ -2628,10 +2629,12 @@ return (
                       type="button"
                       className="bf-composer-tool"
                       aria-expanded={commandsOpen}
+                    aria-label="Actions and commands"
+                    title="Actions and commands"
                       aria-haspopup="menu"
                       onClick={() => setCommandsOpen((value) => !value)}
                     >
-                      <span aria-hidden="true">／</span> Actions
+                      <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true"><path d="M12 3.5L8 16.5" /></svg>
                     </button>
                     {commandsOpen ? (
                       <div
