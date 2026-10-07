@@ -17,7 +17,11 @@ const FPS = 30;
 
 function pickMime(): { mime: string; ext: string } | null {
   if (typeof MediaRecorder === 'undefined') return null;
+  // MP4 (H.264) first: every social app accepts it and it carries a proper duration. Older
+  // Chrome and Firefox only record WebM, which stays as the fallback.
   const options: [string, string][] = [
+    ['video/mp4;codecs=avc1.42E01E', 'mp4'],
+    ['video/mp4', 'mp4'],
     ['video/webm;codecs=vp9', 'webm'],
     ['video/webm;codecs=vp8', 'webm'],
     ['video/webm', 'webm'],
