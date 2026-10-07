@@ -35,7 +35,7 @@ export function GuestSaveBar({
   return (
     <div className="px-4 sm:px-6">
       <div
-        className="mx-auto mb-2 flex max-w-3xl flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border border-ember/30 bg-ember/10 px-4 py-2.5"
+        className="mx-auto mb-1.5 flex max-w-3xl items-center justify-between gap-x-3 rounded-xl border border-ember/30 bg-ember/10 px-3 py-1.5"
         role="region"
         aria-label="Save this chat"
       >
