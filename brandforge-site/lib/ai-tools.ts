@@ -435,7 +435,7 @@ export async function executeTool(
         prompt: `${prompt.replace(/[.\s]+$/, '')}. Unbranded, plain blank surfaces, clean minimal composition.`.slice(0, 600),
         aspect,
         // Captioned images are video scenes: three at once, so take the fast model.
-        quality: caption ? 'fast' : 'best',
+        quality: caption || args.batch === true ? 'fast' : 'best',
       });
       if (!result.ok) {
         return JSON.stringify({
