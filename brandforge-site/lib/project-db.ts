@@ -9,6 +9,8 @@
 
 import { createSupabaseServerClient } from './supabase/server';
 import { createSupabaseAdminClient } from './supabase/admin';
+
+export { createSupabaseAdminClient } from './supabase/admin';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { track } from './funnel.js';

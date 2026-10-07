@@ -6,7 +6,9 @@ import {
   createSupabaseAdminClient,
 } from '@/lib/project-db';
 import { resolveGuestSession } from '@/lib/guest-session';
-import { trackFunnelEvent } from '@/lib/funnel-server';
+import { track } from '@/lib/funnel.js';
+
+const admin = createSupabaseAdminClient();
 
 export const dynamic = 'force-dynamic';
 
@@ -73,11 +75,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Track the conversion funnel event
-    await trackFunnelEvent('blueprint_proposal_requested', {
-      blueprintId,
-      sessionId: guest.sessionId,
-    });
+    if (admin) {
+      await track('blueprint_proposal_requested', {
+        signedIn: false,
+        visitorId: guest.sessionId,
+        properties: { blueprintId },
+        source: 'blueprint',
+        insert: async (row) => {
+          const { error } = await admin.from('funnel_events').insert(row);
+          if (error) console.error('Funnel track failed:', error.message);
+        },
+      });
+    }
 
     return NextResponse.json({ conversationId: created.conversationId });
   } catch (err) {
