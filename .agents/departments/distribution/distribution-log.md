@@ -411,3 +411,9 @@ we do not have.
 **Change:** the message box is a single row: attach and actions icons on the left, text input in the middle, send on the right (grows upward when you type more). "Enter to send" hint removed; the save-chat bar is one line ("Save chat").
 
 **Distribution move:** none (UI polish).
+
+## 2026-10-07 — Invisible chat header
+
+**Change:** the chat header lost its border, the serif title became a quiet one-line label, the "Discovery" pill became a status dot (words in the tooltip), the requirements line moved into the title tooltip (the project panel still shows the counts), and the AI switch is a sparkle icon. "Name joined" shows only when a specialist actually joined.
+
+**Distribution move:** none (UI polish).

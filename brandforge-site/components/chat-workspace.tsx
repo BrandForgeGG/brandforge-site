@@ -1819,7 +1819,7 @@ return (
       />
 
       <main className="relative flex min-w-0 flex-1 flex-col">
-        <header className="bf-chat-header flex shrink-0 items-center justify-between gap-3 px-4 py-2 sm:px-6">
+        <header className="bf-chat-header flex shrink-0 items-center justify-between gap-3 px-4 py-1.5 sm:px-6">
           <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
@@ -1829,34 +1829,31 @@ return (
             >
               <span aria-hidden="true">=</span>
             </button>
-            <div className="min-w-0">
-              <div className="flex min-w-0 items-baseline gap-2.5">
-                <h1 className="truncate font-serif text-xl text-foreground">
-                  {projectLabel}
-                </h1>
-                <span className="bf-chat-status shrink-0">
-                  <span className="bf-status-dot" aria-hidden="true" />
-                  {state
-                    ? (STATUS_LABELS[state.status] ?? state.status)
-                    : "Discovery"}
+            <div className="flex min-w-0 items-center gap-2">
+              <h1
+                className="truncate text-sm font-medium text-foreground"
+                title={
+                  state
+                    ? `${state.requirementsCount} requirement${state.requirementsCount === 1 ? "" : "s"}${
+                        taskProgress.total > 0 ? ` · ${taskProgress.done}/${taskProgress.total} tasks` : ""
+                      }`
+                    : undefined
+                }
+              >
+                {projectLabel}
+              </h1>
+              {/* Status is a dot, not a pill: the words live in the tooltip and for screen readers. */}
+              <span
+                className="bf-status-dot shrink-0"
+                role="img"
+                aria-label={state ? (STATUS_LABELS[state.status] ?? state.status) : "Discovery"}
+                title={state ? (STATUS_LABELS[state.status] ?? state.status) : "Discovery"}
+              />
+              {activeConversation?.staffViewedBy ? (
+                <span className="hidden truncate text-xs text-muted sm:inline">
+                  {activeConversation.staffViewedBy} joined
                 </span>
-              </div>
-              <p className="mt-0.5 truncate text-xs text-muted">
-                {state
-                  ? `${state.requirementsCount} requirement${state.requirementsCount === 1 ? "" : "s"}${
-                      taskProgress.total > 0
-                        ? ` · ${taskProgress.done}/${taskProgress.total} tasks`
-                        : ""
-                    }`
-                  : "Describe what you want to build to get started"}
-                {activeConversation?.staffViewedBy
-                  ? ` · ${activeConversation.staffViewedBy} joined${
-                      activeConversation.staffViewedAt
-                        ? " " + relativeTime(activeConversation.staffViewedAt)
-                        : ""
-                    }`
-                  : ""}
-              </p>
+              ) : null}
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
@@ -1880,8 +1877,9 @@ return (
               title={aiEnabled ? 'AI is on — click to turn off' : 'AI is off — click to turn on'}
               className="bf-composer-tool"
             >
-              <span aria-hidden="true">{aiEnabled ? '◉' : '○'}</span>
-              AI
+              <svg viewBox="0 0 20 20" className="h-4 w-4" fill={aiEnabled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true">
+                <path d="M10 2.5l1.7 4.6 4.6 1.7-4.6 1.7L10 15.1l-1.7-4.6L3.7 8.8l4.6-1.7z" />
+              </svg>
             </button>
             {/* Project team: real participants plus BrandForge AI - never a fabricated roster. */}
             <div className="bf-menu-root relative">

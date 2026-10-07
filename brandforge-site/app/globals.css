@@ -252,7 +252,7 @@ body {
 }
 
 .bf-chat-header {
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+  border: 0;
   background: transparent;
 }
 
