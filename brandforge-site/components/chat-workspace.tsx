@@ -21,6 +21,7 @@ import { isNearBottom } from "@/lib/chat-scroll";
 import { fetchAuthed } from "@/lib/browser-auth";
 import { BetaBanner } from "@/components/beta-banner";
 import { GuestSaveBar } from "@/components/guest-save-bar";
+import { NextStepChips } from "@/components/next-step-chips";
 import { ChatTranscript, type ChatMessage } from "@/components/chat-transcript";
 import {
   ConversationRail,
@@ -2240,6 +2241,21 @@ return (
           </div>
         ) : null}
 
+        <NextStepChips
+          visible={
+            !isStreaming &&
+            !input.trim() &&
+            messages.length > 0 &&
+            messages.length < 10 &&
+            messages[messages.length - 1]?.sender === "ai"
+          }
+          canInvite={Boolean(railMeta.userId)}
+          onInvite={() => setShowInviteForm(true)}
+          onPick={(text) => {
+            setInput(text);
+            requestAnimationFrame(() => composerRef.current?.focus());
+          }}
+        />
         <GuestSaveBar
           conversationId={conversationId}
           hasReply={!isStreaming && messages.some((message) => message.sender === "ai" && !message.streaming)}

@@ -369,3 +369,9 @@ we do not have.
 **Change:** (1) Signed-out visitors get the answer first; once the AI replies a slim bar offers "Save with Google or email" (dismissible), and the sidebar account block says Guest / Not saved yet with a "Save my chats" button instead of "Signed in". (2) Onboarding cut from 4 steps to one screen (birthday + terms), username auto-picked (editable in Settings), promise cards dropped. (3) Login page: "Continue to BrandForge", one line of copy, shorter four-step visual. (4) Chat empty state starters now Plan my idea / Audit a URL / Write ads / Launch plan. (5) AI rule 0: deliver the first version (ads, plan, audit) in the reply instead of a requirements recap.
 
 **Distribution move:** changelog: "Try BrandForge without an account: type an idea, get the work back, then save it with one click. Signing up is now one screen." Measure: guest chats started, "save" clicks (`/login?next=/chat…`), onboarding completion rate before/after.
+
+## 2026-10-07 — Next-step chips + richer Projects empty state
+
+**Change:** under every AI answer (while the chat is young and the composer is empty) a "Next" row offers Turn this into ads / 30-day calendar / Audit a URL / Invite my team; chips fill the composer, nothing sends itself. The empty Projects page now offers four starting points instead of a dead end. Intent: a reason to keep going after the first answer (return rate), and a push toward inviting the team.
+
+**Distribution move:** Discord changelog: "After every answer BrandForge now suggests the next step: ads, a 30-day calendar, a URL audit, or inviting your team." Measure: chip clicks via composer sends starting with the template text; invites sent per active chat.

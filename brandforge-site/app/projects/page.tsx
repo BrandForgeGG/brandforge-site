@@ -70,14 +70,31 @@ export default function ProjectsPage() {
           <p className="mt-8 text-sm text-muted">Loading projects…</p>
         ) : projects.length === 0 ? (
           <div className="mt-8 bf-card p-8 text-center">
-            <p className="text-muted">No projects yet.</p>
-            <p className="mt-1 text-sm text-muted">Start a new chat and your project appears here.</p>
+            <p className="text-sm font-semibold text-foreground">Your projects live here</p>
+            <p className="mt-1 text-sm text-muted">Start with one of these. It opens in a chat you can share.</p>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              {[
+                ['Plan my idea', '/create'],
+                ['Audit a URL', '/create'],
+                ['Write ads', '/distribute'],
+                ['Launch plan', '/distribute'],
+              ].map(([label, href]) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => router.push(href)}
+                  className="rounded-full border border-line px-3 py-1.5 text-xs text-muted transition hover:border-ember hover:text-foreground"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <button
               type="button"
               onClick={() => router.push('/chat')}
-              className="mt-4 bf-button bf-button-primary"
+              className="mt-5 bf-button bf-button-primary"
             >
-              Start your first project
+              Start a chat
             </button>
           </div>
         ) : (
