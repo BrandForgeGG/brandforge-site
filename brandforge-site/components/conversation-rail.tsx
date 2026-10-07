@@ -294,13 +294,10 @@ onMobileClose,
         {isCollapsed ? null : (
           <div className="shrink-0 px-4 pb-2">
             <nav aria-label="Workspace" className="flex flex-col gap-0.5">
-              <Link
-                href="/studio"
-                onClick={onMobileClose}
-                className="rounded-lg px-3 py-2 text-sm text-muted transition hover:bg-overlay hover:text-foreground"
-              >
-                AI Studio
-              </Link>
+              <Link href="/create" onClick={onMobileClose} className="rounded-lg px-3 py-1.5 text-[13px] text-muted transition hover:bg-overlay hover:text-foreground">Create</Link>
+              <Link href="/distribute" onClick={onMobileClose} className="rounded-lg px-3 py-1.5 text-[13px] text-muted transition hover:bg-overlay hover:text-foreground">Distribute</Link>
+              <Link href="/optimize" onClick={onMobileClose} className="rounded-lg px-3 py-1.5 text-[13px] text-muted transition hover:bg-overlay hover:text-foreground">Optimize</Link>
+              <Link href="/connect" onClick={onMobileClose} className="rounded-lg px-3 py-1.5 text-[13px] text-muted transition hover:bg-overlay hover:text-foreground">Connect</Link>
               <Link
                 href="/projects"
                 onClick={onMobileClose}
