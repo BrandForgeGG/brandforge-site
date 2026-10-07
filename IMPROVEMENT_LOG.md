@@ -818,3 +818,32 @@ channels — you are awake, so daylight rules apply).
 - Logo detection is best-effort from HTML content
 - No image analysis yet (T1 spec allows URL or uploaded logo/screenshot — upload path not built)
 
+
+---
+
+## Growth Tools T2 — Instant audit and shareable report (2026-10-07)
+
+**Branch:** `feat/growth-tools`
+
+**What shipped:**
+- `lib/growth-audit.js`: `runAudit()` — fetches URL via SSRF-safe `fetchUrl`, scores 0-100 from fixed rubric (message clarity, offer/CTA, SEO basics, speed, social presence, ads presence, AI-search visibility), identifies top 5 gaps with fix + effort, optional AI-search check via LLM
+- `app/api/tools/audit/route.ts`: POST endpoint — rate-limited (3/day authenticated, 1/day anonymous), runs audit, persists report to `assets` table
+- `lib/growth-audit.test.js`: 12 tests (meta extraction, content scoring, rubric math, gap identification)
+
+**Tests:** 407/407 (12 new)
+
+**Env vars needed:**
+- `GROWTH_ENABLED=true`
+- `GROWTH_AUDIT_ENABLED=true`
+- `GROWTH_LLM_ENABLED=true` (for AI-search visibility check)
+- `GROWTH_FETCH_ENABLED=true`
+- `OPENROUTER_API_KEY`
+
+**Decisions needed:**
+- None for this slice
+
+**Risks:**
+- Content-based scoring is heuristic — real PageSpeed API integration needed for accurate speed scores
+- AI-search visibility check is a sample, not a measurement (per spec)
+- Public report page (/r/[id]) not yet built — only the API endpoint exists
+
