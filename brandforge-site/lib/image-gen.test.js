@@ -47,7 +47,8 @@ test('falls back from a failing configured provider to the next', async () => {
   });
   assert.equal(result.ok, true);
   assert.equal(result.provider, 'pollinations');
-  assert.equal(seen.length, 2);
+  // Two Cloudflare models are tried before the next provider.
+  assert.equal(seen.length, 3);
   assert.match(result.attempts[0], /cloudflare/);
 });
 
@@ -67,6 +68,51 @@ test('cloudflare base64 result is decoded', async () => {
   assert.equal(result.ok, true);
   assert.equal(result.provider, 'cloudflare');
   assert.equal(result.bytes.length, bytes.length);
+});
+
+test('cloudflare tries FLUX.2 (multipart) first, then FLUX.1 (json), and reports why', async () => {
+  const seen = [];
+  const bytes = fakePng();
+  const result = await generateImage({
+    prompt: 'a candle on a table',
+    env: { CF_ACCOUNT_ID: 'acc', CF_API_TOKEN: 'tok' },
+    fetchImpl: async (url, init) => {
+      seen.push({ url: String(url), multipart: init && init.body instanceof FormData });
+      if (String(url).includes('flux-2')) return fail(400, 'bad input');
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ result: { image: Buffer.from(bytes).toString('base64') } }),
+        arrayBuffer: async () => new ArrayBuffer(0),
+        text: async () => '',
+      };
+    },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.provider, 'cloudflare');
+  assert.equal(seen.length, 2);
+  assert.match(seen[0].url, /flux-2-klein-4b/);
+  assert.equal(seen[0].multipart, true);
+  assert.match(seen[1].url, /flux-1-schnell/);
+  assert.equal(seen[1].multipart, false);
+  assert.match(result.attempts.join(' '), /flux-2-klein-4b.*400/);
+});
+
+test('a bad cloudflare token stops after one call and cools down', async () => {
+  let calls = 0;
+  const result = await generateImage({
+    prompt: 'a candle on a table',
+    env: { CF_ACCOUNT_ID: 'acc', CF_API_TOKEN: 'bad' },
+    fetchImpl: async (url) => {
+      if (String(url).includes('api.cloudflare.com')) {
+        calls += 1;
+        return fail(401);
+      }
+      return ok(fakePng());
+    },
+  });
+  assert.equal(calls, 1);
+  assert.equal(result.provider, 'pollinations');
 });
 
 test('a 200 that is not an image is rejected and the next provider is tried', async () => {

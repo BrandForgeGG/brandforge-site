@@ -75,22 +75,47 @@ function classify(provider, status, text) {
 const PROVIDERS = {
   cloudflare: {
     enabled: (env) => Boolean(env.CF_ACCOUNT_ID && env.CF_API_TOKEN),
-    async run({ prompt, fetchImpl, env, timeoutMs }) {
-      const model = env.CF_IMAGE_MODEL || '@cf/black-forest-labs/flux-1-schnell';
-      const response = await fetchImpl(
-        `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/ai/run/${model}`,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${env.CF_API_TOKEN}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt, steps: 6 }),
-          signal: AbortSignal.timeout(timeoutMs),
-        },
-      );
-      if (!response.ok) throw classify('cloudflare', response.status, await response.text().catch(() => ''));
-      const json = await response.json().catch(() => null);
-      const base64 = json && json.result && json.result.image;
-      if (typeof base64 !== 'string') throw failure('cloudflare', 'no image in response');
-      return Uint8Array.from(Buffer.from(base64, 'base64'));
+    // FLUX.2 first (it renders lettering far better, multipart form input), then FLUX.1 schnell
+    // (JSON input, cheaper) as a safety net that still stays inside the free allowance.
+    async run({ prompt, aspect, fetchImpl, env, timeoutMs }) {
+      const models = env.CF_IMAGE_MODEL
+        ? [env.CF_IMAGE_MODEL]
+        : ['@cf/black-forest-labs/flux-2-klein-4b', '@cf/black-forest-labs/flux-1-schnell'];
+      const { width, height } = sizeFor(aspect);
+      const notes = [];
+      for (const model of models) {
+        try {
+          const multipart = model.includes('flux-2');
+          let body;
+          const headers = { Authorization: `Bearer ${env.CF_API_TOKEN}` };
+          if (multipart) {
+            body = new FormData();
+            body.append('prompt', prompt);
+            body.append('width', String(width));
+            body.append('height', String(height));
+          } else {
+            headers['Content-Type'] = 'application/json';
+            body = JSON.stringify({ prompt, steps: 6 });
+          }
+          const response = await fetchImpl(
+            `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/ai/run/${model}`,
+            { method: 'POST', headers, body, signal: AbortSignal.timeout(timeoutMs) },
+          );
+          if (!response.ok) throw classify('cloudflare', response.status, await response.text().catch(() => ''));
+          const json = await response.json().catch(() => null);
+          const base64 = json && json.result && json.result.image;
+          if (typeof base64 !== 'string') throw failure('cloudflare', 'no image in response');
+          const bytes = Uint8Array.from(Buffer.from(base64, 'base64'));
+          // Earlier model failures ride along so the stored row can say why FLUX.2 was skipped.
+          if (notes.length > 0) bytes.note = `cloudflare: ${notes.join('; ')}`.slice(0, 160);
+          return bytes;
+        } catch (error) {
+          // A bad token will fail every model the same way: stop and let the cool-down apply.
+          if (error && error.kind === 'auth') throw error;
+          notes.push(`${model.split('/').pop()} ${String(error && error.message).replace(/^cloudflare:\s*/, '')}`);
+        }
+      }
+      throw failure('cloudflare', notes.join('; ').slice(0, 160));
     },
   },
   huggingface: {
@@ -173,6 +198,7 @@ async function generateImage(options) {
       const bytes = await provider.run({ prompt, aspect: options.aspect, fetchImpl, env, timeoutMs });
       const contentType = sniffImage(bytes);
       if (!contentType) throw failure(name, 'response was not a usable image');
+      if (bytes.note) attempts.push(bytes.note);
       return { ok: true, bytes, contentType, provider: name, attempts };
     } catch (error) {
       const kind = error && error.kind === 'auth' ? 'auth' : 'default';
