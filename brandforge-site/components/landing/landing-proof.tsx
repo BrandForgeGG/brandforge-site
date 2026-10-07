@@ -10,7 +10,7 @@ const LANDING_QUOTES = LANDING_TESTIMONIAL_IDS.map((id) =>
 export function LandingProof() {
   return (
     <>
-      <section id="work" className="border-t border-line px-6 py-20">
+      <section id="work" className="border-t border-line px-6 py-14">
         <div className="mx-auto max-w-5xl">
           <div className="text-center">
             <p className="text-xs uppercase tracking-[0.2em] text-muted">Built with BrandForge</p>
@@ -21,7 +21,7 @@ export function LandingProof() {
           </div>
 
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {PORTFOLIO_PROJECTS.map((project) => (
+            {PORTFOLIO_PROJECTS.slice(0, 3).map((project) => (
               <a
                 key={project.name}
                 href={project.url}
@@ -54,7 +54,7 @@ export function LandingProof() {
         </div>
       </section>
 
-      <section id="feedback" className="border-t border-line px-6 py-20">
+      <section id="feedback" className="border-t border-line px-6 py-14">
         <div className="mx-auto max-w-5xl">
           <div className="text-center">
             <p className="text-xs uppercase tracking-[0.2em] text-muted">Feedback</p>
@@ -67,7 +67,7 @@ export function LandingProof() {
           </div>
 
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {LANDING_QUOTES.map((quote) => (
+            {LANDING_QUOTES.slice(0, 3).map((quote) => (
               <figure key={quote.id} className="flex flex-col rounded-2xl border border-line bg-panel p-5">
                 <blockquote className="flex-1 whitespace-pre-line text-sm leading-relaxed text-foreground">
                   {quote.text}

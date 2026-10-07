@@ -72,6 +72,8 @@
 
 html {
   scroll-behavior: smooth;
+  /* Compact base (Vercel/Claude density): rem-based Tailwind sizes scale with it. */
+  font-size: 14.5px;
 }
 
 body {

@@ -6,8 +6,8 @@ import { getSessionUser } from '@/lib/browser-auth';
 import { COMMUNITY_LINKS } from '@/lib/community';
 
 const NAV_LINKS = [
-  { label: 'Services', href: '/#services' },
-  { label: 'How it works', href: '/#process' },
+  { label: 'Features', href: '/features' },
+  { label: 'Pricing', href: '/pricing' },
   { label: 'Work', href: '/#work' },
   { label: 'Community', href: '/#community' },
 ];

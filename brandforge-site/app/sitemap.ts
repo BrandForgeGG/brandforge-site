@@ -9,6 +9,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const pages: Array<{ path: string; frequency: 'weekly' | 'monthly'; priority: number }> = [
     { path: '/', frequency: 'weekly', priority: 1.0 },
     { path: '/features', frequency: 'weekly', priority: 0.9 },
+    { path: '/pricing', frequency: 'weekly', priority: 0.9 },
     { path: '/platform', frequency: 'weekly', priority: 0.8 },
     { path: '/apply', frequency: 'monthly', priority: 0.8 },
     { path: '/blog', frequency: 'weekly', priority: 0.7 },

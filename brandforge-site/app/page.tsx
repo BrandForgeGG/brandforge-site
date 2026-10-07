@@ -1,14 +1,11 @@
 import { Suspense } from 'react';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { LandingHero } from '@/components/landing/landing-hero';
-import { LandingSections } from '@/components/landing/landing-sections';
-import { LandingFaq } from '@/components/landing/landing-faq';
+import { LandingPillars } from '@/components/landing/landing-pillars';
 import { LandingCommunity } from '@/components/landing/landing-community';
-import { LandingAiFlow } from '@/components/landing/landing-ai-flow';
 import { LandingProof } from '@/components/landing/landing-proof';
 import { BetaBanner } from '@/components/beta-banner';
 import { SiteFooter } from '@/components/site-footer';
-import { blueprintConfig } from '@/lib/blueprint-config';
 
 export const metadata = {
   title: 'BrandForge — Turn an idea into something real',
@@ -40,12 +37,10 @@ export default function Home() {
       <LandingNav />
       <main>
         <Suspense>
-          <LandingHero blueprintEnabled={blueprintConfig().enabled} />
+          <LandingHero />
         </Suspense>
-        <LandingAiFlow />
-        <LandingSections />
+        <LandingPillars />
         <LandingProof />
-        <LandingFaq />
         <LandingCommunity />
       </main>
       <SiteFooter />

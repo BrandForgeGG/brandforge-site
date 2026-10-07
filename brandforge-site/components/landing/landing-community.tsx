@@ -129,40 +129,6 @@ export function LandingCommunity() {
 
   return (
     <>
-      <section id="services" className="border-t border-line px-6 py-20">
-        <div className="mx-auto max-w-4xl text-center">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted">Your project team</p>
-          <h2 className="mt-2 font-serif text-3xl text-foreground sm:text-4xl">
-            Vetted people, not a freelancer feed
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-muted">
-            You don&apos;t search through 400 profiles. BrandForge assembles the team around your project.
-          </p>
-
-          <div className="mt-10 flex justify-center gap-6">
-            {TEAM_ROLES.map((member) => (
-              <div key={member.role} className="text-center">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-line bg-panel font-serif text-lg text-ember">
-                  {member.initial}
-                </div>
-                <p className="mt-2 text-xs text-muted">{member.role}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-10 flex flex-wrap justify-center gap-2">
-            {['Design', 'Development', 'Growth', 'Product', 'AI', 'Reverse Engineering'].map((skill) => (
-              <span
-                key={skill}
-                className="rounded-full border border-line px-3 py-1 text-xs text-muted"
-              >
-                {skill}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <section id="community" className="border-t border-line px-6 py-20">
         <div className="mx-auto max-w-4xl text-center">
           <p className="text-xs uppercase tracking-[0.2em] text-muted">Community</p>

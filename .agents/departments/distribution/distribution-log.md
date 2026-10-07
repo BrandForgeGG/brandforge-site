@@ -327,3 +327,9 @@ we do not have.
 
 ---
 
+
+## 2026-10-07 — Short landing, /pricing page, compact UI (code complete, not deployed)
+
+**Change:** landing cut to hero + four pillars (Projects / Create / Distribute / Optimize) + proof (3 + 3) + community; packages, "how it works" and FAQ moved to the new `/pricing` page; nav now Features / Pricing / Work / Community; base UI size 16px → 14.5px; hero no longer routes signed-out visitors to `/blueprint` (page being removed, flow moving into chat).
+
+**Distribution move:** changelog/Discord line (post to `#public-changelog` after deploy): "BrandForge's landing page is now one screen of what matters. Packages, process and FAQ live on /pricing, and the whole app is a notch denser." Demo note: screenshot the new landing above the fold beside the old one.
