@@ -753,3 +753,39 @@ channels — you are awake, so daylight rules apply).
  -   2 6 5 / 2 6 5   t e s t s ,   t s c ,   e s l i n t ,   b u i l d ,   e 2 e ,   a u t h   p r o b e   a l l   g r e e n   o n   t h e   d e p l o y .   N o   u s e r - v i s i b l e   c h a n g e   b r e a k s   e x i s t i n g   f l o w s . 
  -   D e p l o y e d   a n d   v e r i f i e d   o n   b r a n d f o r g e . g g .  
  
+---
+
+## Growth Tools T0 — Tool shell and shared spine (2026-10-07)
+
+**Branch:** `feat/growth-tools`
+
+**What shipped:**
+- Migration `0027_growth_tools.sql`: `brand_kits`, `tool_runs`, `assets`, `usage_events` tables (RLS on, no policies, additive only, FK cascade)
+- `lib/growth-config.js`: feature flags (GROWTH_ENABLED, per-tool flags, model routing, free limits, fetch config)
+- `lib/growth-llm.js`: llmJson() + llmJsonWithRepair() — OpenRouter wrapper with schema validation, one repair retry, cost logging
+- `lib/growth-fetch.js`: fetchUrl() + assertSafeUrl() + isPublicIp() — SSRF guard (DNS resolve, private IP block, redirect re-validation, byte cap, content-type allowlist)
+- `lib/growth-meter.js`: createMeter() — daily cost ceiling, usage recording, usage queries
+- `lib/growth-tools.js`: tool registry (9 tools) + slash command registry (8 commands)
+- `app/tools/[tool]/page.tsx`: feature-flagged tool shell page
+- `app/api/tools/[tool]/route.ts`: POST endpoint with flag gate + tool validation
+
+**Tests:** 388/388 (26 new: growth-config 5, growth-llm 5, growth-fetch 11, growth-tools 4, growth-meter 1)
+
+**Env vars needed:**
+- GROWTH_ENABLED=true (master switch)
+- GROWTH_LLM_ENABLED=true (LLM calls)
+- GROWTH_FETCH_ENABLED=true (URL fetching)
+- Per-tool: GROWTH_AUDIT_ENABLED, GROWTH_BRAND_KIT_ENABLED, etc.
+- OPENROUTER_API_KEY (for LLM calls)
+- OPENROUTER_MODEL (optional, defaults to openai/gpt-4o-mini)
+
+**Decisions needed:**
+- Search provider for T3 (competitor X-ray)
+- Image-generation provider for T4 (static creatives)
+- Video render infrastructure for T5
+
+**Risks:**
+- All flags default to false — no visible change until enabled
+- LLM wrapper is untested against real OpenRouter (mocked in unit tests)
+- SSRF guard reuses the pattern from lib/research.js but is a separate implementation
+
