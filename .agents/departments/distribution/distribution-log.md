@@ -381,3 +381,9 @@ we do not have.
 **Change:** two public, indexable pages (own title/description/canonical, WebApplication schema, in sitemap and nav as "Free tools"). Paste a URL → a guest chat opens with the request pre-sent (read the page with `research_web`, then deliver the audit / ad pack). No account needed; the save bar offers to keep it. Source tagged `tool_<slug>` for funnel attribution. Mobile checked on landing and chat: no horizontal overflow.
 
 **Distribution move:** these are the shareable assets. Post the two URLs in Discord/Telegram with a one-line hook ("Paste your site, get ads in a minute, no signup"), submit to the directories in the campaign tracker, and run each against a few real community sites for public before/after screenshots (with owners' consent). Honest limit: output quality depends on the page being readable (JS-only or login-walled sites return thin results; the AI says so).
+
+## 2026-10-07 — Vercel Web Analytics on every page
+
+**Change:** `@vercel/analytics` added to the root layout (page views, referrers, top pages, countries; cookieless, no personal data). Internal infrastructure, no user-facing capability. Needs Web Analytics switched on in the Vercel project (Analytics tab) to start collecting.
+
+**Distribution move:** none to announce. Use it: watch /tools/website-audit and /tools/ad-pack referrers weekly to see which channel brings guests, and compare with `chat_started` source tags in the funnel.
