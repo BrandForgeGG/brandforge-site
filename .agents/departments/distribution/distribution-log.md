@@ -345,3 +345,9 @@ we do not have.
 **Change:** `/blueprint` page and its flow components deleted (old links redirect to `/chat`). Signed-out visitors now start a **guest chat** straight from the hero (no sign-in wall before the first answer). The chat AI gained `research_web`: it reads a pasted URL or searches the web before it audits, plans or estimates, and cites what it used. The blueprint/save/return APIs stay dormant for now.
 
 **Distribution move:** Discord changelog: "No more separate blueprint page. Type your idea (or paste a URL) on the homepage and the answer, with research behind it, happens in the chat. Invite your team into that same chat when you're ready." Demo note: paste a competitor URL on the homepage, show the cited audit in chat.
+
+## 2026-10-07 — Team chats: invite links that actually let people in
+
+**Change:** Chat menu → Invite → **Copy team link** (also the email invite now carries the same link). `/join?token=` verifies a signed, 14-day, HMAC token, signs the visitor in if needed, adds them as a `member` participant and drops them in the chat with a "joined the team" line. Before this, the email invite sent a link the invitee could not open. No migration (token is stateless; `participants.role` is free text). +4 tests (392).
+
+**Distribution move:** Discord changelog: "Teams are here. Open any chat → Invite → Copy team link. Your co-founder, designer or marketer joins the same conversation, sees the research and plan, and works with the AI and each other." Demo note: two browser windows, one chat, both typing. Honest limit: members share the chat; per-member permissions and group creation from scratch are next.

@@ -1308,6 +1308,27 @@ export function ChatWorkspace() {
     }
   }, [router]);
 
+  const [inviteNote, setInviteNote] = useState("");
+  const handleCopyInviteLink = useCallback(async () => {
+    if (!conversationId) return;
+    try {
+      const response = await fetchAuthed("/api/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId, link: true }),
+      });
+      const data = (await response.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!response.ok || !data.url) {
+        setInviteNote(data.error || "Could not create a link.");
+        return;
+      }
+      await navigator.clipboard.writeText(data.url);
+      setInviteNote("Team link copied — anyone with it can join after signing in.");
+    } catch {
+      setInviteNote("Could not copy the link.");
+    }
+  }, [conversationId]);
+
   const handleInvite = useCallback(async () => {
     if (!conversationId || !inviteEmail.trim()) return;
     try {
@@ -1978,6 +1999,14 @@ return (
                   aria-label="Invite by email"
                   className="bf-menu absolute right-0 top-full z-40 mt-2 w-56 p-3"
                 >
+                  <button
+                    type="button"
+                    onClick={() => void handleCopyInviteLink()}
+                    className="mb-3 w-full rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember"
+                  >
+                    Copy team link
+                  </button>
+                  {inviteNote ? <p className="mb-2 text-[11px] text-muted" role="status">{inviteNote}</p> : null}
                   <p className="bf-section-label">Invite by email</p>
                   <div className="mt-2 flex gap-2">
                     <input

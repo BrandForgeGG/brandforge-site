@@ -2863,6 +2863,52 @@ export async function assignTask(
 
 // ---------- Participants ----------
 
+// Redeems a signed team invite (lib/join-token): the visitor becomes a 'member'
+// of the conversation. Service-role write because members cannot insert their
+// own participant row; the HMAC token (checked by the route) is the authorization.
+export async function joinConversationAsMember(
+  conversationId: string,
+  userId: string,
+  displayName: string,
+): Promise<{ ok: true; already: boolean } | { ok: false; error: string }> {
+  const supabase = await readClient(true);
+
+  const { data: conversation } = await supabase
+    .from('conversations')
+    .select('id')
+    .eq('id', conversationId)
+    .maybeSingle();
+  if (!conversation) return { ok: false, error: 'not_found' };
+
+  const { data: existing } = await supabase
+    .from('participants')
+    .select('id')
+    .eq('conversation_id', conversationId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (existing) return { ok: true, already: true };
+
+  const { error } = await supabase.from('participants').insert({
+    conversation_id: conversationId,
+    user_id: userId,
+    role: 'member',
+    display_name: displayName.slice(0, 80),
+  });
+  if (error) {
+    console.error('joinConversationAsMember:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+
+  await addMessage({
+    conversation_id: conversationId,
+    sender_type: 'ai',
+    sender_name: 'BrandForge',
+    content: `${displayName.slice(0, 80)} joined the team.`,
+    content_type: 'system',
+  });
+  return { ok: true, already: false };
+}
+
 export async function addParticipant(participant: {
   conversation_id: string;
   user_id: string;

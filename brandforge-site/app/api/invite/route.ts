@@ -6,6 +6,8 @@ import { escapeHtml, oneLine } from '@/lib/html';
 import { notify } from '@/lib/notify';
 import { sendEmail } from '@/lib/email';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { blueprintConfig } from '@/lib/blueprint-config';
+import { createJoinToken } from '@/lib/join-token';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,17 +26,21 @@ export async function POST(request: NextRequest) {
     const body = (await request.json().catch(() => ({}))) as {
       conversationId?: unknown;
       email?: unknown;
+      link?: unknown;
     };
 
-    if (!body.conversationId || !body.email) {
+    // link:true mints a shareable team link (no email sent).
+    const linkOnly = body.link === true && !body.email;
+
+    if (!body.conversationId || (!body.email && !linkOnly)) {
       return NextResponse.json({ error: 'conversationId and email are required' }, { status: 400 });
     }
 
-    if (typeof body.conversationId !== 'string' || typeof body.email !== 'string') {
+    if (typeof body.conversationId !== 'string' || (!linkOnly && typeof body.email !== 'string')) {
       return NextResponse.json({ error: 'conversationId and email must be strings' }, { status: 400 });
     }
 
-    if (!isValidEmail(body.email)) {
+    if (!linkOnly && !isValidEmail(body.email as string)) {
       return NextResponse.json({ error: 'Please enter a valid email address' }, { status: 400 });
     }
 
@@ -56,17 +62,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
     }
 
+    const joinToken = createJoinToken(body.conversationId, blueprintConfig().sessionSecret);
+    if (!joinToken) {
+      return NextResponse.json({ error: 'Invites are not configured.' }, { status: 503 });
+    }
+    const joinUrl = `${resolveSiteUrl()}/join?token=${encodeURIComponent(joinToken)}`;
+    if (linkOnly) {
+      return NextResponse.json({ ok: true, url: joinUrl });
+    }
+    const inviteEmail = (body.email as string).trim();
+
     // Signature is notify(event, details) — an object here would be an unknown event
     // and silently no-op, so the team never hears about invites.
     await notify('invite_sent', {
-      email: body.email.trim(),
+      email: inviteEmail,
       conversationId: body.conversationId,
       invitedBy: user.email ?? user.id,
     });
     // The actual invite email. Non-fatal: the invite itself is recorded either way,
     // and a provider hiccup must never turn into a 500 for the sender.
     const siteUrl = resolveSiteUrl();
-    const chatUrl = `${siteUrl}/chat?conversationId=${encodeURIComponent(body.conversationId)}`;
+    void siteUrl;
+    const chatUrl = joinUrl;
     // Display name comes from Google metadata and the title from the founder — both are
     // user-controlled, so they are escaped for the HTML body and flattened for the subject.
     const inviterName = oneLine(
@@ -84,7 +101,7 @@ export async function POST(request: NextRequest) {
     const safeConversationTitle = escapeHtml(conversationTitle);
 
     const emailResult = await sendEmail({
-      to: body.email.trim(),
+      to: inviteEmail,
       subject: `${inviterName} invited you to ${conversationTitle}`,
       text: `${inviterName} invited you to collaborate on ${conversationTitle} on BrandForge.\n\nOpen the chat: ${chatUrl}\n\nIf you don't have an account yet, signing in with Google will create one for this address.`,
       html: `
