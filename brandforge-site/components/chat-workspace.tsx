@@ -22,7 +22,6 @@ import { fetchAuthed } from "@/lib/browser-auth";
 import { trackEvent } from "@/lib/funnel-client";
 import { GuestSaveBar } from "@/components/guest-save-bar";
 import { extractOutline } from "@/lib/deliverable-outline";
-import { NextStepChips } from "@/components/next-step-chips";
 import { ChatTranscript, type ChatMessage } from "@/components/chat-transcript";
 import {
   ConversationRail,
@@ -127,6 +126,13 @@ const SLASH_COMMANDS = [
   { command: "/attach", label: "How to attach a file" },
   { command: "/help", label: "List all commands" },
 ];
+
+// Suggested next moves live in the Actions menu, not as a row under every answer.
+const NEXT_STEP_ACTIONS = [
+  { key: 'ads', label: 'Turn this into ads', text: 'Turn this into ready-to-run ads for Meta, Google and TikTok.' },
+  { key: 'calendar', label: '30-day calendar', text: 'Build a 30-day content calendar from this, as a table I can export.' },
+  { key: 'audit', label: 'Audit a URL', text: 'Audit this site and tell me what to fix first: https://' },
+] as const;
 
 const CHAT_STARTERS = [
   { label: 'Plan my idea', text: 'I have an idea: ' },
@@ -1264,14 +1270,10 @@ export function ChatWorkspace() {
   // work appears to land instead of hiding behind a menu. Closing it sticks.
   // Mirror the newest AI answer in the panel as it streams (its own client-side read of the
   // markdown; the panel never waits for a tool call to show what the chat already holds).
-  const answerOutline = useMemo(() => {
-    for (let index = messages.length - 1; index >= 0; index -= 1) {
-      if (messages[index].sender === "ai" && messages[index].content.trim()) {
-        return extractOutline(messages[index].content);
-      }
-    }
-    return null;
-  }, [messages]);
+  const latestAiContent = [...messages]
+    .reverse()
+    .find((entry) => entry.sender === "ai" && entry.content.trim())?.content;
+  const answerOutline = useMemo(() => extractOutline(latestAiContent), [latestAiContent]);
 
   const autoOpenedPanelRef = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -2274,21 +2276,6 @@ return (
           </div>
         ) : null}
 
-        <NextStepChips
-          visible={
-            !isStreaming &&
-            !input.trim() &&
-            messages.length > 0 &&
-            messages.length < 10 &&
-            messages[messages.length - 1]?.sender === "ai"
-          }
-          canInvite={Boolean(railMeta.userId)}
-          onInvite={() => setShowInviteForm(true)}
-          onPick={(text) => {
-            setInput(text);
-            requestAnimationFrame(() => composerRef.current?.focus());
-          }}
-        />
         <GuestSaveBar
           conversationId={conversationId}
           hasReply={!isStreaming && messages.some((message) => message.sender === "ai" && !message.streaming)}
@@ -2651,8 +2638,40 @@ return (
                     {commandsOpen ? (
                       <div
                         role="menu"
-                        className="bf-menu absolute bottom-full left-0 z-40 mb-2 w-60 p-1"
+                        className="bf-menu absolute bottom-full left-0 z-40 mb-2 w-64 p-1"
                       >
+                        <p className="px-3 pb-1 pt-1.5 text-[10px] uppercase tracking-[0.15em] text-muted">Next steps</p>
+                        {NEXT_STEP_ACTIONS.map((item) => (
+                          <button
+                            key={item.key}
+                            type="button"
+                            role="menuitem"
+                            className="bf-menu-item"
+                            onClick={() => {
+                              setCommandsOpen(false);
+                              trackEvent("next_step_clicked", { source: item.key });
+                              setInput(item.text);
+                              requestAnimationFrame(() => composerRef.current?.focus());
+                            }}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                        {railMeta.userId ? (
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="bf-menu-item"
+                            onClick={() => {
+                              setCommandsOpen(false);
+                              trackEvent("next_step_clicked", { source: "invite" });
+                              setShowInviteForm(true);
+                            }}
+                          >
+                            Invite my team
+                          </button>
+                        ) : null}
+                        <p className="mt-1 border-t border-line px-3 pb-1 pt-2 text-[10px] uppercase tracking-[0.15em] text-muted">Commands</p>
                         {SLASH_COMMANDS.map((item) => (
                           <button
                             key={item.command}

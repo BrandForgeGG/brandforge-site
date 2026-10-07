@@ -447,3 +447,9 @@ we do not have.
 **Change:** the separate /tools pages are gone (old links redirect to /create). Website audit and ad pack from a URL are now options inside Create and Distribute: paste a URL, press Start, and the chat opens with the request already sent (guests included). Sidebar is now Create, Distribute, Optimize (Projects and Connect removed; /projects still opens if you have the link). Connect moved into Settings as **Integrations** (/connect redirects there; Optimize points to it).
 
 **Distribution move:** the public free-tool landing pages (a possible SEO surface) are retired on purpose; the homepage hero chips ("Audit my landing page", "Ads for my online store") and the Create/Distribute pages are the entry points now. Remove /tools URLs from any posts or directory submissions already drafted.
+
+## 2026-10-07 — Next steps moved into the Actions menu
+
+**Change:** the "Next: Turn this into ads / 30-day calendar / Audit a URL" row under every answer is gone. Those three (plus Invite my team for signed-in users) now sit under "Next steps" at the top of the Actions menu (the slash icon in the message box), above the slash commands. Same click tracking (`next_step_clicked`).
+
+**Distribution move:** none (UI polish).
