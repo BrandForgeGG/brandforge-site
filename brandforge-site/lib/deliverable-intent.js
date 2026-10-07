@@ -57,6 +57,13 @@ const KINDS = [
       'Structure: 5 name options with a one-line reason each, 3 taglines, voice and tone in 4 bullets (with a do and a do-not example), a palette of 5 hex colours with roles, and a font pairing.',
   },
   {
+    kind: 'strategy',
+    pattern: /\b(swot|soar|tows|pestle|porter'?s?\s+five\s+forces|five\s+forces|gap\s+analysis|7-?s\s+model|strateg(?:y|ic)\s+analysis|strategy\s+framework|noise\s+analysis)\b/i,
+    label: 'a strategy analysis',
+    skeleton:
+      'Structure: first one line naming the framework and why it fits. If the founder named one, use it. Otherwise choose: SOAR (Strengths, Opportunities, Aspirations, Results) or NOISE (Needs, Opportunities, Improvements, Strengths, Edges) when the team feels stuck or negative and needs an action plan; PESTLE (Political, Economic, Social, Technological, Legal, Environmental) or Porter\'s Five Forces (rivals, new entrants, substitutes, supplier power, buyer power) for external market or competitive pressure; TOWS (cross internal strengths/weaknesses with external opportunities/threats) to turn SWOT-style lists into decisions; Gap Analysis (current state, target state, the gap, steps to close it) for performance targets; McKinsey 7-S (Strategy, Structure, Systems, Shared values, Style, Staff, Skills) for internal alignment. Then fill the framework in with concrete items for THEIR situation, as short bullets or a compact table, using [bracketed placeholders] where you lack facts. Use research_web for external factors only when a company, market or URL is given, and cite it. End with the top 3 actions, each starting with a verb.',
+  },
+  {
     kind: 'competitors',
     pattern: /\b(competitors?|alternatives to|compare (us|me|my)|vs\.? )\b/i,
     label: 'a competitor view',

@@ -24,6 +24,12 @@ const OPTIONS = [
     prompt: 'Turn this into a researched plan with scope, roadmap, risks and a realistic estimate: {detail}',
   },
   {
+    id: 'strategy',
+    label: 'Strategy analysis',
+    hint: 'SOAR, TOWS, PESTLE, Porter, gap analysis: the right one, filled in',
+    prompt: 'Run a strategy analysis (choose the best framework for this and say why): {detail}',
+  },
+  {
     id: 'competitors',
     label: 'Competitor snapshot',
     hint: 'Positioning, pricing, angles',

@@ -22,6 +22,19 @@ test('create a video is its own deliverable, ads for TikTok are not', () => {
   assert.match(deliverableDirective('Create a video: my shop'), /generate_image exactly three times/);
 });
 
+test('strategy frameworks are recognised and carry the selection guidance', () => {
+  assert.equal(detectDeliverable('Run a SWOT for my bakery'), 'strategy');
+  assert.equal(detectDeliverable('Do a Porter\'s Five Forces on the meal-kit market'), 'strategy');
+  assert.equal(detectDeliverable('Run a strategy analysis: my coffee roaster'), 'strategy');
+  assert.equal(detectDeliverable('gap analysis for our onboarding'), 'strategy');
+  const text = deliverableDirective('Run a PESTLE for fintech in Germany');
+  assert.match(text, /TOWS/);
+  assert.match(text, /SOAR/);
+  assert.match(text, /top 3 actions/);
+  // Ordinary competitor requests are not swallowed by the strategy kind.
+  assert.equal(detectDeliverable('Research 3 competitors for my app'), 'competitors');
+});
+
 test('ordinary conversation is not a deliverable', () => {
   assert.equal(detectDeliverable('hi'), null);
   assert.equal(detectDeliverable('what does escrow mean?'), null);

@@ -507,3 +507,9 @@ we do not have.
 **Change:** the sidebar header, the account block at its bottom, and the right panel header were a lighter grey than the surface behind them, which read as separate bands. They are now transparent so each column is one calm surface, with only the hairline dividers left.
 
 **Distribution move:** none (visual polish).
+
+## 2026-10-08 — Strategy analysis: the right framework, filled in
+
+**Change:** asking for a SWOT, SOAR, NOISE, TOWS, PESTLE, Porter's Five Forces, gap analysis or McKinsey 7-S (or just "strategy analysis") now makes the AI name a framework with a one-line reason, using the rules of thumb: SOAR/NOISE when a team feels stuck, PESTLE or Five Forces for external pressure, TOWS to turn SWOT lists into decisions, Gap Analysis for targets, 7-S for internal alignment. It then fills the framework in for the person's actual situation with [placeholders] for unknowns and ends with three actions. New Create > Strategy analysis card. +1 test (412).
+
+**Distribution move:** a shareable post: "Stop writing a SWOT list nobody uses. Type your idea and BrandForge picks the framework and gives you three actions." Show one filled-in example (Ember Bean coffee roaster).
