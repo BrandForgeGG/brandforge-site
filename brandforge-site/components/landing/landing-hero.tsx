@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { fetchAuthed } from '@/lib/browser-auth';
 import { trackEvent } from '@/lib/funnel-client';
-import { COMMUNITY_LINKS } from '@/lib/community';
 
 const SUGGESTIONS = [
   'Audit my landing page: https://',
@@ -33,7 +32,6 @@ export function LandingHero() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
-  const [isSignedOut, setIsSignedOut] = useState(false);
 
   useEffect(() => {
     trackEvent('landing_viewed');
@@ -53,7 +51,6 @@ export function LandingHero() {
 
     setBusy(true);
     setNotice('');
-    setIsSignedOut(false);
 
     const { data: { session } } = await supabase.auth.getSession();
 
@@ -141,32 +138,8 @@ export function LandingHero() {
         </div>
 
         {notice ? (
-          <div className="mx-auto mt-4 max-w-xl rounded-2xl border border-ember/30 bg-ember/10 p-5" role={isSignedOut ? 'status' : 'alert'}>
-            <p className="text-sm leading-relaxed text-ember-light">{notice}</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <a
-                href={COMMUNITY_LINKS.discord.href}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-95"
-              >
-                Open Discord
-              </a>
-              <a
-                href={COMMUNITY_LINKS.telegramGroup.href}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-xl border border-line bg-background px-4 py-2 text-sm text-foreground transition hover:border-ember"
-              >
-                Open Telegram
-              </a>
-              <a
-                href="/login"
-                className="rounded-xl border border-line px-4 py-2 text-sm text-muted transition hover:border-ember hover:text-foreground"
-              >
-                Sign in
-              </a>
-            </div>
+          <div className="mx-auto mt-4 max-w-xl rounded-xl border border-ember/30 bg-ember/10 px-4 py-2.5" role="alert">
+            <p className="text-sm text-ember-light">{notice}</p>
           </div>
         ) : null}
 
