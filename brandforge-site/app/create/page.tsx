@@ -15,7 +15,7 @@ export default function CreatePage() {
   return (
     <ToolLauncher
       title="Create"
-      subtitle="Words, URLs and files into plans, research, copy and creative. Everything opens in a chat your team can join."
+      subtitle="Idea, URL or file in. Plan, copy or creative out."
       placeholder="Describe it, paste a URL, or add notes…"
       options={OPTIONS}
     />

@@ -6,6 +6,7 @@ import { avatarLabel, avatarTone, initialsFor } from "@/lib/identity-display";
 import { isDirectlyReadable } from "@/lib/file-context";
 import { RichContent } from "@/components/rich-content";
 
+import { detectDeliverable, KINDS } from "@/lib/deliverable-intent";
 import { BlueprintEmbedCard } from "@/components/blueprint/blueprint-embed-card";
 
 export type ChatEmbedAction =
@@ -783,6 +784,34 @@ function BrandForgeMark() {
   );
 }
 
+// Live progress while the AI works: real steps (from activity events) tick off one by one,
+// the current one spins. Nothing is pre-announced that has not actually run.
+function LiveProgress({ steps, request }: { steps: string[]; request: string }) {
+  const kind = detectDeliverable(request);
+  const label = KINDS.find((entry) => entry.kind === kind)?.label;
+  return (
+    <div className="bf-progress" role="status" aria-live="polite">
+      <p className="bf-progress-title">{label ? `Drafting ${label}` : "Working on it"}</p>
+      <ul>
+        {steps.map((step, index) => (
+          <li key={`${step}-${index}`} className="bf-progress-done">
+            <svg viewBox="0 0 16 16" className="h-4 w-4 shrink-0" aria-hidden="true">
+              <circle cx="8" cy="8" r="7" fill="none" stroke="var(--trust)" strokeWidth="1.5" />
+              <path d="M4.8 8.2l2.2 2.2 4.2-4.4" fill="none" stroke="var(--trust)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {step}
+          </li>
+        ))}
+        <li className="bf-progress-now">
+          <span className="bf-spinner" aria-hidden="true" />
+          Writing it up…
+        </li>
+      </ul>
+      <p className="bf-progress-note">Usually about 20 seconds.</p>
+    </div>
+  );
+}
+
 // Collapsed-by-default activity summary. Only user-safe results of steps that actually
 // ran this turn — never chain-of-thought, system prompts or tool arguments.
 function Thoughts({ steps }: { steps: string[] }) {
@@ -1240,7 +1269,7 @@ export function ChatTranscript({
             <div
               className={`min-w-0 max-w-2xl ${isUser ? "order-first flex flex-col items-end" : ""}`}
             >
-              {!grouped ? (
+              {!grouped && !isAI ? (
                 <p className="mb-1 flex items-baseline gap-2">
                   <span className="text-[13px] font-semibold text-foreground">
                     {authorName}
@@ -1314,7 +1343,7 @@ export function ChatTranscript({
                   </div>
                 ) : null}
                 {isAI ? (
-                  <RichContent content={message.content} />
+                  <RichContent content={message.content} streaming={Boolean(message.streaming)} />
                 ) : (
                   message.content
                 )}
@@ -1330,10 +1359,12 @@ export function ChatTranscript({
                   </span>
                 ) : null}
                 {message.streaming && !message.content ? (
-                  <p className="bf-streaming-state" role="status">
-                    <span className="bf-streaming-dot" aria-hidden="true" />
-                    {message.status ?? "Working…"}
-                  </p>
+                  <LiveProgress
+                    steps={message.thoughts ?? []}
+                    request={
+                      [...messages.slice(0, index)].reverse().find((entry) => entry.sender === "user")?.content ?? ""
+                    }
+                  />
                 ) : null}
               </div>
               {isAI && message.thoughts && message.thoughts.length > 0 ? (

@@ -91,7 +91,47 @@ function renderToken(token: MarkdownToken, index: number) {
   }
 }
 
-export function RichContent({ content }: { content: string }) {
+// A long answer with two or more headings becomes a stack of collapsible sections (Pre-launch,
+// Launch week, ...): a person skims the titles and opens only what they need, which keeps
+// one AI message from dominating a chat that has humans in it. Short answers stay flat.
+function sectionItemCount(tokens: MarkdownToken[]): number {
+  let count = 0;
+  for (const token of tokens) {
+    if (token.type === 'list') count += token.items.length;
+  }
+  return count;
+}
+
+export function RichContent({ content, streaming = false }: { content: string; streaming?: boolean }) {
   const tokens = useMemo(() => parseMarkdown(content), [content]);
-  return <div className="bf-msg-prose">{tokens.map((token, index) => renderToken(token, index))}</div>;
+  const headingIndexes = tokens.reduce<number[]>((found, token, index) => {
+    if (token.type === 'heading' && token.depth <= 4) found.push(index);
+    return found;
+  }, []);
+
+  if (headingIndexes.length < 2) {
+    return <div className="bf-msg-prose">{tokens.map((token, index) => renderToken(token, index))}</div>;
+  }
+
+  const intro = tokens.slice(0, headingIndexes[0]);
+  return (
+    <div className="bf-msg-prose">
+      {intro.map((token, index) => renderToken(token, index))}
+      {headingIndexes.map((start, position) => {
+        const end = headingIndexes[position + 1] ?? tokens.length;
+        const heading = tokens[start];
+        const body = tokens.slice(start + 1, end);
+        const count = sectionItemCount(body);
+        return (
+          <details key={start} className="bf-fold" open={streaming || position === 0 ? true : undefined}>
+            <summary>
+              <span className="bf-fold-title">{heading.type === 'heading' ? renderInlines(heading.inlines, `fold${start}`) : null}</span>
+              {count > 0 ? <span className="bf-fold-count">{count}</span> : null}
+            </summary>
+            <div className="bf-fold-body">{body.map((token, index) => renderToken(token, start + 1 + index))}</div>
+          </details>
+        );
+      })}
+    </div>
+  );
 }

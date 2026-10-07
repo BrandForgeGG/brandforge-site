@@ -13,7 +13,7 @@ export default function DistributePage() {
   return (
     <ToolLauncher
       title="Distribute"
-      subtitle="Turn what you created into posts, ads and outreach for every channel. Copy out to Buffer or your scheduler today; direct publishing arrives with Connect."
+      subtitle="Posts, ads and outreach for every channel."
       placeholder="What are we distributing, and to whom?"
       options={OPTIONS}
     />

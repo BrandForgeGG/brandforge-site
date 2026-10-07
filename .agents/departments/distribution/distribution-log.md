@@ -435,3 +435,9 @@ we do not have.
 **Change:** the project panel showed "Nothing yet" next to a finished launch plan, because it only read facts the AI had saved with tools. It now reads the newest AI answer itself (`lib/deliverable-outline.js`, +4 tests, 399): Goal comes from the answer's Goal line, a new "Latest answer" card lists the sections (Pre-launch, Launch week, Metrics...) with step counts and the stated assumptions, and it updates while the answer streams. The server also saves the goal and project name after a deliverable so the panel and Recents stay filled after reload or sign-in.
 
 **Distribution move:** screenshot-worthy: chat on the left, the outline filling in on the right. Fold into the next changelog.
+
+## 2026-10-07 — Quiet AI messages, live progress, one frame for every page
+
+**Change:** (1) AI answers are small (14px), no name label (icon only), and long answers fold into collapsible sections (Pre-launch, Launch week, ...), first one open, with step counts. (2) While the AI works, a live checklist replaces the single status line: real steps tick off one by one (reading the page, researching), the current one spins ("Drafting a launch plan ... usually about 20 seconds"); only steps that actually ran appear. (3) Create, Distribute, Optimize, Connect, Projects and the admin pages share one frame: same rail with a same-width placeholder (no sideways jump), one-line header, one centred column, a short fade-in; Projects gained the rail it was missing and loading skeletons.
+
+**Distribution move:** the progress checklist and folding sections are the visible "this feels like a real product" moment: record a 15-second screen capture of a launch plan being drafted, then opened section by section. Fold into the next changelog.

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AppShell } from '@/components/app-shell';
 import { fetchAuthed } from '@/lib/browser-auth';
 import { relativeTime } from '@/components/conversation-rail';
 
@@ -24,6 +25,13 @@ const STATUS_LABELS: Record<string, string> = {
   COMPLETED: 'Completed',
   CANCELLED: 'Cancelled',
 };
+
+const STARTERS: [string, string][] = [
+  ['Plan my idea', '/create'],
+  ['Audit a URL', '/create'],
+  ['Write ads', '/distribute'],
+  ['Launch plan', '/distribute'],
+];
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -48,58 +56,42 @@ export default function ProjectsPage() {
   }, []);
 
   return (
-    <div className="bf-page">
-      <main className="mx-auto max-w-3xl px-6 py-16">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-serif text-3xl text-foreground">Projects</h1>
-            <p className="mt-2 text-muted">Everything BrandForge knows about your objectives.</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => router.push('/chat')}
-            className="bf-button bf-button-primary"
-          >
-            New Chat
-          </button>
+    <AppShell
+      title="Projects"
+      actions={
+        <button type="button" onClick={() => router.push('/chat')} className="bf-button bf-button-primary">
+          New chat
+        </button>
+      }
+    >
+      {isLoading ? (
+        <div className="space-y-2" aria-busy="true" aria-label="Loading projects">
+          {[0, 1, 2].map((row) => (
+            <div key={row} className="bf-card h-16 animate-pulse" />
+          ))}
         </div>
-
-        {isLoading ? (
-          <p className="mt-8 text-sm text-muted">Loading projects…</p>
-        ) : projects.length === 0 ? (
-          <div className="mt-8 bf-card p-8 text-center">
-            <p className="text-sm font-semibold text-foreground">Your projects live here</p>
-            <p className="mt-1 text-sm text-muted">Start with one of these. It opens in a chat you can share.</p>
-            <div className="mt-4 flex flex-wrap justify-center gap-2">
-              {[
-                ['Plan my idea', '/create'],
-                ['Audit a URL', '/create'],
-                ['Write ads', '/distribute'],
-                ['Launch plan', '/distribute'],
-              ].map(([label, href]) => (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => router.push(href)}
-                  className="rounded-full border border-line px-3 py-1.5 text-xs text-muted transition hover:border-ember hover:text-foreground"
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => router.push('/chat')}
-              className="mt-5 bf-button bf-button-primary"
-            >
-              Start a chat
-            </button>
-          </div>
-        ) : (
-          <div className="mt-8 space-y-2">
-            {projects.map((project) => (
+      ) : projects.length === 0 ? (
+        <div className="bf-card p-8 text-center">
+          <p className="text-sm font-semibold text-foreground">Your projects live here</p>
+          <p className="mt-1 text-sm text-muted">Start with one of these. It opens in a chat you can share.</p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {STARTERS.map(([label, href]) => (
               <button
-                key={project.id}
+                key={label}
+                type="button"
+                onClick={() => router.push(href)}
+                className="rounded-full border border-line px-3 py-1.5 text-xs text-muted transition hover:border-ember hover:text-foreground"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {projects.map((project) => (
+            <li key={project.id}>
+              <button
                 type="button"
                 onClick={() => router.push(`/chat?conversationId=${project.id}`)}
                 className="bf-card w-full p-4 text-left transition hover:border-ember/40"
@@ -119,10 +111,10 @@ export default function ProjectsPage() {
                   </div>
                 </div>
               </button>
-            ))}
-          </div>
-        )}
-      </main>
-    </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </AppShell>
   );
 }

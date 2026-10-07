@@ -1144,7 +1144,7 @@ footer p {
 }
 
 .bf-msg-prose {
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.65;
   color: var(--foreground);
 }
@@ -1665,4 +1665,172 @@ footer p {
 
 @media (prefers-reduced-motion: reduce) {
   .bf-grow, .bf-draw, .bf-pop, .bf-pulse, .bf-flow { animation: none !important; stroke-dashoffset: 0; }
+}
+
+
+/* AI answers sit quietly next to human messages: small type, collapsible sections. */
+.bf-ai-content .bf-msg-prose {
+  line-height: 1.55;
+}
+
+.bf-ai-content .bf-msg-prose h3,
+.bf-ai-content .bf-msg-prose h4 {
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.bf-fold {
+  border-top: 1px solid var(--line);
+}
+
+.bf-fold:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.bf-fold > summary {
+  display: flex;
+  cursor: pointer;
+  list-style: none;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.bf-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.bf-fold > summary::before {
+  content: "";
+  width: 0.4rem;
+  height: 0.4rem;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
+  transform: rotate(-45deg);
+  transition: transform 150ms ease;
+  flex-shrink: 0;
+}
+
+.bf-fold[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.bf-fold-title {
+  min-width: 0;
+  flex: 1;
+}
+
+.bf-fold-count {
+  border-radius: 999px;
+  background: var(--overlay);
+  padding: 0 0.45rem;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.bf-fold-body {
+  padding: 0 0 0.5rem 1rem;
+}
+
+/* Live progress while the answer is being written. */
+.bf-progress {
+  padding: 0.25rem 0;
+}
+
+.bf-progress-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.bf-progress ul {
+  margin-top: 0.625rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.bf-progress li {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 13.5px;
+  animation: bf-step-in 240ms ease-out both;
+}
+
+.bf-progress-done {
+  color: var(--muted);
+}
+
+.bf-progress-now {
+  color: var(--foreground);
+}
+
+.bf-progress-note {
+  margin-top: 0.75rem;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.bf-spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 2px solid var(--line);
+  border-top-color: var(--ember);
+  animation: bf-spin 0.8s linear infinite;
+}
+
+@keyframes bf-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes bf-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bf-spinner {
+    animation-duration: 2.4s;
+  }
+  .bf-progress li {
+    animation: none;
+  }
+}
+
+/* Page content eases in so moving between sections feels continuous. */
+.bf-page-in {
+  animation: bf-page-in 180ms ease-out both;
+}
+
+@keyframes bf-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bf-page-in {
+    animation: none;
+  }
 }

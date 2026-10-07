@@ -8,7 +8,7 @@ const SOON = ['Buffer', 'X / Twitter', 'LinkedIn', 'Instagram', 'TikTok', 'YouTu
 
 export default function ConnectPage() {
   return (
-    <AppShell title="Connect" subtitle="Link your channels so BrandForge can create for them, publish to them and learn from them.">
+    <AppShell title="Connect" subtitle="Link the channels you create for and learn from.">
       <div className="max-w-2xl space-y-4">
         <div className="bf-card p-5">
           <p className="text-sm font-semibold text-foreground">Live now</p>
