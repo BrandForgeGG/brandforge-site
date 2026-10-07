@@ -26,6 +26,11 @@ const STATUS_LABELS: Record<string, string> = {
   CANCELLED: 'Cancelled',
 };
 
+// Previews are the start of an AI answer, which is markdown: show it as plain text.
+function plain(text: string): string {
+  return text.replace(/[*_`#>]+/g, '').replace(/s+/g, ' ').trim();
+}
+
 const STARTERS: [string, string][] = [
   ['Plan my idea', '/create'],
   ['Audit a URL', '/create'],
@@ -100,7 +105,7 @@ export default function ProjectsPage() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-foreground">{project.title}</p>
                     {project.preview ? (
-                      <p className="mt-0.5 truncate text-xs text-muted">{project.preview}</p>
+                      <p className="mt-0.5 truncate text-xs text-muted">{plain(project.preview)}</p>
                     ) : null}
                   </div>
                   <div className="shrink-0 text-right">
