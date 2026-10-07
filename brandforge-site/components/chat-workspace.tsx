@@ -19,7 +19,6 @@ import { summarizeTaskProgress } from "@/lib/task-board";
 import { shapeTaskRoster } from "@/lib/task-board";
 import { isNearBottom } from "@/lib/chat-scroll";
 import { fetchAuthed } from "@/lib/browser-auth";
-import { BetaBanner } from "@/components/beta-banner";
 import { GuestSaveBar } from "@/components/guest-save-bar";
 import { NextStepChips } from "@/components/next-step-chips";
 import { ChatTranscript, type ChatMessage } from "@/components/chat-transcript";
@@ -1807,7 +1806,6 @@ export function ChatWorkspace() {
   }, [messages]);
 return (
       <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
-      <BetaBanner />
       <div className="flex min-h-0 flex-1 overflow-hidden">
       <ConversationRail
         recents={recents}

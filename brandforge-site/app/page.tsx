@@ -4,7 +4,6 @@ import { LandingHero } from '@/components/landing/landing-hero';
 import { LandingPillars } from '@/components/landing/landing-pillars';
 import { LandingCommunity } from '@/components/landing/landing-community';
 import { LandingProof } from '@/components/landing/landing-proof';
-import { BetaBanner } from '@/components/beta-banner';
 import { SiteFooter } from '@/components/site-footer';
 
 export const metadata = {
@@ -34,7 +33,6 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }}
       />
-      <BetaBanner />
       <LandingNav />
       <main>
         <Suspense>

@@ -393,3 +393,9 @@ we do not have.
 **Change:** AI text 15 to 16px, your bubbles 15px; chat header and composer area slimmer with no background; Attach and Actions moved inside the message input card (send button and "Enter to send" on the same bar); the right project panel opens by itself on wide screens as soon as the AI records something (so a guest chat visibly lands in the sidebar); for guests the panel's "Send to BrandForge review" asks them to save the chat first instead of failing.
 
 **Distribution move:** no standalone announcement; fold into the next changelog. Demo note: screenshot the new input card and the panel filling in next to a guest chat.
+
+## 2026-10-07 — Open beta banner removed
+
+**Change:** the top "Open beta / Real specialists are online / @headstartup / Discord" strip is gone from the landing page, chat, projects and app shell. The @headstartup hiring card and Discord/Telegram links remain in the landing Community section and nav.
+
+**Distribution move:** none needed (removal). One caution: the strip was the only place on every page that sent people to @headstartup; watch Telegram inbound volume and re-add a link in the footer or nav if it drops.

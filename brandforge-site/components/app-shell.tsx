@@ -2,7 +2,6 @@
 
 import { useState, Suspense } from 'react';
 import dynamic from 'next/dynamic';
-import { BetaBanner } from '@/components/beta-banner';
 
 const ConversationRail = dynamic(
   () => import('@/components/conversation-rail').then((mod) => mod.ConversationRail),
@@ -24,7 +23,6 @@ export function AppShell({
 
   return (
     <div className="bf-page">
-      <BetaBanner />
       <div className="mx-auto flex max-w-[1600px]">
         <Suspense fallback={null}>
           <ConversationRail

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BetaBanner } from '@/components/beta-banner';
 import { fetchAuthed } from '@/lib/browser-auth';
 import { relativeTime } from '@/components/conversation-rail';
 
@@ -50,7 +49,6 @@ export default function ProjectsPage() {
 
   return (
     <div className="bf-page">
-      <BetaBanner />
       <main className="mx-auto max-w-3xl px-6 py-16">
         <div className="flex items-center justify-between">
           <div>
