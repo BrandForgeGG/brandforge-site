@@ -1258,8 +1258,31 @@ export function ChatWorkspace() {
     requestAnimationFrame(() => composerRef.current?.focus());
   }
 
+  // The right panel is where the AI's work becomes visible (name, requirements, next steps).
+  // Open it once per chat on wide screens as soon as something has been recorded, so the
+  // work appears to land instead of hiding behind a menu. Closing it sticks.
+  const autoOpenedPanelRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!conversationId || !state || state.conversationId !== conversationId) return;
+    if (autoOpenedPanelRef.current.has(conversationId)) return;
+    if (state.requirementsCount > 0 && window.innerWidth >= 1280) {
+      autoOpenedPanelRef.current.add(conversationId);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time reveal per chat
+      setIsContextOpen(true);
+    }
+  }, [state, conversationId]);
+
   const handleRequestReview = useCallback(async () => {
     if (!conversationId) return;
+
+    // A guest has no account for the team to answer: sending a brief for human review
+    // is the natural moment to ask them to save the chat, then continue here.
+    if (!railMeta.userId && document.cookie.includes("bf_guest=")) {
+      router.push(
+        `/login?next=${encodeURIComponent(`/chat?conversationId=${conversationId}`)}`,
+      );
+      return;
+    }
 
     // Client-side soft lock: past DISCOVERY the handoff already fired, so skip the request
     // and say so. The server enforces the same rule (409) for anyone bypassing this.
@@ -1301,7 +1324,7 @@ export function ChatWorkspace() {
     } finally {
       setBusyAction(null);
     }
-  }, [conversationId, loadRecents, refreshMessages, refreshState, state]);
+  }, [router, railMeta.userId, conversationId, loadRecents, refreshMessages, refreshState, state]);
 
   const loadIdentity = useCallback(async () => {
     try {
@@ -1798,7 +1821,7 @@ return (
       />
 
       <main className="relative flex min-w-0 flex-1 flex-col">
-        <header className="bf-chat-header flex shrink-0 items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <header className="bf-chat-header flex shrink-0 items-center justify-between gap-3 px-4 py-2 sm:px-6">
           <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
@@ -2562,101 +2585,99 @@ return (
                   }
                 }}
               />
-              <button
-                type="submit"
-                disabled={isBusy || (!input.trim() && !attachment)}
-                aria-label={
-                  isStreaming ? "BrandForge is answering" : "Send message"
-                }
-                className="bf-composer-send"
-              >
-                <span aria-hidden="true">{isStreaming ? "···" : "↑"}</span>
-              </button>
-            </div>
-            {/* Footer: attach + actions. Slash commands are discoverable here, not plastered
-                across the composer as permanent chips. */}
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5">
-                <div className="bf-menu-root relative">
-                  <button
-                    type="button"
-                    className="bf-composer-tool"
-                    aria-expanded={attachMenuOpen}
-                    aria-haspopup="menu"
-                    disabled={!conversationId}
-                    title={
-                      conversationId
-                        ? undefined
-                        : "Send your first message to start the project, then attach files."
-                    }
-                    onClick={() => setAttachMenuOpen((value) => !value)}
-                  >
-                    <span aria-hidden="true">＋</span> Attach
-                  </button>
-                  {attachMenuOpen ? (
-                    <div
-                      role="menu"
-                      className="bf-menu absolute bottom-full left-0 z-40 mb-2 w-64 p-1"
+              <div className="bf-composer-bar">
+                <div className="flex items-center gap-1.5">
+                  <div className="bf-menu-root relative">
+                    <button
+                      type="button"
+                      className="bf-composer-tool"
+                      aria-expanded={attachMenuOpen}
+                      aria-haspopup="menu"
+                      disabled={!conversationId}
+                      title={
+                        conversationId
+                          ? undefined
+                          : "Send your first message to start the project, then attach files."
+                      }
+                      onClick={() => setAttachMenuOpen((value) => !value)}
                     >
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="bf-menu-item"
-                        onClick={() => {
-                          setAttachMenuOpen(false);
-                          fileInputRef.current?.click();
-                        }}
+                      <span aria-hidden="true">＋</span> Attach
+                    </button>
+                    {attachMenuOpen ? (
+                      <div
+                        role="menu"
+                        className="bf-menu absolute bottom-full left-0 z-40 mb-2 w-64 p-1"
                       >
-                        Upload a file…
-                        <span className="bf-menu-hint">
-                          PNG, PDF, TXT, CSV, JSON, ZIP, audio · up to 10 MB
-                        </span>
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-                <div className="bf-menu-root relative">
-                  <button
-                    type="button"
-                    className="bf-composer-tool"
-                    aria-expanded={commandsOpen}
-                    aria-haspopup="menu"
-                    onClick={() => setCommandsOpen((value) => !value)}
-                  >
-                    <span aria-hidden="true">／</span> Actions
-                  </button>
-                  {commandsOpen ? (
-                    <div
-                      role="menu"
-                      className="bf-menu absolute bottom-full left-0 z-40 mb-2 w-60 p-1"
-                    >
-                      {SLASH_COMMANDS.map((item) => (
                         <button
-                          key={item.command}
                           type="button"
                           role="menuitem"
                           className="bf-menu-item"
                           onClick={() => {
-                            setCommandsOpen(false);
-                            setInput((current) =>
-                              insertComposerCommand(current, item.command),
-                            );
-                            requestAnimationFrame(() =>
-                              composerRef.current?.focus(),
-                            );
+                            setAttachMenuOpen(false);
+                            fileInputRef.current?.click();
                           }}
                         >
-                          {item.label}
-                          <span className="bf-menu-hint">{item.command}</span>
+                          Upload a file…
+                          <span className="bf-menu-hint">
+                            PNG, PDF, TXT, CSV, JSON, ZIP, audio · up to 10 MB
+                          </span>
                         </button>
-                      ))}
-                    </div>
-                  ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="bf-menu-root relative">
+                    <button
+                      type="button"
+                      className="bf-composer-tool"
+                      aria-expanded={commandsOpen}
+                      aria-haspopup="menu"
+                      onClick={() => setCommandsOpen((value) => !value)}
+                    >
+                      <span aria-hidden="true">／</span> Actions
+                    </button>
+                    {commandsOpen ? (
+                      <div
+                        role="menu"
+                        className="bf-menu absolute bottom-full left-0 z-40 mb-2 w-60 p-1"
+                      >
+                        {SLASH_COMMANDS.map((item) => (
+                          <button
+                            key={item.command}
+                            type="button"
+                            role="menuitem"
+                            className="bf-menu-item"
+                            onClick={() => {
+                              setCommandsOpen(false);
+                              setInput((current) =>
+                                insertComposerCommand(current, item.command),
+                              );
+                              requestAnimationFrame(() =>
+                                composerRef.current?.focus(),
+                              );
+                            }}
+                          >
+                            {item.label}
+                            <span className="bf-menu-hint">{item.command}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+                  <div className="flex items-center gap-3">
+                  <span className="hidden text-[10px] uppercase tracking-[0.16em] text-muted sm:inline">Enter to send</span>
+                  <button
+                    type="submit"
+                    disabled={isBusy || (!input.trim() && !attachment)}
+                    aria-label={
+                      isStreaming ? "BrandForge is answering" : "Send message"
+                    }
+                    className="bf-composer-send"
+                  >
+                    <span aria-hidden="true">{isStreaming ? "···" : "↑"}</span>
+                  </button>
                 </div>
               </div>
-              <p className="text-[10px] uppercase tracking-[0.16em] text-muted">
-                Enter to send
-              </p>
             </div>
           </form>
         </div>

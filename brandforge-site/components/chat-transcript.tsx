@@ -1256,7 +1256,7 @@ export function ChatTranscript({
                 className={
                   isAI
                     ? "bf-ai-content"
-                    : `whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed border border-line text-foreground ${
+                    : `whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed border border-line text-foreground ${
                         isUser ? "bg-panel-2" : "bg-panel"
                       }`
                 }

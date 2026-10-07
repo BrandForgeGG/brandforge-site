@@ -387,3 +387,9 @@ we do not have.
 **Change:** `@vercel/analytics` added to the root layout (page views, referrers, top pages, countries; cookieless, no personal data). Internal infrastructure, no user-facing capability. Needs Web Analytics switched on in the Vercel project (Analytics tab) to start collecting.
 
 **Distribution move:** none to announce. Use it: watch /tools/website-audit and /tools/ad-pack referrers weekly to see which channel brings guests, and compare with `chat_started` source tags in the funnel.
+
+## 2026-10-07 — Chat polish: bigger text, lighter chrome, tools inside the input card
+
+**Change:** AI text 15 to 16px, your bubbles 15px; chat header and composer area slimmer with no background; Attach and Actions moved inside the message input card (send button and "Enter to send" on the same bar); the right project panel opens by itself on wide screens as soon as the AI records something (so a guest chat visibly lands in the sidebar); for guests the panel's "Send to BrandForge review" asks them to save the chat first instead of failing.
+
+**Distribution move:** no standalone announcement; fold into the next changelog. Demo note: screenshot the new input card and the panel filling in next to a guest chat.
