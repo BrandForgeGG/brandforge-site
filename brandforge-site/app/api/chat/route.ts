@@ -62,6 +62,23 @@ const TOOL_ACTIVITY: Record<string, string> = {
   request_human_review: "Requested human review",
 };
 
+// research_web labels carry the page host or the search the model asked for, read from the
+// call's own arguments (never a guess).
+function researchLabel(rawArguments: string | undefined): string {
+  try {
+    const args = JSON.parse(rawArguments || "{}") as { url?: unknown; query?: unknown };
+    if (typeof args.url === "string" && args.url) {
+      return `Read ${new URL(args.url).hostname.replace(/^www./, "")}`;
+    }
+    if (typeof args.query === "string" && args.query) {
+      return `Searched the web: ${args.query.slice(0, 48)}`;
+    }
+  } catch {
+    // Fall through to the generic label.
+  }
+  return "Researched the web";
+}
+
 type ArtifactRef = {
   name: string;
   contentType: string;
@@ -392,7 +409,10 @@ export async function POST(request: NextRequest) {
           modelMessages,
           (toolCall) => {
             // Announce the tool only when it is actually about to execute.
-            const label = TOOL_ACTIVITY[toolCall.function?.name];
+            const label =
+              toolCall.function?.name === "research_web"
+                ? researchLabel(toolCall.function?.arguments)
+                : TOOL_ACTIVITY[toolCall.function?.name];
             if (label) {
               send({ type: "activity", label });
             }

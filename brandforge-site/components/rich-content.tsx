@@ -34,6 +34,17 @@ function renderInlines(inlines: MarkdownInline[], keyPrefix: string) {
   });
 }
 
+// Models often mark a section with a bold line instead of a # heading. Treat a paragraph that is
+// only bold text (optionally ending in a colon) as a heading for folding purposes.
+function headingInlines(token: MarkdownToken): MarkdownInline[] | null {
+  if (token.type === 'heading' && token.depth <= 4) return token.inlines;
+  if (token.type === 'paragraph') {
+    const parts = token.inlines.filter((inline) => !(inline.type === 'text' && /^[s:]*$/.test(inline.text)));
+    if (parts.length === 1 && parts[0].type === 'strong' && parts[0].text.length <= 70) return parts;
+  }
+  return null;
+}
+
 const HEADING_TAGS = ['h3', 'h4', 'h5', 'h6'] as const;
 
 // Fenced code with a copy button: AI answers carry buildable code, and selecting it
@@ -105,7 +116,7 @@ function sectionItemCount(tokens: MarkdownToken[]): number {
 export function RichContent({ content, streaming = false }: { content: string; streaming?: boolean }) {
   const tokens = useMemo(() => parseMarkdown(content), [content]);
   const headingIndexes = tokens.reduce<number[]>((found, token, index) => {
-    if (token.type === 'heading' && token.depth <= 4) found.push(index);
+    if (headingInlines(token)) found.push(index);
     return found;
   }, []);
 
@@ -125,7 +136,7 @@ export function RichContent({ content, streaming = false }: { content: string; s
         return (
           <details key={start} className="bf-fold" open={streaming || position === 0 ? true : undefined}>
             <summary>
-              <span className="bf-fold-title">{heading.type === 'heading' ? renderInlines(heading.inlines, `fold${start}`) : null}</span>
+              <span className="bf-fold-title">{renderInlines(headingInlines(heading) ?? [], `fold${start}`)}</span>
               {count > 0 ? <span className="bf-fold-count">{count}</span> : null}
             </summary>
             <div className="bf-fold-body">{body.map((token, index) => renderToken(token, start + 1 + index))}</div>
