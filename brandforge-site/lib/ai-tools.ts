@@ -412,6 +412,7 @@ export async function executeTool(
 
     case 'generate_image': {
       const prompt = toolText(args.prompt, 600);
+      const caption = toolText(args.caption, 90);
       const aspect = ['square', 'portrait', 'landscape'].includes(String(args.aspect))
         ? (String(args.aspect) as 'square' | 'portrait' | 'landscape')
         : 'square';
@@ -457,6 +458,7 @@ export async function executeTool(
           generated: true,
           provider: result.provider,
           source: 'ai',
+          ...(caption ? { caption } : {}),
           // Why earlier providers were skipped (status codes only, never keys): the first thing to
           // read when a configured provider seems to be ignored.
           ...(result.attempts.length > 0 ? { fallback: result.attempts.join(' | ').slice(0, 300) } : {}),

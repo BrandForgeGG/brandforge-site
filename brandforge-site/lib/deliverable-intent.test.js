@@ -14,6 +14,14 @@ test('recognises the starter requests', () => {
   assert.equal(detectDeliverable('Turn this into a researched blueprint'), 'plan');
 });
 
+test('create a video is its own deliverable, ads for TikTok are not', () => {
+  assert.equal(detectDeliverable('Create a video: my candle shop'), 'video');
+  assert.equal(detectDeliverable('make a short video about our launch'), 'video');
+  assert.equal(detectDeliverable('Produce a promo reel for the cafe'), 'video');
+  assert.equal(detectDeliverable('Create ads: TikTok and Meta for my store'), 'ads');
+  assert.match(deliverableDirective('Create a video: my shop'), /generate_image exactly three times/);
+});
+
 test('ordinary conversation is not a deliverable', () => {
   assert.equal(detectDeliverable('hi'), null);
   assert.equal(detectDeliverable('what does escrow mean?'), null);

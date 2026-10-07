@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-export type VideoImage = { url: string; label: string };
+export type VideoImage = { url: string; label: string; caption?: string };
 
 type Format = 'vertical' | 'square';
 
@@ -96,7 +96,7 @@ function drawSlide(
 export function VideoMaker({ images, onClose }: { images: VideoImage[]; onClose: () => void }) {
   const [format, setFormat] = useState<Format>('vertical');
   const [selected, setSelected] = useState<boolean[]>(() => images.map(() => true));
-  const [captions, setCaptions] = useState<string[]>(() => images.map(() => ''));
+  const [captions, setCaptions] = useState<string[]>(() => images.map((image) => image.caption ?? ''));
   const [phase, setPhase] = useState<'edit' | 'recording' | 'done' | 'error'>('edit');
   const [elapsed, setElapsed] = useState(0);
   const [result, setResult] = useState<{ url: string; ext: string; size: number } | null>(null);

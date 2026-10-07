@@ -67,7 +67,7 @@ Tool cheat sheet:
 - set_project_tasks: 5-12 concrete tasks, optionally attached to milestones (AI drafts, not final).
 - check_discovery_completeness: re-read the server-computed discovery checklist.
 - research_web: read a URL the founder pasted (url) or search the web for the market, competitors or references (query). It returns only the page title and visible text: never claim what a page's meta tags, schema, speed or layout are; say what you could not verify. Use it BEFORE giving analysis, audits or estimates that depend on real-world facts, and cite the urls you used. If it errors, say so plainly — never invent sources.
-- generate_image: make one AI image (ad visual, logo concept, mockup) when the founder asks for a visual. You cannot see the result: never describe its details; offer variations. Avoid text and real brand logos inside images.
+- generate_image: make one AI image (pass a short "caption" when it is a video scene) (ad visual, logo concept, mockup) when the founder asks for a visual. You cannot see the result: never describe its details; offer variations. Avoid text and real brand logos inside images.
 - request_human_review: hand the project to the human BrandForge team.`;
 
 // Tool definitions. Every tool is validated again on the server before it touches the
@@ -254,6 +254,7 @@ export const TOOLS: Tool[] = [
       properties: {
         prompt: { type: 'string', description: 'A concrete visual description: subject, setting, style, lighting. No text or logos inside the image.' },
         aspect: { type: 'string', enum: ['square', 'portrait', 'landscape'] },
+        caption: { type: 'string', description: 'Optional caption of at most 8 words, used when the image becomes a scene in a video.' },
       },
       required: ['prompt'],
     },
@@ -496,24 +497,35 @@ export class BrandForgeAIService {
         tool_calls: result.tool_calls,
       });
 
-      for (const toolCall of result.tool_calls) {
-        let toolResult: string;
-
+      const runTool = async (toolCall: ToolCall): Promise<string> => {
         try {
-          toolResult = await toolHandler(toolCall);
+          return await toolHandler(toolCall);
         } catch (error) {
           console.error('Tool execution failed:', toolCall.function.name, error);
-          toolResult = JSON.stringify({
+          return JSON.stringify({
             error: error instanceof Error ? error.message : 'Tool execution failed',
           });
         }
+      };
 
+      // A round made only of image calls (a video's three scenes) runs together: they are
+      // independent and each takes seconds. Everything else keeps its original order.
+      const onlyImages = result.tool_calls.every((call) => call.function.name === 'generate_image');
+      const toolResults = onlyImages
+        ? await Promise.all(result.tool_calls.map(runTool))
+        : await result.tool_calls.reduce<Promise<string[]>>(async (previous, call) => {
+            const list = await previous;
+            list.push(await runTool(call));
+            return list;
+          }, Promise.resolve([]));
+
+      result.tool_calls.forEach((toolCall, index) => {
         conversation.push({
           role: 'tool',
-          content: toolResult,
+          content: toolResults[index],
           tool_call_id: toolCall.id,
         });
-      }
+      });
     }
 
     throw new Error('The assistant kept calling tools without answering. Please try again.');

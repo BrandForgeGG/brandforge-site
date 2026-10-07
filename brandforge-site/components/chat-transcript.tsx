@@ -80,6 +80,7 @@ export interface ChatMessage {
     size: number;
     contentType: string;
     generated?: boolean;
+    caption?: string;
   } | null;
   embed?: ChatEmbed | null;
   /**

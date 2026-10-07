@@ -21,6 +21,7 @@ import { isNearBottom } from "@/lib/chat-scroll";
 import { fetchAuthed } from "@/lib/browser-auth";
 import { trackEvent } from "@/lib/funnel-client";
 import { GuestSaveBar } from "@/components/guest-save-bar";
+import { VideoReadyBar } from "@/components/video-ready-bar";
 import { extractOutline } from "@/lib/deliverable-outline";
 import { ChatTranscript, type ChatMessage } from "@/components/chat-transcript";
 import {
@@ -112,6 +113,7 @@ function toChatMessage(message: PersistedMessage): ChatMessage {
             size: number;
             contentType: string;
             generated?: boolean;
+            caption?: string;
           })
         : null,
     embed: parseChatEmbed(message.artifact_data) as ChatMessage["embed"],
@@ -138,6 +140,7 @@ const NEXT_STEP_ACTIONS = [
   { key: 'ads', label: 'Create ads', text: 'Create ads: ' },
   { key: 'calendar', label: 'Create a 30-day calendar', text: 'Create a 30-day content calendar: ' },
   { key: 'audit', label: 'Audit a URL', text: 'Audit this URL: https://' },
+  { key: 'video', label: 'Create a video', text: 'Create a video: ' },
 ] as const;
 
 const CHAT_STARTERS = [
@@ -1282,6 +1285,7 @@ export function ChatWorkspace() {
     .map((entry) => ({
       url: `/api/attachments?path=${encodeURIComponent(entry.artifactData!.path)}`,
       label: entry.artifactData!.name,
+      caption: entry.artifactData!.caption,
     }));
 
   const latestAiContent = [...messages]
@@ -2290,6 +2294,14 @@ return (
           </div>
         ) : null}
 
+        <VideoReadyBar
+          count={videoImages.length}
+          busy={isStreaming}
+          onOpen={() => {
+            trackEvent("next_step_clicked", { source: "video_ready" });
+            setIsVideoOpen(true);
+          }}
+        />
         <GuestSaveBar
           conversationId={conversationId}
           hasReply={!isStreaming && messages.some((message) => message.sender === "ai" && !message.streaming)}
@@ -2690,21 +2702,6 @@ return (
                             Invite my team
                           </button>
                         ) : null}
-                        <button
-                          type="button"
-                          role="menuitem"
-                          className="bf-menu-item"
-                          disabled={videoImages.length === 0}
-                          title={videoImages.length === 0 ? "Create or attach an image first" : undefined}
-                          onClick={() => {
-                            setCommandsOpen(false);
-                            trackEvent("next_step_clicked", { source: "video" });
-                            setIsVideoOpen(true);
-                          }}
-                        >
-                          Create a video
-                          {videoImages.length === 0 ? <span className="bf-menu-hint">needs an image</span> : null}
-                        </button>
                       </div>
                     ) : null}
                   </div>

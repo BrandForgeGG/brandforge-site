@@ -8,6 +8,13 @@
 
 const KINDS = [
   {
+    kind: 'video',
+    pattern: /\b(create|make|produce)\s+(an?\s+)?(short\s+|vertical\s+|promo\s+|ad\s+)?(video|reel|clip)\b/i,
+    label: 'a short video',
+    skeleton:
+      'Structure: call generate_image exactly three times, one scene each (the hook, the product or benefit, the call to action), aspect "portrait", the same visual style in all three, each with a caption of at most 8 words in the "caption" field. Then reply in at most four lines: the concept in one sentence, then the three captions as a numbered list, then tell them the video is ready to build with the button above the message box. Do not write a script and do not describe the images.',
+  },
+  {
     kind: 'launch_plan',
     pattern: /\b(launch|go[- ]to[- ]market|gtm)\b.{0,20}\b(plan|strategy|checklist)\b|\b(plan|strategy)\b.{0,20}\blaunch/i,
     label: 'a launch plan',
