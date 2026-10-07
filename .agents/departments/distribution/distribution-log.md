@@ -471,3 +471,9 @@ we do not have.
 **Change:** CF_ACCOUNT_ID and CF_API_TOKEN are set in Vercel; a live guest request now returns a 1024x1024 image from Cloudflare (FLUX schnell, free daily allowance, no watermark) instead of Pollinations, which stays as the automatic fallback. Generated-image rows now record why a provider was skipped (status codes only). Every image prompt now ends with "No text, no lettering, no labels, no logos" because the first Cloudflare sample invented garbled label text on a jar.
 
 **Distribution move:** quality is now good enough to show: use the candle/coffee-roaster samples in a "free AI images in your chat" post. Watch the Cloudflare dashboard (Workers AI) for daily neuron use; the free allowance is 10,000 neurons per day, roughly 125+ images, after which images fall back to Pollinations automatically.
+
+## 2026-10-07 — FLUX.2 on Cloudflare: realistic images, no invented lettering
+
+**Change:** Cloudflare now tries FLUX.2 klein first (multipart), then FLUX.1 schnell as an in-provider safety net, then Hugging Face / Pollinations / OpenRouter. The same candle prompt that gave a garbled label ("Hand Paury") on FLUX.1 now returns a clean, realistic 768x1024 photo on FLUX.2 with no fallback. 409 tests. Cost per image is higher (roughly 100 neurons vs 70), so the free daily allowance covers about 90 images instead of about 125; past that, schnell/Pollinations take over automatically.
+
+**Distribution move:** this is the sample set to show: a "before / after" of the same prompt (garbled label vs clean photo) makes a strong short post. Keep the AI-generated label and the honest limits (free daily allowance, fallback quality).
