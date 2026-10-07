@@ -73,7 +73,8 @@ const TOOLS = [
     example: { about: 'A neighbourhood coffee roaster selling beans and running tastings', days: '14 days', platforms: ['Instagram', 'TikTok'], cadence: '5 a week', tone: 'Playful' },
     build(values) {
       const platforms = listOrAll(values.platforms, SOCIAL_PLATFORMS);
-      return `Build a ${values.days} content calendar for: ${values.about}. Platforms: ${platforms}. Posting ${String(values.cadence).toLowerCase()}. Tone: ${String(values.tone).toLowerCase()}. Give four content pillars first, then one markdown table with the columns Day, Platform, Format, Hook, Caption and CTA, then 3 reusable post templates.`;
+      const span = String(values.days).replace(/\s*days?$/i, '-day');
+      return `Build a ${span} content calendar for: ${values.about}. Platforms: ${platforms}. Posting ${String(values.cadence).toLowerCase()}. Tone: ${String(values.tone).toLowerCase()}. Give four content pillars first, then one markdown table with the columns Day, Platform, Format, Hook, Caption and CTA, then 3 reusable post templates.`;
     },
   },
   {

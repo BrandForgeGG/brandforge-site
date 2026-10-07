@@ -25,7 +25,7 @@ test('ad pack uses the chosen platforms, goal and tone and a real address', () =
 
 test('calendar asks for the table the Copy as CSV button needs', () => {
   const result = compile('calendar', { about: 'a coffee roaster', days: '7 days', platforms: ['Instagram'], cadence: 'Daily' });
-  assert.match(result.prompt, /^Build a 7 days content calendar/);
+  assert.match(result.prompt, /^Build a 7-day content calendar/);
   assert.match(result.prompt, /columns Day, Platform, Format, Hook, Caption and CTA/);
   assert.match(result.prompt, /Platforms: Instagram\./);
 });
