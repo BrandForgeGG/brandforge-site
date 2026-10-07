@@ -501,3 +501,9 @@ we do not have.
 **Change:** three FLUX.2 images at once took 48 s (two timed out and were rescued by FLUX.1), too close to the 60 s request limit. Captioned images (video scenes) now go straight to FLUX.1 schnell, and each Cloudflare model waits at most 20 s. Same prompt: 37 s, three images, no fallbacks, clear sharp scenes. 411 tests. Note: schnell returns square images; the video maker crops them to the chosen format.
 
 **Distribution move:** include the coffee-roaster scenes in the "Create a video:" demo clip. Honest caption: AI-generated images set to motion and captions.
+
+## 2026-10-08 — One surface for the sidebar and project panel
+
+**Change:** the sidebar header, the account block at its bottom, and the right panel header were a lighter grey than the surface behind them, which read as separate bands. They are now transparent so each column is one calm surface, with only the hairline dividers left.
+
+**Distribution move:** none (visual polish).

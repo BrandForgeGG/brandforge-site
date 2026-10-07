@@ -293,8 +293,9 @@ body {
 }
 
 .bf-rail-header {
+  /* Same surface as the rail body: one calm column, not three bands. */
   border-bottom: 1px solid var(--line);
-  background: var(--panel-2);
+  background: transparent;
   padding: 1rem;
 }
 
@@ -356,7 +357,7 @@ body {
 
 .bf-rail-footer {
   border-top: 1px solid var(--line);
-  background: var(--panel-2);
+  background: transparent;
   padding: 1rem;
 }
 
@@ -399,7 +400,7 @@ body {
 
 .bf-panel-header {
   border-bottom: 1px solid var(--line);
-  background: var(--panel-2);
+  background: transparent;
   padding: 1rem;
 }
 
