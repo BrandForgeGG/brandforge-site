@@ -23,7 +23,12 @@ const nextConfig: NextConfig = {
   // The standalone Blueprint page is gone: the same research and planning run inside chat.
   // Old links (including saved-blueprint return emails) land in the chat.
   async redirects() {
-    return [{ source: "/blueprint", destination: "/chat", permanent: false }];
+    return [
+      { source: "/blueprint", destination: "/chat", permanent: false },
+      // Free tools live inside Create and Distribute now; Connect became Settings > Integrations.
+      { source: "/tools/:slug", destination: "/create", permanent: false },
+      { source: "/connect", destination: "/settings#integrations", permanent: false },
+    ];
   },
   async headers() {
     return [

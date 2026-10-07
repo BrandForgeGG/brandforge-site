@@ -3,12 +3,38 @@ import { ToolLauncher } from '@/components/tool-launcher';
 export const metadata = { title: 'Create — BrandForge' };
 
 const OPTIONS = [
-  { id: 'blueprint', label: 'Project blueprint', hint: 'Idea → researched scope, roadmap, estimate', starter: 'Turn this into a researched blueprint: scope, roadmap, risks and a realistic estimate.' },
-  { id: 'audit', label: 'URL audit', hint: 'Messaging, SEO, conversion gaps', starter: 'Audit this website: messaging, SEO, conversion and trust gaps, with a prioritised fix list.' },
-  { id: 'adpack', label: 'Ad pack', hint: 'Hooks, copy and a video script', starter: 'Build an ad pack for this: hooks, headlines, primary text per platform, and a 15–30s video script with shot list.' },
-  { id: 'competitors', label: 'Competitor snapshot', hint: 'Positioning, pricing, angles', starter: 'Research 3–5 competitors for this and summarise positioning, pricing, ad angles and channels.' },
-  { id: 'brand', label: 'Brand kit', hint: 'Names, voice, palette, fonts', starter: 'Draft a brand starter kit: name and tagline options, voice and tone, palette and font pairing.' },
-  { id: 'content', label: 'Content & copy', hint: 'Posts, emails, landing copy', starter: 'Write content for this: social posts, an email sequence and landing page copy.' },
+  {
+    id: 'audit',
+    label: 'Website audit',
+    hint: 'A ranked fix list from your URL',
+    url: true,
+    prompt:
+      'Audit this website: {url}. Read the page first, then give a prioritised fix list covering messaging, SEO, conversion and trust. Cite what you read. Put the three highest-impact fixes first with the exact change to make. You can only see the page title and visible text: do not state facts about meta tags, schema, speed, mobile layout or backlinks. List those under "Check these yourself" instead, and only quote customers or logos that appear on the page.',
+  },
+  {
+    id: 'blueprint',
+    label: 'Project plan',
+    hint: 'Idea to scope, roadmap and estimate',
+    prompt: 'Turn this into a researched plan with scope, roadmap, risks and a realistic estimate: {detail}',
+  },
+  {
+    id: 'competitors',
+    label: 'Competitor snapshot',
+    hint: 'Positioning, pricing, angles',
+    prompt: 'Research 3 to 5 competitors for this and summarise positioning, pricing, ad angles and channels: {detail}',
+  },
+  {
+    id: 'brand',
+    label: 'Brand kit',
+    hint: 'Names, voice, palette, fonts',
+    prompt: 'Draft a brand starter kit for this: name and tagline options, voice and tone, palette and font pairing: {detail}',
+  },
+  {
+    id: 'content',
+    label: 'Content and copy',
+    hint: 'Posts, emails, landing copy',
+    prompt: 'Write content for this: social posts, an email sequence and landing page copy: {detail}',
+  },
 ];
 
 export default function CreatePage() {

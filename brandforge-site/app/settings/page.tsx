@@ -581,6 +581,28 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        <div id="integrations" className="min-w-0 scroll-mt-6 rounded-2xl border border-line bg-panel p-5 lg:col-span-2">
+          <h2 className="text-xl font-medium text-foreground">Integrations</h2>
+          <p className="mt-1 text-sm text-muted">Channels BrandForge can create for, publish to and learn from.</p>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <div className="rounded-xl border border-line px-3 py-2.5">
+              <p className="text-sm text-foreground">Telegram</p>
+              <p className="text-xs text-muted">{telegramConnected ? 'Connected. Project updates arrive here.' : 'Not linked. Use the code under Notifications.'}</p>
+            </div>
+            <div className="rounded-xl border border-line px-3 py-2.5">
+              <p className="text-sm text-foreground">Discord</p>
+              <p className="text-xs text-muted">Team alerts and changelog run through the BrandForge server.</p>
+            </div>
+          </div>
+          <p className="mt-4 text-xs uppercase tracking-[0.15em] text-muted">Coming next</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {['Buffer', 'X', 'LinkedIn', 'Instagram', 'TikTok', 'YouTube', 'Meta Ads', 'Google Ads'].map((name) => (
+              <span key={name} className="rounded-full border border-line px-3 py-1 text-xs text-muted">{name}</span>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-muted">Tell us in Discord which one you need first. It moves up the list.</p>
+        </div>
+
         <div className="lg:col-span-2">
           <button
             type="button"

@@ -441,3 +441,9 @@ we do not have.
 **Change:** (1) AI answers are small (14px), no name label (icon only), and long answers fold into collapsible sections (Pre-launch, Launch week, ...), first one open, with step counts. (2) While the AI works, a live checklist replaces the single status line: real steps tick off one by one (reading the page, researching), the current one spins ("Drafting a launch plan ... usually about 20 seconds"); only steps that actually ran appear. (3) Create, Distribute, Optimize, Connect, Projects and the admin pages share one frame: same rail with a same-width placeholder (no sideways jump), one-line header, one centred column, a short fade-in; Projects gained the rail it was missing and loading skeletons.
 
 **Distribution move:** the progress checklist and folding sections are the visible "this feels like a real product" moment: record a 15-second screen capture of a launch plan being drafted, then opened section by section. Fold into the next changelog.
+
+## 2026-10-07 — Tools live inside Create and Distribute; Connect became Settings > Integrations
+
+**Change:** the separate /tools pages are gone (old links redirect to /create). Website audit and ad pack from a URL are now options inside Create and Distribute: paste a URL, press Start, and the chat opens with the request already sent (guests included). Sidebar is now Create, Distribute, Optimize (Projects and Connect removed; /projects still opens if you have the link). Connect moved into Settings as **Integrations** (/connect redirects there; Optimize points to it).
+
+**Distribution move:** the public free-tool landing pages (a possible SEO surface) are retired on purpose; the homepage hero chips ("Audit my landing page", "Ads for my online store") and the Create/Distribute pages are the entry points now. Remove /tools URLs from any posts or directory submissions already drafted.

@@ -3,10 +3,32 @@ import { ToolLauncher } from '@/components/tool-launcher';
 export const metadata = { title: 'Distribute — BrandForge' };
 
 const OPTIONS = [
-  { id: 'calendar', label: '30-day content calendar', hint: 'Posts per platform, export to any scheduler', starter: 'Build a 30-day content calendar for this with captions and hashtags per platform, as a table I can export to CSV.' },
-  { id: 'launch', label: 'Launch plan', hint: 'Channels, checklist, draft posts', starter: 'Make a channel-by-channel launch plan for this with a checklist and draft posts.' },
-  { id: 'outreach', label: 'Outreach sequence', hint: 'Emails and DMs', starter: 'Write a 3–5 message outreach sequence and a short DM/pitch set for this audience.' },
-  { id: 'ads', label: 'Ready-to-run ads', hint: 'Meta, Google, TikTok, LinkedIn', starter: 'Produce ready-to-run ads for this across Meta, Google, TikTok and LinkedIn, with targeting suggestions.' },
+  {
+    id: 'adpack',
+    label: 'Ad pack from a URL',
+    hint: 'Ads for Meta, Google, TikTok, LinkedIn',
+    url: true,
+    prompt:
+      'Read {url} and build a ready-to-run ad pack: for each of Meta, Google, TikTok and LinkedIn give 3 hooks, 3 headlines and 2 primary texts, then a 20-second video script with a shot list. Use only claims that appear on the page; use [brackets] for anything I need to confirm.',
+  },
+  {
+    id: 'calendar',
+    label: '30-day content calendar',
+    hint: 'Posts per platform, export to any scheduler',
+    prompt: 'Build a 30-day content calendar with captions and hashtags per platform, as a table I can export to CSV: {detail}',
+  },
+  {
+    id: 'launch',
+    label: 'Launch plan',
+    hint: 'Channels, checklist, draft posts',
+    prompt: 'Make a channel-by-channel launch plan with a checklist and draft posts: {detail}',
+  },
+  {
+    id: 'outreach',
+    label: 'Outreach sequence',
+    hint: 'Emails and DMs',
+    prompt: 'Write a 3 to 5 message outreach sequence and a short DM or pitch set for this audience: {detail}',
+  },
 ];
 
 export default function DistributePage() {
