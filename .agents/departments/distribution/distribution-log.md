@@ -465,3 +465,9 @@ we do not have.
 **Change:** Actions > Make a video opens a maker that builds an MP4/WebM slideshow in the visitor's own browser (canvas + MediaRecorder): pick the images in the chat, add optional captions, choose vertical 9:16 or square, press Make video. 3 seconds per image with slow zoom and crossfades. Nothing is uploaded and no service is paid. Honest scope: motion slideshows with captions, not AI-generated footage (real generated video needs paid credits or a GPU).
 
 **Distribution move:** with images (previous entry) this completes "create assets": idea, ad visuals, 15-second vertical ad, all free. Record a 30-second screen capture of exactly that flow for TikTok/Reels/Shorts and the Discord changelog, labelled AI-generated.
+
+## 2026-10-07 — Cloudflare image provider live; no invented lettering
+
+**Change:** CF_ACCOUNT_ID and CF_API_TOKEN are set in Vercel; a live guest request now returns a 1024x1024 image from Cloudflare (FLUX schnell, free daily allowance, no watermark) instead of Pollinations, which stays as the automatic fallback. Generated-image rows now record why a provider was skipped (status codes only). Every image prompt now ends with "No text, no lettering, no labels, no logos" because the first Cloudflare sample invented garbled label text on a jar.
+
+**Distribution move:** quality is now good enough to show: use the candle/coffee-roaster samples in a "free AI images in your chat" post. Watch the Cloudflare dashboard (Workers AI) for daily neuron use; the free allowance is 10,000 neurons per day, roughly 125+ images, after which images fall back to Pollinations automatically.

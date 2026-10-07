@@ -429,7 +429,11 @@ export async function executeTool(
             : 'This chat has reached its image limit. Say so and suggest starting a new chat.',
         });
       }
-      const result = await generateImage({ prompt, aspect });
+      // Image models invent garbled lettering; keep text, labels and logos out of every image.
+      const result = await generateImage({
+        prompt: `${prompt.replace(/[.\s]+$/, '')}. No text, no lettering, no labels, no logos.`.slice(0, 600),
+        aspect,
+      });
       if (!result.ok) {
         return JSON.stringify({
           error:
