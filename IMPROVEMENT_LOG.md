@@ -847,3 +847,35 @@ channels — you are awake, so daylight rules apply).
 - AI-search visibility check is a sample, not a measurement (per spec)
 - Public report page (/r/[id]) not yet built — only the API endpoint exists
 
+
+---
+
+## Growth Tools T3 — Research and competitor X-ray (2026-10-07)
+
+**Branch:** `feat/growth-tools`
+
+**What shipped:**
+- `lib/growth-xray.js`: `runCompetitorXray()` — accepts 1-3 competitor URLs (with optional pre-fetched content), fetches pages via SSRF-safe `fetchUrl`, sends to LLM with schema validation + one repair retry, returns positioning map, offers, hooks, formats, gaps, and 5 angles
+- `lib/growth-search.js`: SearchProvider interface with stub + serper + tavily adapters (env-driven via `SEARCH_PROVIDER`); stub is default, no paid key wired
+- `app/api/tools/research/route.ts`: POST endpoint — rate-limited (5/month), runs X-ray, persists to `assets` table
+- `lib/growth-xray.test.js`: 8 tests (validation, parse failure, mocked extraction, search provider selection)
+
+**Tests:** 415/415 (8 new)
+
+**Env vars needed:**
+- `GROWTH_ENABLED=true`
+- `GROWTH_RESEARCH_ENABLED=true`
+- `GROWTH_LLM_ENABLED=true`
+- `GROWTH_FETCH_ENABLED=true`
+- `OPENROUTER_API_KEY`
+- `SEARCH_PROVIDER=stub` (default; `serper` or `tavily` when keys available)
+- `SERPER_API_KEY` / `TAVILY_API_KEY` (optional)
+
+**Decisions needed:**
+- Search provider: stub is default. Serper/Tavily adapters exist but no paid key is wired. Founder to choose provider and provide API key.
+
+**Risks:**
+- Screenshot-only path (vision analysis) not yet built — only URL/content analysis works
+- Ad-library API integration not built (platform terms review needed)
+- LLM analysis quality depends on fetched content length (capped at 8000 chars per competitor)
+
