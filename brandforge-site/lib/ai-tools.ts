@@ -448,7 +448,15 @@ export async function executeTool(
         sender_name: 'BrandForge',
         content: prompt.slice(0, 200),
         content_type: 'text',
-        artifact_data: { ...stored, generated: true, provider: result.provider, source: 'ai' },
+        artifact_data: {
+          ...stored,
+          generated: true,
+          provider: result.provider,
+          source: 'ai',
+          // Why earlier providers were skipped (status codes only, never keys): the first thing to
+          // read when a configured provider seems to be ignored.
+          ...(result.attempts.length > 0 ? { fallback: result.attempts.join(' | ').slice(0, 300) } : {}),
+        },
       });
       if (!messageId) {
         return JSON.stringify({ error: 'The image could not be shown in the chat. Say so plainly.' });
