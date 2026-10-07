@@ -1,7 +1,7 @@
-import { CreateStudio } from '@/components/create-studio';
+import { ToolStudio } from '@/components/tool-studio';
 
 export const metadata = { title: 'Create — BrandForge' };
 
 export default function CreatePage() {
-  return <CreateStudio />;
+  return <ToolStudio studioId="create" />;
 }

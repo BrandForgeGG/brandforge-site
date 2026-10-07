@@ -531,3 +531,9 @@ we do not have.
 **Change:** scenes are generated in parallel and can finish out of order (a live 4-scene run listed the call to action before the last benefit scene). Each scene image now carries its number (`scene`) and the video maker sorts consecutive numbered scenes into order, so the hook comes first and the call to action last.
 
 **Distribution move:** none (fix).
+
+## 2026-10-08 — Distribute is a studio too
+
+**Change:** Distribute now uses the same studio as Create (one shared engine, `lib/studio-core.js`): three groups, five tools with real options. Ads: Ad pack from a URL (platforms Meta/Google/TikTok/LinkedIn, goal sales/leads/awareness, tone) and Ad visuals (style, format, 1-4 images, room left for a headline). Content: Content calendar (7/14/30 days, six platforms, daily/5 a week/3 a week, tone; returns a table with Copy as CSV). Launch and outreach: Launch plan (stage, channels, timeline) and Outreach sequence (audience, offer, email/LinkedIn DM/X DM, 3-5 messages). Every tool keeps the reference page, Try an example, editable request, remembered draft and the recent-chats strip. +6 tests (430). The old launcher component is removed.
+
+**Distribution move:** this closes the loop in the marketing story: "Create it, then distribute it, from two pages." Record a calendar run: Distribute > Content calendar > 14 days > Instagram + TikTok > Start > Copy as CSV into a spreadsheet.

@@ -8,19 +8,30 @@ import { relativeTime } from '@/components/conversation-rail';
 import { supabase } from '@/lib/supabase';
 import { fetchAuthed } from '@/lib/browser-auth';
 import { trackEvent } from '@/lib/funnel-client';
-import {
-  GROUPS,
-  REFERENCE_FIELD,
-  TOOLS,
-  compile,
-  defaultValues,
-  getTool,
-  type CreateField,
-  type CreateTool,
-  type CreateValues,
-} from '@/lib/create-tools';
+import * as createStudio from '@/lib/create-tools';
+import * as distributeStudio from '@/lib/distribute-tools';
+import type { CreateField, CreateTool, CreateValues } from '@/lib/create-tools';
 
-const STORAGE_KEY = 'brandforge:create-studio';
+// What a studio page hands in: its tools, groups and the pure compile functions (lib/studio-core).
+export type StudioApi = {
+  tools: CreateTool[];
+  getTool: (id: string) => CreateTool | null;
+  defaultValues: (tool: CreateTool) => CreateValues;
+  compile: (
+    toolId: string,
+    values: CreateValues,
+  ) => { ok: true; prompt: string } | { ok: false; error: string; field: string | null };
+};
+
+export type ToolStudioProps = {
+  title: string;
+  subtitle: string;
+  storageKey: string;
+  source: string;
+  groups: { id: string; label: string }[];
+  referenceField: CreateField;
+  studio: StudioApi;
+};
 
 // One small stroke icon per tool, drawn inline so the page has no image requests.
 const ICONS: Record<string, string> = {
@@ -32,6 +43,11 @@ const ICONS: Record<string, string> = {
   plan: 'M4 4.5h4v4H4zM12 4.5h4v4h-4zM8 6.5h4M6 8.5v4h6M12 12.5h4v3h-4z',
   competitors: 'M6 8a2.5 2.5 0 105 0 2.5 2.5 0 00-5 0zM3.5 16c.4-2.4 2.3-3.8 4.5-3.8s4.1 1.4 4.5 3.8M14 8.2a2 2 0 110 3.6M14.5 12.4c1.2.3 2 1.3 2.2 2.6',
   brand: 'M10 3.5l1.9 4 4.4.6-3.2 3 .8 4.4L10 13.4l-3.9 2.1.8-4.4-3.2-3 4.4-.6z',
+  adpack: 'M3.5 9.5v-3l9-3v9zM12.5 6.5h3a1.5 1.5 0 010 3h-3M6 12.5l1 3.5h2l-.8-3',
+  visuals: 'M4 5h12v10H4zM4 13l3.5-3.5 3 3 2-2L16 14M13 8.2h.01',
+  calendar: 'M4 5.5h12v10.5H4zM4 9h12M7.5 3.5v3M12.5 3.5v3',
+  launch: 'M10 16.5V10M10 10c0-3.5 2-5.5 5.5-6 0 3.5-2 6-5.5 6zM10 10C10 7.5 8.5 5.5 5 5c0 3 1.5 5 5 5zM7 16.5h6',
+  outreach: 'M3.5 5.5h13v9h-13zM3.5 6l6.5 5 6.5-5',
 };
 
 function ToolIcon({ id }: { id: string }) {
@@ -118,7 +134,8 @@ function FieldInput({
   return null;
 }
 
-export function CreateStudio() {
+function StudioView({ title, subtitle, storageKey, source, groups, referenceField, studio }: ToolStudioProps) {
+  const { tools: TOOLS, getTool, defaultValues, compile } = studio;
   const router = useRouter();
   const [toolId, setToolId] = useState<string>(TOOLS[0].id);
   const [valuesByTool, setValuesByTool] = useState<Record<string, CreateValues>>({});
@@ -135,7 +152,7 @@ export function CreateStudio() {
   // Remember the last tool and what was typed for this browser session only.
   useEffect(() => {
     try {
-      const saved = JSON.parse(window.sessionStorage.getItem(STORAGE_KEY) ?? 'null') as { toolId?: string; values?: Record<string, CreateValues> } | null;
+      const saved = JSON.parse(window.sessionStorage.getItem(storageKey) ?? 'null') as { toolId?: string; values?: Record<string, CreateValues> } | null;
       if (saved?.toolId && getTool(saved.toolId)) {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time restore of this session's draft
         setToolId(saved.toolId);
@@ -144,15 +161,17 @@ export function CreateStudio() {
     } catch {
       // Storage unavailable: start fresh.
     }
+    // The studio definition is a module constant; the draft is restored once on arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     try {
-      window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ toolId, values: valuesByTool }));
+      window.sessionStorage.setItem(storageKey, JSON.stringify({ toolId, values: valuesByTool }));
     } catch {
       // Draft just will not persist.
     }
-  }, [toolId, valuesByTool]);
+  }, [storageKey, toolId, valuesByTool]);
 
   useEffect(() => {
     let cancelled = false;
@@ -203,7 +222,7 @@ export function CreateStudio() {
     }
     setBusy(true);
     setError(null);
-    trackEvent('chat_started', { source: `studio_${toolId}` });
+    trackEvent('chat_started', { source: `${source}_${toolId}` });
     try {
       const {
         data: { session },
@@ -211,7 +230,7 @@ export function CreateStudio() {
       const response = await fetchAuthed('/api/conversations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ initialMessage: finalPrompt, source: `studio_${toolId}`, guest: !session?.user }),
+        body: JSON.stringify({ initialMessage: finalPrompt, source: `${source}_${toolId}`, guest: !session?.user }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.conversationId) {
@@ -225,9 +244,9 @@ export function CreateStudio() {
   }
 
   return (
-    <AppShell title="Create" subtitle="Pick a tool, set the options, and it opens in a chat your team can join.">
+    <AppShell title={title} subtitle={subtitle}>
       <div role="tablist" aria-label="Tool groups" className="flex gap-1 border-b border-line">
-        {GROUPS.map((entry) => (
+        {groups.map((entry) => (
           <button
             key={entry.id}
             type="button"
@@ -287,9 +306,9 @@ export function CreateStudio() {
           <summary className="cursor-pointer text-sm text-muted">More options</summary>
           <div className="mt-3 space-y-3">
             <div>
-              <label className="mb-1.5 block text-xs font-medium uppercase tracking-[0.1em] text-muted">{REFERENCE_FIELD.label}</label>
+              <label className="mb-1.5 block text-xs font-medium uppercase tracking-[0.1em] text-muted">{referenceField.label}</label>
               <FieldInput
-                field={REFERENCE_FIELD}
+                field={referenceField}
                 value={values.reference ?? ''}
                 onChange={(next) => setValue('reference', next)}
                 invalid={error?.field === 'reference'}
@@ -341,4 +360,41 @@ export function CreateStudio() {
       ) : null}
     </AppShell>
   );
+}
+
+// Server pages pass only a name; the definitions (plain functions) stay on the client side so
+// nothing non-serialisable crosses the server/client boundary.
+const STUDIOS: Record<'create' | 'distribute', ToolStudioProps> = {
+  create: {
+    title: 'Create',
+    subtitle: 'Pick a tool, set the options, and it opens in a chat your team can join.',
+    storageKey: 'brandforge:create-studio',
+    source: 'studio',
+    groups: createStudio.GROUPS,
+    referenceField: createStudio.REFERENCE_FIELD,
+    studio: {
+      tools: createStudio.TOOLS,
+      getTool: createStudio.getTool,
+      defaultValues: createStudio.defaultValues,
+      compile: createStudio.compile,
+    },
+  },
+  distribute: {
+    title: 'Distribute',
+    subtitle: 'Ads, posts and outreach for every channel. Set the options and it opens in a chat.',
+    storageKey: 'brandforge:distribute-studio',
+    source: 'distribute',
+    groups: distributeStudio.GROUPS,
+    referenceField: distributeStudio.REFERENCE_FIELD,
+    studio: {
+      tools: distributeStudio.TOOLS,
+      getTool: distributeStudio.getTool,
+      defaultValues: distributeStudio.defaultValues,
+      compile: distributeStudio.compile,
+    },
+  },
+};
+
+export function ToolStudio({ studioId }: { studioId: 'create' | 'distribute' }) {
+  return <StudioView {...STUDIOS[studioId]} />;
 }
