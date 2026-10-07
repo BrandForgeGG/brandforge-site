@@ -30,7 +30,7 @@ test('strategy frameworks are recognised and carry the selection guidance', () =
   const text = deliverableDirective('Run a PESTLE for fintech in Germany');
   assert.match(text, /TOWS/);
   assert.match(text, /SOAR/);
-  assert.match(text, /top 3 actions/);
+  assert.match(text, /Next 3 actions/);
   // Ordinary competitor requests are not swallowed by the strategy kind.
   assert.equal(detectDeliverable('Research 3 competitors for my app'), 'competitors');
 });

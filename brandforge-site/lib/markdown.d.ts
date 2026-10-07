@@ -13,6 +13,7 @@ export type MarkdownToken =
   | { type: 'quote'; inlines: MarkdownInline[] }
   | { type: 'list'; ordered: boolean; items: MarkdownInline[][] }
   | { type: 'code'; lang: string; code: string }
+  | { type: 'table'; header: MarkdownInline[][]; rows: MarkdownInline[][][] }
   | { type: 'hr' };
 
 export declare function parseMarkdown(source: string | null | undefined): MarkdownToken[];

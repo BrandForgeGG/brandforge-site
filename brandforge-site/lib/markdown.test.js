@@ -87,3 +87,37 @@ test('blockquote and horizontal rule parse', () => {
   assert.equal(tokens[0].inlines[0].text, 'quoted line');
   assert.equal(tokens[1].type, 'hr');
 });
+
+test('pipe tables parse into a rectangular grid', () => {
+  const md = [
+    'Intro line',
+    '| Force | Analysis |',
+    '|---|---|',
+    '| **Rivalry** | High, three big chains |',
+    '| Buyers | Can switch easily |',
+    '',
+    'After the table.',
+  ].join('\n');
+  const tokens = parseMarkdown(md);
+  assert.deepEqual(tokens.map((token) => token.type), ['paragraph', 'table', 'paragraph']);
+  const table = tokens[1];
+  assert.equal(table.header.length, 2);
+  assert.equal(table.rows.length, 2);
+  assert.equal(table.rows[0][0][0].type, 'strong');
+  assert.equal(table.rows[1][1][0].text, 'Can switch easily');
+});
+
+test('tables without outer pipes, ragged rows and escaped pipes still work', () => {
+  const md = 'Day | Post | Note\n:--- | :---: | ---:\nMon | Reel\nTue | a \\| b | ok | extra';
+  const table = parseMarkdown(md)[0];
+  assert.equal(table.type, 'table');
+  assert.equal(table.header.length, 3);
+  assert.equal(table.rows[0].length, 3);
+  assert.equal(table.rows[0][2].length === 0 || table.rows[0][2][0].text === '', true);
+  assert.equal(table.rows[1][1][0].text, 'a | b');
+});
+
+test('a lone pipe line or a pipe in prose is not a table', () => {
+  assert.equal(parseMarkdown('use a | b to choose')[0].type, 'paragraph');
+  assert.equal(parseMarkdown('| not | a table |\nnext line')[0].type, 'paragraph');
+});

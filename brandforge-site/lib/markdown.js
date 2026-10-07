@@ -52,6 +52,41 @@ function parseInlines(text) {
   return out;
 }
 
+// A pipe table is a header row followed by a separator row such as | --- | :---: |.
+const TABLE_SEPARATOR = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
+
+function splitRow(line) {
+  let row = line.trim();
+  if (row.startsWith('|')) row = row.slice(1);
+  if (row.endsWith('|') && !row.endsWith('\\|')) row = row.slice(0, -1);
+  // Manual split: an escaped pipe (\|) stays inside its cell. No regex lookbehind, which older
+  // Safari versions reject at parse time and would take the whole chat bundle down with it.
+  const cells = [];
+  let current = '';
+  for (let position = 0; position < row.length; position += 1) {
+    const char = row[position];
+    if (char === '\\' && row[position + 1] === '|') {
+      current += '|';
+      position += 1;
+    } else if (char === '|') {
+      cells.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  cells.push(current.trim());
+  return cells;
+}
+
+function isTableStart(lines, index) {
+  const header = lines[index] ?? '';
+  const separator = lines[index + 1] ?? '';
+  if (!header.includes('|') || !TABLE_SEPARATOR.test(separator) || !separator.includes('-')) return false;
+  const columns = splitRow(header).length;
+  return columns >= 2 && splitRow(separator).length === columns;
+}
+
 function startsBlock(lines, index) {
   const line = lines[index] ?? '';
   return (
@@ -60,9 +95,12 @@ function startsBlock(lines, index) {
     /^(#{1,4})\s+/.test(line) ||
     /^>\s?/.test(line) ||
     /^(\s*)([-*+]|\d+[.)])\s+/.test(line) ||
-    /^(-{3,}|\*{3,})$/.test(line.trim())
+    /^(-{3,}|\*{3,})$/.test(line.trim()) ||
+    isTableStart(lines, index)
   );
 }
+
+const MAX_TABLE_ROWS = 200;
 
 function parseMarkdown(source) {
   const text = String(source ?? '').replace(/\r\n?/g, '\n');
@@ -113,6 +151,21 @@ function parseMarkdown(source) {
         index += 1;
       }
       tokens.push({ type: 'quote', inlines: parseInlines(quoted.join(' ')) });
+      continue;
+    }
+
+    if (isTableStart(lines, index)) {
+      const header = splitRow(line).map((cell) => parseInlines(cell));
+      index += 2;
+      const rows = [];
+      while (index < lines.length && lines[index].includes('|') && lines[index].trim() !== '' && rows.length < MAX_TABLE_ROWS) {
+        const cells = splitRow(lines[index]);
+        // Ragged rows are padded or trimmed to the header width so the grid stays rectangular.
+        const fitted = Array.from({ length: header.length }, (_, column) => parseInlines(cells[column] ?? ''));
+        rows.push(fitted);
+        index += 1;
+      }
+      tokens.push({ type: 'table', header, rows });
       continue;
     }
 

@@ -513,3 +513,9 @@ we do not have.
 **Change:** asking for a SWOT, SOAR, NOISE, TOWS, PESTLE, Porter's Five Forces, gap analysis or McKinsey 7-S (or just "strategy analysis") now makes the AI name a framework with a one-line reason, using the rules of thumb: SOAR/NOISE when a team feels stuck, PESTLE or Five Forces for external pressure, TOWS to turn SWOT lists into decisions, Gap Analysis for targets, 7-S for internal alignment. It then fills the framework in for the person's actual situation with [placeholders] for unknowns and ends with three actions. New Create > Strategy analysis card. +1 test (412).
 
 **Distribution move:** a shareable post: "Stop writing a SWOT list nobody uses. Type your idea and BrandForge picks the framework and gives you three actions." Show one filled-in example (Ember Bean coffee roaster).
+
+## 2026-10-08 — Tables that actually render; a smarter strategy analysis
+
+**Change:** (1) Chat answers can now contain real tables (the strategy grid, the 30-day calendar): they render as a compact scrollable table with a Copy-as-CSV button, and a lone pipe in ordinary text is left alone (+3 tests). Before, every table showed as a line of pipe characters. (2) Strategy analysis now reads the situation in the person's own words to choose the framework (flat sales or stuck -> SOAR/NOISE; competitors or rules -> PESTLE/Five Forces; a finished SWOT list -> TOWS; a target -> Gap; misalignment -> 7-S), names a runner-up ("Also worth running"), fills ONE table, adds a "What this means" section and three actions with [owner] and [by when], and for external frameworks searches the named market first and cites sources (or says "from general knowledge, not live sources"). 415 tests.
+
+**Distribution move:** the CSV button is a shareable feature on its own: "Your 30-day content calendar, copied straight into a spreadsheet." Demo: Distribute > 30-day content calendar, then Copy as CSV into Google Sheets.

@@ -73,8 +73,66 @@ function CodeBlock({ code }: { code: string }) {
   );
 }
 
+function inlinesToText(inlines: MarkdownInline[]): string {
+  return inlines.map((inline) => inline.text).join('');
+}
+
+function csvCell(value: string): string {
+  return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+}
+
+// Tables scroll sideways on small screens instead of squeezing, and can be copied as CSV
+// (the 30-day calendar and the strategy grids are meant to land in a spreadsheet).
+function TableBlock({
+  header,
+  rows,
+  keyPrefix,
+}: {
+  header: MarkdownInline[][];
+  rows: MarkdownInline[][][];
+  keyPrefix: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const copyCsv = () => {
+    const lines = [header, ...rows].map((row) => row.map((cell) => csvCell(inlinesToText(cell))).join(','));
+    void navigator.clipboard?.writeText(lines.join('\n')).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+  return (
+    <div className="bf-table-block">
+      <div className="bf-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              {header.map((cell, column) => (
+                <th key={column}>{renderInlines(cell, `${keyPrefix}-h${column}`)}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {row.map((cell, column) => (
+                  <td key={column}>{renderInlines(cell, `${keyPrefix}-r${rowIndex}c${column}`)}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <button type="button" onClick={copyCsv} className="bf-table-copy">
+        {copied ? 'Copied' : 'Copy as CSV'}
+      </button>
+    </div>
+  );
+}
+
 function renderToken(token: MarkdownToken, index: number) {
   switch (token.type) {
+    case 'table':
+      return <TableBlock key={index} header={token.header} rows={token.rows} keyPrefix={`t${index}`} />;
     case 'heading': {
       const Tag = HEADING_TAGS[Math.min(token.depth, 4) - 1] ?? 'h6';
       return <Tag key={index}>{renderInlines(token.inlines, `h${index}`)}</Tag>;
