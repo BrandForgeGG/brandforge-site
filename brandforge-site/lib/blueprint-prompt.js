@@ -35,7 +35,7 @@ const SYSTEM = [
   '    {"id":"b_roadmap","type":"roadmap","headline","owner":"ai"|"expert"|"both","totalDuration","phases":{"plan","design","build","qa","launch"} — each phase {"label":max 12 words,"duration":max 12 words,"deliverable":max 20 words}},',
   '    {"id":"b_estimate","type":"estimate","headline","kind","currency":"EUR","low":number >= 1,"high":number|null,"label":"AI draft, not final","included":[1..4 strings, max 20 words],"notIncluded":[1..4 strings, max 20 words],"assumptions":[1..4 strings, max 20 words]};',
   '      estimate.kind by lane: deliver_now -> "fixed" (high null) or "range" (high >= low); scope_first -> "discovery_sprint" (low/high = sprint price); reframe -> "reality_check" (low = what their goal realistically costs, high optional).',
-  '  "quickWins": always [] in this phase,',
+  '  "quickWins": array, 0 to 2 items: {"id":"qw1","label":max 10 words,"kind":"website_audit"|"clip_plan"|"software_scope"|"competitor_snapshot"},',
   '  "clarifyingQuestion": null, or {"text":max 20 words,"options":[2..4 strings, max 12 words]} ONLY when the lane truly depends on the answer,',
   '  "ethics": {"status":"clear"|"flagged"|"needs_review"|"declined","checks":[{"principle","result":"pass"|"flag","note":optional max 20 words}]}',
   '}',
@@ -48,6 +48,7 @@ const SYSTEM = [
   '- When lane is decline or needs_review: blocks [], mirror and findings still written.',
   '- Tone: plain and specific, written for a non-technical founder. No hype, no exclamation marks, no bullet glyphs inside prose fields.',
   '- If the input is empty, incoherent or hostile, use lane "decline" with an honest mirror instead of inventing a project.',
+  '- Quick wins: add 1 to 2 if the request is clearly a website, video clips, or software. "website_audit" = audit of the site, "clip_plan" = transcript/hooks/cut list, "software_scope" = competitor snapshot/MVP scope. Omit if unclear or large mission.',
 ].join('\n');
 
 function researchLines(research) {

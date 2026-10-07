@@ -38,7 +38,7 @@ BrandForge/
   out/, *.html                   <- older static marketing pages (reference only)
 ```
 
-## Current state (2026-10-03)
+## Current state (2026-10-07)
 
 - Live: https://brandforge.gg (Vercel, `brandforge-site` production).
 - Chat-first product: landing -> chat -> AI-structured project -> human proposal -> escrow.
@@ -133,6 +133,20 @@ BrandForge/
   landing (`blueprint_started` ×7, `blueprint_first_screen` ×8), auth probe green. Scope held back
   on purpose: convert exit hidden until S6, email gate to S11, quickWins `[]` until S8; **brief
   sections 6–18 still needed**.
+- **Blueprint Engine S6 — Convert exit + quick wins prompt (2026-10-07, code complete, not yet
+  deployed)**: result screen exit buttons now render from server-computed `exits` array. "Get a
+  human proposal" (convert exit) creates a guest conversation via `POST /api/blueprint/proposal`
+  (session ownership guards, links blueprint row → conversation, status → `proposed`, redirects
+  to `/chat`). "Start free quick win" button renders when `quickWins` array is non-empty (currently
+  empty per brief — S8 will populate). "Refine this blueprint" always available. Quick-win kinds
+  (`website_audit`, `clip_plan`, `software_scope`, `competitor_snapshot`) wired into the LLM
+  system-prompt contract in `blueprint-prompt.js` (+3 test needles → **382/382**). New migrations
+  (uncommitted): `0025_quick_wins.sql` (quick_wins table — blueprint FK, kind, status, output
+  jsonb, share_token for opt-in public links, RLS on, no policies) and `0026_jobs.sql` (jobs table
+  for background work — type, run_at, status, attempts, payload, idempotency_key, RLS on, no
+  policies; references `/api/cron/jobs` worker not yet built). Distribution: changelog line ready
+  ("Your blueprint now offers a path to a human proposal"). Funnel event `blueprint_exit_tapped`
+  tracks which exit was tapped.
 - **Blueprint Engine S0–S2 (2026-10-04, code complete, flag-dormant in prod)**: master brief v1.0
   (sections 0–5 only — **sections 6–18 still need pasting**) Phase 0 audit + first three slices as
   code: `lib/blueprint-{config,session,schema,prompt,llm}.js` (+`.d.ts`, 38 new tests → **348/348**,
@@ -537,5 +551,7 @@ BrandForge/
   applied 2026-09-29** (founder ran it in the SQL editor; all five columns verified readable
   via REST before the release deploy). **`0020_onboarding.sql` applied 2026-10-02**
   (columns verified selectable; 17/17 rows backfilled — gate/save e2e green on prod).
-  Supabase PAT for
-  future SQL runs is not stored here — ask the operator or use the SQL editor.
+  **`0021_marketing_campaigns.sql`**, **`0022_blueprint_sessions_and_blueprints.sql`**,
+  **`0023_guest_conversations.sql`**, **`0024_ai_participation.sql`** — all applied.
+  **`0025_quick_wins.sql`** and **`0026_jobs.sql`** — code complete, **not yet applied** to prod.
+  Supabase PAT for future SQL runs is not stored here — ask the operator or use the SQL editor.

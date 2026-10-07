@@ -8,6 +8,7 @@ test('the system prompt pins the contract the validator enforces', () => {
     'deliver_now', 'scope_first', 'reframe', 'decline', 'needs_review',
     'needs_discovery', 'reframed', 'discovery_sprint', 'reality_check',
     'AI draft, not final', 'guarantee', 'quickWins', 'clarifyingQuestion',
+    'website_audit', 'clip_plan', 'software_scope',
     'Do NOT output: version, status, createdAt, exits, cost',
   ]) {
     assert.equal(SYSTEM.includes(needle), true, `system prompt missing: ${needle}`);
