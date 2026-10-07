@@ -789,3 +789,32 @@ channels — you are awake, so daylight rules apply).
 - LLM wrapper is untested against real OpenRouter (mocked in unit tests)
 - SSRF guard reuses the pattern from lib/research.js but is a separate implementation
 
+
+---
+
+## Growth Tools T1 — Brand Kit from a URL (2026-10-07)
+
+**Branch:** `feat/growth-tools`
+
+**What shipped:**
+- `lib/growth-brand-kit.js`: `extractBrandKitFromUrl()` — fetches a page via SSRF-safe `fetchUrl`, sends content to LLM with schema validation + one repair retry, returns typed brand kit
+- `app/api/tools/brand/route.ts`: POST endpoint — accepts `{ url }` for extraction or `{ edits, domain }` for manual save; persists to `brand_kits` table
+- `lib/growth-brand-kit.test.js`: 7 tests (validation, normalization, fetch failure, mocked extraction)
+
+**Tests:** 395/395 (7 new)
+
+**Env vars needed:**
+- `GROWTH_ENABLED=true`
+- `GROWTH_BRAND_KIT_ENABLED=true`
+- `GROWTH_LLM_ENABLED=true`
+- `GROWTH_FETCH_ENABLED=true`
+- `OPENROUTER_API_KEY`
+
+**Decisions needed:**
+- None for this slice
+
+**Risks:**
+- LLM extraction quality depends on page content length (capped at 12000 chars)
+- Logo detection is best-effort from HTML content
+- No image analysis yet (T1 spec allows URL or uploaded logo/screenshot — upload path not built)
+
