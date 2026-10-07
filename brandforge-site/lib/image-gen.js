@@ -77,10 +77,12 @@ const PROVIDERS = {
     enabled: (env) => Boolean(env.CF_ACCOUNT_ID && env.CF_API_TOKEN),
     // FLUX.2 first (it renders lettering far better, multipart form input), then FLUX.1 schnell
     // (JSON input, cheaper) as a safety net that still stays inside the free allowance.
-    async run({ prompt, aspect, fetchImpl, env, timeoutMs }) {
-      const models = env.CF_IMAGE_MODEL
-        ? [env.CF_IMAGE_MODEL]
-        : ['@cf/black-forest-labs/flux-2-klein-4b', '@cf/black-forest-labs/flux-1-schnell'];
+    async run({ prompt, aspect, quality, fetchImpl, env, timeoutMs }) {
+      const klein = '@cf/black-forest-labs/flux-2-klein-4b';
+      const schnell = '@cf/black-forest-labs/flux-1-schnell';
+      // quality 'fast' (several images at once, e.g. video scenes) goes straight to schnell: three
+      // FLUX.2 calls together were slow enough to threaten the 60 second request limit.
+      const models = env.CF_IMAGE_MODEL ? [env.CF_IMAGE_MODEL] : quality === 'fast' ? [schnell, klein] : [klein, schnell];
       const { width, height } = sizeFor(aspect);
       const notes = [];
       for (const model of models) {
@@ -99,7 +101,7 @@ const PROVIDERS = {
           }
           const response = await fetchImpl(
             `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/ai/run/${model}`,
-            { method: 'POST', headers, body, signal: AbortSignal.timeout(timeoutMs) },
+            { method: 'POST', headers, body, signal: AbortSignal.timeout(Math.min(timeoutMs, 20_000)) },
           );
           if (!response.ok) throw classify('cloudflare', response.status, await response.text().catch(() => ''));
           const json = await response.json().catch(() => null);
@@ -195,7 +197,7 @@ async function generateImage(options) {
       continue;
     }
     try {
-      const bytes = await provider.run({ prompt, aspect: options.aspect, fetchImpl, env, timeoutMs });
+      const bytes = await provider.run({ prompt, aspect: options.aspect, quality: options.quality, fetchImpl, env, timeoutMs });
       const contentType = sniffImage(bytes);
       if (!contentType) throw failure(name, 'response was not a usable image');
       if (bytes.note) attempts.push(bytes.note);

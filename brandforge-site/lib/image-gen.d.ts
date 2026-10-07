@@ -5,6 +5,7 @@ export type ImageGenResult =
 export declare function generateImage(options: {
   prompt: string;
   aspect?: 'square' | 'portrait' | 'landscape';
+  quality?: 'best' | 'fast';
   env?: Record<string, string | undefined>;
   fetchImpl?: typeof fetch;
   now?: () => number;

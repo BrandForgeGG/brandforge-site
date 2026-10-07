@@ -98,6 +98,28 @@ test('cloudflare tries FLUX.2 (multipart) first, then FLUX.1 (json), and reports
   assert.match(result.attempts.join(' '), /flux-2-klein-4b.*400/);
 });
 
+test("quality 'fast' tries FLUX.1 before FLUX.2", async () => {
+  const urls = [];
+  const bytes = fakePng();
+  await generateImage({
+    prompt: 'a candle on a table',
+    quality: 'fast',
+    env: { CF_ACCOUNT_ID: 'acc', CF_API_TOKEN: 'tok' },
+    fetchImpl: async (url) => {
+      urls.push(String(url));
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ result: { image: Buffer.from(bytes).toString('base64') } }),
+        arrayBuffer: async () => new ArrayBuffer(0),
+        text: async () => '',
+      };
+    },
+  });
+  assert.equal(urls.length, 1);
+  assert.match(urls[0], /flux-1-schnell/);
+});
+
 test('a bad cloudflare token stops after one call and cools down', async () => {
   let calls = 0;
   const result = await generateImage({
