@@ -14,6 +14,7 @@ import {
   updateConversationTitle,
 } from "@/lib/project-db";
 import { consumeChatQuota } from "@/lib/blueprint-session";
+import { deliverableDirective } from "@/lib/deliverable-intent";
 import { resolveGuestSession } from "@/lib/guest-session";
 import { buildFileContextBlock, isDirectlyReadable } from "@/lib/file-context";
 import {
@@ -358,6 +359,13 @@ export async function POST(request: NextRequest) {
       content: entry.content,
     })),
   ];
+
+  // A request for concrete work (launch plan, ads, audit...) gets its directive as the LAST
+  // system message, next to the request, so a thin one-line ask still returns the work.
+  const directive = deliverableDirective(lastMessage.content);
+  if (directive) {
+    modelMessages.push({ role: "system", content: directive });
+  }
 
   const encoder = new TextEncoder();
 

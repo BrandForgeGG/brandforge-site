@@ -423,3 +423,9 @@ we do not have.
 **Change:** five new allowlisted funnel events: `tool_page_viewed` (source = tool slug), `guest_save_clicked`, `next_step_clicked` (source = which chip), `invite_link_copied`, `team_joined` (server-side on a redeemed invite). With the existing `chat_started` (source `landing_hero` / `tool_*`) and `onboarding_completed` this gives the full path: visit, first chat, save click, signup, invite, teammate joined. The hero chip "Audit my landing page: https://" now puts the cursor after the slashes and refuses to send an empty address.
 
 **Distribution move:** none to announce; this is the measurement layer. Weekly read: tool page views to chat_started by source, chat_started to guest_save_clicked to onboarding_completed, and team_joined per invite_link_copied.
+
+## 2026-10-07 — Deliver the work, not an interview (deliverable mode)
+
+**Change:** "Launch plan for my SaaS" came back as five questions. The top-of-prompt rule lost to a one-line request, so a detector (`lib/deliverable-intent.js`, +3 tests, 395) now recognises launch plan, ads, audit, content calendar, outreach, brand kit, competitor view and plan requests and appends a DELIVERABLE MODE directive as the last system message of the turn, with a skeleton per kind: full first version now, at most three stated assumptions, [bracketed placeholders], no question lists, no invented offers, one closing question.
+
+**Distribution move:** this is the product promise ("get the work back first"), so it earns a demo: record the same thin prompt ("Launch plan for my SaaS") before and after. Do not post until the live check below is confirmed.
