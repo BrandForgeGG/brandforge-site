@@ -429,9 +429,9 @@ export async function executeTool(
             : 'This chat has reached its image limit. Say so and suggest starting a new chat.',
         });
       }
-      // Image models invent garbled lettering; keep text, labels and logos out of every image.
+      // FLUX has no negative prompts and "no text" can attract lettering; positive phrasing steers away from invented labels.
       const result = await generateImage({
-        prompt: `${prompt.replace(/[.\s]+$/, '')}. No text, no lettering, no labels, no logos.`.slice(0, 600),
+        prompt: `${prompt.replace(/[.\s]+$/, '')}. Unbranded, plain blank surfaces, clean minimal composition.`.slice(0, 600),
         aspect,
       });
       if (!result.ok) {
