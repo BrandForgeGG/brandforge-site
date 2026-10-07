@@ -12,9 +12,11 @@ import {
   persistGuestChatQuota,
   runAsGuestSession,
   updateConversationTitle,
+  updateProjectContext,
 } from "@/lib/project-db";
 import { consumeChatQuota } from "@/lib/blueprint-session";
 import { deliverableDirective } from "@/lib/deliverable-intent";
+import { extractOutline } from "@/lib/deliverable-outline";
 import { resolveGuestSession } from "@/lib/guest-session";
 import { buildFileContextBlock, isDirectlyReadable } from "@/lib/file-context";
 import {
@@ -420,6 +422,23 @@ export async function POST(request: NextRequest) {
 
           if (assistantMessageId) {
             send({ type: "message", id: assistantMessageId });
+
+            // A deliverable answer states its goal in the text. If the model recorded nothing
+            // itself, persist the goal and a name so the saved project (and the panel after a
+            // reload or sign-in) is not empty next to a finished plan.
+            if (directive) {
+              const outline = extractOutline(content);
+              if (outline?.goal && !snapshot.context?.problem_statement) {
+                await scope(() =>
+                  updateProjectContext(conversationId, {
+                    problem_statement: outline.goal!.slice(0, 2000),
+                    ...(snapshot.context?.project_name
+                      ? {}
+                      : { project_name: String(snapshot.title ?? "").slice(0, 120) || undefined }),
+                  }),
+                ).catch(() => undefined);
+              }
+            }
           } else {
             // Field name matters: the client reads `error`.
             send({ type: "error", error: "The answer could not be saved. Please try again." });

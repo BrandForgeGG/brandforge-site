@@ -429,3 +429,9 @@ we do not have.
 **Change:** "Launch plan for my SaaS" came back as five questions. The top-of-prompt rule lost to a one-line request, so a detector (`lib/deliverable-intent.js`, +3 tests, 395) now recognises launch plan, ads, audit, content calendar, outreach, brand kit, competitor view and plan requests and appends a DELIVERABLE MODE directive as the last system message of the turn, with a skeleton per kind: full first version now, at most three stated assumptions, [bracketed placeholders], no question lists, no invented offers, one closing question.
 
 **Distribution move:** this is the product promise ("get the work back first"), so it earns a demo: record the same thin prompt ("Launch plan for my SaaS") before and after. Do not post until the live check below is confirmed.
+
+## 2026-10-07 — Right panel mirrors the chat in real time
+
+**Change:** the project panel showed "Nothing yet" next to a finished launch plan, because it only read facts the AI had saved with tools. It now reads the newest AI answer itself (`lib/deliverable-outline.js`, +4 tests, 399): Goal comes from the answer's Goal line, a new "Latest answer" card lists the sections (Pre-launch, Launch week, Metrics...) with step counts and the stated assumptions, and it updates while the answer streams. The server also saves the goal and project name after a deliverable so the panel and Recents stay filled after reload or sign-in.
+
+**Distribution move:** screenshot-worthy: chat on the left, the outline filling in on the right. Fold into the next changelog.

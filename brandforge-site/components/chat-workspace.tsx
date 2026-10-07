@@ -21,6 +21,7 @@ import { isNearBottom } from "@/lib/chat-scroll";
 import { fetchAuthed } from "@/lib/browser-auth";
 import { trackEvent } from "@/lib/funnel-client";
 import { GuestSaveBar } from "@/components/guest-save-bar";
+import { extractOutline } from "@/lib/deliverable-outline";
 import { NextStepChips } from "@/components/next-step-chips";
 import { ChatTranscript, type ChatMessage } from "@/components/chat-transcript";
 import {
@@ -1261,16 +1262,27 @@ export function ChatWorkspace() {
   // The right panel is where the AI's work becomes visible (name, requirements, next steps).
   // Open it once per chat on wide screens as soon as something has been recorded, so the
   // work appears to land instead of hiding behind a menu. Closing it sticks.
+  // Mirror the newest AI answer in the panel as it streams (its own client-side read of the
+  // markdown; the panel never waits for a tool call to show what the chat already holds).
+  const answerOutline = useMemo(() => {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      if (messages[index].sender === "ai" && messages[index].content.trim()) {
+        return extractOutline(messages[index].content);
+      }
+    }
+    return null;
+  }, [messages]);
+
   const autoOpenedPanelRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!conversationId || !state || state.conversationId !== conversationId) return;
     if (autoOpenedPanelRef.current.has(conversationId)) return;
-    if (state.requirementsCount > 0 && window.innerWidth >= 1280) {
+    if ((state.requirementsCount > 0 || answerOutline) && window.innerWidth >= 1280) {
       autoOpenedPanelRef.current.add(conversationId);
       // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time reveal per chat
       setIsContextOpen(true);
     }
-  }, [state, conversationId]);
+  }, [state, conversationId, answerOutline]);
 
   const handleRequestReview = useCallback(async () => {
     if (!conversationId) return;
@@ -2686,6 +2698,7 @@ return (
       {isContextOpen ? (
         <ProjectContextPanel
           state={state}
+          outline={answerOutline}
           proposal={proposal}
           agreement={agreement}
           payments={payments}

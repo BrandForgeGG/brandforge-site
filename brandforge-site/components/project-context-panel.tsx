@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import type { AnswerOutline } from '@/lib/deliverable-outline';
 import { buildProjectPulse, describeAgreementStatus, describeNextDeliveryAction, describePaymentStatus, describeProposalStatus, isTaskOverdue, summarizeTaskProgress } from '@/lib/task-board';
 import { COMMUNITY_LINKS } from '@/lib/community';
 import { avatarTone, formatRole, initialsFor } from '@/lib/identity-display';
@@ -89,6 +90,7 @@ function shortDate(value: string | null): string | null {
 
 export function ProjectContextPanel({
   state,
+  outline,
   proposal,
   agreement,
   payments,
@@ -103,6 +105,8 @@ export function ProjectContextPanel({
   onTaskAction,
 }: {
   state: ClientProjectState | null;
+  // Structure of the latest AI answer, computed client-side so the panel mirrors the chat live.
+  outline?: AnswerOutline | null;
   proposal: ProposalSummary | null;
   agreement: AgreementSummary | null;
   payments: PaymentSummary[];
@@ -243,7 +247,7 @@ export function ProjectContextPanel({
         <div className="bf-panel-section">
           <p className="bf-section-label">Goal</p>
           <p className="text-sm leading-relaxed text-foreground">
-            {state?.project.problemStatement || 'Define what you want to achieve in the chat.'}
+            {state?.project.problemStatement || outline?.goal || 'Define what you want to achieve in the chat.'}
           </p>
         </div>
 
@@ -254,11 +258,30 @@ export function ProjectContextPanel({
               <p className="text-xs leading-relaxed text-muted">
                 {haveItems.join(' · ')}
               </p>
-            ) : (
+            ) : outline && outline.sections.length === 0 ? (
+              <p className="text-xs text-muted">Working on it in the chat.</p>
+            ) : !outline ? (
               <p className="text-xs text-muted">Nothing yet — start the conversation.</p>
-            )}
+            ) : null}
           </div>
         </div>
+
+        {outline && outline.sections.length > 0 ? (
+          <div className="bf-panel-section">
+            <p className="bf-section-label">Latest answer</p>
+            {outline.assumptions ? (
+              <p className="mb-2 text-xs leading-relaxed text-muted">Assuming: {outline.assumptions.replace(/^Assuming:?s*/i, '')}</p>
+            ) : null}
+            <ul className="bf-panel-card space-y-1.5">
+              {outline.sections.map((section) => (
+                <li key={section.title} className="flex items-baseline justify-between gap-3 text-xs">
+                  <span className="min-w-0 truncate text-foreground">{section.title}</span>
+                  {section.items > 0 ? <span className="shrink-0 text-muted">{section.items}</span> : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         <div className="bf-panel-section">
           <p className="bf-section-label">Next</p>
