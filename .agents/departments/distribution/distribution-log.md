@@ -459,3 +459,9 @@ we do not have.
 **Change:** the chat can now make images (`generate_image`): ad visuals, logo concepts, mockups, shown inline labelled AI-generated with a Download link, saved with the chat (guests can see their own). `lib/image-gen.js` (+8 tests, 407) tries providers in order and falls back automatically: Cloudflare Workers AI (needs CF_ACCOUNT_ID + CF_API_TOKEN), Hugging Face (HF_TOKEN), Pollinations (free, no key, small watermark), OpenRouter (only if IMAGE_OPENROUTER=true and credits). Failed providers cool down; non-image responses are rejected by byte sniffing; basic prompt blocklist. Free caps per chat: 4 images for guests, 12 for signed-in. New entries: Create > Image or logo concept, Distribute > Ad visuals, Actions > Make an image.
 
 **Distribution move:** headline for the next changelog once live-verified: "Free AI images inside your chat: ad visuals and logo concepts, no credits needed." Honest limits to state: free images carry a provider watermark until a Cloudflare key is added; video comes next as an in-browser maker.
+
+## 2026-10-07 — Free video: Make a video from the images in your chat
+
+**Change:** Actions > Make a video opens a maker that builds an MP4/WebM slideshow in the visitor's own browser (canvas + MediaRecorder): pick the images in the chat, add optional captions, choose vertical 9:16 or square, press Make video. 3 seconds per image with slow zoom and crossfades. Nothing is uploaded and no service is paid. Honest scope: motion slideshows with captions, not AI-generated footage (real generated video needs paid credits or a GPU).
+
+**Distribution move:** with images (previous entry) this completes "create assets": idea, ad visuals, 15-second vertical ad, all free. Record a 30-second screen capture of exactly that flow for TikTok/Reels/Shorts and the Discord changelog, labelled AI-generated.

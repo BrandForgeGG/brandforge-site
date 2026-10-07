@@ -30,6 +30,8 @@ import {
 } from "@/components/conversation-rail";
 import { STATUS_LABELS, type AgreementSummary, type PaymentSummary, type ProposalSummary, type TaskParticipant } from "@/components/project-context-panel";
 
+const VideoMaker = dynamic(() => import("@/components/video-maker").then((mod) => mod.VideoMaker), { ssr: false });
+
 const ProjectContextPanel = dynamic(
   () => import("@/components/project-context-panel").then((mod) => mod.ProjectContextPanel),
   { ssr: false, loading: () => null }
@@ -270,6 +272,7 @@ export function ChatWorkspace() {
   // until the user asks for it. On mobile both become drawers.
   const [isRailOpen, setIsRailOpen] = useState(false);
   const [isContextOpen, setIsContextOpen] = useState(false);
+  const [isVideoOpen, setIsVideoOpen] = useState(false);
   // Popover menus: attachments, composer actions, conversation menu, project team.
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const [commandsOpen, setCommandsOpen] = useState(false);
@@ -1272,6 +1275,13 @@ export function ChatWorkspace() {
   // work appears to land instead of hiding behind a menu. Closing it sticks.
   // Mirror the newest AI answer in the panel as it streams (its own client-side read of the
   // markdown; the panel never waits for a tool call to show what the chat already holds).
+  const videoImages = messages
+    .filter((entry) => entry.artifactData?.contentType?.startsWith("image/"))
+    .map((entry) => ({
+      url: `/api/attachments?path=${encodeURIComponent(entry.artifactData!.path)}`,
+      label: entry.artifactData!.name,
+    }));
+
   const latestAiContent = [...messages]
     .reverse()
     .find((entry) => entry.sender === "ai" && entry.content.trim())?.content;
@@ -2673,6 +2683,21 @@ return (
                             Invite my team
                           </button>
                         ) : null}
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="bf-menu-item"
+                          disabled={videoImages.length === 0}
+                          title={videoImages.length === 0 ? "Create or attach an image first" : undefined}
+                          onClick={() => {
+                            setCommandsOpen(false);
+                            trackEvent("next_step_clicked", { source: "video" });
+                            setIsVideoOpen(true);
+                          }}
+                        >
+                          Make a video
+                          {videoImages.length === 0 ? <span className="bf-menu-hint">needs an image</span> : null}
+                        </button>
                         <p className="mt-1 border-t border-line px-3 pb-1 pt-2 text-[10px] uppercase tracking-[0.15em] text-muted">Commands</p>
                         {SLASH_COMMANDS.map((item) => (
                           <button
@@ -2715,6 +2740,8 @@ return (
           </form>
         </div>
       </main>
+
+      {isVideoOpen ? <VideoMaker images={videoImages} onClose={() => setIsVideoOpen(false)} /> : null}
 
       {isContextOpen ? (
         <ProjectContextPanel
