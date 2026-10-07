@@ -81,6 +81,7 @@ export interface ChatMessage {
     contentType: string;
     generated?: boolean;
     caption?: string;
+    scene?: number;
   } | null;
   embed?: ChatEmbed | null;
   /**

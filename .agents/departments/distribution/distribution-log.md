@@ -525,3 +525,9 @@ we do not have.
 **Change:** /create is one page with everything: three groups (Visuals, Words, Plan and research), eight tools (Image, Video, Copy, Website audit, Strategy analysis, Project plan, Competitors, Brand kit) and real options per tool: image style (photo, illustration, 3D, flat vector, cinematic, watercolor), format and count 1-4; video scenes 3-4, style and caption tone; copy type, tone, length and audience; audit focus areas; any of nine strategy frameworks or Auto; budget and timeline for plans; compare-by for competitors; brand vibe plus optional logo concepts. Every tool takes an optional reference page that is read first. "Try an example" fills sensible values, "More options" shows the exact request (editable), the last tool and answers are remembered for the session, and a "Pick up where you left off" strip lists recent chats. Options compile into one request (lib/create-tools.js, +8 tests, 424); multi-image requests run on the fast model together, and video can be 4 scenes.
 
 **Distribution move:** the headline is breadth from one page: "Images, videos, copy, audits and strategy from one screen." Record a 30-second tour: pick Image, choose 3D render and 3 images, Start; then Video. Mention that the free tier has per-chat limits.
+
+## 2026-10-08 — Video scenes keep their order
+
+**Change:** scenes are generated in parallel and can finish out of order (a live 4-scene run listed the call to action before the last benefit scene). Each scene image now carries its number (`scene`) and the video maker sorts consecutive numbered scenes into order, so the hook comes first and the call to action last.
+
+**Distribution move:** none (fix).

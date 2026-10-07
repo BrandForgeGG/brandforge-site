@@ -255,6 +255,7 @@ export const TOOLS: Tool[] = [
         prompt: { type: 'string', description: 'A concrete visual description: subject, setting, style, lighting. No text or logos inside the image.' },
         aspect: { type: 'string', enum: ['square', 'portrait', 'landscape'] },
         caption: { type: 'string', description: 'Optional caption of at most 8 words, used when the image becomes a scene in a video.' },
+        scene: { type: 'integer', minimum: 1, maximum: 6, description: 'The position of this image in a video, starting at 1. Scenes are made in parallel and can finish out of order, so always number them.' },
         batch: { type: 'boolean', description: 'True when you are creating several images in the same step; they then use the faster model so all finish in time.' },
       },
       required: ['prompt'],

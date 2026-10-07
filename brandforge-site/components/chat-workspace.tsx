@@ -114,6 +114,7 @@ function toChatMessage(message: PersistedMessage): ChatMessage {
             contentType: string;
             generated?: boolean;
             caption?: string;
+            scene?: number;
           })
         : null,
     embed: parseChatEmbed(message.artifact_data) as ChatMessage["embed"],
@@ -1280,13 +1281,33 @@ export function ChatWorkspace() {
   // work appears to land instead of hiding behind a menu. Closing it sticks.
   // Mirror the newest AI answer in the panel as it streams (its own client-side read of the
   // markdown; the panel never waits for a tool call to show what the chat already holds).
-  const videoImages = messages
-    .filter((entry) => entry.artifactData?.contentType?.startsWith("image/"))
-    .map((entry) => ({
-      url: `/api/attachments?path=${encodeURIComponent(entry.artifactData!.path)}`,
-      label: entry.artifactData!.name,
-      caption: entry.artifactData!.caption,
-    }));
+  // Scenes are generated in parallel and can finish out of order, so each carries its number.
+  // Only a run of consecutive numbered images is re-sorted; everything else keeps chat order.
+  const videoImages = (() => {
+    const list = messages
+      .filter((entry) => entry.artifactData?.contentType?.startsWith("image/"))
+      .map((entry) => ({
+        url: `/api/attachments?path=${encodeURIComponent(entry.artifactData!.path)}`,
+        label: entry.artifactData!.name,
+        caption: entry.artifactData!.caption,
+        scene: entry.artifactData!.scene,
+      }));
+    const ordered: typeof list = [];
+    let run: typeof list = [];
+    const flush = () => {
+      ordered.push(...run.sort((a, b) => (a.scene ?? 0) - (b.scene ?? 0)));
+      run = [];
+    };
+    for (const item of list) {
+      if (item.scene) run.push(item);
+      else {
+        flush();
+        ordered.push(item);
+      }
+    }
+    flush();
+    return ordered;
+  })();
 
   const latestAiContent = [...messages]
     .reverse()
