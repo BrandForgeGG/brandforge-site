@@ -477,3 +477,9 @@ we do not have.
 **Change:** Cloudflare now tries FLUX.2 klein first (multipart), then FLUX.1 schnell as an in-provider safety net, then Hugging Face / Pollinations / OpenRouter. The same candle prompt that gave a garbled label ("Hand Paury") on FLUX.1 now returns a clean, realistic 768x1024 photo on FLUX.2 with no fallback. 409 tests. Cost per image is higher (roughly 100 neurons vs 70), so the free daily allowance covers about 90 images instead of about 125; past that, schnell/Pollinations take over automatically.
 
 **Distribution move:** this is the sample set to show: a "before / after" of the same prompt (garbled label vs clean photo) makes a strong short post. Keep the AI-generated label and the honest limits (free daily allowance, fallback quality).
+
+## 2026-10-07 — Actions menu is only the useful moves; videos export as MP4
+
+**Change:** the Commands list (progress report, send to review, agreement steps, how to attach, list commands) is gone from the Actions menu; it now shows Make an image, Turn this into ads, 30-day calendar, Audit a URL, Make a video and (signed in) Invite my team. Typing `/` in the box still completes those commands for anyone who knows them. The video maker now records MP4 (H.264) when the browser supports it, so clips upload directly to Instagram, TikTok and YouTube; WebM stays as the fallback.
+
+**Distribution move:** none (UI polish); mention MP4 export in the next changelog.

@@ -2652,7 +2652,6 @@ return (
                         role="menu"
                         className="bf-menu absolute bottom-full left-0 z-40 mb-2 w-64 p-1"
                       >
-                        <p className="px-3 pb-1 pt-1.5 text-[10px] uppercase tracking-[0.15em] text-muted">Next steps</p>
                         {NEXT_STEP_ACTIONS.map((item) => (
                           <button
                             key={item.key}
@@ -2698,27 +2697,6 @@ return (
                           Make a video
                           {videoImages.length === 0 ? <span className="bf-menu-hint">needs an image</span> : null}
                         </button>
-                        <p className="mt-1 border-t border-line px-3 pb-1 pt-2 text-[10px] uppercase tracking-[0.15em] text-muted">Commands</p>
-                        {SLASH_COMMANDS.map((item) => (
-                          <button
-                            key={item.command}
-                            type="button"
-                            role="menuitem"
-                            className="bf-menu-item"
-                            onClick={() => {
-                              setCommandsOpen(false);
-                              setInput((current) =>
-                                insertComposerCommand(current, item.command),
-                              );
-                              requestAnimationFrame(() =>
-                                composerRef.current?.focus(),
-                              );
-                            }}
-                          >
-                            {item.label}
-                            <span className="bf-menu-hint">{item.command}</span>
-                          </button>
-                        ))}
                       </div>
                     ) : null}
                   </div>
