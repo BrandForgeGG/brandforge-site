@@ -56,6 +56,7 @@ export function BlueprintFlow({
   const [busy, setBusy] = useState(false);
   const [saveEmail, setSaveEmail] = useState('');
   const [saveState, setSaveState] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [converting, setConverting] = useState(false);
   const stageRef = useRef<Stage>('intake');
   const interactedRef = useRef(false);
   const gateTrackedRef = useRef(false);
@@ -203,6 +204,31 @@ export function BlueprintFlow({
     }
   }
 
+  async function requestProposal() {
+    if (!blueprintId || busy || converting) return;
+
+    trackEvent('blueprint_exit_tapped', { source: 'convert' });
+    setConverting(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/blueprint/proposal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blueprintId }),
+      });
+      const data: { conversationId?: string; error?: string } = await response.json().catch(() => ({}));
+      if (!response.ok || !data.conversationId) {
+        throw new Error(data.error || 'Could not start a conversation. Try again.');
+      }
+      // Redirect to the new conversation
+      window.location.href = `/chat?c=${data.conversationId}`;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Try again.');
+      setConverting(false);
+    }
+  }
+
   async function saveBlueprint(event: React.FormEvent) {
     event.preventDefault();
     if (!blueprintId || saveState !== 'idle' || busy) return;
@@ -346,8 +372,44 @@ export function BlueprintFlow({
           <BlueprintDocumentView document={document} beforeEstimate={gateCard} />
 
           <div className="rounded-2xl border border-line bg-panel p-6">
+            {/* Exit buttons (S6): server-computed exits from the document */}
+            {document.exits && document.exits.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-3">
+                {document.exits.includes('convert') ? (
+                  <button
+                    type="button"
+                    onClick={requestProposal}
+                    disabled={busy || converting}
+                    className="rounded-lg bg-ember px-5 py-2 text-sm font-semibold text-background transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {converting ? 'Starting conversation…' : 'Get a human proposal'}
+                  </button>
+                ) : null}
+                {document.exits.includes('quick_win') ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    className="rounded-lg border border-ember/30 bg-ember/10 px-5 py-2 text-sm font-semibold text-ember transition hover:bg-ember/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Start free quick win
+                  </button>
+                ) : null}
+                {document.exits.includes('refine') ? (
+                  <button
+                    type="button"
+                    onClick={() => setRefineOpen(true)}
+                    disabled={busy}
+                    className="rounded-lg border border-line px-4 py-2 text-sm text-muted transition hover:border-ember hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Refine this blueprint
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+
+            {/* Refine panel (toggled by the refine exit button) */}
             {refineOpen ? (
-              <div>
+              <div className="mt-4 rounded-xl border border-line bg-panel-2 p-4">
                 <label htmlFor="refine-note" className="text-sm font-semibold text-foreground">
                   What should change?
                 </label>
@@ -358,7 +420,7 @@ export function BlueprintFlow({
                   maxLength={NOTE_MAX}
                   rows={3}
                   placeholder="For example: assume no native app, and make the timeline tighter."
-                  className="mt-2 w-full resize-none rounded-2xl border border-line bg-background px-4 py-3 text-sm text-foreground placeholder-muted outline-none transition focus:border-ember focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  className="mt-2 w-full resize-none rounded-xl border border-line bg-background px-4 py-3 text-sm text-foreground placeholder-muted outline-none transition focus:border-ember focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 />
                 <div className="mt-3 flex flex-wrap items-center gap-3">
                   <button
@@ -380,32 +442,19 @@ export function BlueprintFlow({
                   <span className="text-xs text-muted">{note.length}/{NOTE_MAX}</span>
                 </div>
               </div>
-            ) : (
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Not quite right?</p>
-                  <p className="text-xs text-muted">Tell it what to change — same rules, new version.</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRefineOpen(true)}
-                    disabled={busy}
-                    className="rounded-lg bg-ember px-5 py-2 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50"
-                  >
-                    Refine this blueprint
-                  </button>
-                  <button
-                    type="button"
-                    onClick={startOver}
-                    disabled={busy}
-                    className="rounded-lg border border-line px-4 py-2 text-sm text-muted transition hover:border-ember hover:text-foreground"
-                  >
-                    Start over
-                  </button>
-                </div>
-              </div>
-            )}
+            ) : null}
+
+            {/* Start over button (always available) */}
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={startOver}
+                disabled={busy}
+                className="rounded-lg border border-line px-4 py-2 text-sm text-muted transition hover:border-ember hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Start over
+              </button>
+            </div>
           </div>
         </div>
       </div>
