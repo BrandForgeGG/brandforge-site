@@ -1605,3 +1605,28 @@ footer p {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---- Landing motion: small scenes that play once as they scroll into view ---- */
+@keyframes bf-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes bf-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes bf-pop { 0% { transform: scale(0); opacity: 0; } 70% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes bf-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+@keyframes bf-flow { 0% { stroke-dashoffset: 1; opacity: 0; } 15% { opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 1; } }
+
+.bf-grow { transform-origin: left center; animation: bf-grow 0.9s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.bf-draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: bf-draw 1.4s ease-out 0.2s forwards; }
+.bf-flow { stroke-dasharray: 1; stroke-dashoffset: 1; animation: bf-flow 1.6s ease-out forwards; }
+.bf-pop { transform-box: fill-box; transform-origin: center; animation: bf-pop 0.5s ease-out both; }
+.bf-pulse { animation: bf-pulse 2.4s ease-in-out infinite; }
+
+@supports (animation-timeline: view()) {
+  .bf-grow, .bf-draw, .bf-pop, .bf-flow {
+    animation-timeline: view();
+    animation-range: entry 10% cover 35%;
+    animation-delay: 0s !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bf-grow, .bf-draw, .bf-pop, .bf-pulse, .bf-flow { animation: none !important; stroke-dashoffset: 0; }
+}

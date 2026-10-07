@@ -357,3 +357,9 @@ we do not have.
 **Change:** landing suggestion chips now span the product (URL audit, launch plan, ads, a build) instead of only "build me an app". Copy-only; no new capability.
 
 **Distribution move:** no standalone announcement — folded into the next changelog line. Demo note: the first chip pre-fills a URL audit, a good 10-second screen recording for socials.
+
+## 2026-10-07 — Visual landing: animated product scenes, less text
+
+**Change:** the four pillars are now small animated scenes (roadmap filling in, video frame, posts scheduling with ticks, a chart drawing up) fed by a flow line from one idea; each card is a two-word label plus a six-word line. Hero sub-line cut to one sentence. Motion plays as it scrolls into view and is off for reduced-motion users. Home and /pricing got new meta + canonical. Also: team-invite e2e (`scripts/prod/team-invite-e2e.js`, local-only, throwaway users) passes 10/10 incl. RLS (member can post, outsider cannot).
+
+**Distribution move:** Discord/X clip: screen-record the landing scroll (flow line → four scenes animate). Caption: "One idea. Four things you can ship." Changelog line: "Landing page rebuilt around what you ship, not paragraphs about it."

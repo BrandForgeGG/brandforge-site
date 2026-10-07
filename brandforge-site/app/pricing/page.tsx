@@ -5,6 +5,7 @@ import { LandingFaq } from '@/components/landing/landing-faq';
 import { SiteFooter } from '@/components/site-footer';
 
 export const metadata = {
+  alternates: { canonical: '/pricing' },
   title: 'Pricing — BrandForge',
   description:
     'Fixed-price proposals, milestone escrow and no charge until you accept. Packages, how the process works, and answers to common questions.',

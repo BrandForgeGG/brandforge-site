@@ -8,9 +8,10 @@ import { BetaBanner } from '@/components/beta-banner';
 import { SiteFooter } from '@/components/site-footer';
 
 export const metadata = {
-  title: 'BrandForge — Turn an idea into something real',
+  title: 'BrandForge — Research, plan, create and distribute with your team',
   description:
-    'BrandForge combines AI planning with human execution — describe your project, get a vetted team, and ship with escrow protection.',
+    'Describe an idea, paste a URL or drop a file. BrandForge researches it, plans it, creates the assets and distributes them, with your team in the same chat.',
+  alternates: { canonical: '/' },
 };
 
 export default function Home() {
@@ -20,7 +21,7 @@ export default function Home() {
     name: 'BrandForge',
     url: 'https://brandforge.gg',
     description:
-      'Execution platform: describe your project, AI structures it, vetted specialists build it, escrow protects your money.',
+      'Workspace for founders and teams: AI researches and plans, you create and distribute together, vetted specialists build with escrow-protected payments.',
     sameAs: [
       'https://discord.gg/GSKHXkUY85',
       'https://t.me/BrandForge_gg',

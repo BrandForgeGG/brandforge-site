@@ -85,8 +85,8 @@ export function LandingHero() {
           <span className="text-ember">Ship it with a team.</span>
         </h1>
 
-        <p className="mx-auto mt-4 max-w-lg text-base leading-relaxed text-muted">
-          Describe it, paste a URL or drop a file. AI researches and plans it, then your team builds, creates and distributes it together.
+        <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-muted">
+          Type it, paste a URL, or drop a file.
         </p>
 
         <form onSubmit={handleSubmit} className="mx-auto mt-7 max-w-xl">
