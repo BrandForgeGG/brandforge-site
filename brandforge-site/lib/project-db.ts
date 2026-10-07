@@ -3306,6 +3306,94 @@ export async function runDueMarketingPosts(): Promise<MarketingRunResult> {
 }
 
 // ---------------------------------------------------------------------------
+// Jobs worker (master brief section 8) — scheduled background work.
+//
+// The jobs table (migration 0026) stores async tasks: quick wins, nurture
+// sequences, and other deferred work. This function is called by the
+// /api/cron/jobs Vercel cron and processes due jobs in order.
+// ---------------------------------------------------------------------------
+
+import { processJob, jobOutcome } from './jobs.js';
+
+export type JobsRunResult = {
+  ran: boolean;
+  reason?: string;
+  due: number;
+  completed: number;
+  failed: number;
+  retried: number;
+  results: { id: string; type: string; status: string; error?: string }[];
+};
+
+export async function runDueJobs(): Promise<JobsRunResult> {
+  const empty: JobsRunResult = { ran: false, due: 0, completed: 0, failed: 0, retried: 0, results: [] };
+
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ...empty, reason: 'not_configured' };
+  if (process.env.JOBS_ENABLED !== 'true') {
+    return { ...empty, reason: 'JOBS_ENABLED is not set to true' };
+  }
+
+  const nowIso = new Date().toISOString();
+  const { data, error } = await admin
+    .from('jobs')
+    .select('*')
+    .eq('status', 'pending')
+    .lte('run_at', nowIso)
+    .order('run_at', { ascending: true })
+    .limit(25);
+
+  if (error) {
+    console.error('Jobs queue read error:', error.message);
+    return { ...empty, reason: 'read_failed' };
+  }
+
+  const rows = data ?? [];
+  let completed = 0;
+  let failed = 0;
+  let retried = 0;
+  const results: JobsRunResult['results'] = [];
+
+  for (const row of rows) {
+    const attempts = (row.attempts ?? 0) + 1;
+
+    let outcome: { ok: boolean; terminal?: boolean; error?: string };
+    try {
+      outcome = processJob(row);
+    } catch (err) {
+      outcome = { ok: false, terminal: false, error: String(err).slice(0, 500) };
+    }
+
+    const { status, errorText } = jobOutcome(row, outcome, attempts);
+
+    if (status === 'completed') {
+      await admin
+        .from('jobs')
+        .update({ status: 'completed', attempts, error: null, completed_at: nowIso })
+        .eq('id', row.id);
+      completed += 1;
+      results.push({ id: row.id, type: row.type, status: 'completed' });
+    } else if (status === 'failed') {
+      await admin
+        .from('jobs')
+        .update({ status: 'failed', attempts, error: errorText })
+        .eq('id', row.id);
+      failed += 1;
+      results.push({ id: row.id, type: row.type, status: 'failed', error: errorText ?? undefined });
+    } else {
+      await admin
+        .from('jobs')
+        .update({ attempts, error: errorText })
+        .eq('id', row.id);
+      retried += 1;
+      results.push({ id: row.id, type: row.type, status: 'pending', error: errorText ?? undefined });
+    }
+  }
+
+  return { ran: true, due: rows.length, completed, failed, retried, results };
+}
+
+// ---------------------------------------------------------------------------
 // Blueprint Engine (master brief 2026-10-04) — H7 service-role boundary.
 //
 // Anonymous sessions and blueprint documents. RLS is on with zero policies
