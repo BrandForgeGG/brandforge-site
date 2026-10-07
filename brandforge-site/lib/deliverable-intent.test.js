@@ -35,6 +35,18 @@ test('strategy frameworks are recognised and carry the selection guidance', () =
   assert.equal(detectDeliverable('Research 3 competitors for my app'), 'competitors');
 });
 
+test('tidySourcing drops the contradictory provenance line only when a source is cited', () => {
+  const { tidySourcing } = require('./deliverable-intent');
+  const cited = 'Growth is 14% (trade.gov).\n\nFrom general knowledge, not live sources.\n\n### Next';
+  const out = tidySourcing(cited);
+  assert.doesNotMatch(out, /general knowledge/);
+  assert.match(out, /trade\.gov/);
+  assert.match(out, /### Next/);
+  const uncited = 'Growth is steady.\n\n*From general knowledge, not live sources.*';
+  assert.equal(tidySourcing(uncited), uncited);
+  assert.equal(tidySourcing(undefined), '');
+});
+
 test('ordinary conversation is not a deliverable', () => {
   assert.equal(detectDeliverable('hi'), null);
   assert.equal(detectDeliverable('what does escrow mean?'), null);

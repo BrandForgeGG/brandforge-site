@@ -15,7 +15,7 @@ import {
   updateProjectContext,
 } from "@/lib/project-db";
 import { consumeChatQuota } from "@/lib/blueprint-session";
-import { deliverableDirective } from "@/lib/deliverable-intent";
+import { deliverableDirective, tidySourcing } from "@/lib/deliverable-intent";
 import { extractOutline } from "@/lib/deliverable-outline";
 import { resolveGuestSession } from "@/lib/guest-session";
 import { buildFileContextBlock, isDirectlyReadable } from "@/lib/file-context";
@@ -432,7 +432,7 @@ export async function POST(request: NextRequest) {
           },
         );
 
-        const content = answer.content.trim();
+        const content = tidySourcing(answer.content.trim()).trim();
 
         if (content) {
           const assistantMessageId = await scope(() =>

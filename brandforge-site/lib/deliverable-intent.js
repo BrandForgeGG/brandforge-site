@@ -103,4 +103,14 @@ function deliverableDirective(message) {
   ].join('\n');
 }
 
-module.exports = { detectDeliverable, deliverableDirective, KINDS };
+// The small model sometimes appends "From general knowledge, not live sources" under a table whose
+// numbers it just cited. When a source in parentheses (example.com) is present, drop that line:
+// a contradictory provenance note is worse than none.
+function tidySourcing(text) {
+  const value = String(text ?? '');
+  const hasCitation = /\(\s*(?:[a-z0-9-]+\.)+[a-z]{2,}[^)\s]*\s*\)/i.test(value);
+  if (!hasCitation) return value;
+  return value.replace(/^[ \t]*[*_]*From general knowledge, not live sources\.?[*_]*[ \t]*$\n?/gim, '').replace(/\n{3,}/g, '\n\n');
+}
+
+module.exports = { detectDeliverable, deliverableDirective, tidySourcing, KINDS };
