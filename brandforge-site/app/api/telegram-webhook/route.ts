@@ -1,8 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import crypto from 'node:crypto';
 import { normalizeLinkCode, LINK_CODE_LENGTH } from '@/lib/identity';
+import { handleTelegramMessage, BOT_HELP } from '@/lib/telegram-bot';
+import { looksLikeLinkCode, parseCommand } from '@/lib/bot-core.js';
 
 export const dynamic = 'force-dynamic';
+// The bot answers after Telegram has been acknowledged; give it room to finish a full turn.
+export const maxDuration = 60;
 
 const BOT_TOKEN = () => String(process.env.TELEGRAM_BOT_TOKEN ?? '').trim();
 
@@ -107,21 +111,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    if (text.startsWith('/start') || text.startsWith('/help')) {
-      await callTelegramApi('sendMessage', { chat_id: chatId, text: WELCOME_TEXT });
+    const command = parseCommand(text);
+    const isPrivate = message.chat?.type === 'private';
+
+    if (command && (command.name === 'start' || command.name === 'help')) {
+      await callTelegramApi('sendMessage', { chat_id: chatId, text: command.name === 'start' ? `${BOT_HELP}\n\n${WELCOME_TEXT}` : BOT_HELP });
       return NextResponse.json({ ok: true });
     }
 
-    if (text.startsWith('/')) {
-      await callTelegramApi('sendMessage', {
-        chat_id: chatId,
-        text: 'Unknown command. Paste your BrandForge link code to link your account.',
-      });
+    // Account linking: "/link CODE", or a pasted code on its own.
+    const isLinkCommand = command?.name === 'link';
+    const pasted = isLinkCommand ? command!.args : looksLikeLinkCode(text) ? text : '';
+    if (!pasted) {
+      // Everything else is a BrandForge request. Answer after acknowledging Telegram.
+      const userId = String(from.id ?? '');
+      if (userId) {
+        after(async () => {
+          await handleTelegramMessage({ chatId, userId, text, isPrivate });
+        });
+      }
       return NextResponse.json({ ok: true });
     }
 
-    // Anything else: treat it as a pasted link code.
-    const code = normalizeLinkCode(text);
+    const code = normalizeLinkCode(pasted);
 
     if (code.length !== LINK_CODE_LENGTH) {
       await callTelegramApi('sendMessage', {

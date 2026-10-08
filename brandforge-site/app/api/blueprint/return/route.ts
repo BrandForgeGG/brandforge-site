@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { blueprintConfig } from '@/lib/blueprint-config';
 import { createSessionToken, verifySessionToken, sessionCookieOptions } from '@/lib/blueprint-session';
-import { getBlueprintSession, getCurrentBlueprintForSession } from '@/lib/project-db';
+import { getBlueprintSession, getConversationOwnerSession, getCurrentBlueprintForSession } from '@/lib/project-db';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +31,13 @@ export async function GET(request: NextRequest) {
     const session = await getBlueprintSession(sessionId);
     if (session.ok && session.session) {
       let landing = intake;
+      // A chat bot hands people back to the exact chat they were in, only if their session owns it.
+      const wanted = new URL(request.url).searchParams.get('conversationId');
+      if (wanted && (await getConversationOwnerSession(wanted)) === sessionId) {
+        const opened = NextResponse.redirect(new URL(`/chat?conversationId=${encodeURIComponent(wanted)}`, origin));
+        opened.cookies.set(config.sessionCookieName, createSessionToken(sessionId, config.sessionSecret), sessionCookieOptions(config.sessionTtlDays));
+        return opened;
+      }
       const current = await getCurrentBlueprintForSession(sessionId);
       const conversationId =
         current.ok && current.blueprint?.conversation_id ? current.blueprint.conversation_id : null;

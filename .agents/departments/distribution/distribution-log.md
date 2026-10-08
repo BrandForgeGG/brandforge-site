@@ -621,3 +621,9 @@ we do not have.
 **Change:** Search and share cards (title, description, Open Graph, Twitter) now say "BrandForge: AI and people, one workspace". Features, About, Platform, Careers and the welcome email were rewritten around what the product does today (chat that does the work, formats, teams, member contracts with the flat 5%, Trade Center, specialists), with the small labels above headings removed. New blog post: "brandforge.gg now opens in a chat".
 
 **Distribution move:** share the blog post in Discord #public-changelog, the Telegram channel, X and LinkedIn; the post is the long version of the front-door announcement.
+
+## 2026-10-08 — Use BrandForge from Telegram (and Discord, when switched on)
+
+**Change:** Message @brandforge_bot on Telegram with an idea, or use /plan, /audit, /ads, /calendar, /launch, /image and /video, and the answer comes back in the chat; a "Continue in BrandForge" button opens the same conversation on the web, where the team can join. Each Telegram person gets their own free guest chat (same daily limits as the web). In groups the bot only answers commands, and it never messages anyone who has not written to it first. A Discord /brandforge command is built and verified (signed requests only) but stays off until the application's public key and Interactions Endpoint are set.
+
+**Distribution move:** this is the community-native channel: pin "Message @brandforge_bot with your idea" in the Telegram channel and group, and add a "Try it here" line to the Discord welcome message. Every bot answer carries the Continue in BrandForge button, which is the conversion path from chat app to the product. No unsolicited DMs, by design.

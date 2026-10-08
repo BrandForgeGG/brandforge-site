@@ -5074,3 +5074,19 @@ export async function getAdminOverview(): Promise<AdminOverview | null> {
     applications,
   };
 }
+
+// A guest session with a chosen id: the chat bots map one person on a platform to one session
+// (lib/bot-core.js botSessionId), so the row is created on first use and reused after.
+export async function ensureBlueprintSessionWithId(id: string, retentionDays = 90): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const existing = await admin.from('blueprint_sessions').select('id').eq('id', id).maybeSingle();
+  if (existing.data) return true;
+  const purgeAfter = new Date(Date.now() + retentionDays * 86400_000).toISOString();
+  const { error } = await admin.from('blueprint_sessions').insert({ id, purge_after: purgeAfter });
+  if (error && error.code !== '23505') {
+    console.error('ensureBlueprintSessionWithId failed:', error.message);
+    return false;
+  }
+  return true;
+}
