@@ -1,25 +1,25 @@
 @import "tailwindcss";
 
 :root {
-  /* Default theme: dark. Near-black #0D0D0D with warm off-white typography. */
+  /* Forge (default): warm near-black with fire orange. Chosen in Settings > Theme. */
   color-scheme: dark;
-  --background: #0d0d0d;
-  --foreground: #ece7de;
+  --background: #0f0e0d;
+  --foreground: #f1ece4;
   --font-sans: var(--font-inter), "Inter", sans-serif;
   --font-serif: var(--font-fraunces), "Fraunces", serif;
-  --panel: #141414;
-  --panel-2: #1a1a1a;
-  --line: rgba(236, 231, 222, 0.08);
-  --muted: #8a8a8a;
-  --ember: #e8571e;
-  --ember-soft: rgba(232, 87, 30, 0.12);
-  --ember-light: #f6d6c3;
-  --copper: #b8763b;
-  --trust: #5aa578;
+  --panel: #171514;
+  --panel-2: #1f1c1a;
+  --line: rgba(241, 236, 228, 0.1);
+  --muted: #9b958c;
+  --ember: #ff6a2b;
+  --ember-soft: rgba(255, 106, 43, 0.14);
+  --ember-light: #ffd3bd;
+  --copper: #d68a4e;
+  --trust: #5fb58a;
   --trust-light: #d9f7ea;
-  --focus: #f6a07a;
-  --deep: #0a0a0a;
-  --overlay: rgba(236, 231, 222, 0.03);
+  --focus: #ff9a6a;
+  --deep: #0b0a09;
+  --overlay: rgba(241, 236, 228, 0.05);
   --danger-fg: #fca5a5;
   --success-fg: #d9f7ea;
   --radius-sm: 6px;
@@ -27,26 +27,48 @@
   --radius-lg: 16px;
 }
 
-/* Light theme: opt-in via data-theme='light'. */
-:root[data-theme='light'] {
+/* Crystal: cool near-black with crystal blue, the tech side of BrandForge. */
+:root[data-theme='crystal'] {
+  color-scheme: dark;
+  --background: #090e13;
+  --foreground: #e8f1f8;
+  --panel: #0f161d;
+  --panel-2: #151f29;
+  --line: rgba(190, 225, 255, 0.11);
+  --muted: #8b9ba9;
+  --ember: #55c7ff;
+  --ember-soft: rgba(85, 199, 255, 0.14);
+  --ember-light: #cfeeff;
+  --copper: #7fa6c9;
+  --trust: #5fd0b0;
+  --trust-light: #d4f7ec;
+  --focus: #8fdcff;
+  --deep: #060a0e;
+  --overlay: rgba(190, 225, 255, 0.05);
+  --danger-fg: #fca5a5;
+  --success-fg: #d4f7ec;
+}
+
+/* Mono: black and white. Paper white, ink black, no colour except meaning. */
+:root[data-theme='mono'] {
   color-scheme: light;
-  --background: #faf9f7;
-  --foreground: #1c1f22;
+  --background: #ffffff;
+  --foreground: #0a0a0a;
   --panel: #ffffff;
-  --panel-2: #f4f2ef;
-  --line: rgba(28, 31, 34, 0.12);
-  --muted: #6b7280;
-  --ember: #d94e1a;
-  --ember-soft: rgba(232, 87, 30, 0.12);
-  --ember-light: #9a3412;
-  --copper: #a05f2a;
-  --trust: #2f855a;
-  --trust-light: #166534;
-  --focus: #e8571e;
-  --deep: #f1efec;
-  --overlay: rgba(28, 31, 34, 0.04);
+  --panel-2: #f5f5f5;
+  --line: rgba(0, 0, 0, 0.12);
+  --muted: #656565;
+  --ember: #0a0a0a;
+  --ember-soft: rgba(0, 0, 0, 0.06);
+  --ember-light: #3d3d3d;
+  --copper: #525252;
+  --trust: #1f7a4d;
+  --trust-light: #14532d;
+  --focus: #0a0a0a;
+  --deep: #f6f6f6;
+  --overlay: rgba(0, 0, 0, 0.04);
   --danger-fg: #b91c1c;
-  --success-fg: #166534;
+  --success-fg: #14532d;
 }
 
 @theme inline {
@@ -153,13 +175,13 @@ body {
 }
 
 .bf-panel-card-emphasis {
-  border-color: rgba(90, 165, 120, 0.3);
-  background: rgba(90, 165, 120, 0.1);
+  border-color: color-mix(in srgb, var(--trust) 30%, transparent);
+  background: color-mix(in srgb, var(--trust) 10%, transparent);
 }
 
 .bf-panel-card-alert {
-  border-color: rgba(232, 87, 30, 0.38);
-  background: rgba(232, 87, 30, 0.1);
+  border-color: color-mix(in srgb, var(--ember) 38%, transparent);
+  background: color-mix(in srgb, var(--ember) 10%, transparent);
 }
 
 .bf-action-group {
@@ -222,7 +244,7 @@ body {
 
 .bf-composer:focus-within {
   border-color: var(--ember);
-  box-shadow: 0 0 0 3px rgba(232, 87, 30, 0.14);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ember) 14%, transparent);
 }
 
 /* One line: tools, input, send. The bar wrapper dissolves so its two groups sit either
@@ -288,7 +310,7 @@ body {
 
 .bf-insights-toggle:hover,
 .bf-insights-toggle[aria-expanded="true"] {
-  border-color: rgba(232, 87, 30, 0.55);
+  border-color: color-mix(in srgb, var(--ember) 55%, transparent);
   color: var(--foreground);
 }
 
@@ -306,7 +328,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border: 1px solid rgba(232, 87, 30, 0.5);
+  border: 1px solid color-mix(in srgb, var(--ember) 50%, transparent);
   border-radius: var(--radius-sm);
   background: var(--ember);
   color: var(--background);
@@ -320,7 +342,7 @@ body {
 
 .bf-new-chat:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(232, 87, 30, 0.18);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--ember) 18%, transparent);
 }
 
 .bf-rail-section-label {
@@ -352,8 +374,8 @@ body {
 }
 
 .bf-recent-item-active {
-  border-color: rgba(232, 87, 30, 0.3);
-  background: rgba(232, 87, 30, 0.1);
+  border-color: color-mix(in srgb, var(--ember) 30%, transparent);
+  background: color-mix(in srgb, var(--ember) 10%, transparent);
 }
 
 .bf-rail-footer {
@@ -378,8 +400,8 @@ body {
 }
 
 .bf-panel-close:hover {
-  border-color: rgba(232, 87, 30, 0.5);
-  background: rgba(232, 87, 30, 0.08);
+  border-color: color-mix(in srgb, var(--ember) 50%, transparent);
+  background: color-mix(in srgb, var(--ember) 8%, transparent);
   color: var(--foreground);
 }
 
@@ -527,14 +549,14 @@ body {
 
 .bf-community-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(232, 87, 30, 0.55);
+  border-color: color-mix(in srgb, var(--ember) 55%, transparent);
 }
 
 .bf-community-card-featured {
-  border-color: rgba(232, 87, 30, 0.32);
+  border-color: color-mix(in srgb, var(--ember) 32%, transparent);
   background: linear-gradient(
     135deg,
-    rgba(232, 87, 30, 0.13),
+    color-mix(in srgb, var(--ember) 13%, transparent),
     var(--panel) 72%
   );
 }
@@ -1267,7 +1289,7 @@ footer p {
 
 .bf-code-copy:hover {
   color: #ece7de;
-  border-color: rgba(232, 87, 30, 0.6);
+  border-color: color-mix(in srgb, var(--ember) 60%, transparent);
 }
 
 .bf-msg-link {
@@ -1282,8 +1304,8 @@ footer p {
 
 /* BrandForge AI identity: the mark, not a human face. */
 .bf-ai-mark {
-  background: rgba(232, 87, 30, 0.12);
-  border: 1px solid rgba(232, 87, 30, 0.45);
+  background: color-mix(in srgb, var(--ember) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ember) 45%, transparent);
   color: var(--ember);
 }
 
@@ -1325,7 +1347,7 @@ footer p {
 
 .bf-thoughts summary:hover,
 .bf-thoughts summary:focus-visible {
-  border-color: rgba(232, 87, 30, 0.5);
+  border-color: color-mix(in srgb, var(--ember) 50%, transparent);
   color: var(--foreground);
 }
 
@@ -1429,7 +1451,7 @@ footer p {
 }
 
 .bf-stack-item.bf-stack-ai {
-  background: rgba(232, 87, 30, 0.14);
+  background: color-mix(in srgb, var(--ember) 14%, transparent);
   border-color: var(--background);
   color: var(--ember);
   font-family: var(--font-serif);
@@ -1594,7 +1616,7 @@ footer p {
   align-items: center;
   gap: 8px;
   padding: 7px 14px;
-  border: 1px solid rgba(232, 87, 30, 0.55);
+  border: 1px solid color-mix(in srgb, var(--ember) 55%, transparent);
   border-radius: 999px;
   background: var(--panel);
   color: var(--foreground);
@@ -1613,7 +1635,7 @@ footer p {
 
 .bf-error-retry {
   padding: 6px 12px;
-  border: 1px solid rgba(232, 87, 30, 0.6);
+  border: 1px solid color-mix(in srgb, var(--ember) 60%, transparent);
   border-radius: 999px;
   background: var(--ember-soft);
   color: var(--ember-light);
@@ -1887,9 +1909,96 @@ footer p {
 }
 
 /* Sidebar scrolling: never sideways, and the vertical bar only shows while the pointer is over the rail. */
-.bf-rail { overflow-x: hidden; }
 .bf-rail-scroll { scrollbar-width: none; }
 .bf-rail-scroll::-webkit-scrollbar { width: 0; height: 0; }
 .bf-rail:hover .bf-rail-scroll { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .bf-rail:hover .bf-rail-scroll::-webkit-scrollbar { width: 6px; }
 .bf-rail:hover .bf-rail-scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 999px; }
+
+/* ---- Tooltips: one quiet pattern for every icon-only control ---- */
+[data-tip] { position: relative; }
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translate(-50%, 3px);
+  max-width: 16rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 8px;
+  background: var(--foreground);
+  color: var(--background);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms ease, transform 140ms ease;
+  z-index: 70;
+}
+[data-tip]:hover::after,
+[data-tip]:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+[data-tip-pos='below']::after { bottom: auto; top: calc(100% + 8px); transform: translate(-50%, -3px); }
+[data-tip-pos='below']:hover::after,
+[data-tip-pos='below']:focus-visible::after { transform: translate(-50%, 0); }
+[data-tip-pos='right']::after { left: calc(100% + 10px); bottom: auto; top: 50%; transform: translate(-3px, -50%); }
+[data-tip-pos='right']:hover::after,
+[data-tip-pos='right']:focus-visible::after { transform: translate(0, -50%); }
+@media (hover: none) { [data-tip]::after { display: none; } }
+
+/* ---- Start screen: a centred, calm first impression ---- */
+main[data-empty='true'] { justify-content: center; }
+main[data-empty='true'] > .bf-chat-header { position: absolute; inset: 0 0 auto 0; z-index: 5; }
+main[data-empty='true'] > .bf-scroller { flex: 0 0 auto !important; overflow: visible !important; padding-top: 0; padding-bottom: 1.25rem; }
+main[data-empty='true'] > .bf-scroller > div { min-height: 0 !important; }
+main[data-empty='true'] .bf-composer-shell { position: static; }
+.bf-start-title { letter-spacing: -0.02em; line-height: 1.12; text-wrap: balance; }
+.bf-start-chip {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.8rem;
+  transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease;
+}
+.bf-start-chip:hover { border-color: var(--ember); color: var(--foreground); background: var(--overlay); }
+.bf-start-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.bf-start-prompts { margin-top: 1.1rem; }
+@media (prefers-reduced-motion: no-preference) {
+  .bf-start-title, .bf-flow-diagram { animation: bf-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .bf-flow-diagram { animation-delay: 0.1s; }
+}
+@keyframes bf-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ---- First-run hint ---- */
+.bf-hint {
+  position: absolute;
+  bottom: calc(100% + 0.5rem);
+  left: 1.5rem;
+  max-width: 17rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+  z-index: 30;
+}
+.bf-hint::after {
+  content: '';
+  position: absolute;
+  left: 2.4rem;
+  top: 100%;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  transform: rotate(45deg);
+}

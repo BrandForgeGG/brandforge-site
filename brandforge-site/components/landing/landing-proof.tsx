@@ -13,9 +13,8 @@ export function LandingProof() {
       <section id="work" className="border-t border-line px-6 py-14">
         <div className="mx-auto max-w-5xl">
           <div className="text-center">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted">Built with BrandForge</p>
             <h2 className="mt-2 font-serif text-3xl text-foreground sm:text-4xl">
-              Real projects. Real people. Real outcomes.
+              Projects built with BrandForge
             </h2>
             <p className="mt-3 text-sm text-muted">Not AI-generated mockups. Click through and try them.</p>
           </div>
@@ -57,9 +56,8 @@ export function LandingProof() {
       <section id="feedback" className="border-t border-line px-6 py-14">
         <div className="mx-auto max-w-5xl">
           <div className="text-center">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted">Feedback</p>
             <h2 className="mt-2 font-serif text-3xl text-foreground sm:text-4xl">
-              Word from the people we shipped for.
+              In their words
             </h2>
             <p className="mt-3 text-sm text-muted">
               Copied straight from our Discord and Telegram — nothing edited.

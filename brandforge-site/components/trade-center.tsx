@@ -145,6 +145,14 @@ export function TradeCenter() {
         <div className="bf-card mt-2 p-6 text-center">
           <p className="text-sm text-foreground">{pending ? "The Trade Center opens shortly." : "No listings match yet."}</p>
           {!pending ? <p className="mt-1 text-xs text-muted">Be the first: post what you offer or what you need.</p> : null}
+          <ol className="mx-auto mt-4 flex max-w-md flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-muted" aria-label="How it works">
+            {["List", "Chat", "Sign", "Get paid"].map((step, index) => (
+              <li key={step} className="flex items-center gap-2">
+                <span className="rounded-full border border-line px-2.5 py-1 text-foreground">{step}</span>
+                {index < 3 ? <span aria-hidden="true">→</span> : null}
+              </li>
+            ))}
+          </ol>
         </div>
       ) : null}
 

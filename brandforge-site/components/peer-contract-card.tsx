@@ -132,7 +132,6 @@ export function PeerContractCard({ contractId }: { contractId: string }) {
     <>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-copper">Contract</p>
           <p className="mt-1 truncate font-serif text-lg text-foreground">{view.title}</p>
           <p className="mt-0.5 text-xs text-muted">
             {view.payer.name} pays · {view.payee.name} delivers

@@ -2,14 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-
-const {
-  normalizeTheme,
-  applyTheme,
-  getStoredTheme,
-  setStoredTheme,
-  VALID_THEMES,
-} = require('./theme');
+const { normalizeTheme, applyTheme, getStoredTheme, setStoredTheme, VALID_THEMES } = require('./theme');
 
 function makeDom() {
   const store = new Map();
@@ -20,70 +13,64 @@ function makeDom() {
     setItem: (k, v) => store.set(k, String(v)),
     removeItem: (k) => store.delete(k),
   };
-  return { document, localStorage, store, dataset };
+  return { document, localStorage, dataset };
 }
 
-test('normalizeTheme accepts the two themes and defaults to Forge', () => {
-  assert.equal(normalizeTheme('light'), 'light');
-  assert.equal(normalizeTheme('original'), 'original');
-  assert.equal(normalizeTheme('dark'), 'original', 'dark is not a stored value; Forge is the default');
-  assert.equal(normalizeTheme('bogus'), 'original');
-  assert.equal(normalizeTheme(null), 'original');
-  assert.equal(normalizeTheme(undefined), 'original');
-  assert.equal(normalizeTheme(''), 'original');
+test('three themes, Forge by default, old saved values map forward', () => {
+  assert.deepEqual(VALID_THEMES, ['forge', 'crystal', 'mono']);
+  assert.equal(normalizeTheme('crystal'), 'crystal');
+  assert.equal(normalizeTheme('mono'), 'mono');
+  assert.equal(normalizeTheme('original'), 'forge');
+  assert.equal(normalizeTheme('light'), 'mono');
+  for (const junk of ['dark', 'bogus', '', null, undefined]) assert.equal(normalizeTheme(junk), 'forge');
 });
 
-test("applyTheme: light sets data-theme='light' (what the CSS expects), Forge removes it", () => {
+test('applyTheme sets data-theme for Crystal and Mono and removes it for Forge', () => {
   const { document, dataset } = makeDom();
-  const origDoc = globalThis.document;
+  const orig = globalThis.document;
   globalThis.document = document;
   try {
-    applyTheme('light');
-    assert.equal(dataset.theme, 'light');
-    applyTheme('original');
-    assert.equal(dataset.theme, undefined, 'Forge removes the attribute');
-  } finally {
-    globalThis.document = origDoc;
-  }
-});
-
-test('setStoredTheme persists light and applies it; Forge clears the key', () => {
-  const { document, localStorage, dataset } = makeDom();
-  const origDoc = globalThis.document;
-  const origLocal = globalThis.localStorage;
-  globalThis.document = document;
-  globalThis.localStorage = localStorage;
-  try {
-    assert.equal(setStoredTheme('light'), 'light');
-    assert.equal(localStorage.getItem('brandforge:theme'), 'light');
-    assert.equal(dataset.theme, 'light');
-
-    assert.equal(setStoredTheme('original'), 'original');
-    assert.equal(localStorage.getItem('brandforge:theme'), null, 'Forge is the default: key removed');
+    applyTheme('crystal');
+    assert.equal(dataset.theme, 'crystal');
+    applyTheme('mono');
+    assert.equal(dataset.theme, 'mono');
+    applyTheme('forge');
     assert.equal(dataset.theme, undefined);
   } finally {
-    globalThis.document = origDoc;
-    globalThis.localStorage = origLocal;
+    globalThis.document = orig;
   }
 });
 
-test('getStoredTheme reads the stored choice', () => {
-  const { localStorage } = makeDom();
-  const origLocal = globalThis.localStorage;
+test('setStoredTheme persists non-default themes and clears the key for Forge', () => {
+  const { document, localStorage, dataset } = makeDom();
+  const od = globalThis.document;
+  const ol = globalThis.localStorage;
+  globalThis.document = document;
   globalThis.localStorage = localStorage;
   try {
-    assert.equal(getStoredTheme(), 'original');
-    localStorage.setItem('brandforge:theme', 'light');
-    assert.equal(getStoredTheme(), 'light');
-    localStorage.setItem('brandforge:theme', 'bogus');
-    assert.equal(getStoredTheme(), 'original');
+    assert.equal(setStoredTheme('crystal'), 'crystal');
+    assert.equal(localStorage.getItem('brandforge:theme'), 'crystal');
+    assert.equal(dataset.theme, 'crystal');
+    assert.equal(setStoredTheme('forge'), 'forge');
+    assert.equal(localStorage.getItem('brandforge:theme'), null);
+    assert.equal(dataset.theme, undefined);
   } finally {
-    globalThis.localStorage = origLocal;
+    globalThis.document = od;
+    globalThis.localStorage = ol;
   }
 });
 
-test('theme helpers survive blocked storage', () => {
-  const origLocal = globalThis.localStorage;
+test('getStoredTheme reads, migrates and survives blocked storage', () => {
+  const { localStorage } = makeDom();
+  const ol = globalThis.localStorage;
+  globalThis.localStorage = localStorage;
+  try {
+    assert.equal(getStoredTheme(), 'forge');
+    localStorage.setItem('brandforge:theme', 'light');
+    assert.equal(getStoredTheme(), 'mono');
+  } finally {
+    globalThis.localStorage = ol;
+  }
   globalThis.localStorage = {
     getItem: () => {
       throw new Error('blocked');
@@ -96,13 +83,9 @@ test('theme helpers survive blocked storage', () => {
     },
   };
   try {
-    assert.equal(getStoredTheme(), 'original');
-    assert.equal(setStoredTheme('light'), 'light');
+    assert.equal(getStoredTheme(), 'forge');
+    assert.equal(setStoredTheme('mono'), 'mono');
   } finally {
-    globalThis.localStorage = origLocal;
+    globalThis.localStorage = ol;
   }
-});
-
-test('the two themes are the closed set the settings UI offers', () => {
-  assert.deepEqual(VALID_THEMES, ['original', 'light']);
 });

@@ -28,6 +28,12 @@ function profileFromEmail(email: string, name?: string | null): SettingsProfile 
   };
 }
 
+const THEME_CHOICES: { id: Theme; label: string; bg: string; fg: string; accent: string }[] = [
+  { id: 'forge', label: 'Forge', bg: '#0f0e0d', fg: '#f1ece4', accent: '#ff6a2b' },
+  { id: 'crystal', label: 'Crystal', bg: '#090e13', fg: '#e8f1f8', accent: '#55c7ff' },
+  { id: 'mono', label: 'Black and white', bg: '#ffffff', fg: '#0a0a0a', accent: '#0a0a0a' },
+];
+
 export default function SettingsPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<SettingsProfile | null>(null);
@@ -472,25 +478,31 @@ export default function SettingsPage() {
             <div>
               <p className="text-sm text-muted">Theme</p>
               <div className="mt-2 flex gap-2" role="radiogroup" aria-label="Theme">
-                {(['original', 'light'] as Theme[]).map((t) => (
+                {THEME_CHOICES.map((choice) => (
                   <button
-                    key={t}
+                    key={choice.id}
                     type="button"
                     role="radio"
-                    aria-checked={theme === t}
-                    onClick={() => handleThemeChange(t)}
-                    className={`rounded-lg border px-3 py-1.5 text-xs transition ${
-                      theme === t
-                        ? 'border-ember bg-ember/10 text-ember'
-                        : 'border-line text-muted hover:border-ember hover:text-foreground'
+                    aria-checked={theme === choice.id}
+                    onClick={() => handleThemeChange(choice.id)}
+                    className={`flex w-28 flex-col gap-2 rounded-xl border p-2 text-left text-xs transition ${
+                      theme === choice.id ? 'border-ember text-foreground' : 'border-line text-muted hover:border-ember hover:text-foreground'
                     }`}
                   >
-                    {t === 'original' ? 'Forge' : 'Light'}
+                    <span
+                      aria-hidden="true"
+                      className="flex h-12 items-end gap-1 rounded-lg border border-black/10 p-1.5"
+                      style={{ background: choice.bg }}
+                    >
+                      <span className="h-3 w-6 rounded" style={{ background: choice.fg, opacity: 0.85 }} />
+                      <span className="h-5 w-3 rounded" style={{ background: choice.accent }} />
+                    </span>
+                    <span className="font-medium">{choice.label}</span>
                   </button>
                 ))}
               </div>
               <p className="mt-1 text-xs text-muted">
-                Forge is the default dark look. Light is brighter, for daytime.
+                Forge is fire orange, Crystal is crystal blue, Mono is plain black and white.
               </p>
             </div>
           </div>

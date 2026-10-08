@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { supabase } from "@/lib/supabase";
 import { fetchAuthed, getSessionUser } from "@/lib/browser-auth";
 import { avatarTone, initialsFor } from "@/lib/identity-display";
@@ -28,11 +28,21 @@ export interface RecentConversation {
 // Recents show real timestamps from persisted messages, never a hardcoded "Just now".
 
 // One small stroke icon per workspace page and for chats, drawn inline (no image requests).
+// A browser with no Supabase auth cookie has no account to load: show sign-in instead of an
+// account block that would read "Signed in". Server render says "not a visitor" so hydration agrees.
+function useIsVisitor(): boolean {
+  return useSyncExternalStore(
+    () => () => undefined,
+    () => !/sb-[^=;]+-auth-token/.test(document.cookie),
+    () => false,
+  );
+}
+
 const NAV_ITEMS = [
-  { href: "/create", label: "Create", path: "M10 3.5l1.6 4.4 4.4 1.6-4.4 1.6L10 15.5l-1.6-4.4L4 9.5l4.4-1.6zM15.5 3v3M14 4.5h3" },
-  { href: "/distribute", label: "Distribute", path: "M16.5 3.5L8 12M16.5 3.5l-5 13-3.5-4.5-4.5-3.5z" },
-  { href: "/optimize", label: "Optimize", path: "M4 15V9M8 15V5M12 15v-4M16 15V7" },
-  { href: "/trade", label: "Trade", path: "M4 7h11l-3-3M16 13H5l3 3" },
+  { href: "/create", label: "Create", hint: "Images, video, copy and plans", path: "M10 3.5l1.6 4.4 4.4 1.6-4.4 1.6L10 15.5l-1.6-4.4L4 9.5l4.4-1.6zM15.5 3v3M14 4.5h3" },
+  { href: "/distribute", label: "Distribute", hint: "Ads, calendar and launch plans", path: "M16.5 3.5L8 12M16.5 3.5l-5 13-3.5-4.5-4.5-3.5z" },
+  { href: "/optimize", label: "Optimize", hint: "See what works", path: "M4 15V9M8 15V5M12 15v-4M16 15V7" },
+  { href: "/trade", label: "Trade", hint: "Hire or get hired", path: "M4 7h11l-3-3M16 13H5l3 3" },
 ];
 const CHAT_ICON = "M4 5.5h12v7.5H9.5L6 16v-3H4z";
 
@@ -98,6 +108,7 @@ onMobileClose,
   } | null>(null);
   const [accountId, setAccountId] = useState("");
   // The readable bf_guest cookie marks an anonymous browser (rail is client-only, no SSR mismatch).
+  const isVisitor = useIsVisitor();
   const isGuestBrowser = typeof document !== "undefined" && document.cookie.includes("bf_guest=");
   const [isSelfStaff, setIsSelfStaff] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -253,7 +264,7 @@ onMobileClose,
 
       <aside
         className={
-          "bf-rail fixed inset-y-0 left-0 z-40 h-screen w-72 shrink-0 flex-col overflow-x-hidden border-r border-line bg-deep md:sticky md:top-0 md:h-full md:z-auto md:flex " +
+          "bf-rail fixed inset-y-0 left-0 z-40 h-screen w-72 shrink-0 flex-col border-r border-line bg-deep md:sticky md:top-0 md:h-full md:z-auto md:flex " +
           (isMobileOpen ? "flex" : "hidden") +
           // Collapsed on desktop: a narrow icon rail so the conversation can breathe.
           (isCollapsed ? " md:w-16" : "")
@@ -283,6 +294,8 @@ onMobileClose,
             onClick={toggleCollapsed}
             className="hidden rounded-lg p-2 text-muted transition hover:bg-overlay hover:text-foreground md:inline-flex"
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            data-tip={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            data-tip-pos="right"
           >
             <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d={isCollapsed ? "M7 4l6 6-6 6" : "M13 4l-6 6 6 6"} />
@@ -332,7 +345,8 @@ onMobileClose,
                 key={item.href}
                 href={item.href}
                 onClick={onMobileClose}
-                title={item.label}
+                data-tip={isCollapsed ? item.label : item.hint}
+                data-tip-pos="right"
                 aria-label={item.label}
                 className={
                   isCollapsed
@@ -463,11 +477,13 @@ onMobileClose,
           /* Collapsed footer: the account stays reachable as an avatar chip. */
           <div className="bf-rail-footer mt-auto flex shrink-0 justify-center">
             <Link
-              href="/settings"
+              href={isVisitor && !account ? "/login" : "/settings"}
               title={
                 account
                   ? `${account.name}${account.username ? " · @" + account.username : ""} · ${account.role}`
-                  : "Account settings"
+                  : isVisitor
+                    ? "Sign in"
+                    : "Account settings"
               }
               aria-label={
                 account
@@ -487,6 +503,21 @@ onMobileClose,
                 {initialsFor(account?.name ?? "?")}
               </span>
             </Link>
+          </div>
+        ) : isVisitor && !account ? (
+          <div className="bf-rail-footer mt-auto shrink-0">
+            <p className="text-xs leading-snug text-muted">Save your chats and bring your team in.</p>
+            <div className="mt-2.5 grid grid-cols-2 gap-2">
+              <Link
+                href={`/login?next=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname + window.location.search : "/")}`}
+                className="rounded-lg bg-ember px-3 py-2 text-center text-xs font-semibold text-background transition hover:opacity-90"
+              >
+                Sign up free
+              </Link>
+              <Link href="/login" className="rounded-lg border border-line px-3 py-2 text-center text-xs text-foreground transition hover:border-ember">
+                Log in
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="bf-rail-footer mt-auto shrink-0 relative">

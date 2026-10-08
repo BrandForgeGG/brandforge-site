@@ -142,6 +142,11 @@ export async function fetchAuthed(
   // client-side and must not import lib/guest-session (server-only graph).
   if (await isMarkedGuestWithoutSession()) return response;
 
+  // A browser that never signed in has no Supabase auth cookie, so there is no session to refresh
+  // and no dead session to park on /login: the public pages (front door, Create, Distribute,
+  // Trade) simply keep their account-only endpoints unauthorised.
+  if (typeof document !== 'undefined' && !/sb-[^=;]+-auth-token/.test(document.cookie)) return response;
+
   try {
     const { data, error } = await refreshWithTimeout();
 

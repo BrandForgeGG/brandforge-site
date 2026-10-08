@@ -573,3 +573,15 @@ we do not have.
 **Change:** The Light option in Settings did nothing: the saved choice and the page colours used opposite rules, so picking Light left the site dark. They now agree (Forge dark is the default; Light switches and remembers). Error and success messages are readable on the light page, the community card no longer shows a dark patch, and long chat titles in the sidebar end in an ellipsis instead of being cut off.
 
 **Distribution move:** none (fix). Changelog line: "Light mode now works. Settings > Theme."
+
+## 2026-10-08 — brandforge.gg opens straight into a chat; three themes
+
+**Change:** brandforge.gg now opens directly into a chat (no sign-up, the first message starts a guest chat); the long-form pitch moved to /overview. Themes are now Forge (fire orange), Crystal (crystal blue) and Black and white, chosen in Settings with a swatch preview; older saved choices carry over.
+
+**Distribution move:** point every link (bio, Discord, ads) at brandforge.gg: the first thing a visitor sees is the product, not a pitch. Link the /overview page for people who want the story first. Ad creative uses screenshots of the app in the three themes.
+
+## 2026-10-08 — A new front door, an overview page and three themes
+
+**Change:** brandforge.gg opens straight into a chat with a centred composer, five starting points with hover hints, and a one-line You, AI, People diagram; a one-time pointer shows where Actions lives after the first answer. Visitors see "Sign up free / Log in" in the sidebar instead of a fake "Signed in" label, and Create, Distribute and Trade now open for people with no account (they used to bounce to the login page). The story lives at /overview: one promise, a how-it-works diagram, real screenshots (Create formats, Distribute, a milestone contract), the three themes, a plain price list, proof, community and FAQ. Themes: Forge (fire orange), Crystal (crystal blue) and Black and white. Small labels above headings were removed across the landing sections.
+
+**Distribution move:** ad creative is built only from app screenshots, saved in marketing/app-screenshots (start screens in all three themes on desktop and phone; Create, Distribute, Trade, Pricing; a launch-plan chat in each theme; a demo milestone contract in each theme; the contract and answer are demo content, never to be presented as a customer). Suggested ads: (1) start screen, line "What are we building today?"; (2) the Create format picker, "Every format, one page."; (3) the Crystal chat answer, "A launch plan in 20 seconds."; (4) the contract card, "Hire someone you meet in the chat. Pay per milestone."; (5) three themes side by side, "Make it yours."

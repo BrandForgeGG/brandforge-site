@@ -131,9 +131,8 @@ export function LandingCommunity() {
     <>
       <section id="community" className="border-t border-line px-6 py-20">
         <div className="mx-auto max-w-4xl text-center">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted">Community</p>
           <h2 className="mt-2 font-serif text-3xl text-foreground sm:text-4xl">
-            The app is live. The community is where builds land first.
+            Talk to the people behind it
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-muted">
             Watch us ship, talk to the crew, or bring your project today. A human answers.

@@ -145,13 +145,75 @@ const NEXT_STEP_ACTIONS = [
   { key: 'video', label: 'Create a video', text: 'Create a video: ' },
 ] as const;
 
-const CHAT_STARTERS = [
-  { label: 'Plan my idea', text: 'I have an idea: ' },
-  { label: 'Audit a URL', text: 'Audit this site and tell me what to fix first: https://' },
-  { label: 'Write ads', text: 'Write ads for ' },
-  { label: 'Launch plan', text: 'Make a launch plan for ' },
-  { label: 'Not sure yet', text: '' },
-];
+
+// Starting points under the composer: one tap fills it, the tooltip says what comes back.
+const START_PROMPTS = [
+  { label: 'Plan my idea', hint: 'Scope, roadmap and estimate', text: 'I have an idea: ', icon: 'M4 4.5h4v4H4zM12 4.5h4v4h-4zM8 6.5h4M6 8.5v4h6M12 12.5h4v3h-4z' },
+  { label: 'Audit a URL', hint: 'A ranked fix list from your page', text: 'Audit this site and tell me what to fix first: https://', icon: 'M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM13 13l3.5 3.5' },
+  { label: 'Write ads', hint: 'Hooks and copy for each platform', text: 'Write ads for ', icon: 'M3.5 9.5v-3l9-3v9zM12.5 6.5h3a1.5 1.5 0 010 3h-3M6 12.5l1 3.5h2l-.8-3' },
+  { label: 'Make an image', hint: 'Free, right in the chat', text: 'Create an image: ', icon: 'M4 5h12v10H4zM4 13l3.5-3.5 3 3 2-2L16 14M13 8.2h.01' },
+  { label: 'Get a specialist', hint: 'A vetted person joins this chat', text: 'I need a specialist to help me build ', icon: 'M7 8a3 3 0 106 0 3 3 0 00-6 0zM4 16c.5-2.8 2.6-4.5 6-4.5s5.5 1.7 6 4.5' },
+] as const;
+
+function StartPrompts({ onPick }: { onPick: (text: string) => void }) {
+  return (
+    <div className="bf-start-prompts mx-auto w-full max-w-3xl px-4 sm:px-6">
+      <div className="flex flex-wrap justify-center gap-2" role="group" aria-label="Starting points">
+        {START_PROMPTS.map((item) => (
+          <button key={item.label} type="button" data-tip={item.hint} onClick={() => onPick(item.text)} className="bf-start-chip">
+            <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d={item.icon} />
+            </svg>
+            {item.label}
+          </button>
+        ))}
+      </div>
+      <p className="mt-5 text-center text-xs text-muted">AI drafts fast. People check what matters.</p>
+    </div>
+  );
+}
+
+// You -> AI -> People: the whole product in one small, quietly animated line.
+function AiPeopleFlow() {
+  const nodes: [number, string][] = [
+    [40, 'You'],
+    [140, 'AI'],
+    [240, 'People'],
+  ];
+  return (
+    <svg viewBox="0 0 280 44" className="bf-flow-diagram mx-auto mt-5 h-11 w-[17.5rem] max-w-full" role="img" aria-label="You describe it, AI drafts it, people refine it">
+      <g fill="none" stroke="var(--line)" strokeWidth="1.5">
+        <path d="M76 22h28" />
+        <path d="M176 22h28" />
+      </g>
+      <g fill="none" stroke="var(--ember)" strokeWidth="1.8" strokeLinecap="round">
+        <path className="bf-flow" d="M76 22h28" pathLength={1} />
+        <path className="bf-flow" style={{ animationDelay: '0.5s' }} d="M176 22h28" pathLength={1} />
+      </g>
+      {nodes.map(([x, label]) => (
+        <g key={label}>
+          <rect x={x - 32} y="8" width="64" height="28" rx="14" fill="var(--panel)" stroke="var(--line)" />
+          <text x={x} y="26.5" textAnchor="middle" fontSize="11" fill="var(--foreground)" fontFamily="var(--font-sans)">{label}</text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+// One quiet pointer, shown once, after the first answer: where the extra powers live.
+function ActionsHint({ show, onDismiss }: { show: boolean; onDismiss: () => void }) {
+  if (!show) return null;
+  return (
+    <div className="bf-hint" role="status">
+      <p className="text-xs leading-snug text-foreground">
+        <span className="font-medium">Actions</span> makes images, ads, a content calendar or a video, and invites your team.
+      </p>
+      <button type="button" onClick={onDismiss} className="mt-1.5 text-xs text-ember underline-offset-2 hover:underline">
+        Got it
+      </button>
+    </div>
+  );
+}
 
 export function ChatWorkspace() {
   const router = useRouter();
@@ -196,6 +258,24 @@ export function ChatWorkspace() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [showContractForm, setShowContractForm] = useState(false);
+  // One-time pointer to Actions, shown after the first answer arrives.
+  const [actionsHintSeen, setActionsHintSeen] = useState(true);
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- read a browser-only flag once
+      setActionsHintSeen(localStorage.getItem("bf:hint-actions") === "1");
+    } catch {
+      /* storage blocked: stay quiet */
+    }
+  }, []);
+  function dismissActionsHint() {
+    setActionsHintSeen(true);
+    try {
+      localStorage.setItem("bf:hint-actions", "1");
+    } catch {
+      /* ignore */
+    }
+  }
   // Staff proposal composer: the send side of POST /api/proposals. Opens from the
   // "Brief ready" strip above the composer while the conversation waits for review.
   const [showProposalForm, setShowProposalForm] = useState(false);
@@ -1323,6 +1403,8 @@ export function ChatWorkspace() {
     .reverse()
     .find((entry) => entry.sender === "ai" && entry.content.trim())?.content;
   const answerOutline = useMemo(() => extractOutline(latestAiContent), [latestAiContent]);
+  const showActionsHint =
+    !actionsHintSeen && Boolean(conversationId) && !isStreaming && messages.some((entry) => entry.sender === "ai" && entry.content.length > 40);
 
   const autoOpenedPanelRef = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -1810,7 +1892,7 @@ export function ChatWorkspace() {
     ],
   );
 
-  const projectLabel = state?.project.name || state?.title || "New project";
+  const projectLabel = state?.project.name || state?.title || "New chat";
   const taskProgress = useMemo(
     () => summarizeTaskProgress(state?.tasks ?? []),
     [state?.tasks],
@@ -1883,7 +1965,7 @@ return (
         staffUnseenCount={railMeta.unseenCount}
       />
 
-      <main className="relative flex min-w-0 flex-1 flex-col">
+      <main className="relative flex min-w-0 flex-1 flex-col" data-empty={!conversationId && !isBooting ? "true" : undefined}>
         <header className="bf-chat-header flex shrink-0 items-center justify-between gap-3 px-4 py-1.5 sm:px-6">
           <div className="flex min-w-0 items-center gap-2">
             <button
@@ -1939,7 +2021,8 @@ return (
               }}
               aria-pressed={aiEnabled}
               aria-label={aiEnabled ? 'Disable AI participation' : 'Enable AI participation'}
-              title={aiEnabled ? 'AI is on — click to turn off' : 'AI is off — click to turn on'}
+              data-tip={aiEnabled ? 'AI is on. Click to pause it.' : 'AI is paused. Click to turn it on.'}
+              data-tip-pos="below"
               className="bf-composer-tool"
             >
               <svg viewBox="0 0 20 20" className="h-4 w-4" fill={aiEnabled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true">
@@ -1953,6 +2036,8 @@ return (
                 onClick={() => setTeamOpen((value) => !value)}
                 aria-expanded={teamOpen}
                 aria-label="Show project team"
+                data-tip="Everyone in this chat"
+                data-tip-pos="below"
                 className="bf-participants"
               >
                 <span className="bf-participant-stack" aria-hidden="true">
@@ -2128,7 +2213,7 @@ return (
 
         <div
           ref={scrollerRef}
-          className="flex-1 overflow-y-auto px-6 py-6"
+          className="bf-scroller flex-1 overflow-y-auto px-6 py-6"
           onScroll={handleTranscriptScroll}
         >
           {isBooting && messages.length === 0 ? (
@@ -2146,34 +2231,13 @@ return (
                 {/* eslint-disable-next-line @next/next/no-img-element -- bundled local asset at a fixed size */}
                 <img src="/discord-server-icon.png" alt="" className="h-full w-full object-cover" />
               </div>
-              <p className="mt-3 text-[10px] uppercase tracking-[0.2em] text-muted">
-                BrandForge AI · Project Operator
-              </p>
-              <h1 className="mt-2 font-serif text-3xl text-foreground sm:text-4xl">
-                Let&apos;s build something.
+              <h1 className="bf-start-title mt-5 font-serif text-3xl text-foreground sm:text-[2.6rem]">
+                What are we building today?
               </h1>
               <p className="mt-3 max-w-md text-sm leading-relaxed text-muted">
-                Type an idea, paste a URL, or attach a file.
+                AI drafts it in seconds. Your team and vetted specialists take it from there.
               </p>
-              <div
-                className="mt-5 flex flex-wrap justify-center gap-2"
-                role="group"
-                aria-label="Starting points"
-              >
-                {CHAT_STARTERS.map(({ label, text }) => (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => {
-                      setInput(text);
-                      requestAnimationFrame(() => composerRef.current?.focus());
-                    }}
-                    className="inline-flex min-h-9 items-center rounded-full border border-line px-3.5 py-1.5 text-xs text-muted transition hover:border-ember hover:text-foreground"
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+              <AiPeopleFlow />
             </div>
           ) : (
             <>
@@ -2668,11 +2732,7 @@ return (
                     aria-label="Attach a file"
                       aria-haspopup="menu"
                       disabled={!conversationId}
-                      title={
-                        conversationId
-                          ? undefined
-                          : "Send your first message to start the project, then attach files."
-                      }
+                      data-tip={conversationId ? "Attach a file" : "Send a first message, then attach files"}
                       onClick={() => setAttachMenuOpen((value) => !value)}
                     >
                       <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15.5 9.5l-5.6 5.6a3.4 3.4 0 01-4.8-4.8l6-6a2.3 2.3 0 013.2 3.2l-6 6a1.1 1.1 0 01-1.6-1.6l5.4-5.4" /></svg>
@@ -2705,7 +2765,7 @@ return (
                       className="bf-composer-tool"
                       aria-expanded={commandsOpen}
                     aria-label="Actions and commands"
-                    title="Actions and commands"
+                    data-tip="Actions: images, ads, calendar, video, team"
                       aria-haspopup="menu"
                       onClick={() => setCommandsOpen((value) => !value)}
                     >
@@ -2777,6 +2837,7 @@ return (
                     aria-label={
                       isStreaming ? "BrandForge is answering" : "Send message"
                     }
+                    data-tip={isStreaming ? "Answering" : "Send"}
                     className="bf-composer-send"
                   >
                     <span aria-hidden="true">{isStreaming ? "···" : "↑"}</span>
@@ -2785,7 +2846,21 @@ return (
               </div>
             </div>
           </form>
+          <ActionsHint show={showActionsHint} onDismiss={dismissActionsHint} />
         </div>
+        {!conversationId && !isBooting ? (
+          <StartPrompts
+            onPick={(text) => {
+              setInput(text);
+              requestAnimationFrame(() => {
+                const box = composerRef.current;
+                if (!box) return;
+                box.focus();
+                box.setSelectionRange(text.length, text.length);
+              });
+            }}
+          />
+        ) : null}
       </main>
 
       {isVideoOpen ? <VideoMaker images={videoImages} onClose={() => setIsVideoOpen(false)} /> : null}

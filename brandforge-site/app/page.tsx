@@ -1,50 +1,25 @@
 import { Suspense } from 'react';
-import { LandingNav } from '@/components/landing/landing-nav';
-import { LandingHero } from '@/components/landing/landing-hero';
-import { LandingPillars } from '@/components/landing/landing-pillars';
-import { LandingCommunity } from '@/components/landing/landing-community';
-import { LandingTrade } from '@/components/landing/landing-trade';
-import { LandingProof } from '@/components/landing/landing-proof';
-import { SiteFooter } from '@/components/site-footer';
+import { ChatWorkspace } from '@/components/chat-workspace';
 
+// The front door is the product: brandforge.gg opens straight into a chat. Signed-out visitors
+// start a guest chat with their first message; the long-form pitch lives at /overview.
 export const metadata = {
-  title: 'BrandForge — Research, plan, create and distribute with your team',
+  title: 'BrandForge: AI and people, one workspace',
   description:
-    'Describe an idea, paste a URL or drop a file. BrandForge researches it, plans it, creates the assets and distributes them, with your team in the same chat.',
+    'Describe an idea, paste a URL or drop a file. AI researches, plans and creates; your team and vetted specialists join the same chat.',
   alternates: { canonical: '/' },
 };
 
-export default function Home() {
-  const organization = {
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
-    name: 'BrandForge',
-    url: 'https://brandforge.gg',
-    description:
-      'Workspace for founders and teams: AI researches and plans, you create and distribute together, vetted specialists build with escrow-protected payments.',
-    sameAs: [
-      'https://discord.gg/GSKHXkUY85',
-      'https://t.me/BrandForge_gg',
-      'https://github.com/BrandForgeGG',
-    ],
-  };
+export default function HomePage() {
   return (
-    <div className="bf-page">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }}
-      />
-      <LandingNav />
-      <main>
-        <Suspense>
-          <LandingHero />
-        </Suspense>
-        <LandingPillars />
-        <LandingTrade />
-        <LandingProof />
-        <LandingCommunity />
-      </main>
-      <SiteFooter />
-    </div>
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-background px-6 text-foreground">
+          <p className="text-sm text-muted">Loading…</p>
+        </main>
+      }
+    >
+      <ChatWorkspace />
+    </Suspense>
   );
 }

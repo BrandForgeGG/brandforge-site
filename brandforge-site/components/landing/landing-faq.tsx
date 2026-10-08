@@ -49,9 +49,8 @@ export function LandingFaq() {
   return (
     <section id="faq" className="bf-section" aria-labelledby="faq-title">
       <div className="mx-auto max-w-3xl">
-        <p className="text-xs uppercase tracking-[0.2em] text-copper">Questions</p>
         <h2 id="faq-title" className="mt-2 font-serif text-3xl text-foreground sm:text-4xl">
-          Asked before you ask
+          Questions, answered
         </h2>
         <div className="mt-8 space-y-3">
           {FAQS.map((item) => (

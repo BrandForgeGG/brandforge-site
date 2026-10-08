@@ -1,4 +1,4 @@
-export type Theme = 'original' | 'light';
+export type Theme = 'forge' | 'crystal' | 'mono';
 
 export declare const THEME_KEY: string;
 export declare const VALID_THEMES: Theme[];
