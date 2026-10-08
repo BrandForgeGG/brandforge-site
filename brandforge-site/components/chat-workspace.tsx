@@ -2308,7 +2308,7 @@ return (
         {error ? (
           <div className="px-6 pb-2">
             <div
-              className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200"
+              className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-danger"
               role="alert"
             >
               <span className="min-w-0 flex-1">{error}</span>

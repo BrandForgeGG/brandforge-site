@@ -57,7 +57,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('brandforge:theme');if(t==='original'){document.documentElement.dataset.theme='original';}}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('brandforge:theme');if(t==='light'){document.documentElement.dataset.theme='light';}}catch(e){}})();`,
           }}
         />
       </head>

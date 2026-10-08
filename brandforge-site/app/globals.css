@@ -334,6 +334,7 @@ body {
 
 .bf-recents {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.25rem;
 }
 
@@ -534,7 +535,7 @@ body {
   background: linear-gradient(
     135deg,
     rgba(232, 87, 30, 0.13),
-    rgba(28, 32, 36, 0.96) 72%
+    var(--panel) 72%
   );
 }
 
@@ -641,7 +642,7 @@ body {
 }
 
 .bf-input::placeholder {
-  color: #8f959b;
+  color: var(--muted);
 }
 
 @media (max-width: 640px) {
@@ -1563,7 +1564,7 @@ footer p {
 
 .bf-chip-remove:hover:not(:disabled) {
   color: var(--foreground);
-  background: rgba(236, 231, 222, 0.08);
+  background: var(--overlay);
 }
 
 /* Avatar images: deterministic crop, no dramatic treatment. */

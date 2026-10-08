@@ -472,7 +472,7 @@ export default function SettingsPage() {
             <div>
               <p className="text-sm text-muted">Theme</p>
               <div className="mt-2 flex gap-2" role="radiogroup" aria-label="Theme">
-                {(['light', 'original'] as Theme[]).map((t) => (
+                {(['original', 'light'] as Theme[]).map((t) => (
                   <button
                     key={t}
                     type="button"
@@ -490,7 +490,7 @@ export default function SettingsPage() {
                 ))}
               </div>
               <p className="mt-1 text-xs text-muted">
-                Light is the default. Forge is the original dark BrandForge look.
+                Forge is the default dark look. Light is brighter, for daytime.
               </p>
             </div>
           </div>

@@ -444,7 +444,7 @@ onMobileClose,
                                   className="h-1.5 w-1.5 shrink-0 rounded-full bg-ember"
                                 />
                               ) : null}
-                              <span className="truncate">
+                              <span className="min-w-0 truncate">
                                 {conversation.title}
                               </span>
                             </p>

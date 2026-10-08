@@ -14,11 +14,7 @@ const {
 function makeDom() {
   const store = new Map();
   const dataset = {};
-  const document = {
-    documentElement: {
-      dataset,
-    },
-  };
+  const document = { documentElement: { dataset } };
   const localStorage = {
     getItem: (k) => (store.has(k) ? store.get(k) : null),
     setItem: (k, v) => store.set(k, String(v)),
@@ -27,43 +23,43 @@ function makeDom() {
   return { document, localStorage, store, dataset };
 }
 
-test('normalizeTheme accepts the two themes and defaults to light', () => {
+test('normalizeTheme accepts the two themes and defaults to Forge', () => {
   assert.equal(normalizeTheme('light'), 'light');
   assert.equal(normalizeTheme('original'), 'original');
-  assert.equal(normalizeTheme('dark'), 'light', 'dark is not a theme; light is the default');
-  assert.equal(normalizeTheme('bogus'), 'light');
-  assert.equal(normalizeTheme(null), 'light');
-  assert.equal(normalizeTheme(undefined), 'light');
-  assert.equal(normalizeTheme(''), 'light');
+  assert.equal(normalizeTheme('dark'), 'original', 'dark is not a stored value; Forge is the default');
+  assert.equal(normalizeTheme('bogus'), 'original');
+  assert.equal(normalizeTheme(null), 'original');
+  assert.equal(normalizeTheme(undefined), 'original');
+  assert.equal(normalizeTheme(''), 'original');
 });
 
-test('applyTheme: light removes data-theme, Forge (original) sets it', () => {
+test("applyTheme: light sets data-theme='light' (what the CSS expects), Forge removes it", () => {
   const { document, dataset } = makeDom();
   const origDoc = globalThis.document;
   globalThis.document = document;
   try {
-    applyTheme('original');
-    assert.equal(dataset.theme, 'original');
     applyTheme('light');
-    assert.equal(dataset.theme, undefined, 'light removes the attribute');
+    assert.equal(dataset.theme, 'light');
+    applyTheme('original');
+    assert.equal(dataset.theme, undefined, 'Forge removes the attribute');
   } finally {
     globalThis.document = origDoc;
   }
 });
 
-test('setStoredTheme persists the choice and applies it', () => {
+test('setStoredTheme persists light and applies it; Forge clears the key', () => {
   const { document, localStorage, dataset } = makeDom();
   const origDoc = globalThis.document;
   const origLocal = globalThis.localStorage;
   globalThis.document = document;
   globalThis.localStorage = localStorage;
   try {
-    assert.equal(setStoredTheme('original'), 'original');
-    assert.equal(localStorage.getItem('brandforge:theme'), 'original');
-    assert.equal(dataset.theme, 'original');
-
     assert.equal(setStoredTheme('light'), 'light');
-    assert.equal(localStorage.getItem('brandforge:theme'), null, 'light is the default: key removed');
+    assert.equal(localStorage.getItem('brandforge:theme'), 'light');
+    assert.equal(dataset.theme, 'light');
+
+    assert.equal(setStoredTheme('original'), 'original');
+    assert.equal(localStorage.getItem('brandforge:theme'), null, 'Forge is the default: key removed');
     assert.equal(dataset.theme, undefined);
   } finally {
     globalThis.document = origDoc;
@@ -76,11 +72,11 @@ test('getStoredTheme reads the stored choice', () => {
   const origLocal = globalThis.localStorage;
   globalThis.localStorage = localStorage;
   try {
-    assert.equal(getStoredTheme(), 'light');
-    localStorage.setItem('brandforge:theme', 'original');
     assert.equal(getStoredTheme(), 'original');
-    localStorage.setItem('brandforge:theme', 'bogus');
+    localStorage.setItem('brandforge:theme', 'light');
     assert.equal(getStoredTheme(), 'light');
+    localStorage.setItem('brandforge:theme', 'bogus');
+    assert.equal(getStoredTheme(), 'original');
   } finally {
     globalThis.localStorage = origLocal;
   }
@@ -100,13 +96,13 @@ test('theme helpers survive blocked storage', () => {
     },
   };
   try {
-    assert.equal(getStoredTheme(), 'light');
-    assert.equal(setStoredTheme('original'), 'original');
+    assert.equal(getStoredTheme(), 'original');
+    assert.equal(setStoredTheme('light'), 'light');
   } finally {
     globalThis.localStorage = origLocal;
   }
 });
 
 test('the two themes are the closed set the settings UI offers', () => {
-  assert.deepEqual(VALID_THEMES, ['light', 'original']);
+  assert.deepEqual(VALID_THEMES, ['original', 'light']);
 });

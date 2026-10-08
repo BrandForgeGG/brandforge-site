@@ -1,23 +1,23 @@
 'use strict';
 
-// Theme persistence for the two BrandForge themes: light (default) and the dark
-// "Forge" theme (stored as 'original'). The choice lives in localStorage so it
-// survives reloads and applies before paint via the inline script in app/layout.tsx.
-// Light is the absence of data-theme: the CSS default. Forge sets data-theme='original'.
+// Theme persistence for the two BrandForge themes: Forge (the default dark look, stored as
+// 'original') and light. The choice lives in localStorage so it survives reloads and applies
+// before paint via the inline script in app/layout.tsx. Forge is the absence of data-theme:
+// the CSS default. Light sets data-theme='light'.
 
 const THEME_KEY = 'brandforge:theme';
-const VALID_THEMES = ['light', 'original'];
+const VALID_THEMES = ['original', 'light'];
 
 function normalizeTheme(value) {
-  return VALID_THEMES.includes(value) ? value : 'light';
+  return VALID_THEMES.includes(value) ? value : 'original';
 }
 
 function applyTheme(theme) {
   const root = typeof document !== 'undefined' ? document.documentElement : null;
   if (!root) return;
   const normalized = normalizeTheme(theme);
-  if (normalized === 'original') {
-    root.dataset.theme = normalized;
+  if (normalized === 'light') {
+    root.dataset.theme = 'light';
   } else {
     delete root.dataset.theme;
   }
@@ -27,20 +27,20 @@ function getStoredTheme() {
   try {
     return normalizeTheme(localStorage.getItem(THEME_KEY));
   } catch {
-    return 'light';
+    return 'original';
   }
 }
 
 function setStoredTheme(theme) {
   const normalized = normalizeTheme(theme);
   try {
-    if (normalized === 'light') {
+    if (normalized === 'original') {
       localStorage.removeItem(THEME_KEY);
     } else {
       localStorage.setItem(THEME_KEY, normalized);
     }
   } catch {
-    // Storage blocked — the choice just won't persist.
+    // Storage blocked: the choice just won't persist.
   }
   applyTheme(normalized);
   return normalized;

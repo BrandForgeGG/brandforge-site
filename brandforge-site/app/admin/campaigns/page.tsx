@@ -25,9 +25,9 @@ const KINDS = ['directory', 'launch', 'outreach', 'other'] as const;
 const STATUS_STYLES: Record<string, string> = {
   planned: 'border-line bg-background text-muted',
   in_progress: 'border-ember/40 bg-ember/10 text-ember',
-  submitted: 'border-sky-500/30 bg-sky-500/10 text-sky-200',
-  live: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200',
-  declined: 'border-red-500/40 bg-red-500/10 text-red-200',
+  submitted: 'border-sky-500/30 bg-sky-500/10 text-foreground',
+  live: 'border-emerald-500/30 bg-emerald-500/10 text-success',
+  declined: 'border-red-500/40 bg-red-500/10 text-danger',
   skipped: 'border-line bg-background text-muted/60',
 };
 
@@ -196,7 +196,7 @@ export default function AdminCampaignsPage() {
       {error ? (
         <p
           role="alert"
-          className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200"
+          className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-danger"
         >
           {error}
         </p>
@@ -348,7 +348,7 @@ export default function AdminCampaignsPage() {
                     </a>
                   ) : null}
                   {campaign.live_url ? (
-                    <a href={campaign.live_url} target="_blank" rel="noreferrer" className="text-emerald-200 hover:underline">
+                    <a href={campaign.live_url} target="_blank" rel="noreferrer" className="text-success hover:underline">
                       Live →
                     </a>
                   ) : null}

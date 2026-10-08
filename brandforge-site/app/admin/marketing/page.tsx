@@ -24,8 +24,8 @@ type MarketingPost = {
 
 const STATUS_STYLES: Record<string, string> = {
   queued: 'border-ember/40 bg-ember/10 text-ember',
-  posted: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200',
-  failed: 'border-red-500/40 bg-red-500/10 text-red-200',
+  posted: 'border-emerald-500/30 bg-emerald-500/10 text-success',
+  failed: 'border-red-500/40 bg-red-500/10 text-danger',
   paused: 'border-line bg-background text-muted',
 };
 
@@ -213,13 +213,13 @@ export default function AdminMarketingPage() {
       {error ? (
         <p
           role="alert"
-          className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200"
+          className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-danger"
         >
           {error}
         </p>
       ) : null}
       {runNote ? (
-        <p role="status" className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+        <p role="status" className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-success">
           {runNote}
         </p>
       ) : null}
@@ -375,14 +375,14 @@ export default function AdminMarketingPage() {
                   </a>
                 ) : null}
                 {post.error ? (
-                  <p className="mt-2 text-xs text-red-200">{post.error}</p>
+                  <p className="mt-2 text-xs text-danger">{post.error}</p>
                 ) : null}
                 {post.status !== 'posted' ? (
                   <button
                     type="button"
                     onClick={() => void discard(post.id)}
                     disabled={discardId === post.id}
-                    className="mt-2 text-xs text-red-200 underline-offset-2 transition hover:underline disabled:opacity-50"
+                    className="mt-2 text-xs text-danger underline-offset-2 transition hover:underline disabled:opacity-50"
                   >
                     {discardId === post.id ? 'Discarding…' : 'Discard draft'}
                   </button>

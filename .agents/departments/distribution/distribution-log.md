@@ -567,3 +567,9 @@ we do not have.
 **Change:** The left sidebar now has an icon for Create, Distribute, Optimize and Trade (shown on their own when the sidebar is collapsed) and a chat icon on every recent chat. The sidebar never scrolls sideways, and its vertical scrollbar only appears while the pointer is over it.
 
 **Distribution move:** none (interface polish).
+
+## 2026-10-08 — Light theme actually works now
+
+**Change:** The Light option in Settings did nothing: the saved choice and the page colours used opposite rules, so picking Light left the site dark. They now agree (Forge dark is the default; Light switches and remembers). Error and success messages are readable on the light page, the community card no longer shows a dark patch, and long chat titles in the sidebar end in an ellipsis instead of being cut off.
+
+**Distribution move:** none (fix). Changelog line: "Light mode now works. Settings > Theme."
