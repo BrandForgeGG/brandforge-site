@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Inter, Fraunces } from "next/font/google";
+import { LoginProvider } from "@/components/login-dialog";
 import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -44,7 +45,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#faf9f7",
+  themeColor: "#0f0e0d",
 };
 
 export default function RootLayout({
@@ -62,7 +63,7 @@ export default function RootLayout({
         />
       </head>
       <body>
-        {children}
+        <LoginProvider>{children}</LoginProvider>
         <Analytics />
       </body>
     </html>

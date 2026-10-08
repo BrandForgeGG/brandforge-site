@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { getSessionUser } from '@/lib/browser-auth';
 import { COMMUNITY_LINKS } from '@/lib/community';
+import { useLogin } from '@/components/login-dialog';
 
 const NAV_LINKS = [
   { label: 'Features', href: '/features' },
@@ -14,6 +15,7 @@ const NAV_LINKS = [
 ];
 
 export function LandingNav() {
+  const { openLogin } = useLogin();
   const [signedIn, setSignedIn] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -68,12 +70,13 @@ export function LandingNav() {
               >
                 Join Discord
               </a>
-              <Link
-                href="/login"
+              <button
+                type="button"
+                onClick={() => openLogin({ reason: 'signin', next: '/' })}
                 className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-95"
               >
                 Sign in
-              </Link>
+              </button>
             </>
           )}
           {/* Phones: the section links live behind a 44px menu button. */}

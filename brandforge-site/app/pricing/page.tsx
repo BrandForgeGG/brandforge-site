@@ -18,7 +18,6 @@ export default function PricingPage() {
       <LandingNav />
       <main>
         <header className="px-6 pb-2 pt-14 text-center">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted">Pricing</p>
           <h1 className="mt-2 font-serif text-4xl text-foreground sm:text-5xl">
             Fixed price. Nothing charged until you accept.
           </h1>

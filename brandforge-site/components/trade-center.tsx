@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLogin } from "@/components/login-dialog";
 import { createPortal } from "react-dom";
 import { fetchAuthed } from "@/lib/browser-auth";
 import { CATEGORIES } from "@/lib/trade.js";
@@ -168,7 +169,7 @@ export function TradeCenter() {
 }
 
 function PostForm({ onClose, onPosted, listing }: { onClose: () => void; onPosted: () => void; listing?: ListingView }) {
-  const router = useRouter();
+  const { openLogin } = useLogin();
   const [kind, setKind] = useState<"offer" | "request">((listing?.kind as "offer" | "request") ?? "offer");
   const [category, setCategory] = useState(listing?.category ?? CATEGORIES[0]);
   const [title, setTitle] = useState(listing?.title ?? "");
@@ -190,7 +191,7 @@ function PostForm({ onClose, onPosted, listing }: { onClose: () => void; onPoste
       });
       const data = await response.json().catch(() => ({}));
       if (response.status === 401) {
-        router.push("/login?next=/trade");
+        openLogin({ reason: "signin", next: "/trade" });
         return;
       }
       if (!response.ok) {
@@ -268,6 +269,7 @@ function PostForm({ onClose, onPosted, listing }: { onClose: () => void; onPoste
 
 function ContactForm({ listing, onClose }: { listing: ListingView; onClose: () => void }) {
   const router = useRouter();
+  const { openLogin } = useLogin();
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -283,7 +285,7 @@ function ContactForm({ listing, onClose }: { listing: ListingView; onClose: () =
       });
       const data = await response.json().catch(() => ({}));
       if (response.status === 401) {
-        router.push("/login?next=/trade");
+        openLogin({ reason: "signin", next: "/trade" });
         return;
       }
       if (!response.ok) {

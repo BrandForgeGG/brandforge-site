@@ -591,3 +591,9 @@ we do not have.
 **Change:** The chat now ends with one quiet line under the composer, as on the best chat apps: "AI can make mistakes. People check what matters." with Terms and Privacy. It sits at the bottom of the start screen and under the composer in every conversation.
 
 **Distribute:** none (polish); it does reinforce the "AI and people" message in every screenshot.
+
+## 2026-10-08 — Sign-in pop-up and a short site footer
+
+**Change:** "Sign up free", "Log in", "Save chat" and the Trade sign-in prompts now open a sign-in pop-up over the page you are on (Google or email, Esc to close, focus kept inside), so the chat stays right behind it and you land back where you were; /login still works for direct links. The public-page footer shrank from five columns to two lines: the product links on one, the small print and socials on the other. A global link-colour rule that silently overrode every coloured link was fixed, so links now show their intended colours.
+
+**Distribution move:** none; shorter path from "Save chat" to a signed-in account should lift guest-to-account conversion (watch `guest_save_clicked` against sign-ins in the funnel).

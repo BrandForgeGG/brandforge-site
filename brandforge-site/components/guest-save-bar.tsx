@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { trackEvent } from '@/lib/funnel-client';
+import { useLogin } from '@/components/login-dialog';
 
 const DISMISS_KEY = 'brandforge:guest-save-dismissed';
 
@@ -16,6 +16,7 @@ export function GuestSaveBar({
   conversationId: string;
   hasReply: boolean;
 }) {
+  const { openLogin } = useLogin();
   const [isGuest, setIsGuest] = useState(false);
   const [dismissed, setDismissed] = useState(true);
 
@@ -44,13 +45,16 @@ export function GuestSaveBar({
           Keep this chat and add your team. <span className="hidden text-muted sm:inline">Free, takes 10 seconds.</span>
         </p>
         <div className="flex shrink-0 items-center gap-2">
-          <Link
-            href={`/login?next=${next}`}
-            onClick={() => trackEvent('guest_save_clicked', { source: 'save_bar' })}
+          <button
+            type="button"
+            onClick={() => {
+              trackEvent('guest_save_clicked', { source: 'save_bar' });
+              openLogin({ reason: 'save', next: decodeURIComponent(next) });
+            }}
             className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background transition hover:opacity-90"
           >
             Save chat
-          </Link>
+          </button>
           <button
             type="button"
             aria-label="Dismiss"

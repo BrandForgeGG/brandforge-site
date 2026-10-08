@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { supabase } from "@/lib/supabase";
 import { fetchAuthed, getSessionUser } from "@/lib/browser-auth";
+import { useLogin } from "@/components/login-dialog";
 import { avatarTone, initialsFor } from "@/lib/identity-display";
 
 export interface RecentConversation {
@@ -109,6 +110,7 @@ onMobileClose,
   const [accountId, setAccountId] = useState("");
   // The readable bf_guest cookie marks an anonymous browser (rail is client-only, no SSR mismatch).
   const isVisitor = useIsVisitor();
+  const { openLogin } = useLogin();
   const isGuestBrowser = typeof document !== "undefined" && document.cookie.includes("bf_guest=");
   const [isSelfStaff, setIsSelfStaff] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -477,7 +479,13 @@ onMobileClose,
           /* Collapsed footer: the account stays reachable as an avatar chip. */
           <div className="bf-rail-footer mt-auto flex shrink-0 justify-center">
             <Link
-              href={isVisitor && !account ? "/login" : "/settings"}
+              href={isVisitor && !account ? "#sign-in" : "/settings"}
+              onClick={(event) => {
+                if (isVisitor && !account) {
+                  event.preventDefault();
+                  openLogin({ reason: "signin" });
+                }
+              }}
               title={
                 account
                   ? `${account.name}${account.username ? " · @" + account.username : ""} · ${account.role}`
@@ -508,15 +516,20 @@ onMobileClose,
           <div className="bf-rail-footer mt-auto shrink-0">
             <p className="text-xs leading-snug text-muted">Save your chats and bring your team in.</p>
             <div className="mt-2.5 grid grid-cols-2 gap-2">
-              <Link
-                href={`/login?next=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname + window.location.search : "/")}`}
+              <button
+                type="button"
+                onClick={() => openLogin({ reason: "save" })}
                 className="rounded-lg bg-ember px-3 py-2 text-center text-xs font-semibold text-background transition hover:opacity-90"
               >
                 Sign up free
-              </Link>
-              <Link href="/login" className="rounded-lg border border-line px-3 py-2 text-center text-xs text-foreground transition hover:border-ember">
+              </button>
+              <button
+                type="button"
+                onClick={() => openLogin({ reason: "signin" })}
+                className="rounded-lg border border-line px-3 py-2 text-center text-xs text-foreground transition hover:border-ember"
+              >
                 Log in
-              </Link>
+              </button>
             </div>
           </div>
         ) : (
@@ -562,13 +575,16 @@ onMobileClose,
             {dropdownOpen ? (
               <div className="absolute bottom-full left-0 mb-2 w-56 rounded-xl border border-line bg-panel p-3 shadow-xl">
                 {isGuestBrowser && !account ? (
-                  <Link
-                    href={`/login?next=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname + window.location.search : "/chat")}`}
-                    onClick={() => setDropdownOpen(false)}
-                    className="mb-1 block rounded-lg bg-ember px-3 py-2 text-center text-sm font-semibold text-background transition hover:opacity-90"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      openLogin({ reason: "save" });
+                    }}
+                    className="mb-1 block w-full rounded-lg bg-ember px-3 py-2 text-center text-sm font-semibold text-background transition hover:opacity-90"
                   >
                     Save my chats
-                  </Link>
+                  </button>
                 ) : null}
                 <Link
                   href="/settings"

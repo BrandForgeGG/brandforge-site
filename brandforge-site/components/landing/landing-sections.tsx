@@ -36,7 +36,6 @@ export function LandingSections() {
     <section id="process" className="border-t border-line px-6 py-20">
       <div className="mx-auto max-w-2xl">
         <div className="text-center">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted">From idea → shipped</p>
           <h2 className="mt-2 font-serif text-3xl text-foreground sm:text-4xl">
             How BrandForge works
           </h2>
