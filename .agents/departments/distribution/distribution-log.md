@@ -639,3 +639,9 @@ we do not have.
 **Change:** On phones the composer no longer zooms the page when tapped (text fields are 16px), the placeholder fits on one line ("Describe your idea…"), signed-out visitors get a visible "Sign in" button in the chat header, and the one-time Actions tooltip no longer covers the "Save chat" bar.
 
 **Distribution move:** no new capability to announce; this lifts the first two minutes for mobile visitors from community links, which is where most launch traffic opens. Demo note: re-record the mobile screenshots for ads with the new header.
+
+## 2026-10-09 — Sign in wording for visitors
+
+**Change:** the bar under a guest's first answer now says "Sign in to keep this chat and add your team" with a "Sign in" button (was "Save chat"); the sign-in pop-up is titled "Sign in to keep going".
+
+**Distribution move:** copy-only conversion tweak; watch `guest_save_clicked` rate in the funnel against last week to see if the plainer wording lifts sign-ins.

@@ -20,7 +20,7 @@ export function useLogin(): LoginApi {
 }
 
 const COPY = {
-  save: { title: 'Keep this chat', line: 'Sign in free and everything here comes with you, so you can bring your team in.' },
+  save: { title: 'Sign in to keep going', line: 'Sign in free and everything here comes with you, so you can bring your team in.' },
   signin: { title: 'Sign in to BrandForge', line: 'New or returning, same buttons. Free to start, no card.' },
 } as const;
 

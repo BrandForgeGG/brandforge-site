@@ -39,10 +39,10 @@ export function GuestSaveBar({
       <div
         className="mx-auto mb-1.5 flex max-w-3xl items-center justify-between gap-x-3 rounded-xl border border-ember/30 bg-ember/10 px-3 py-1.5"
         role="region"
-        aria-label="Save this chat"
+        aria-label="Sign in"
       >
         <p className="min-w-0 text-sm text-foreground">
-          Keep this chat and add your team. <span className="hidden text-muted sm:inline">Free, takes 10 seconds.</span>
+          Sign in to keep this chat and add your team. <span className="hidden text-muted sm:inline">Free, takes 10 seconds.</span>
         </p>
         <div className="flex shrink-0 items-center gap-2">
           <button
@@ -53,7 +53,7 @@ export function GuestSaveBar({
             }}
             className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background transition hover:opacity-90"
           >
-            Save chat
+            Sign in
           </button>
           <button
             type="button"
