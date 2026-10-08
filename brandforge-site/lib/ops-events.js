@@ -43,7 +43,8 @@ const KIND_BY_EVENT = {
   milestone_released: 'contracts',
   peer_funding_review: 'contracts',
   peer_released: 'contracts',
-  peer_dispute: 'disputes',
+  // No #ops-disputes webhook exists yet; a dispute must never be silent, so it shares contracts.
+  peer_dispute: 'contracts',
 };
 
 // clip/money live in lib/format.js so every message builder renders identically.
