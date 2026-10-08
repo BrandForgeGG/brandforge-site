@@ -597,3 +597,9 @@ we do not have.
 **Change:** "Sign up free", "Log in", "Save chat" and the Trade sign-in prompts now open a sign-in pop-up over the page you are on (Google or email, Esc to close, focus kept inside), so the chat stays right behind it and you land back where you were; /login still works for direct links. The public-page footer shrank from five columns to two lines: the product links on one, the small print and socials on the other. A global link-colour rule that silently overrode every coloured link was fixed, so links now show their intended colours.
 
 **Distribution move:** none; shorter path from "Save chat" to a signed-in account should lift guest-to-account conversion (watch `guest_save_clicked` against sign-ins in the funnel).
+
+## 2026-10-08 — Guidance on Create, Distribute and Optimize; thumb-sized controls
+
+**Change:** Create and Distribute open with a one-line "Pick a tool, set the options, it opens in a chat" and hover hints on Start from a format and More options. Optimize now shows its three steps (connect a channel, we read the results, you get what to change) and says plainly that no numbers are invented until a channel is connected. On phones every chip and icon button is at least 40px, so nothing is hard to tap. A phone audit of 12 pages found no sideways scrolling.
+
+**Distribution move:** none (usability). It makes the "Make it yours / Every format, one page" screenshots work on phones too.

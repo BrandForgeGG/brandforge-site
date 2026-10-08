@@ -60,6 +60,21 @@ function ToolIcon({ id }: { id: string }) {
 
 type Recent = { id: string; title: string; lastActivity: string | null };
 
+// The whole flow in one line, so nobody wonders what Start does.
+function StudioFlow() {
+  const steps = ['Pick a tool', 'Set the options', 'It opens in a chat'];
+  return (
+    <ol className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-muted" aria-label="How this page works">
+      {steps.map((step, index) => (
+        <li key={step} className="flex items-center gap-2">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full border border-line text-[10px] text-foreground">{index + 1}</span>
+          <span>{step}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 // "Start from a format": direction, then track, then format. Choosing a format only pre-fills the
 // form (a lead-in sentence and matching options); everything stays editable.
 function FormatPicker({ formats, onPick }: { formats: CreateFormat[]; onPick: (format: CreateFormat) => void }) {
@@ -73,7 +88,7 @@ function FormatPicker({ formats, onPick }: { formats: CreateFormat[]; onPick: (f
 
   return (
     <details className="rounded-xl border border-line bg-panel px-3.5 py-2.5">
-      <summary className="cursor-pointer text-sm text-muted">Start from a format</summary>
+      <summary className="cursor-pointer text-sm text-muted" data-tip="Pre-fills the form. You can change everything." data-tip-pos="right">Start from a format</summary>
       <div className="mt-3 space-y-2.5">
         <div className="flex flex-wrap gap-1.5" role="group" aria-label="Direction">
           {directions.map((item) => (
@@ -93,7 +108,7 @@ function FormatPicker({ formats, onPick }: { formats: CreateFormat[]; onPick: (f
           {formats
             .filter((item) => item.direction === direction && item.track === activeTrack)
             .map((item) => (
-              <button key={item.label} type="button" onClick={() => onPick(item)} className="rounded-lg border border-line bg-background px-3 py-1.5 text-xs text-foreground transition hover:border-ember">
+              <button key={item.label} type="button" onClick={() => onPick(item)} className="bf-tap rounded-lg border border-line bg-background px-3 py-1.5 text-xs text-foreground transition hover:border-ember">
                 {item.label}
               </button>
             ))}
@@ -305,6 +320,7 @@ function StudioView({ title, subtitle, storageKey, source, groups, referenceFiel
 
   return (
     <AppShell title={title} subtitle={subtitle}>
+      <StudioFlow />
       <div role="tablist" aria-label="Tool groups" className="flex gap-1 border-b border-line">
         {groups.map((entry) => (
           <button
@@ -365,7 +381,7 @@ function StudioView({ title, subtitle, storageKey, source, groups, referenceFiel
         ))}
 
         <details className="rounded-xl border border-line bg-panel px-3.5 py-2.5" open={Boolean(values.reference) || override !== null}>
-          <summary className="cursor-pointer text-sm text-muted">More options</summary>
+          <summary className="cursor-pointer text-sm text-muted" data-tip="Add a page to read first, or word the request yourself." data-tip-pos="right">More options</summary>
           <div className="mt-3 space-y-3">
             <div>
               <label className="mb-1.5 block text-xs font-medium uppercase tracking-[0.1em] text-muted">{referenceField.label}</label>
@@ -394,7 +410,7 @@ function StudioView({ title, subtitle, storageKey, source, groups, referenceFiel
           <button type="submit" disabled={busy} className="bf-button bf-button-primary disabled:opacity-50">
             {busy ? 'Starting…' : 'Start →'}
           </button>
-          <button type="button" onClick={fillExample} className="text-sm text-muted underline-offset-2 transition hover:text-foreground hover:underline">
+          <button type="button" onClick={fillExample} className="bf-tap text-sm text-muted underline-offset-2 transition hover:text-foreground hover:underline">
             Try an example
           </button>
           {error ? (
