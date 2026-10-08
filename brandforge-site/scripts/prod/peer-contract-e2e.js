@@ -124,9 +124,21 @@ const check = (name, cond, detail) => {
     const listing = { kind: 'offer', category: 'Video and motion', title: 'Short-form video editing', description: 'I cut Reels and Shorts for small brands, captions included, two-day turnaround.', budgetMin: 200, budgetMax: 600 };
     check('unsupported sector listing declined (422)', (await call(payer, 'POST', '/api/trade', { ...listing, title: 'Promo for my payday loans' })).status === 422);
     check('invalid listing rejected (400)', (await call(payer, 'POST', '/api/trade', { ...listing, title: 'x' })).status === 400);
-    const posted = await call(payer, 'POST', '/api/trade', listing);
-    listingId = posted.body.listing?.id;
-    check('listing posted', posted.status === 200 && posted.body.listing.mine === true, JSON.stringify(posted.body).slice(0, 200));
+    const offerAttempt = await call(payer, 'POST', '/api/trade', listing);
+    check('a member who is not a specialist cannot offer services (403, apply)', offerAttempt.status === 403 && offerAttempt.body.apply === true, JSON.stringify(offerAttempt.body));
+    const requestListing = { ...listing, kind: 'request', title: 'Need a short launch reel edited', description: 'Looking for someone to cut a 30-second launch reel with captions this week.' };
+    const posted = await call(payer, 'POST', '/api/trade', requestListing);
+    const requestId = posted.body.listing?.id;
+    check('anyone can post a request for work', posted.status === 200 && posted.body.listing.mine === true, JSON.stringify(posted.body).slice(0, 200));
+    check('a non-specialist cannot answer a request (403, apply)', (await call(outsider, 'POST', `/api/trade/${requestId}/contact`, { message: 'I can do this for you this week.' })).status === 403);
+    check('viewer info says specialist or not', (await call(payer, 'GET', '/api/trade')).body.viewer?.isSpecialist === false);
+    const edit1 = await call(payer, 'PATCH', `/api/trade/${requestId}`, { ...requestListing, budgetMax: 700 });
+    check('owner edits a request', edit1.status === 200 && edit1.body.listing?.budgetMaxCents === 70000);
+    check('editing a request into an offer is also gated (403)', (await call(payer, 'PATCH', `/api/trade/${requestId}`, listing)).status === 403);
+    // Fixture: a specialist's offer, written directly (no admin or specialist account is created).
+    const seeded = await admin.from('trade_listings').insert({ owner_id: payer.id, kind: 'offer', category: listing.category, title: listing.title, description: listing.description, currency: 'EUR', budget_min_cents: 20000, budget_max_cents: 60000 }).select('id').single();
+    listingId = seeded.data.id;
+    check('seeded offer is visible to everyone', (await call(null, 'GET', '/api/trade')).body.listings?.some((l) => l.id === listingId));
     const browse = await call(null, 'GET', '/api/trade?q=reels');
     check('anyone can browse and search it', browse.status === 200 && browse.body.listings?.some((l) => l.id === listingId && l.mine === false));
     check('filters exclude it', !(await call(null, 'GET', '/api/trade?kind=request')).body.listings?.some((l) => l.id === listingId));
@@ -141,10 +153,8 @@ const check = (name, cond, detail) => {
     const tradePeople = await call(payer, 'GET', `/api/peer-contracts?conversationId=${tradeConvId}&people=1`);
     check('the owner can start a contract with the visitor from there', tradePeople.status === 200 && tradePeople.body.people?.some((p) => p.userId === outsider.id));
     check('only the owner can close it (404 for others)', (await call(outsider, 'DELETE', `/api/trade/${listingId}`)).status === 404);
-    const edited = await call(payer, 'PATCH', `/api/trade/${listingId}`, { ...listing, title: 'Short-form video editing, fast', budgetMax: 700 });
-    check('owner edits the listing', edited.status === 200 && edited.body.listing?.title === 'Short-form video editing, fast' && edited.body.listing.budgetMaxCents === 70000, JSON.stringify(edited.body).slice(0, 200));
-    check('others cannot edit it (404)', (await call(outsider, 'PATCH', `/api/trade/${listingId}`, listing)).status === 404);
-    check('an edit into an unsupported sector is declined (422)', (await call(payer, 'PATCH', `/api/trade/${listingId}`, { ...listing, title: 'Promo for my online casino' })).status === 422);
+    check('others cannot edit a listing (404)', (await call(outsider, 'PATCH', `/api/trade/${requestId}`, requestListing)).status === 404);
+    check('an edit into an unsupported sector is declined (422)', (await call(payer, 'PATCH', `/api/trade/${requestId}`, { ...requestListing, title: 'Promo for my online casino' })).status === 422);
     check('a review request is accepted', (await call(null, 'POST', '/api/content-review', { text: 'ads for my winery tours', category: 'intoxicants' })).status === 200);
     check('an empty review request is refused (400)', (await call(null, 'POST', '/api/content-review', { text: '' })).status === 400);
     check('owner closes the listing', (await call(payer, 'DELETE', `/api/trade/${listingId}`)).status === 200);

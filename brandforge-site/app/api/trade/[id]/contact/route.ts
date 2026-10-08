@@ -3,6 +3,7 @@ import {
   addMessage,
   createConversation,
   getProfileDisplayName,
+  getProfileRole,
   getTradeListing,
   joinConversationAsMember,
   recordFunnelEvent,
@@ -29,6 +30,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
     if (listing.row.owner_id === user.id) {
       return NextResponse.json({ error: 'This is your own listing' }, { status: 400 });
+    }
+
+    // Answering a request for work is offering a service: specialists only.
+    if (listing.row.kind === 'request') {
+      const role = await getProfileRole(user.id);
+      if (role !== 'operator' && role !== 'admin') {
+        return NextResponse.json({ error: 'Offering services is for approved specialists. Apply first, it takes two minutes.', apply: true }, { status: 403 });
+      }
     }
 
     const rate = checkRateLimit(`trade-contact:${user.id}`, CONTACT_LIMIT);

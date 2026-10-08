@@ -18,7 +18,6 @@ type AuthCookieUpdate = {
 const protectedRoutes = [
   '/chat',
   '/settings',
-  '/apply',
   '/admin',
   '/onboarding',
 ];

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLogin } from "@/components/login-dialog";
 import { createPortal } from "react-dom";
@@ -39,6 +40,7 @@ function Modal({ label, onClose, children }: { label: string; onClose: () => voi
 export function TradeCenter() {
   const [listings, setListings] = useState<ListingView[] | null>(null);
   const [pending, setPending] = useState(false);
+  const [isSpecialist, setIsSpecialist] = useState(false);
   const [kind, setKind] = useState<"" | "offer" | "request">("");
   const [category, setCategory] = useState("");
   const [q, setQ] = useState("");
@@ -56,6 +58,7 @@ export function TradeCenter() {
       const data = await response.json().catch(() => ({}));
       setListings(response.ok ? (data.listings ?? []) : []);
       setPending(Boolean(data.pending));
+      setIsSpecialist(Boolean(data.viewer?.isSpecialist));
     } catch {
       setListings([]);
     }
@@ -133,9 +136,15 @@ export function TradeCenter() {
                       </button>
                     </div>
                   ) : (
-                    <button type="button" onClick={() => setContacting(l)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background">
-                      {l.kind === "offer" ? "Hire" : "Offer to help"}
-                    </button>
+                    l.kind === "request" && !isSpecialist ? (
+                      <Link href="/apply" data-tip="Only approved specialists can answer requests" className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">
+                        Apply to help
+                      </Link>
+                    ) : (
+                      <button type="button" onClick={() => setContacting(l)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background">
+                        {l.kind === "offer" ? "Hire" : "Offer to help"}
+                      </button>
+                    )
                   )}
                 </div>
               </article>
@@ -161,14 +170,14 @@ export function TradeCenter() {
         Agree the deal in a private chat, then sign a milestone contract there. A flat 5% is taken when each milestone is released.
       </p>
 
-      {posting ? <PostForm onClose={() => setPosting(false)} onPosted={() => void load()} /> : null}
-      {editing ? <PostForm listing={editing} onClose={() => setEditing(null)} onPosted={() => void load()} /> : null}
+      {posting ? <PostForm canOffer={isSpecialist} onClose={() => setPosting(false)} onPosted={() => void load()} /> : null}
+      {editing ? <PostForm canOffer={isSpecialist} listing={editing} onClose={() => setEditing(null)} onPosted={() => void load()} /> : null}
       {contacting ? <ContactForm listing={contacting} onClose={() => setContacting(null)} /> : null}
     </div>
   );
 }
 
-function PostForm({ onClose, onPosted, listing }: { onClose: () => void; onPosted: () => void; listing?: ListingView }) {
+function PostForm({ onClose, onPosted, listing, canOffer }: { onClose: () => void; onPosted: () => void; listing?: ListingView; canOffer: boolean }) {
   const { openLogin } = useLogin();
   const [kind, setKind] = useState<"offer" | "request">((listing?.kind as "offer" | "request") ?? "offer");
   const [category, setCategory] = useState(listing?.category ?? CATEGORIES[0]);
@@ -216,6 +225,15 @@ function PostForm({ onClose, onPosted, listing }: { onClose: () => void; onPoste
           </button>
         ))}
       </div>
+      {kind === "offer" && !canOffer ? (
+        <p className="mt-3 rounded-lg border border-ember/30 bg-ember/10 px-3 py-2 text-xs leading-relaxed text-foreground">
+          Offering services is for approved specialists.{" "}
+          <Link href="/apply" className="text-ember underline-offset-2 hover:underline">
+            Apply in two minutes
+          </Link>{" "}
+          , or switch to &quot;I need work done&quot;.
+        </p>
+      ) : null}
       <label className="mt-3 block text-[11px] text-muted">
         Category
         <select value={category} onChange={(e) => setCategory(e.target.value)} className={`${field} mt-1`}>
@@ -259,7 +277,7 @@ function PostForm({ onClose, onPosted, listing }: { onClose: () => void; onPoste
         <button type="button" onClick={onClose} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground">
           Cancel
         </button>
-        <button type="button" disabled={busy} onClick={() => void submit()} className="rounded-lg bg-ember px-4 py-1.5 text-xs font-semibold text-background disabled:opacity-60">
+        <button type="button" disabled={busy || (kind === "offer" && !canOffer)} onClick={() => void submit()} className="rounded-lg bg-ember px-4 py-1.5 text-xs font-semibold text-background disabled:opacity-60">
           {listing ? "Save changes" : "Post listing"}
         </button>
       </div>

@@ -21,11 +21,14 @@ export function AppShell({
   title,
   subtitle,
   actions,
+  wide = false,
   children,
 }: {
   title: string;
   subtitle?: string;
   actions?: React.ReactNode;
+  /** Dashboards and tables get the full width; reading pages keep a calm column. */
+  wide?: boolean;
   children: React.ReactNode;
 }) {
   const [isRailOpen, setIsRailOpen] = useState(false);
@@ -37,7 +40,7 @@ export function AppShell({
       </Suspense>
 
       <main className="min-w-0 flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-3xl px-5 pb-16 pt-4 sm:px-8">
+        <div className={`mx-auto w-full px-5 pb-16 pt-4 sm:px-8 ${wide ? "max-w-7xl" : "max-w-3xl"}`}>
           <header className="flex items-center justify-between gap-3 pb-5">
             <div className="flex min-w-0 items-center gap-2">
               <button

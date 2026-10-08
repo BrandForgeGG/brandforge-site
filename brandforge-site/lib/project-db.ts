@@ -4787,3 +4787,290 @@ export async function getRealStats(sinceIso?: string): Promise<RealStats> {
 
   return { since, members, chats, guestChats, listings, specialistApplications, contractsSigned, milestonesReleased };
 }
+
+// ---------------------------------------------------------------------------
+// Specialist applications (0029): open to anyone, linked to an account by email once the person
+// registers. Service role behind route checks, like the other open-door writes.
+// ---------------------------------------------------------------------------
+
+export type ApplicationRow = {
+  id: string;
+  user_id: string | null;
+  email: string;
+  full_name: string | null;
+  specialty: string | null;
+  links: string | null;
+  message: string;
+  status: 'pending' | 'accepted' | 'declined';
+  created_at: string;
+  reviewed_at: string | null;
+};
+
+const APPLICATION_COLUMNS = 'id, user_id, email, full_name, specialty, links, message, status, created_at, reviewed_at';
+
+export async function createSpecialistApplication(input: {
+  userId: string | null;
+  email: string;
+  fullName: string;
+  specialty: string;
+  links: string;
+  message: string;
+}): Promise<{ ok: true; row: ApplicationRow } | { ok: false; error: 'duplicate' | 'not_configured' | 'failed' }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('operator_applications')
+    .insert({
+      user_id: input.userId,
+      email: input.email,
+      full_name: input.fullName || null,
+      specialty: input.specialty || null,
+      links: input.links || null,
+      message: input.message,
+      status: 'pending',
+    })
+    .select(APPLICATION_COLUMNS)
+    .single();
+
+  if (error) {
+    if (error.code === '23505') return { ok: false, error: 'duplicate' };
+    console.error('Application create error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+  return { ok: true, row: data as unknown as ApplicationRow };
+}
+
+// The newest application for this person: by account, or by the email they applied with.
+export async function getApplicationFor(userId: string, email: string | null): Promise<ApplicationRow | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const filters = [`user_id.eq.${userId}`];
+  if (email) filters.push(`email.ilike.${email.replace(/[,()]/g, '')}`);
+  const { data } = await admin
+    .from('operator_applications')
+    .select(APPLICATION_COLUMNS)
+    .or(filters.join(','))
+    .order('created_at', { ascending: false })
+    .limit(1);
+  return ((data ?? [])[0] as unknown as ApplicationRow | undefined) ?? null;
+}
+
+// Links applications made before registering to the new account; if one was accepted in the
+// meantime, access is granted now (never touching admins).
+export async function claimApplicationsForUser(userId: string, email: string): Promise<void> {
+  try {
+    const admin = createSupabaseAdminClient();
+    if (!admin || !email) return;
+    const { data } = await admin
+      .from('operator_applications')
+      .select('id, status')
+      .is('user_id', null)
+      .ilike('email', email.replace(/[,()]/g, ''));
+    const rows = (data ?? []) as { id: string; status: string }[];
+    if (rows.length === 0) return;
+    await admin.from('operator_applications').update({ user_id: userId }).in('id', rows.map((r) => r.id));
+    if (rows.some((r) => r.status === 'accepted')) {
+      const { data: profile } = await admin.from('profiles').select('role').eq('id', userId).maybeSingle();
+      if (profile && profile.role !== 'admin') {
+        await admin.from('profiles').update({ role: 'operator', updated_at: new Date().toISOString() }).eq('id', userId);
+      }
+    }
+  } catch (cause) {
+    console.warn('claimApplicationsForUser failed:', cause instanceof Error ? cause.message : cause);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Admin dashboard: one read of everything the team needs, real users only, plus chat deletion.
+// ---------------------------------------------------------------------------
+
+export type AdminChatRow = {
+  id: string;
+  title: string;
+  status: string;
+  source: string;
+  createdAt: string;
+  updatedAt: string;
+  ownerName: string;
+  ownerEmail: string | null;
+  isGuest: boolean;
+  isTest: boolean;
+  hasMoney: boolean;
+};
+
+type AdminClient = NonNullable<ReturnType<typeof createSupabaseAdminClient>>;
+
+// Conversations where someone's money is committed: never removed by a bulk action.
+async function conversationsWithMoney(admin: AdminClient): Promise<Set<string>> {
+  const ids = new Set<string>();
+  const contracts = await admin
+    .from('peer_contracts')
+    .select('conversation_id, funding_status, status')
+    .neq('funding_status', 'none')
+    .in('status', ['active', 'disputed']);
+  for (const row of (contracts.data ?? []) as { conversation_id: string }[]) ids.add(row.conversation_id);
+  const agreements = await admin
+    .from('agreements')
+    .select('conversation_id, status')
+    .not('status', 'in', '("pending_funding","cancelled","completed")');
+  for (const row of (agreements.data ?? []) as { conversation_id: string }[]) ids.add(row.conversation_id);
+  return ids;
+}
+
+export async function adminListChats(limit = 300): Promise<AdminChatRow[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const { data } = await admin
+    .from('conversations')
+    .select('id, title, status, source, user_id, created_at, updated_at')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  const rows = (data ?? []) as { id: string; title: string; status: string; source: string | null; user_id: string | null; created_at: string; updated_at: string }[];
+
+  const userIds = [...new Set(rows.map((r) => r.user_id).filter((id): id is string => Boolean(id)))];
+  const profiles = new Map<string, { name: string; email: string | null; role: string | null }>();
+  if (userIds.length > 0) {
+    const { data: profileRows } = await admin.from('profiles').select('id, email, display_name, full_name, username, role').in('id', userIds);
+    for (const p of (profileRows ?? []) as { id: string; email: string | null; display_name: string | null; full_name: string | null; username: string | null; role: string | null }[]) {
+      profiles.set(p.id, { name: p.display_name || p.full_name || p.username || (p.email ? p.email.split('@')[0] : 'Member'), email: p.email, role: p.role });
+    }
+  }
+  const money = await conversationsWithMoney(admin);
+
+  return rows.map((row) => {
+    const owner = row.user_id ? profiles.get(row.user_id) : null;
+    const isTest = row.source === 'test' || !isRealActorRecord({ email: owner?.email, role: owner?.role });
+    return {
+      id: row.id,
+      title: row.title || 'Untitled',
+      status: row.status,
+      source: row.source ?? 'organic',
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      ownerName: owner ? owner.name : 'Guest',
+      ownerEmail: owner?.email ?? null,
+      isGuest: !row.user_id,
+      isTest,
+      hasMoney: money.has(row.id),
+    };
+  });
+}
+
+// Deletes chats (and everything hanging off them). Bulk modes skip chats with money committed.
+export async function adminDeleteChats(options: {
+  ids?: string[];
+  mode?: 'ids' | 'test' | 'all';
+}): Promise<{ deleted: number; skippedMoney: number }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { deleted: 0, skippedMoney: 0 };
+
+  const mode = options.mode ?? 'ids';
+  let targets: string[] = [];
+  if (mode === 'ids') {
+    targets = (options.ids ?? []).map(String).filter(Boolean).slice(0, 500);
+  } else {
+    const chats = await adminListChats(5000);
+    targets = chats.filter((c) => mode === 'all' || c.isTest).map((c) => c.id);
+  }
+  if (targets.length === 0) return { deleted: 0, skippedMoney: 0 };
+
+  let skippedMoney = 0;
+  if (mode !== 'ids') {
+    const money = await conversationsWithMoney(admin);
+    const before = targets.length;
+    targets = targets.filter((id) => !money.has(id));
+    skippedMoney = before - targets.length;
+  }
+
+  let deleted = 0;
+  for (let i = 0; i < targets.length; i += 100) {
+    const batch = targets.slice(i, i + 100);
+    const { error, count } = await admin.from('conversations').delete({ count: 'exact' }).in('id', batch);
+    if (error) console.error('adminDeleteChats batch error:', error.message);
+    else deleted += count ?? batch.length;
+  }
+  return { deleted, skippedMoney };
+}
+
+export type ActivityItem = { at: string; kind: string; text: string };
+
+export type AdminOverview = {
+  totals: RealStats;
+  today: RealStats;
+  week: RealStats;
+  chats: { total: number; test: number; guests: number; withMoney: number };
+  openListings: number;
+  pendingApplications: number;
+  daily: { day: string; chats: number; members: number }[];
+  activity: ActivityItem[];
+  applications: (ApplicationRow & { isTest: boolean })[];
+};
+
+export async function getAdminOverview(): Promise<AdminOverview | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+
+  const day = 24 * 60 * 60 * 1000;
+  const [today, week, totals] = await Promise.all([
+    getRealStats(new Date(Date.now() - day).toISOString()),
+    getRealStats(new Date(Date.now() - 7 * day).toISOString()),
+    getRealStats('2000-01-01T00:00:00.000Z'),
+  ]);
+
+  const chats = await adminListChats(2000);
+  const real = chats.filter((c) => !c.isTest);
+
+  // Last 14 days, real chats and real new members, oldest first.
+  const start = new Date();
+  start.setUTCHours(0, 0, 0, 0);
+  start.setTime(start.getTime() - 13 * day);
+  const buckets = new Map<string, { chats: number; members: number }>();
+  for (let i = 0; i < 14; i += 1) buckets.set(new Date(start.getTime() + i * day).toISOString().slice(0, 10), { chats: 0, members: 0 });
+  for (const chat of real) {
+    const bucket = buckets.get(chat.createdAt.slice(0, 10));
+    if (bucket) bucket.chats += 1;
+  }
+  const realProfiles = await loadRealProfiles(admin);
+  for (const p of realProfiles.values()) {
+    const bucket = buckets.get(p.createdAt.slice(0, 10));
+    if (bucket) bucket.members += 1;
+  }
+
+  const appsRes = await admin
+    .from('operator_applications')
+    .select('id, user_id, email, full_name, specialty, links, message, status, created_at, reviewed_at')
+    .order('created_at', { ascending: false })
+    .limit(100);
+  const applications = ((appsRes.data ?? []) as unknown as ApplicationRow[]).map((row) => ({ ...row, isTest: isTestEmailAddress(row.email) }));
+
+  const listingsRes = await admin.from('trade_listings').select('id', { count: 'exact', head: true }).eq('status', 'open');
+
+  const activity: ActivityItem[] = [];
+  for (const chat of real.slice(0, 12)) {
+    activity.push({ at: chat.createdAt, kind: 'chat', text: `${chat.isGuest ? 'A visitor' : chat.ownerName} started a chat: ${chat.title}` });
+  }
+  for (const [, p] of [...realProfiles.entries()].sort((a, b) => b[1].createdAt.localeCompare(a[1].createdAt)).slice(0, 8)) {
+    activity.push({ at: p.createdAt, kind: 'member', text: 'A new member joined' });
+  }
+  for (const app of applications.filter((a) => !a.isTest).slice(0, 8)) {
+    activity.push({ at: app.created_at, kind: 'application', text: `${app.full_name || 'Someone'} applied as a specialist${app.specialty ? ` (${app.specialty})` : ''}` });
+  }
+  const listingRows = await admin.from('trade_listings').select('title, kind, created_at, owner_id').order('created_at', { ascending: false }).limit(8);
+  for (const l of (listingRows.data ?? []) as { title: string; kind: string; created_at: string; owner_id: string }[]) {
+    if (realProfiles.has(l.owner_id)) activity.push({ at: l.created_at, kind: 'trade', text: `New ${l.kind === 'offer' ? 'service' : 'request'} in Trade: ${l.title}` });
+  }
+  activity.sort((a, b) => b.at.localeCompare(a.at));
+
+  return {
+    totals,
+    today,
+    week,
+    chats: { total: real.length, test: chats.length - real.length, guests: real.filter((c) => c.isGuest).length, withMoney: chats.filter((c) => c.hasMoney).length },
+    openListings: listingsRes.count ?? 0,
+    pendingApplications: applications.filter((a) => a.status === 'pending' && !a.isTest).length,
+    daily: [...buckets.entries()].map(([d, v]) => ({ day: d, ...v })),
+    activity: activity.slice(0, 30),
+    applications,
+  };
+}

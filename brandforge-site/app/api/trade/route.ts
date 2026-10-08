@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   createTradeListing,
   getProfileDisplayName,
+  getProfileRole,
   listOpenTradeListings,
   announceReal,
   recordFunnelEvent,
@@ -38,8 +39,10 @@ export async function GET(request: NextRequest) {
     for (const ownerId of new Set(rows.map((r) => r.owner_id))) {
       names.set(ownerId, await getProfileDisplayName(ownerId));
     }
+    const viewerRole = viewer ? await getProfileRole(viewer.id) : null;
     return NextResponse.json({
       listings: rows.map((row) => toListingView(row, names.get(row.owner_id) ?? 'Member', viewer?.id ?? null)),
+      viewer: { signedIn: Boolean(viewer), isSpecialist: viewerRole === 'operator' || viewerRole === 'admin' },
     });
   } catch (error) {
     console.error('Trade list error:', error);
@@ -66,6 +69,14 @@ export async function POST(request: NextRequest) {
 
     const screened = screenText(`${draft.value.title}\n${draft.value.description}`);
     if (!screened.ok) return NextResponse.json({ error: screened.message, policy: screened.category }, { status: 422 });
+
+    // Anyone can ask for work; offering services is for specialists who applied and were accepted.
+    if (draft.value.kind === 'offer') {
+      const role = await getProfileRole(user.id);
+      if (role !== 'operator' && role !== 'admin') {
+        return NextResponse.json({ error: 'Offering services is for approved specialists. Apply first, it takes two minutes.', apply: true }, { status: 403 });
+      }
+    }
 
     const created = await createTradeListing(user.id, draft.value);
     if (!created.ok) {
