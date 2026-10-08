@@ -44,6 +44,7 @@ const NAV_ITEMS = [
   { href: "/distribute", label: "Distribute", hint: "Ads, calendar and launch plans", path: "M16.5 3.5L8 12M16.5 3.5l-5 13-3.5-4.5-4.5-3.5z" },
   { href: "/optimize", label: "Optimize", hint: "See what works", path: "M4 15V9M8 15V5M12 15v-4M16 15V7" },
   { href: "/trade", label: "Trade", hint: "Hire or get hired", path: "M4 7h11l-3-3M16 13H5l3 3" },
+  { href: "/overview", label: "Overview", hint: "What BrandForge is and how it works", path: "M10 3.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM10 9v4.5M10 6.6h.01" },
 ];
 const CHAT_ICON = "M4 5.5h12v7.5H9.5L6 16v-3H4z";
 
