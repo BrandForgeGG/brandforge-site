@@ -60,7 +60,6 @@ async function settleIfDue(row: PeerContractRow): Promise<PeerContractRow> {
     sender_name: 'BrandForge',
     content: `A milestone on "${settled.title}" was released automatically after 48 hours with no objection.`,
     content_type: 'system',
-    artifact_data: { type: 'peer_contract', id: row.id, status: saved.row.status },
   });
   return saved.row;
 }
@@ -176,7 +175,6 @@ async function announce(row: PeerContractRow, event: string, actorName: string, 
       sender_name: 'BrandForge',
       content: line(actorName, contract.title),
       content_type: 'system',
-      artifact_data: { type: 'peer_contract', id: row.id, status: row.status },
     });
   }
 

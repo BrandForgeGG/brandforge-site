@@ -403,7 +403,8 @@ export function PeerContractForm({ conversationId, onClose, onSaved, reviseId, i
   if (!mounted) return null;
 
   const input =
-    "w-full rounded-lg border border-line bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted";
+    "rounded-lg border border-line bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted";
+  const full = `w-full ${input}`;
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/50 p-3 sm:items-center" role="dialog" aria-modal="true" aria-label={reviseId ? "Change contract terms" : "Create a contract"}>
@@ -419,7 +420,7 @@ export function PeerContractForm({ conversationId, onClose, onSaved, reviseId, i
           <div className="mt-3 grid grid-cols-2 gap-2">
             <label className="text-[11px] text-muted">
               With
-              <select value={counterpartyId} onChange={(e) => setCounterpartyId(e.target.value)} className={`${input} mt-1`}>
+              <select value={counterpartyId} onChange={(e) => setCounterpartyId(e.target.value)} className={`${full} mt-1`}>
                 {people.length === 0 ? <option value="">Invite someone to this chat first</option> : null}
                 {people.map((p) => (
                   <option key={p.userId} value={p.userId}>
@@ -430,7 +431,7 @@ export function PeerContractForm({ conversationId, onClose, onSaved, reviseId, i
             </label>
             <label className="text-[11px] text-muted">
               I am
-              <select value={myRole} onChange={(e) => setMyRole(e.target.value as "payer" | "payee")} className={`${input} mt-1`}>
+              <select value={myRole} onChange={(e) => setMyRole(e.target.value as "payer" | "payee")} className={`${full} mt-1`}>
                 <option value="payer">Paying for the work</option>
                 <option value="payee">Doing the work</option>
               </select>
@@ -440,17 +441,17 @@ export function PeerContractForm({ conversationId, onClose, onSaved, reviseId, i
 
         <label className="mt-3 block text-[11px] text-muted">
           Title
-          <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="30-second launch video" className={`${input} mt-1`} />
+          <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="30-second launch video" className={`${full} mt-1`} />
         </label>
         <label className="mt-3 block text-[11px] text-muted">
           What is delivered
-          <textarea value={scope} onChange={(e) => setScope(e.target.value)} rows={3} maxLength={4000} placeholder="One 30-second video, two rounds of edits, captions included." className={`${input} mt-1`} />
+          <textarea value={scope} onChange={(e) => setScope(e.target.value)} rows={3} maxLength={4000} placeholder="One 30-second video, two rounds of edits, captions included." className={`${full} mt-1`} />
         </label>
 
         <div className="mt-3 grid grid-cols-2 gap-2">
           <label className="text-[11px] text-muted">
             Currency
-            <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={`${input} mt-1`}>
+            <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={`${full} mt-1`}>
               <option>EUR</option>
               <option>USD</option>
               <option>GBP</option>
@@ -458,7 +459,7 @@ export function PeerContractForm({ conversationId, onClose, onSaved, reviseId, i
           </label>
           <label className="text-[11px] text-muted">
             Due date (optional)
-            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={`${input} mt-1`} />
+            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={`${full} mt-1`} />
           </label>
         </div>
 
@@ -466,7 +467,7 @@ export function PeerContractForm({ conversationId, onClose, onSaved, reviseId, i
         <div className="mt-1 space-y-2">
           {rows.map((row, i) => (
             <div key={i} className="flex gap-2">
-              <input value={row.title} onChange={(e) => setRows(rows.map((r, j) => (j === i ? { ...r, title: e.target.value } : r)))} placeholder={`Milestone ${i + 1}`} aria-label={`Milestone ${i + 1} title`} className={input} />
+              <input value={row.title} onChange={(e) => setRows(rows.map((r, j) => (j === i ? { ...r, title: e.target.value } : r)))} placeholder={`Milestone ${i + 1}`} aria-label={`Milestone ${i + 1} title`} className={`${input} min-w-0 flex-1`} />
               <input value={row.amount} onChange={(e) => setRows(rows.map((r, j) => (j === i ? { ...r, amount: e.target.value } : r)))} placeholder="0" inputMode="decimal" aria-label={`Milestone ${i + 1} amount`} className={`${input} w-24 shrink-0`} />
               {rows.length > 1 ? (
                 <button type="button" onClick={() => setRows(rows.filter((_, j) => j !== i))} aria-label={`Remove milestone ${i + 1}`} className="text-muted hover:text-foreground">
