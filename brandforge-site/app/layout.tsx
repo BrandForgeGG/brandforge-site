@@ -9,9 +9,9 @@ const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://brandforge.gg"),
-  title: "BrandForge - Chat-first studio for founders",
+  title: "BrandForge: AI and people, one workspace",
   description:
-    "Describe your project in a chat, get a human-vetted proposal, fund it with admin-verified crypto escrow, and approve every milestone before payment is released.",
+    "Describe an idea, paste a URL or drop a file. AI researches, plans and creates; your team and vetted specialists finish it in the same chat.",
   icons: {
     icon: [
       { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
@@ -20,9 +20,9 @@ export const metadata: Metadata = {
     apple: "/apple-touch-icon.png",
   },
   openGraph: {
-    title: "BrandForge - Chat-first studio for founders",
+    title: "BrandForge: AI and people, one workspace",
     description:
-      "Describe your project in a chat, get a human-vetted proposal, fund it with admin-verified crypto escrow, and approve every milestone before payment is released.",
+      "Research, plans, images, ads and video in one chat, with your team and vetted specialists to finish the job.",
     url: "https://brandforge.gg",
     siteName: "BrandForge",
     type: "website",
@@ -31,15 +31,15 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "BrandForge - Describe it. Humans build it.",
+        alt: "BrandForge: describe it, AI drafts it, people ship it.",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "BrandForge - Chat-first studio for founders",
+    title: "BrandForge: AI and people, one workspace",
     description:
-      "Describe your project in a chat, get a human-vetted proposal, fund it with admin-verified crypto escrow.",
+      "Research, plans, images, ads and video in one chat, with your team and vetted specialists to finish the job.",
     images: ["/twitter-card.png"],
   },
 };

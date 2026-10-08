@@ -5,7 +5,7 @@ import { SiteFooter } from '@/components/site-footer';
 export const metadata = {
   title: 'About — BrandForge',
   description:
-    'BrandForge is a chat-first studio. Describe your project, get a human-vetted proposal, fund it with crypto escrow, and approve every milestone.',
+    'BrandForge is where AI and people work on the same page: research, plans, images, ads and video in one chat, with your team and vetted specialists to finish the job.',
 };
 
 export default function AboutPage() {
@@ -13,14 +13,13 @@ export default function AboutPage() {
     <div className="bf-page">
       <LandingNav />
       <main className="mx-auto max-w-3xl px-6 py-16">
-        <p className="text-xs uppercase tracking-[0.2em] text-copper">About</p>
         <h1 className="mt-2 font-serif text-4xl text-foreground sm:text-5xl">
-          BrandForge is a chat-first studio
+          AI drafts. People finish.
         </h1>
         <p className="mt-6 text-lg leading-relaxed text-muted">
-          BrandForge turns one conversation into a real project. You describe what you want in
-          plain language. Our AI structures it into requirements, milestones, and an estimate.
-          Then a vetted human specialist joins your chat with a fixed scope, price, and timeline.
+          BrandForge turns one conversation into finished work. You describe what you want in plain
+          language, AI researches and drafts it, and then your team, or a vetted specialist, joins
+          the same chat to take it the rest of the way.
         </p>
 
         <div className="mt-12 space-y-8">
@@ -34,9 +33,8 @@ export default function AboutPage() {
               project.
             </p>
             <p className="mt-2 leading-relaxed text-muted">
-              3. A specialist joins with a fixed proposal. You fund in crypto to the BrandForge
-              escrow wallet, verified on-chain. Milestone payments release only after you approve
-              the delivered work.
+              3. Invite your team, or bring in a specialist with a priced proposal. Money moves
+              milestone by milestone, only when the person paying approves the work.
             </p>
           </section>
 

@@ -615,3 +615,9 @@ we do not have.
 **Change:** The separate admin pages are now one dashboard at /admin with everything already on the page: real-user numbers (members, chats, listings, contracts, milestones), a 14-day chart, the funnel, a live feed of what is happening, every specialist application with accept and decline inline, contract actions (deposits to check, disputes to decide, payouts to send), every chat with search and delete (single, selected, all test chats, or all chats with a typed confirmation; chats with money committed are never bulk-deleted), the outbound post queue with a composer, and the campaign tracker. /apply is open to anyone without an account (we recommend registering once with the same email, and an accepted application switches on access the moment they sign in). In the Trade Center anyone can post a request for work, but offering services and answering requests is for approved specialists, who must apply.
 
 **Distribution move:** "Become a specialist" is now a real front door: link /apply from Discord, Telegram, X and LinkedIn bios. Specialists-only offers make the Trade Center a vetted marketplace, which is the line to use when recruiting.
+
+## 2026-10-08 — Copy pass and a new blog post
+
+**Change:** Search and share cards (title, description, Open Graph, Twitter) now say "BrandForge: AI and people, one workspace". Features, About, Platform, Careers and the welcome email were rewritten around what the product does today (chat that does the work, formats, teams, member contracts with the flat 5%, Trade Center, specialists), with the small labels above headings removed. New blog post: "brandforge.gg now opens in a chat".
+
+**Distribution move:** share the blog post in Discord #public-changelog, the Telegram channel, X and LinkedIn; the post is the long version of the front-door announcement.

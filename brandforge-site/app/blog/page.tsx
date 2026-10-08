@@ -10,6 +10,16 @@ export const metadata = {
 // Real shipping entries, dated to when they actually went live. New posts go on top.
 const POSTS = [
   {
+    date: '2026-10-08',
+    title: 'brandforge.gg now opens in a chat',
+    body: [
+      'Open brandforge.gg and you are already in a chat. No sign-up: type an idea, paste a URL or drop a file and the first answer comes back before we ask you for anything. The old landing page now lives at /overview, built from screenshots of the real product.',
+      'Create and Distribute start from formats. Pick a direction, a track and a format (logo, favicon, T-shirt, poster, TikTok, Reel, ad angles, investor update) and the form fills itself in. Images and video stay free. There are three looks to choose from in Settings: Forge (fire orange), Crystal (crystal blue) and plain black and white.',
+      'People can work on the same page. Any two members in a chat can sign a milestone contract: the payer funds it, the other person submits each milestone with a link to the work, and the payer has 48 hours to approve it or raise an issue before it releases. BrandForge keeps a flat 5% of each released milestone, shown before anyone signs. The Trade Center lets anyone post a request for work; offering services is for specialists who applied and were accepted, and applying needs no account.',
+      'One more thing we changed: the live feed in Discord and Telegram now carries only activity from real members. Staff accounts and test accounts never appear in it, and the daily line of numbers is only posted on days when something really happened.',
+    ],
+  },
+  {
     date: '2026-10-03',
     title: 'The landing page finally proves it',
     body: [
@@ -58,7 +68,6 @@ export default function BlogPage() {
     <div className="bf-page">
       <LandingNav />
       <main className="mx-auto max-w-3xl px-6 py-16">
-        <p className="text-xs uppercase tracking-[0.2em] text-copper">Blog</p>
         <h1 className="mt-2 font-serif text-4xl text-foreground sm:text-5xl">
           What we shipped, and why
         </h1>
@@ -70,7 +79,7 @@ export default function BlogPage() {
         <div className="mt-12 space-y-10">
           {[...POSTS, ESSAY].map((post) => (
             <article key={post.title} className="border-t border-line pt-8">
-              <p className="text-xs uppercase tracking-[0.18em] text-copper">
+              <p className="text-xs text-muted">
                 <time dateTime={post.date}>
                   {new Date(`${post.date}T00:00:00Z`).toLocaleDateString('en-US', {
                     year: 'numeric',

@@ -217,8 +217,8 @@ ${chatUrl || ''}`.trim(),
     case 'welcome': {
       const chatUrl = typeof details.chatUrl === 'string' && details.chatUrl ? details.chatUrl : '';
       const paragraphs = [
-        'You are in. Describe what you want to build — the AI turns it into a structured project, and a vetted specialist replies with a priced proposal.',
-        `You approve before anything is charged, and escrow pays milestone by milestone. Launch packages from ${money(500, 'EUR')}.`,
+        'You are in. Open BrandForge and describe an idea, paste a URL or drop a file. The first answer is a researched plan, not a list of questions.',
+        'Bring your team into any chat with a link, and use the Trade Center to hire or get hired. Creating and distributing is free; a flat 5% applies only when a contract milestone is paid.',
       ];
       const subject = 'Welcome to BrandForge';
       return {
@@ -230,7 +230,7 @@ ${chatUrl || ''}`.trim(),
           paragraphs,
           chatUrl ? 'Open the chat' : null,
           chatUrl,
-          'One chat, one team, escrow-protected delivery.',
+          'AI drafts. People finish.',
           unsubscribeUrlFrom(details)
         ),
       };

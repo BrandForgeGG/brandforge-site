@@ -6,7 +6,7 @@ import { COMMUNITY_LINKS } from '@/lib/community';
 export const metadata = {
   title: 'Careers — BrandForge',
   description:
-    'BrandForge is a small team building a chat-first execution platform. See how we work and how to stay close to what we are hiring for.',
+    'BrandForge is a small team building a workspace where AI and people work together. See how we work and how to stay close to what we are hiring for.',
 };
 
 export default function CareersPage() {
@@ -14,7 +14,6 @@ export default function CareersPage() {
     <div className="bf-page">
       <LandingNav />
       <main className="mx-auto max-w-3xl px-6 py-16">
-        <p className="text-xs uppercase tracking-[0.2em] text-copper">Careers</p>
         <h1 className="mt-2 font-serif text-4xl text-foreground sm:text-5xl">
           A small team, shipping in the open
         </h1>

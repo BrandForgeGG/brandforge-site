@@ -40,14 +40,13 @@ export default function PlatformPage() {
     <div className="bf-page">
       <LandingNav />
       <main className="mx-auto max-w-4xl px-6 py-16">
-        <p className="text-xs uppercase tracking-[0.2em] text-copper">Platform</p>
         <h1 className="mt-2 font-serif text-4xl text-foreground sm:text-5xl">
           One pipeline, from idea to released payment
         </h1>
         <p className="mt-6 text-lg leading-relaxed text-muted">
-          BrandForge is built for two sides of the same table: founders who need
-          something built, and specialists who build it. The platform keeps both
-          honest at every step.
+          For bigger builds, BrandForge keeps both sides of the table honest: the person who needs
+          something made, and the specialist who makes it. Members can also contract each other
+          directly; see the Trade Center.
         </p>
 
         <div className="mt-12">

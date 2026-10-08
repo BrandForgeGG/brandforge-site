@@ -76,8 +76,8 @@ test('welcome email explains the journey and points at the chat', () => {
   assert.ok(email.html.includes('href="https://brandforge.gg/chat"'), 'cta links to chat');
   assert.ok(email.html.includes('Open the chat'), 'cta label');
   assert.ok(email.text.includes('https://brandforge.gg/chat'), 'text carries the url');
-  assert.ok(email.text.includes('EUR 500'), 'real launch package price');
-  assert.ok(email.html.includes('One chat, one team'), 'welcome signoff');
+  assert.ok(email.text.includes('flat 5%'), 'states the only fee, plainly');
+  assert.ok(email.html.includes('AI drafts. People finish.'), 'welcome signoff');
 });
 
 test('welcome email without a chat url skips the cta instead of emitting an empty link', () => {
