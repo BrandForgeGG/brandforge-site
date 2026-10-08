@@ -26,6 +26,24 @@ export interface RecentConversation {
 }
 
 // Recents show real timestamps from persisted messages, never a hardcoded "Just now".
+
+// One small stroke icon per workspace page and for chats, drawn inline (no image requests).
+const NAV_ITEMS = [
+  { href: "/create", label: "Create", path: "M10 3.5l1.6 4.4 4.4 1.6-4.4 1.6L10 15.5l-1.6-4.4L4 9.5l4.4-1.6zM15.5 3v3M14 4.5h3" },
+  { href: "/distribute", label: "Distribute", path: "M16.5 3.5L8 12M16.5 3.5l-5 13-3.5-4.5-4.5-3.5z" },
+  { href: "/optimize", label: "Optimize", path: "M4 15V9M8 15V5M12 15v-4M16 15V7" },
+  { href: "/trade", label: "Trade", path: "M4 7h11l-3-3M16 13H5l3 3" },
+];
+const CHAT_ICON = "M4 5.5h12v7.5H9.5L6 16v-3H4z";
+
+function RailIcon({ path, className = "h-4 w-4" }: { path: string; className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" className={className} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={path} />
+    </svg>
+  );
+}
+
 export function relativeTime(value: string | null): string {
   if (!value) {
     return "no activity";
@@ -235,7 +253,7 @@ onMobileClose,
 
       <aside
         className={
-          "fixed inset-y-0 left-0 z-40 h-screen w-72 shrink-0 flex-col border-r border-line bg-deep md:sticky md:top-0 md:h-full md:z-auto md:flex " +
+          "bf-rail fixed inset-y-0 left-0 z-40 h-screen w-72 shrink-0 flex-col overflow-x-hidden border-r border-line bg-deep md:sticky md:top-0 md:h-full md:z-auto md:flex " +
           (isMobileOpen ? "flex" : "hidden") +
           // Collapsed on desktop: a narrow icon rail so the conversation can breathe.
           (isCollapsed ? " md:w-16" : "")
@@ -307,22 +325,33 @@ onMobileClose,
           </button>
         </div>
 
-        {isCollapsed ? null : (
-          <div className="shrink-0 px-4 pb-2">
-            <nav aria-label="Workspace" className="flex flex-col gap-0.5">
-              <Link href="/create" onClick={onMobileClose} className="rounded-lg px-3 py-1.5 text-[13px] text-muted transition hover:bg-overlay hover:text-foreground">Create</Link>
-              <Link href="/distribute" onClick={onMobileClose} className="rounded-lg px-3 py-1.5 text-[13px] text-muted transition hover:bg-overlay hover:text-foreground">Distribute</Link>
-              <Link href="/optimize" onClick={onMobileClose} className="rounded-lg px-3 py-1.5 text-[13px] text-muted transition hover:bg-overlay hover:text-foreground">Optimize</Link>
-              <Link href="/trade" onClick={onMobileClose} className="rounded-lg px-3 py-1.5 text-[13px] text-muted transition hover:bg-overlay hover:text-foreground">Trade</Link>
-            </nav>
-          </div>
-        )}
+        <div className={isCollapsed ? "shrink-0 px-2 pb-2" : "shrink-0 px-4 pb-2"}>
+          <nav aria-label="Workspace" className={isCollapsed ? "flex flex-col items-center gap-1" : "flex flex-col gap-0.5"}>
+            {NAV_ITEMS.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onMobileClose}
+                title={item.label}
+                aria-label={item.label}
+                className={
+                  isCollapsed
+                    ? "flex h-9 w-9 items-center justify-center rounded-lg text-muted transition hover:bg-overlay hover:text-foreground"
+                    : "flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-[13px] text-muted transition hover:bg-overlay hover:text-foreground"
+                }
+              >
+                <RailIcon path={item.path} className="h-4 w-4 shrink-0" />
+                {isCollapsed ? null : item.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
 
         {isCollapsed ? (
           /* Collapsed rail: recents stay one click away as letter chips with tooltips. */
           <nav
             aria-label="Recent conversations"
-            className="flex min-h-0 flex-1 flex-col items-center gap-1.5 overflow-y-auto px-2 pb-4"
+            className="bf-rail-scroll flex min-h-0 flex-1 flex-col items-center gap-1.5 overflow-y-auto overflow-x-hidden px-2 pb-4"
           >
             {recents.map((conversation) => {
               const isActive = conversation.id === activeConversationId;
@@ -356,7 +385,7 @@ onMobileClose,
         ) : null}
 
         {isCollapsed ? null : (
-          <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pb-4">
+          <div className="bf-rail-scroll flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overflow-x-hidden px-4 pb-4">
             {isAdmin ? (
               <section>
                 <p className="bf-rail-section-label">Admin</p>
@@ -407,7 +436,8 @@ onMobileClose,
                             onClick={onMobileClose}
                             className="min-w-0 flex-1"
                           >
-                            <p className="flex items-center gap-1.5 text-sm text-foreground">
+                            <p className="flex items-center gap-2 text-sm text-foreground">
+                              <RailIcon path={CHAT_ICON} className="h-3.5 w-3.5 shrink-0 text-muted" />
                               {isStaff && conversation.isUnseen ? (
                                 <span
                                   aria-label="Nobody from the team has opened this chat yet"

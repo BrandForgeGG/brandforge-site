@@ -561,3 +561,9 @@ we do not have.
 **Change:** When a request is declined by the sector filter, the red banner now has "Ask a person to review", which sends the text to the team's channel (works for guests too). Trade Center owners can edit their listings, not only close them. The contract card refreshes every 15 seconds and the moment the tab comes back into view.
 
 **Distribution move:** none (trust and polish). Changelog line: "Blocked by mistake? Ask a person to review it. You can also edit your Trade listings."
+
+## 2026-10-08 — Sidebar icons and a quieter scrollbar
+
+**Change:** The left sidebar now has an icon for Create, Distribute, Optimize and Trade (shown on their own when the sidebar is collapsed) and a chat icon on every recent chat. The sidebar never scrolls sideways, and its vertical scrollbar only appears while the pointer is over it.
+
+**Distribution move:** none (interface polish).
