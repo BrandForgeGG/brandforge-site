@@ -651,3 +651,9 @@ we do not have.
 **Change:** on the web, a signed-out visitor who sends their first message gets the sign-in pop-up ("Sign in to get your answer") instead of an anonymous chat; the idea is kept and put back in the composer after sign-in. Existing guest chats stay open, and the Telegram/Discord bots keep their own guest path. Funnel event `guest_send_gated` counts the gate.
 
 **Distribution move:** every visitor now becomes an account or leaves, so measure `guest_send_gated` against sign-ins for two weeks; if drop-off is heavy, the free-answer-first flow is one revert away. Landing and ad copy should promise "free, no card" next to the first button.
+
+## 2026-10-09 — Mobile sidebar fixed, sign-in card
+
+**Change:** on phones the sidebar footer was cut off behind the browser toolbar (100vh); the sidebar, app shell and chat now size to the visible screen (dvh) and clear the iPhone home indicator. Signed-out visitors see a "Keep your work" card with one Sign in button, in the style of ChatGPT's login card.
+
+**Distribution move:** re-shoot the mobile sidebar screenshot for ads and the Telegram/Discord pins; no public announcement needed (fix plus conversion polish).

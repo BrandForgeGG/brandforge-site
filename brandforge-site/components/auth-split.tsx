@@ -13,7 +13,7 @@ const FLOW = [
 
 export function AuthSplit() {
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    <div className="flex min-h-dvh bg-background text-foreground">
       <div className="flex w-full flex-col justify-center px-6 py-12 sm:px-10 lg:w-[55%] lg:px-20">
         <div className="mx-auto w-full max-w-md">
           <Link href="/" className="font-serif text-2xl text-foreground" aria-label="BrandForge home">

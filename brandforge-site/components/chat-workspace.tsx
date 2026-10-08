@@ -1997,7 +1997,7 @@ export function ChatWorkspace() {
     return files;
   }, [messages]);
 return (
-      <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
+      <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
       <div className="flex min-h-0 flex-1 overflow-hidden">
       <ConversationRail
         recents={recents}

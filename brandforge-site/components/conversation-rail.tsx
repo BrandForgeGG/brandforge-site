@@ -267,7 +267,7 @@ onMobileClose,
 
       <aside
         className={
-          "bf-rail fixed inset-y-0 left-0 z-40 h-screen w-72 shrink-0 flex-col border-r border-line bg-deep md:sticky md:top-0 md:h-full md:z-auto md:flex " +
+          "bf-rail fixed inset-y-0 left-0 z-40 h-dvh w-72 shrink-0 flex-col border-r border-line bg-deep md:sticky md:top-0 md:h-full md:z-auto md:flex " +
           (isMobileOpen ? "flex" : "hidden") +
           // Collapsed on desktop: a narrow icon rail so the conversation can breathe.
           (isCollapsed ? " md:w-16" : "")
@@ -515,23 +515,15 @@ onMobileClose,
           </div>
         ) : isVisitor && !account ? (
           <div className="bf-rail-footer mt-auto shrink-0">
-            <p className="text-xs leading-snug text-muted">Save your chats and bring your team in.</p>
-            <div className="mt-2.5 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => openLogin({ reason: "save" })}
-                className="rounded-lg bg-ember px-3 py-2 text-center text-xs font-semibold text-background transition hover:opacity-90"
-              >
-                Sign up free
-              </button>
-              <button
-                type="button"
-                onClick={() => openLogin({ reason: "signin" })}
-                className="rounded-lg border border-line px-3 py-2 text-center text-xs text-foreground transition hover:border-ember"
-              >
-                Log in
-              </button>
-            </div>
+            <p className="text-sm font-semibold text-foreground">Keep your work</p>
+            <p className="mt-1 text-xs leading-snug text-muted">Sign in to save chats, bring your team and specialists in, and pick up on any device. Free, no card.</p>
+            <button
+              type="button"
+              onClick={() => openLogin({ reason: "signin" })}
+              className="mt-3 w-full rounded-xl bg-ember px-3 py-2.5 text-center text-sm font-semibold text-background transition hover:opacity-90"
+            >
+              Sign in
+            </button>
           </div>
         ) : (
           <div className="bf-rail-footer mt-auto shrink-0 relative">

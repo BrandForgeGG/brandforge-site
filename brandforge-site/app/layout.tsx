@@ -46,6 +46,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#0f0e0d",
+  // Lets env(safe-area-inset-*) work, so footers clear the iPhone home indicator.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

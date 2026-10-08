@@ -115,6 +115,7 @@ body {
 
 .bf-page {
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--background);
   color: var(--foreground);
 }
@@ -382,6 +383,8 @@ body {
   border-top: 1px solid var(--line);
   background: transparent;
   padding: 1rem;
+  /* Clear the home indicator on phones. */
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
 .bf-panel-close {
@@ -735,6 +738,7 @@ h3 {
 
 .brandforge-page {
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .brandforge-wrap {

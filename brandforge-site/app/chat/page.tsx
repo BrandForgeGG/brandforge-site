@@ -10,7 +10,7 @@ export default function ChatPage() {
   return (
     <Suspense
       fallback={
-        <main className="flex min-h-screen items-center justify-center bg-background px-6 text-foreground">
+        <main className="flex min-h-dvh items-center justify-center bg-background px-6 text-foreground">
           <p className="text-sm text-muted">Loading your conversation…</p>
         </main>
       }

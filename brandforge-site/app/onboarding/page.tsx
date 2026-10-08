@@ -113,14 +113,14 @@ export default function OnboardingPage() {
 
   if (checking) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
+      <main className="flex min-h-dvh items-center justify-center bg-background text-foreground">
         <p className="text-sm text-muted">Loading…</p>
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-10 text-foreground">
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-background px-4 py-10 text-foreground">
       <Link href="/" className="font-serif text-xl text-foreground" aria-label="BrandForge home">
         Brand<span className="text-ember">Forge</span>
       </Link>
