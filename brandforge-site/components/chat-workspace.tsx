@@ -1977,7 +1977,9 @@ return (
               <span aria-hidden="true">=</span>
             </button>
             <div className="flex min-w-0 items-center gap-2">
-              <h1
+              <p
+                role={conversationId ? "heading" : undefined}
+                aria-level={conversationId ? 1 : undefined}
                 className="truncate text-sm font-medium text-foreground"
                 title={
                   state
@@ -1988,7 +1990,7 @@ return (
                 }
               >
                 {projectLabel}
-              </h1>
+              </p>
               {/* Status is a dot, not a pill: the words live in the tooltip and for screen readers. */}
               <span
                 className="bf-status-dot shrink-0"
