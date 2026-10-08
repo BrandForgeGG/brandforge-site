@@ -2002,3 +2002,17 @@ main[data-empty='true'] .bf-composer-shell { position: static; }
   border-bottom: 1px solid var(--line);
   transform: rotate(45deg);
 }
+
+/* ---- Chat footer: one quiet line under the composer ---- */
+.bf-chat-footer {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0.15rem 1rem 0.6rem;
+  text-align: center;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.bf-chat-footer a { color: inherit; text-decoration: none; }
+.bf-chat-footer a:hover { color: var(--foreground); text-decoration: underline; text-underline-offset: 2px; }
+main[data-empty='true'] > .bf-chat-footer { position: absolute; inset: auto 0 0 0; }

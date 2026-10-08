@@ -585,3 +585,9 @@ we do not have.
 **Change:** brandforge.gg opens straight into a chat with a centred composer, five starting points with hover hints, and a one-line You, AI, People diagram; a one-time pointer shows where Actions lives after the first answer. Visitors see "Sign up free / Log in" in the sidebar instead of a fake "Signed in" label, and Create, Distribute and Trade now open for people with no account (they used to bounce to the login page). The story lives at /overview: one promise, a how-it-works diagram, real screenshots (Create formats, Distribute, a milestone contract), the three themes, a plain price list, proof, community and FAQ. Themes: Forge (fire orange), Crystal (crystal blue) and Black and white. Small labels above headings were removed across the landing sections.
 
 **Distribution move:** ad creative is built only from app screenshots, saved in marketing/app-screenshots (start screens in all three themes on desktop and phone; Create, Distribute, Trade, Pricing; a launch-plan chat in each theme; a demo milestone contract in each theme; the contract and answer are demo content, never to be presented as a customer). Suggested ads: (1) start screen, line "What are we building today?"; (2) the Create format picker, "Every format, one page."; (3) the Crystal chat answer, "A launch plan in 20 seconds."; (4) the contract card, "Hire someone you meet in the chat. Pay per milestone."; (5) three themes side by side, "Make it yours."
+
+## 2026-10-08 — One-line chat footer
+
+**Change:** The chat now ends with one quiet line under the composer, as on the best chat apps: "AI can make mistakes. People check what matters." with Terms and Privacy. It sits at the bottom of the start screen and under the composer in every conversation.
+
+**Distribute:** none (polish); it does reinforce the "AI and people" message in every screenshot.

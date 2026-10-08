@@ -6,6 +6,7 @@ import { useRealtimeMessages } from "@/lib/realtime-messages";
 import { useConversationPresence } from "@/lib/presence";
 import { formatTypingLabel } from "@/lib/presence-utils";
 import { avatarTone, formatRole, initialsFor } from "@/lib/identity-display";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ClientProjectState } from "@/lib/conversation-state";
 import {
@@ -168,7 +169,6 @@ function StartPrompts({ onPick }: { onPick: (text: string) => void }) {
           </button>
         ))}
       </div>
-      <p className="mt-5 text-center text-xs text-muted">AI drafts fast. People check what matters.</p>
     </div>
   );
 }
@@ -2863,6 +2863,13 @@ return (
             }}
           />
         ) : null}
+        <p className="bf-chat-footer">
+          AI can make mistakes. People check what matters.
+          <span aria-hidden="true"> · </span>
+          <Link href="/terms">Terms</Link>
+          <span aria-hidden="true"> · </span>
+          <Link href="/privacy">Privacy</Link>
+        </p>
       </main>
 
       {isVideoOpen ? <VideoMaker images={videoImages} onClose={() => setIsVideoOpen(false)} /> : null}
