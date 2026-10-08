@@ -42,6 +42,11 @@ export declare function postPublicActivity(
   opts?: OpsSendOptions
 ): Promise<OpsSendResult>;
 
+export declare function postEverywhere(
+  text: string,
+  opts?: OpsSendOptions
+): Promise<{ discord: OpsSendResult; telegram: { sent: boolean; reason?: string } }>;
+
 export declare function postDevLog(
   post: { title?: string; description?: string; url?: string },
   opts?: OpsSendOptions

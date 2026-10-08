@@ -21,6 +21,7 @@ import { postOpsEvent, postPublicActivity } from './ops-events';
 import { publishPost } from './marketing-poster';
 import { headers } from 'next/headers';
 import type { PeerContract, PeerMilestone } from './peer-contract';
+import { allReal as allRealActors, isRealActor as isRealActorRecord, isTestEmail as isTestEmailAddress, type Actor as RealActor } from './real-activity';
 
 import { validateUsername } from '@/lib/identity';
 
@@ -1537,7 +1538,7 @@ export async function updateConversationStatus(
     await notifyDiscordDiscovery(conversationId, data.title);
     await notifyStaffBriefReady(conversationId, data.title);
     await postOpsEvent('brief_posted', { title: data.title, conversationId });
-    await postPublicActivity('brief_posted', { title: data.title });
+    await announceReal('brief_posted', { title: data.title }, [{ conversationId }]);
   }
 
   return true;
@@ -4650,4 +4651,139 @@ export async function updateTradeListing(
     return { ok: false, error: 'failed' };
   }
   return data ? { ok: true, row: data as unknown as TradeListingRow } : { ok: false, error: 'not_found' };
+}
+
+// ---------------------------------------------------------------------------
+// Real activity: what may be announced and counted publicly. Staff, throwaway test accounts and
+// conversations marked as test traffic never are (lib/real-activity.js has the rules).
+// ---------------------------------------------------------------------------
+
+export type ActivityRef = { userId?: string | null; conversationId?: string | null };
+
+async function resolveActors(admin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>, refs: ActivityRef[]): Promise<RealActor[]> {
+  const actors: RealActor[] = [];
+  for (const ref of refs) {
+    let userId = ref.userId ?? null;
+    if (ref.conversationId) {
+      const { data } = await admin
+        .from('conversations')
+        .select('user_id, source')
+        .eq('id', ref.conversationId)
+        .maybeSingle();
+      if (data) {
+        actors.push({ source: data.source ? String(data.source) : null });
+        userId = userId ?? (data.user_id ? String(data.user_id) : null);
+      }
+    }
+    if (userId) {
+      const { data } = await admin.from('profiles').select('email, role').eq('id', userId).maybeSingle();
+      actors.push({ email: data?.email ? String(data.email) : null, role: data?.role ? String(data.role) : null });
+    }
+  }
+  return actors;
+}
+
+// Announces an event to Discord and Telegram only when every person behind it is a real user.
+// Never throws and never blocks the action that triggered it.
+export async function announceReal(event: string, details: Record<string, unknown>, refs: ActivityRef[]): Promise<void> {
+  try {
+    const admin = createSupabaseAdminClient();
+    if (!admin) return;
+    const actors = await resolveActors(admin, refs);
+    if (!allRealActors(actors)) {
+      console.info(`[announce] ${event}: skipped (test or staff activity)`);
+      return;
+    }
+    await postPublicActivity(event, details);
+  } catch (cause) {
+    console.warn('announceReal failed:', cause instanceof Error ? cause.message : cause);
+  }
+}
+
+export type RealStats = {
+  since: string;
+  members: number;
+  chats: number;
+  guestChats: number;
+  listings: number;
+  specialistApplications: number;
+  contractsSigned: number;
+  milestonesReleased: number;
+};
+
+type ProfileLite = { id: string; email: string | null; role: string | null };
+
+async function loadRealProfiles(admin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>) {
+  const { data } = await admin.from('profiles').select('id, email, role, created_at');
+  const real = new Map<string, { createdAt: string }>();
+  for (const row of (data ?? []) as (ProfileLite & { created_at: string })[]) {
+    if (isRealActorRecord({ email: row.email, role: row.role })) real.set(row.id, { createdAt: row.created_at });
+  }
+  return real;
+}
+
+// Real-user-only counts since a moment (ISO). Safe to call before optional tables exist.
+export async function getRealStats(sinceIso?: string): Promise<RealStats> {
+  const since = sinceIso ?? new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const empty: RealStats = { since, members: 0, chats: 0, guestChats: 0, listings: 0, specialistApplications: 0, contractsSigned: 0, milestonesReleased: 0 };
+  const admin = createSupabaseAdminClient();
+  if (!admin) return empty;
+
+  const real = await loadRealProfiles(admin);
+  const sinceMs = new Date(since).getTime();
+  const members = [...real.values()].filter((p) => new Date(p.createdAt).getTime() >= sinceMs).length;
+
+  const { data: convs } = await admin
+    .from('conversations')
+    .select('user_id, source')
+    .gte('created_at', since)
+    .eq('source', 'organic');
+  let chats = 0;
+  let guestChats = 0;
+  for (const row of (convs ?? []) as { user_id: string | null }[]) {
+    if (!row.user_id) {
+      chats += 1;
+      guestChats += 1;
+    } else if (real.has(row.user_id)) {
+      chats += 1;
+    }
+  }
+
+  let listings = 0;
+  const listingRes = await admin.from('trade_listings').select('owner_id').gte('created_at', since);
+  if (!listingRes.error) listings = ((listingRes.data ?? []) as { owner_id: string }[]).filter((r) => real.has(r.owner_id)).length;
+
+  let specialistApplications = 0;
+  const appRes = await admin.from('operator_applications').select('user_id, email').gte('created_at', since);
+  if (!appRes.error) {
+    specialistApplications = ((appRes.data ?? []) as { user_id: string | null; email: string | null }[]).filter(
+      (r) => !isTestEmailAddress(r.email) && (!r.user_id || real.has(r.user_id)),
+    ).length;
+  }
+
+  let contractsSigned = 0;
+  let milestonesReleased = 0;
+  const contractRes = await admin
+    .from('peer_contracts')
+    .select('payer_id, payee_id, payer_signed_at, payee_signed_at, milestones, status')
+    .gte('updated_at', since);
+  if (!contractRes.error) {
+    for (const row of (contractRes.data ?? []) as {
+      payer_id: string;
+      payee_id: string;
+      payer_signed_at: string | null;
+      payee_signed_at: string | null;
+      milestones: { status: string; releasedAt: string | null }[];
+      status: string;
+    }[]) {
+      if (!real.has(row.payer_id) || !real.has(row.payee_id) || row.status === 'cancelled') continue;
+      const signedAt = Math.max(new Date(row.payer_signed_at ?? 0).getTime(), new Date(row.payee_signed_at ?? 0).getTime());
+      if (row.payer_signed_at && row.payee_signed_at && signedAt >= sinceMs) contractsSigned += 1;
+      for (const m of Array.isArray(row.milestones) ? row.milestones : []) {
+        if (m.status === 'released' && m.releasedAt && new Date(m.releasedAt).getTime() >= sinceMs) milestonesReleased += 1;
+      }
+    }
+  }
+
+  return { since, members, chats, guestChats, listings, specialistApplications, contractsSigned, milestonesReleased };
 }

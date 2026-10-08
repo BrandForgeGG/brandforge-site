@@ -14,12 +14,13 @@ import {
   getTelegramChatIdForUser,
   getProfileDisplayName,
   countDeclinedProposals,
+  announceReal,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { canSetProposalStatus } from '@/lib/money-authz.js';
 import { notify, notifyUser } from '@/lib/notify';
 import { notifyFounder } from '@/lib/stage-notify';
-import { postOpsEvent, postPublicActivity, weeks } from '@/lib/ops-events';
+import { postOpsEvent, weeks } from '@/lib/ops-events';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -440,7 +441,7 @@ export async function PATCH(request: NextRequest) {
           currency: proposal.currency ?? currency,
           conversationId: proposal.conversation_id,
         });
-        await postPublicActivity('match_made', { title: existing.title });
+        await announceReal('match_made', { title: existing.title }, [{ conversationId: proposal.conversation_id }]);
       } else {
         await postOpsEvent('proposal_declined', {
           title: existing.title,

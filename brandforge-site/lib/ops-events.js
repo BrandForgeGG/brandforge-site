@@ -268,6 +268,14 @@ function buildPublicPost(event, details = {}) {
       return 'A milestone shipped';
     case 'member_joined':
       return 'A new member joined the platform';
+    case 'listing_posted':
+      return title ? `New in the Trade Center: ${title}` : 'A new listing was posted in the Trade Center';
+    case 'peer_contract_signed':
+      return 'Two members signed a contract';
+    case 'specialist_applied':
+      return 'A specialist applied to join';
+    case 'chats_started':
+      return null;
     default:
       return null;
   }
@@ -415,10 +423,27 @@ async function postViaBot({ channelId, embed, details = {}, env, fetchImpl }) {
  * Milestone shipments prefer the dedicated milestones channel when configured,
  * everything else shares the live feed.
  */
+// One line, everywhere the community listens: Discord live feed and the Telegram channel.
+async function postEverywhere(text, opts = {}) {
+  const { postTelegramAnnouncement } = require('./telegram-announce');
+  const [discord, telegram] = await Promise.all([
+    postLiveMessage(text, opts),
+    postTelegramAnnouncement(text, opts),
+  ]);
+  return { discord, telegram };
+}
+
 async function postPublicActivity(event, details = {}, opts = {}) {
   const { env = process.env, fetchImpl = fetch } = opts;
   const text = buildPublicPost(event, details);
   if (!text) return { sent: false, reason: 'not_public' };
+  // Telegram gets the same line (best-effort, independent of Discord).
+  try {
+    const { postTelegramAnnouncement } = require('./telegram-announce');
+    void postTelegramAnnouncement(text, opts);
+  } catch {
+    /* announcements never block the action */
+  }
   const webhookUrl =
     event === 'milestone_released' && env.DISCORD_MILESTONE_URL
       ? env.DISCORD_MILESTONE_URL
@@ -512,6 +537,7 @@ module.exports = {
   opsWebhookUrl,
   postOpsEvent,
   postPublicActivity,
+  postEverywhere,
   postDevLog,
   postPublicChangelog,
   postLiveMessage,

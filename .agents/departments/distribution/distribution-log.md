@@ -603,3 +603,9 @@ we do not have.
 **Change:** Create and Distribute open with a one-line "Pick a tool, set the options, it opens in a chat" and hover hints on Start from a format and More options. Optimize now shows its three steps (connect a channel, we read the results, you get what to change) and says plainly that no numbers are invented until a channel is connected. On phones every chip and icon button is at least 40px, so nothing is hard to tap. A phone audit of 12 pages found no sideways scrolling.
 
 **Distribution move:** none (usability). It makes the "Make it yours / Every format, one page" screenshots work on phones too.
+
+## 2026-10-08 — Live announcements from real users only
+
+**Change:** Everything announced publicly (Discord live feed and now the Telegram channel) passes a real-user check first: staff accounts, throwaway test accounts (probe-, demo-, test-, e2e-, qa- addresses, example.com, plus any listed in TEST_ACCOUNT_EMAILS) and conversations marked as test traffic are never announced or counted. New anonymous lines: new Trade listing, two members signed a contract, a milestone shipped, a specialist applied. A daily line of real numbers (chats started, new members, listings, contracts, milestones) goes to Discord and Telegram at 09:00 UTC, and stays silent on a quiet day.
+
+**Distribution move:** this is the live proof feed for the community channels. Telegram posts need the BrandForge bot to be an admin of the channel (set TELEGRAM_ANNOUNCE_CHAT_ID if the handle differs from @BrandForge_gg).

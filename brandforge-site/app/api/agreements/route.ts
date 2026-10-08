@@ -16,6 +16,7 @@ import {
   addMessage,
   isStaffAccount,
   recordFunnelEvent,
+  announceReal,
   type Milestone,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
@@ -28,7 +29,7 @@ import {
 } from '@/lib/money-authz.js';
 import { notify } from '@/lib/notify';
 import { notifyFounder } from '@/lib/stage-notify';
-import { postOpsEvent, postPublicActivity } from '@/lib/ops-events';
+import { postOpsEvent } from '@/lib/ops-events';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 const AGREEMENTS_RATE_LIMIT = { limit: 20, windowMs: 60 * 60 * 1000 };
@@ -233,7 +234,7 @@ export async function PATCH(request: NextRequest) {
           conversationId: agreement.conversation_id,
         });
         const proposal = await getProposalById(agreement.proposal_id);
-        await postPublicActivity('contract_signed', { title: proposal?.title });
+        await announceReal('contract_signed', { title: proposal?.title }, [{ conversationId: agreement.conversation_id }]);
       } else if (isOwner) {
         // Founder signed first: the team's accept is now the only thing left.
         await notify('contract_accepted', { side: 'founder' });

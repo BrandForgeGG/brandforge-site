@@ -1,5 +1,6 @@
 import {
   addMessage,
+  announceReal,
   getUserNotifyTargets,
   peerRowToContract,
   recordFunnelEvent,
@@ -73,6 +74,7 @@ export async function announce(
       properties: { total_amount: Math.round(contract.totalCents / 100), stage: 'agree' },
     });
     await postOpsEvent('contract_signed', { ...common, totalAmount: contract.totalCents / 100 });
+    await announceReal('peer_contract_signed', {}, [{ userId: contract.payerId }, { userId: contract.payeeId }]);
   } else if (event === 'funding_submitted') {
     await postOpsEvent('peer_funding_review', { ...common, totalAmount: contract.totalCents / 100 });
   } else if (event === 'disputed') {
@@ -89,6 +91,7 @@ export async function announce(
         totalAmount: (m.amountCents - m.feeCents) / 100,
         feeLabel: formatMoney(m.feeCents, contract.currency),
       });
+      await announceReal('milestone_released', {}, [{ userId: contract.payerId }, { userId: contract.payeeId }]);
     }
   }
 }

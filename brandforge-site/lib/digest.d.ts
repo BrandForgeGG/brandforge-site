@@ -8,3 +8,7 @@ export interface WeeklyDigestInput {
 }
 
 export declare function buildWeeklyDigest(input?: WeeklyDigestInput): string;
+export declare function buildLiveStats(
+  stats: Partial<{ chats: number; guestChats: number; members: number; listings: number; specialistApplications: number; contractsSigned: number; milestonesReleased: number }>,
+  label?: string
+): string | null;

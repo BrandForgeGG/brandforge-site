@@ -2,10 +2,9 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { sanitizeNextPath } from '@/lib/auth-utils';
-import { countRegisteredProfiles, mergeBlueprintSessionToUser, recordFunnelEvent } from '@/lib/project-db';
+import { announceReal, countRegisteredProfiles, mergeBlueprintSessionToUser, recordFunnelEvent } from '@/lib/project-db';
 import { verifySessionToken } from '@/lib/blueprint-session';
 import { isFreshSignup, postRegistrationNotice } from '@/lib/registration-notice';
-import { postPublicActivity } from '@/lib/ops-events';
 import { sendStageEmail } from '@/lib/email';
 import { makeUnsubscribeToken } from '@/lib/unsubscribe-token';
 
@@ -155,7 +154,7 @@ export async function GET(request: Request) {
       reason: result.reason ?? null,
       memberCount: memberCount ?? null,
     });
-    await postPublicActivity('member_joined');
+    await announceReal('member_joined', {}, [{ userId: user.id }]);
 
     // Welcome email to the new member. Best-effort like the Discord notice: a
     // missing RESEND key or a provider hiccup logs and moves on, never blocks sign-in.

@@ -3,6 +3,7 @@ import {
   createTradeListing,
   getProfileDisplayName,
   listOpenTradeListings,
+  announceReal,
   recordFunnelEvent,
 } from '@/lib/project-db';
 import { toListingView } from '@/lib/trade-view';
@@ -75,6 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     await recordFunnelEvent('trade_listing_created', { signedIn: true, properties: { source: draft.value.kind } });
+    await announceReal('listing_posted', { title: draft.value.title }, [{ userId: user.id }]);
     return NextResponse.json({
       success: true,
       listing: toListingView(created.row, await getProfileDisplayName(user.id), user.id),

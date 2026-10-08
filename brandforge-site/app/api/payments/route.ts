@@ -9,6 +9,7 @@ import {
   addMessage,
   isStaffAccount,
   recordFunnelEvent,
+  announceReal,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 // lib/crypto-payments.js is dependency-free CommonJS so node:test can run it without a build.
@@ -20,7 +21,7 @@ import {
 } from '@/lib/crypto-payments';
 import { notify } from '@/lib/notify';
 import { notifyFounder } from '@/lib/stage-notify';
-import { postOpsEvent, postPublicActivity } from '@/lib/ops-events';
+import { postOpsEvent } from '@/lib/ops-events';
 import { canSubmitFunding } from '@/lib/money-authz.js';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -217,7 +218,7 @@ export async function PATCH(request: NextRequest) {
           currency: agreement.currency,
           conversationId: agreement.conversation_id,
         });
-        await postPublicActivity('contract_funded');
+        await announceReal('contract_funded', {}, [{ conversationId: agreement.conversation_id }]);
 
         return NextResponse.json({ success: true });
       }
@@ -287,7 +288,7 @@ export async function PATCH(request: NextRequest) {
         currency: released.currency,
         conversationId: released.conversation_id,
       });
-      await postPublicActivity('milestone_released');
+      await announceReal('milestone_released', {}, [{ conversationId: released.conversation_id }]);
 
       return NextResponse.json({ success: true });
     }
