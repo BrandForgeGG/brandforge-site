@@ -21,6 +21,7 @@ import { shapeTaskRoster } from "@/lib/task-board";
 import { isNearBottom } from "@/lib/chat-scroll";
 import { fetchAuthed } from "@/lib/browser-auth";
 import { trackEvent } from "@/lib/funnel-client";
+import { useLogin } from "@/components/login-dialog";
 import { GuestSaveBar } from "@/components/guest-save-bar";
 import { VideoReadyBar } from "@/components/video-ready-bar";
 import { PeerContractForm } from "@/components/peer-contract-card";
@@ -260,6 +261,14 @@ export function ChatWorkspace() {
   const [showContractForm, setShowContractForm] = useState(false);
   // One-time pointer to Actions, shown after the first answer arrives.
   const [actionsHintSeen, setActionsHintSeen] = useState(true);
+  // A signed-out browser carries the readable bf_guest cookie: it gets a Sign in button, and the
+  // one-time Actions pointer waits (the save bar already sits in the same spot).
+  const [isGuestBrowser, setIsGuestBrowser] = useState(false);
+  const { openLogin: openGuestLogin } = useLogin();
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- read a browser-only cookie once
+    setIsGuestBrowser(document.cookie.split(";").some((part) => part.trim().startsWith("bf_guest=")));
+  }, []);
   useEffect(() => {
     try {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- read a browser-only flag once
@@ -1404,7 +1413,7 @@ export function ChatWorkspace() {
     .find((entry) => entry.sender === "ai" && entry.content.trim())?.content;
   const answerOutline = useMemo(() => extractOutline(latestAiContent), [latestAiContent]);
   const showActionsHint =
-    !actionsHintSeen && Boolean(conversationId) && !isStreaming && messages.some((entry) => entry.sender === "ai" && entry.content.length > 40);
+    !actionsHintSeen && !isGuestBrowser && Boolean(conversationId) && !isStreaming && messages.some((entry) => entry.sender === "ai" && entry.content.length > 40);
 
   const autoOpenedPanelRef = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -2006,6 +2015,15 @@ return (
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
+            {isGuestBrowser ? (
+              <button
+                type="button"
+                onClick={() => openGuestLogin({ reason: "save", next: conversationId ? `/chat?conversationId=${conversationId}` : "/" })}
+                className="rounded-full border border-line px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-overlay"
+              >
+                Sign in
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => {
@@ -2680,7 +2698,7 @@ return (
                     ? "Type your reply…"
                     : conversationId
                       ? "Ask anything…"
-                      : "Describe what you want to build…"
+                      : "Describe your idea…"
                 }
                 rows={1}
                 disabled={isBusy}

@@ -441,8 +441,8 @@ body {
   background: transparent;
   color: var(--foreground);
   padding: 0.4375rem 0.5rem;
-  /* 16px: below that iOS Safari zooms the page when the composer is focused. */
-  font-size: 1rem;
+  /* 16px, in px: the root is 14.5px so 1rem is too small and iOS Safari zooms on focus. */
+  font-size: 16px;
   line-height: 1.45;
   outline: none;
   transition:
@@ -2046,4 +2046,13 @@ main[data-empty='true'] > .bf-chat-footer { position: absolute; inset: auto 0 0 
     min-width: 40px;
   }
   .bf-chat-footer a { display: inline-block; padding: 0.55rem 0.35rem; }
+}
+
+/* Phones: every text field is at least 16px so iOS Safari never zooms the page on focus. */
+@media (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  textarea,
+  select {
+    font-size: max(16px, 1em);
+  }
 }

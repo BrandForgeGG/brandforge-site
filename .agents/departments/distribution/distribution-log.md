@@ -633,3 +633,9 @@ we do not have.
 **Change:** @brandforge_bot now opens with a button menu (Plan an idea, Audit a site, Write ads, 30-day calendar, Launch plan, Make an image, Make a video, Fresh chat, Link my account, Open BrandForge). Each button asks one short question; the answer comes back with Shorter / Go deeper / Turn into ads / What next? buttons and a "Continue in BrandForge" button. Generated images arrive as photos. Typing and the old commands still work. Real announcements now also post to the @BrandForge_gg channel.
 
 **Distribution move:** pin "Tap /start in @brandforge_bot" in the Telegram channel and group; post a short screen recording of the menu in the channel. Changelog line: "Our Telegram bot now works with buttons: tap, answer one question, get your plan."
+
+## 2026-10-09 — Phone first-visit polish
+
+**Change:** On phones the composer no longer zooms the page when tapped (text fields are 16px), the placeholder fits on one line ("Describe your idea…"), signed-out visitors get a visible "Sign in" button in the chat header, and the one-time Actions tooltip no longer covers the "Save chat" bar.
+
+**Distribution move:** no new capability to announce; this lifts the first two minutes for mobile visitors from community links, which is where most launch traffic opens. Demo note: re-record the mobile screenshots for ads with the new header.
