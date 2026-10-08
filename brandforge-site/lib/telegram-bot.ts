@@ -1,20 +1,14 @@
 import { blueprintConfig } from '@/lib/blueprint-config';
 import { createSessionToken } from '@/lib/blueprint-session';
 import { ensureBlueprintSessionWithId, getSessionConversationSummaries } from '@/lib/project-db';
-import { botSessionId, collectStreamText, commandToPrompt, parseCommand, parseIdList, toPlainChat } from '@/lib/bot-core.js';
+import { ASK, FOLLOWUPS, MENU, botSessionId, collectStreamText, commandToPrompt, kindFromPrompt, parseCallback, parseCommand, parseIdList, promptForKind, toPlainChat } from '@/lib/bot-core.js';
 import { resolveSiteUrl } from '@/lib/auth-utils';
 
-// Use BrandForge from Telegram. A person writes to the bot; their messages become a guest chat
-// (the same one they can open on the web), the answer comes back as plain text, and a button
-// opens the full chat with everything in it. Nothing here messages anyone who has not written first.
+// Use BrandForge from Telegram, with buttons. A menu of buttons asks one short question each; the
+// answer comes back as text (and images) with follow-up buttons under it, and one button opens the
+// same chat on the web. Typing works too. Nothing here messages anyone who has not written first.
 
 const RECENT_CHAT_WINDOW_MS = 6 * 60 * 60 * 1000;
-
-export const BOT_HELP =
-  'BrandForge: AI drafts, people finish.\n\n' +
-  'Just write what you want to build and I will answer here. Or use a shortcut:\n' +
-  '/plan your idea\n/audit https://yoursite.com\n/ads what you are advertising\n/calendar your business\n/launch what you are launching\n/image what to show\n/video what it is about\n\n' +
-  '/new starts a fresh chat. /link CODE links your BrandForge account for updates. Images and videos open in the full chat.';
 
 async function telegram(method: string, body: Record<string, unknown>) {
   const token = String(process.env.TELEGRAM_BOT_TOKEN ?? '').trim();
@@ -94,52 +88,118 @@ export function continueUrl(conversationId: string, token: string): string {
   return `${origin()}/api/blueprint/return?token=${encodeURIComponent(token)}&conversationId=${encodeURIComponent(conversationId)}`;
 }
 
-// Handles one private message or command. Runs after the webhook has already answered Telegram.
-export async function handleTelegramMessage(message: { chatId: string; userId: string; text: string; isPrivate: boolean }) {
-  const { chatId, userId, text, isPrivate } = message;
-  const command = parseCommand(text);
+export const BOT_WELCOME = 'BrandForge: AI drafts, people finish.\n\nTap what you want to do, or just write it and I will answer here.';
 
-  let prompt = text.trim();
-  let forceNew = false;
-  let media = false;
+type Button = { text: string; callback_data?: string; url?: string };
 
-  if (command) {
-    if (command.name === 'new') {
-      forceNew = true;
-      if (command.args.length < 3) {
-        await telegram('sendMessage', { chat_id: chatId, text: 'Start a fresh chat by adding what you want to build: /new a booking page for my studio' });
-        return;
-      }
-      prompt = command.args;
-    } else {
-      const built = commandToPrompt(command);
-      if (!built) {
-        await telegram('sendMessage', { chat_id: chatId, text: BOT_HELP });
-        return;
-      }
-      if (!built.ok) {
-        await telegram('sendMessage', { chat_id: chatId, text: `Add ${built.needs} after the command, like /${command.name} …` });
-        return;
-      }
-      prompt = built.prompt;
-      media = built.media;
+function menuKeyboard(): { inline_keyboard: Button[][] } {
+  const rows: Button[][] = MENU.map((row: [string, string][]) => row.map(([label, kind]) => ({ text: label, callback_data: `ask:${kind}` })));
+  rows.push([
+    { text: 'Link my account', callback_data: 'ask:link' },
+    { text: 'Open BrandForge', url: origin() },
+  ]);
+  return { inline_keyboard: rows };
+}
+
+function answerKeyboard(url: string): { inline_keyboard: Button[][] } {
+  const tap = (id: keyof typeof FOLLOWUPS): Button => ({ text: FOLLOWUPS[id].label, callback_data: `do:${id}` });
+  return {
+    inline_keyboard: [
+      [tap('shorter'), tap('deeper'), tap('ads')],
+      [tap('next'), { text: 'Menu', callback_data: 'menu' }],
+      [{ text: 'Continue in BrandForge', url }],
+    ],
+  };
+}
+
+export async function sendMenu(chatId: string, text: string = BOT_WELCOME) {
+  await telegram('sendMessage', { chat_id: chatId, text, reply_markup: menuKeyboard() });
+}
+
+// One short question; the reply to it says which button was pressed (see lib/bot-core.js).
+async function askFor(chatId: string, kind: string) {
+  await telegram('sendMessage', {
+    chat_id: chatId,
+    text: ASK[kind],
+    reply_markup: { force_reply: true, input_field_placeholder: 'Type here', selective: true },
+  });
+}
+
+// Generated images from this turn, sent as photos (up to four). Videos are assembled in the
+// browser, so for those the scenes arrive here and the button opens the full chat.
+async function sendGeneratedImages(chatId: string, conversationId: string, token: string) {
+  const config = blueprintConfig();
+  const cookie = `${config.sessionCookieName}=${token}`;
+  try {
+    const list = await fetch(`${origin()}/api/messages?conversationId=${encodeURIComponent(conversationId)}&limit=12`, { headers: { Cookie: cookie }, signal: AbortSignal.timeout(15000) });
+    const data = (await list.json().catch(() => ({}))) as { messages?: { sender_type: string; artifact_data?: { path?: string; contentType?: string; generated?: boolean; caption?: string } | null }[] };
+    const rows = data.messages ?? [];
+    const lastUser = rows.map((row) => row.sender_type).lastIndexOf('user');
+    const images = rows
+      .slice(lastUser + 1)
+      .map((row) => row.artifact_data)
+      .filter((art): art is NonNullable<typeof art> => Boolean(art && art.generated && art.path && String(art.contentType ?? '').startsWith('image/')))
+      .slice(0, 4);
+    const botToken = String(process.env.TELEGRAM_BOT_TOKEN ?? '').trim();
+    for (const art of images) {
+      const file = await fetch(`${origin()}/api/attachments?path=${encodeURIComponent(art.path!)}`, { headers: { Cookie: cookie }, signal: AbortSignal.timeout(20000) });
+      if (!file.ok) continue;
+      const form = new FormData();
+      form.append('chat_id', chatId);
+      if (art.caption) form.append('caption', String(art.caption).slice(0, 200));
+      form.append('photo', new Blob([await file.arrayBuffer()], { type: art.contentType || 'image/png' }), 'brandforge.png');
+      await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, { method: 'POST', body: form, signal: AbortSignal.timeout(20000) }).catch(() => undefined);
     }
-  } else if (!isPrivate) {
-    return; // in groups the bot only answers commands
+  } catch (cause) {
+    console.warn('telegram image delivery failed:', cause instanceof Error ? cause.message : cause);
   }
+}
 
+async function deliver(chatId: string, userId: string, built: { prompt: string; forceNew: boolean; media: boolean }) {
   await telegram('sendChatAction', { chat_id: chatId, action: 'typing' });
-  const result = await runBotTurn({ platform: 'telegram', userId, prompt, forceNew });
+  const result = await runBotTurn({ platform: 'telegram', userId, prompt: built.prompt, forceNew: built.forceNew });
   if (!result.ok) {
-    await telegram('sendMessage', { chat_id: chatId, text: result.message });
+    await telegram('sendMessage', { chat_id: chatId, text: result.message, reply_markup: menuKeyboard() });
     return;
   }
-
+  if (built.media) await sendGeneratedImages(chatId, result.conversationId, result.token);
   const reply = toPlainChat(result.text) || 'Done. Open the chat to see it.';
   await telegram('sendMessage', {
     chat_id: chatId,
-    text: media ? `${reply}\n\nYour ${prompt.toLowerCase().startsWith('create a video') ? 'video' : 'image'} is ready in the full chat.` : reply,
+    text: built.media && /^create a video/i.test(built.prompt) ? `${reply}\n\nOpen the full chat to turn the scenes into a video.` : reply,
     disable_web_page_preview: true,
-    reply_markup: { inline_keyboard: [[{ text: 'Continue in BrandForge', url: continueUrl(result.conversationId, result.token) }]] },
+    reply_markup: answerKeyboard(continueUrl(result.conversationId, result.token)),
   });
+}
+
+// A button press. Telegram needs an answer within seconds; the work follows.
+export async function handleTelegramCallback(input: { callbackId: string; chatId: string; userId: string; data: string }) {
+  await telegram('answerCallbackQuery', { callback_query_id: input.callbackId });
+  const parsed = parseCallback(input.data);
+  if (!parsed) return;
+  if (parsed.type === 'menu') return sendMenu(input.chatId, 'What next?');
+  if (parsed.type === 'ask') return askFor(input.chatId, parsed.kind);
+  await deliver(input.chatId, input.userId, { prompt: parsed.text, forceNew: false, media: false });
+}
+
+// A typed message, a shortcut command, or the answer to one of the menu questions.
+export async function handleTelegramMessage(message: { chatId: string; userId: string; text: string; isPrivate: boolean; replyToText?: string | null }) {
+  const { chatId, userId, text, isPrivate, replyToText } = message;
+
+  const answered = kindFromPrompt(replyToText);
+  if (answered && answered !== 'link') {
+    const built = promptForKind(answered, text);
+    if (built) return deliver(chatId, userId, built);
+  }
+
+  const command = parseCommand(text);
+  if (command) {
+    if (command.name === 'new' && command.args.length >= 3) return deliver(chatId, userId, { prompt: command.args, forceNew: true, media: false });
+    const built = commandToPrompt(command);
+    if (built && built.ok) return deliver(chatId, userId, { prompt: built.prompt, forceNew: false, media: built.media });
+    return sendMenu(chatId); // unknown or incomplete shortcut: show the buttons
+  }
+
+  if (!isPrivate) return; // in groups the bot answers buttons and shortcuts, not chatter
+  await deliver(chatId, userId, { prompt: text.trim(), forceNew: false, media: false });
 }

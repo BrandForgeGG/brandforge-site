@@ -6,4 +6,11 @@ export declare function botCommandPrompt(kind: string, text: string): { prompt: 
 export declare function looksLikeLinkCode(text: string): boolean;
 export declare function toPlainChat(markdown: string, limit?: number): string;
 export declare function collectStreamText(sseText: string): { text: string; error: string | null };
+export declare const ASK: Record<string, string>;
+export declare const MENU: [string, string][][];
+export declare const FOLLOWUPS: Record<string, { label: string; text: string }>;
+export declare function askPrompt(kind: string): string | null;
+export declare function kindFromPrompt(replyToText: string | null | undefined): string | null;
+export declare function promptForKind(kind: string, text: string): { prompt: string; forceNew: boolean; media: boolean } | null;
+export declare function parseCallback(data: string | null | undefined): { type: 'menu' } | { type: 'ask'; kind: string } | { type: 'do'; id: string; text: string } | null;
 export declare function parseIdList(value: string | undefined): string[];

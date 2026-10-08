@@ -627,3 +627,9 @@ we do not have.
 **Change:** Message @brandforge_bot on Telegram with an idea, or use /plan, /audit, /ads, /calendar, /launch, /image and /video, and the answer comes back in the chat; a "Continue in BrandForge" button opens the same conversation on the web, where the team can join. Each Telegram person gets their own free guest chat (same daily limits as the web). In groups the bot only answers commands, and it never messages anyone who has not written to it first. A Discord /brandforge command is built and verified (signed requests only) but stays off until the application's public key and Interactions Endpoint are set.
 
 **Distribution move:** this is the community-native channel: pin "Message @brandforge_bot with your idea" in the Telegram channel and group, and add a "Try it here" line to the Discord welcome message. Every bot answer carries the Continue in BrandForge button, which is the conversion path from chat app to the product. No unsolicited DMs, by design.
+
+### 2026-10-08 — Telegram bot with buttons instead of commands
+
+**Change:** @brandforge_bot now opens with a button menu (Plan an idea, Audit a site, Write ads, 30-day calendar, Launch plan, Make an image, Make a video, Fresh chat, Link my account, Open BrandForge). Each button asks one short question; the answer comes back with Shorter / Go deeper / Turn into ads / What next? buttons and a "Continue in BrandForge" button. Generated images arrive as photos. Typing and the old commands still work. Real announcements now also post to the @BrandForge_gg channel.
+
+**Distribution move:** pin "Tap /start in @brandforge_bot" in the Telegram channel and group; post a short screen recording of the menu in the channel. Changelog line: "Our Telegram bot now works with buttons: tap, answer one question, get your plan."

@@ -50,3 +50,28 @@ test('id lists parse from env text', () => {
   assert.deepEqual(parseIdList(' 7000000001, 7000000002 ,'), ['7000000001', '7000000002']);
   assert.deepEqual(parseIdList(undefined), []);
 });
+
+test('every menu button asks one question, and the question identifies the button', () => {
+  const { ASK, MENU, askPrompt, kindFromPrompt, promptForKind, parseCallback, FOLLOWUPS } = require('./bot-core');
+  for (const row of MENU) {
+    assert.ok(row.length <= 2, 'two buttons per row fit a phone');
+    for (const [label, kind] of row) {
+      assert.ok(label.length <= 18, label + ' fits on a button');
+      assert.ok(askPrompt(kind), kind + ' has a question');
+      assert.equal(kindFromPrompt(ASK[kind]), kind);
+      assert.ok(('ask:' + kind).length <= 64);
+      assert.deepEqual(parseCallback('ask:' + kind), { type: 'ask', kind });
+    }
+  }
+  assert.equal(kindFromPrompt('Some other message'), null);
+  assert.equal(kindFromPrompt(undefined), null);
+  assert.equal(new Set(Object.values(ASK)).size, Object.keys(ASK).length, 'questions are unique');
+  assert.equal(promptForKind('plan', 'a yoga studio').prompt, 'Make a researched plan with scope, roadmap, risks and a realistic estimate: a yoga studio');
+  assert.deepEqual(promptForKind('new', 'a booking page'), { prompt: 'a booking page', forceNew: true, media: false });
+  assert.equal(promptForKind('image', 'a mug').media, true);
+  assert.equal(promptForKind('link', 'x'), null);
+  assert.deepEqual(parseCallback('menu'), { type: 'menu' });
+  assert.equal(parseCallback('do:shorter').text, FOLLOWUPS.shorter.text);
+  assert.equal(parseCallback('do:nope'), null);
+  assert.equal(parseCallback('junk'), null);
+});

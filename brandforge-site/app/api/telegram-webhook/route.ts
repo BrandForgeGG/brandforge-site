@@ -1,8 +1,8 @@
 import { after, NextRequest, NextResponse } from 'next/server';
 import crypto from 'node:crypto';
 import { normalizeLinkCode, LINK_CODE_LENGTH } from '@/lib/identity';
-import { handleTelegramMessage, BOT_HELP } from '@/lib/telegram-bot';
-import { looksLikeLinkCode, parseCommand } from '@/lib/bot-core.js';
+import { handleTelegramCallback, handleTelegramMessage, sendMenu, BOT_WELCOME } from '@/lib/telegram-bot';
+import { kindFromPrompt, looksLikeLinkCode, parseCommand } from '@/lib/bot-core.js';
 
 export const dynamic = 'force-dynamic';
 // The bot answers after Telegram has been acknowledged; give it room to finish a full turn.
@@ -65,14 +65,6 @@ async function confirmLink(payload: Record<string, unknown>): Promise<{ ok: bool
   }
 }
 
-const WELCOME_TEXT =
-  'Welcome to BrandForge.\n\n' +
-  'To link your account and get project updates here:\n' +
-  '1. Open the BrandForge app\n' +
-   '2. Press “Connect Telegram” in Settings\n' +
-  '3. Paste the 8-character code it shows you into this chat\n\n' +
-  'Codes are valid for about 15 minutes.';
-
 export async function POST(request: NextRequest) {
   try {
     if (!isAuthorized(request)) {
@@ -89,13 +81,17 @@ export async function POST(request: NextRequest) {
     const message = update.message;
     const callbackQuery = update.callback_query;
 
-    // Legacy deep-link buttons from before the paste-code flow. Answer them with the
-    // new instruction instead of acting on a callback payload Telegram can no longer carry.
+    // Menu and follow-up buttons. The work runs after Telegram has been answered.
     if (callbackQuery) {
-      await callTelegramApi('answerCallbackQuery', {
-        callback_query_id: callbackQuery.id,
-        text: 'Please paste your BrandForge link code into the chat instead.',
-      });
+      const callbackChat = String(callbackQuery.message?.chat?.id ?? '');
+      const callbackUser = String(callbackQuery.from?.id ?? '');
+      if (callbackChat && callbackUser) {
+        after(async () => {
+          await handleTelegramCallback({ callbackId: String(callbackQuery.id), chatId: callbackChat, userId: callbackUser, data: String(callbackQuery.data ?? '') });
+        });
+      } else {
+        await callTelegramApi('answerCallbackQuery', { callback_query_id: callbackQuery.id });
+      }
       return NextResponse.json({ ok: true });
     }
 
@@ -114,20 +110,23 @@ export async function POST(request: NextRequest) {
     const command = parseCommand(text);
     const isPrivate = message.chat?.type === 'private';
 
-    if (command && (command.name === 'start' || command.name === 'help')) {
-      await callTelegramApi('sendMessage', { chat_id: chatId, text: command.name === 'start' ? `${BOT_HELP}\n\n${WELCOME_TEXT}` : BOT_HELP });
+    if (command && (command.name === 'start' || command.name === 'help' || command.name === 'menu')) {
+      await sendMenu(chatId, BOT_WELCOME);
       return NextResponse.json({ ok: true });
     }
 
-    // Account linking: "/link CODE", or a pasted code on its own.
+    // Account linking: the "Link my account" button asks for the code and this is its answer;
+    // "/link CODE" and a pasted code on its own still work.
+    const replyToText = message.reply_to_message?.text ?? null;
+    const isLinkReply = kindFromPrompt(replyToText) === 'link';
     const isLinkCommand = command?.name === 'link';
-    const pasted = isLinkCommand ? command!.args : looksLikeLinkCode(text) ? text : '';
+    const pasted = isLinkReply ? text : isLinkCommand ? command!.args : looksLikeLinkCode(text) ? text : '';
     if (!pasted) {
       // Everything else is a BrandForge request. Answer after acknowledging Telegram.
       const userId = String(from.id ?? '');
       if (userId) {
         after(async () => {
-          await handleTelegramMessage({ chatId, userId, text, isPrivate });
+          await handleTelegramMessage({ chatId, userId, text, isPrivate, replyToText });
         });
       }
       return NextResponse.json({ ok: true });

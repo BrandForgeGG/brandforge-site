@@ -97,8 +97,69 @@ function collectStreamText(sseText) {
   return { text: out, error };
 }
 
+// ---- Buttons instead of commands ----------------------------------------------------------
+// Each menu button asks one short question (a Telegram force-reply). The question text is the only
+// state: when the reply arrives, the text it answers says which button was pressed, so nothing is
+// stored and nothing can go stale.
+const ASK = {
+  plan: "What's your idea?",
+  audit: 'Which website should I audit? Send the address.',
+  ads: 'What are you advertising?',
+  calendar: "What's the business?",
+  launch: 'What are you launching?',
+  image: 'What should the image show?',
+  video: 'What is the video about?',
+  new: 'What do you want to build? This starts a fresh chat.',
+  link: 'Paste the 8-character code from BrandForge Settings, Connect Telegram.',
+};
+
+// Menu rows: label and the kind each button asks about.
+const MENU = [
+  [['Plan an idea', 'plan'], ['Audit a site', 'audit']],
+  [['Write ads', 'ads'], ['30-day calendar', 'calendar']],
+  [['Launch plan', 'launch'], ['Make an image', 'image']],
+  [['Make a video', 'video'], ['Fresh chat', 'new']],
+];
+
+// Buttons shown under every answer.
+const FOLLOWUPS = {
+  shorter: { label: 'Shorter', text: 'Make that shorter and sharper. Keep only what matters.' },
+  deeper: { label: 'Go deeper', text: 'Go deeper on the most important part.' },
+  ads: { label: 'Turn into ads', text: 'Turn this into ad copy for Meta and TikTok.' },
+  next: { label: 'What next?', text: 'What should I do next, in order?' },
+};
+
+function askPrompt(kind) {
+  return ASK[kind] || null;
+}
+
+// The kind a reply is answering, from the text of the question it replies to.
+function kindFromPrompt(replyToText) {
+  const text = String(replyToText || '').trim();
+  return Object.keys(ASK).find((kind) => ASK[kind] === text) || null;
+}
+
+// What to send to the chat for an answered question.
+function promptForKind(kind, text) {
+  if (kind === 'new') return { prompt: String(text).trim(), forceNew: true, media: false };
+  const spec = COMMANDS[kind];
+  if (!spec) return null;
+  return { prompt: spec.build(String(text).trim()), forceNew: false, media: Boolean(spec.media) };
+}
+
+// Callback data is short and structured: "menu", "ask:plan", "do:shorter".
+function parseCallback(data) {
+  const value = String(data || '');
+  if (value === 'menu') return { type: 'menu' };
+  const [head, tail] = value.split(':');
+  if (head === 'ask' && ASK[tail] && tail !== 'link') return { type: 'ask', kind: tail };
+  if (head === 'ask' && tail === 'link') return { type: 'ask', kind: 'link' };
+  if (head === 'do' && FOLLOWUPS[tail]) return { type: 'do', id: tail, text: FOLLOWUPS[tail].text };
+  return null;
+}
+
 function parseIdList(value) {
   return String(value || '').split(',').map((item) => item.trim()).filter(Boolean);
 }
 
-module.exports = { botSessionId, COMMANDS, parseCommand, commandToPrompt, botCommandPrompt, looksLikeLinkCode, toPlainChat, collectStreamText, parseIdList };
+module.exports = { ASK, MENU, FOLLOWUPS, askPrompt, kindFromPrompt, promptForKind, parseCallback, botSessionId, COMMANDS, parseCommand, commandToPrompt, botCommandPrompt, looksLikeLinkCode, toPlainChat, collectStreamText, parseIdList };
