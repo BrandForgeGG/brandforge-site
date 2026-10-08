@@ -549,3 +549,9 @@ we do not have.
 **Change:** Everyone on a member contract now gets an email (and a Telegram ping if linked) when the other side signs, funds, submits work, raises an issue or when a milestone is released, including the automatic release after 48 hours, which now also runs daily instead of waiting for someone to open the chat. New admin page Contracts lists deposits to check, disputes to decide and payouts to send (with a "mark as paid" record). Internal fix: the background-jobs table is now `background_jobs` (the old name clashed with an existing table); quick-wins and background-jobs tables are applied.
 
 **Distribution move:** none beyond the earlier contracts announcement; this is trust plumbing. One line for the changelog: "You'll now hear about every contract step by email, and payouts are tracked."
+
+## 2026-10-08 — Create starts from a format; landing shows the Trade Center
+
+**Change:** Create's Image, Video and Copy tools now open with "Start from a format": pick a direction, a track, then a format (about 20 for images from logo and favicon to T-shirt, poster and packaging; 12 for copy from ad angles to investor update; 16 for video from TikTok and Reels to bumper ads and product videos). It fills the lead-in sentence and the matching options, and everything stays editable. The landing page got a short "Hire, or get hired" strip (list, chat, sign, get paid) and a Trade link in the nav; the FAQ answers how member contracts work and what the 5% is.
+
+**Distribution move:** screen-record "Create > Image > Start from a format > Physical > Merchandise > T-shirt graphic" (10 seconds) for X and TikTok with the line "Every format, one page." Use the landing Trade strip as the hero image when posting about the Trade Center.

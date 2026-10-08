@@ -10,6 +10,11 @@ const FAQS = [
       'You fund the agreed total in crypto to the BrandForge escrow wallet. The transfer is verified on-chain, and milestone payments release only after you approve the delivered work. The rest stays with you.',
   },
   {
+    question: 'Can I hire or get hired by other members?',
+    answer:
+      'Yes. Post what you offer or need in the Trade Center, agree terms in a private chat and sign a milestone contract there. The payer funds it, the other person submits each milestone, and the payer has 48 hours to approve or raise an issue before it releases. BrandForge keeps a flat 5% of each released milestone.',
+  },
+  {
     question: 'Who builds my project?',
     answer:
       'Vetted specialists — designers, developers, reverse engineers, and marketers. Your specialist joins your project chat with the proposal and stays there through delivery.',

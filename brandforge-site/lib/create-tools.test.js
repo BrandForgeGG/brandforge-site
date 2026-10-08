@@ -70,3 +70,23 @@ test('defaults come from the field definitions and are copies', () => {
   assert.equal(defaultValues(tool).focus.includes('extra'), false);
   assert.equal(getTool('nope'), null);
 });
+
+test('format trees: two directions, four tracks for images, and every preset fits its tool', () => {
+  const image = getTool('image');
+  assert.equal(new Set(image.formats.map((f) => f.direction)).size, 2);
+  assert.equal(new Set(image.formats.map((f) => f.track)).size, 4);
+  assert.ok(image.formats.length >= 8);
+  for (const id of ['image', 'copy', 'video']) {
+    const tool = getTool(id);
+    const keys = new Set(tool.fields.map((field) => field.key));
+    assert.ok(keys.has(tool.leadKey), id + ' lead field exists');
+    for (const preset of tool.formats) {
+      assert.ok(preset.lead.length > 3 && /\s$/.test(preset.lead), id + ': ' + preset.label + ' lead ends with a space');
+      for (const [key, value] of Object.entries(preset.values)) {
+        assert.ok(keys.has(key), id + ': ' + preset.label + ' sets a real field (' + key + ')');
+        const field = tool.fields.find((item) => item.key === key);
+        if (field.options) assert.ok(field.options.includes(value), id + ': ' + preset.label + ' uses a real option (' + key + '=' + value + ')');
+      }
+    }
+  }
+});

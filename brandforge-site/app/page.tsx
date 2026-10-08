@@ -3,6 +3,7 @@ import { LandingNav } from '@/components/landing/landing-nav';
 import { LandingHero } from '@/components/landing/landing-hero';
 import { LandingPillars } from '@/components/landing/landing-pillars';
 import { LandingCommunity } from '@/components/landing/landing-community';
+import { LandingTrade } from '@/components/landing/landing-trade';
 import { LandingProof } from '@/components/landing/landing-proof';
 import { SiteFooter } from '@/components/site-footer';
 
@@ -39,6 +40,7 @@ export default function Home() {
           <LandingHero />
         </Suspense>
         <LandingPillars />
+        <LandingTrade />
         <LandingProof />
         <LandingCommunity />
       </main>

@@ -10,7 +10,7 @@ import { fetchAuthed } from '@/lib/browser-auth';
 import { trackEvent } from '@/lib/funnel-client';
 import * as createStudio from '@/lib/create-tools';
 import * as distributeStudio from '@/lib/distribute-tools';
-import type { CreateField, CreateTool, CreateValues } from '@/lib/create-tools';
+import type { CreateField, CreateFormat, CreateTool, CreateValues } from '@/lib/create-tools';
 
 // What a studio page hands in: its tools, groups and the pure compile functions (lib/studio-core).
 export type StudioApi = {
@@ -59,6 +59,49 @@ function ToolIcon({ id }: { id: string }) {
 }
 
 type Recent = { id: string; title: string; lastActivity: string | null };
+
+// "Start from a format": direction, then track, then format. Choosing a format only pre-fills the
+// form (a lead-in sentence and matching options); everything stays editable.
+function FormatPicker({ formats, onPick }: { formats: CreateFormat[]; onPick: (format: CreateFormat) => void }) {
+  const directions = Array.from(new Set(formats.map((item) => item.direction)));
+  const [direction, setDirection] = useState(directions[0]);
+  const tracks = Array.from(new Set(formats.filter((item) => item.direction === direction).map((item) => item.track)));
+  const [track, setTrack] = useState<string | null>(null);
+  const activeTrack = track && tracks.includes(track) ? track : tracks[0];
+  const chip = (active: boolean) =>
+    `rounded-full border px-3 py-1 text-xs transition ${active ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`;
+
+  return (
+    <details className="rounded-xl border border-line bg-panel px-3.5 py-2.5">
+      <summary className="cursor-pointer text-sm text-muted">Start from a format</summary>
+      <div className="mt-3 space-y-2.5">
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Direction">
+          {directions.map((item) => (
+            <button key={item} type="button" aria-pressed={item === direction} onClick={() => { setDirection(item); setTrack(null); }} className={chip(item === direction)}>
+              {item}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Track">
+          {tracks.map((item) => (
+            <button key={item} type="button" aria-pressed={item === activeTrack} onClick={() => setTrack(item)} className={chip(item === activeTrack)}>
+              {item}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Format">
+          {formats
+            .filter((item) => item.direction === direction && item.track === activeTrack)
+            .map((item) => (
+              <button key={item.label} type="button" onClick={() => onPick(item)} className="rounded-lg border border-line bg-background px-3 py-1.5 text-xs text-foreground transition hover:border-ember">
+                {item.label}
+              </button>
+            ))}
+        </div>
+      </div>
+    </details>
+  );
+}
 
 function FieldInput({
   field,
@@ -201,6 +244,23 @@ function StudioView({ title, subtitle, storageKey, source, groups, referenceFiel
     setError(null);
   }
 
+  function applyFormat(format: CreateFormat) {
+    const leadKey = tool.leadKey;
+    setValuesByTool((current) => {
+      const base = current[toolId] ?? defaultValues(tool);
+      const next: CreateValues = { ...base, ...format.values };
+      if (leadKey) {
+        const existing = String(base[leadKey] ?? '').trim();
+        const isLeadOnly = !existing || (tool.formats ?? []).some((item) => item.lead.trim() === existing);
+        if (isLeadOnly) next[leadKey] = format.lead;
+      }
+      return { ...current, [toolId]: next };
+    });
+    setOverride(null);
+    setError(null);
+    trackEvent('next_step_clicked', { source: `format_${toolId}` });
+  }
+
   function pickTool(id: string) {
     setToolId(id);
     setOverride(null);
@@ -290,6 +350,8 @@ function StudioView({ title, subtitle, storageKey, source, groups, referenceFiel
           void start();
         }}
       >
+        {tool.formats ? <FormatPicker key={toolId} formats={tool.formats} onPick={applyFormat} /> : null}
+
         {tool.fields.map((field) => (
           <div key={field.key}>
             <label className="mb-1.5 block text-xs font-medium uppercase tracking-[0.1em] text-muted">{field.label}</label>

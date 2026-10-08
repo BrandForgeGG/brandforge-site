@@ -12,6 +12,14 @@ export interface CreateField {
 
 export type CreateValues = Record<string, string | string[]>;
 
+export interface CreateFormat {
+  direction: string;
+  track: string;
+  label: string;
+  lead: string;
+  values: Record<string, string>;
+}
+
 export interface CreateTool {
   id: string;
   group: string;
@@ -19,6 +27,8 @@ export interface CreateTool {
   hint: string;
   fields: CreateField[];
   example: CreateValues;
+  formats?: CreateFormat[];
+  leadKey?: string;
   build(values: CreateValues): string;
 }
 

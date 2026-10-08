@@ -156,6 +156,19 @@ const TOOLS = [
 ];
 
 const { REFERENCE_FIELD, normalizeUrl, makeStudio } = require('./studio-core');
+const { FORMATS: FORMAT_TREES, EXTRA_COPY_KINDS } = require('./create-formats');
+
+// "Start from a format" trees for the three asset tools; leadKey is the field the lead-in goes in.
+const LEAD_KEYS = { image: 'subject', video: 'topic', copy: 'about' };
+for (const tool of TOOLS) {
+  if (!FORMAT_TREES[tool.id]) continue;
+  tool.formats = FORMAT_TREES[tool.id];
+  tool.leadKey = LEAD_KEYS[tool.id];
+  if (tool.id === 'copy') {
+    const kind = tool.fields.find((field) => field.key === 'kind');
+    kind.options = [...kind.options, ...EXTRA_COPY_KINDS];
+  }
+}
 
 const studio = makeStudio(TOOLS);
 
