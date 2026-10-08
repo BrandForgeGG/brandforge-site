@@ -27,6 +27,7 @@ import {
 } from "@/lib/conversation-state";
 import { executeTool } from "@/lib/ai-tools";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { screenText } from "@/lib/content-policy.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -225,6 +226,12 @@ export async function POST(request: NextRequest) {
       { error: "conversationId is required" },
       { status: 400 },
     );
+  }
+
+  // Sector guardrail: declined before any quota or model call is spent.
+  const screened = screenText(message);
+  if (!screened.ok) {
+    return NextResponse.json({ error: screened.message, policy: screened.category }, { status: 422 });
   }
 
   if (user) {

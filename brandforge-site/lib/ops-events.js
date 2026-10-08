@@ -41,6 +41,9 @@ const KIND_BY_EVENT = {
   escrow_funded: 'contracts',
   escrow_rejected: 'disputes',
   milestone_released: 'contracts',
+  peer_funding_review: 'contracts',
+  peer_released: 'contracts',
+  peer_dispute: 'disputes',
 };
 
 // clip/money live in lib/format.js so every message builder renders identically.
@@ -159,6 +162,30 @@ function buildOpsEmbedBody(event, details = {}) {
           .join(' · ') || 'Terms drafted, awaiting signatures.',
         color: BRAND,
         footer: footer('contracts'),
+      };
+
+    case 'peer_funding_review':
+      return {
+        title: `Deposit to verify: ${title}`,
+        description: `${price || 'A deposit'} submitted for a contract between two members. Check the transaction, then mark it funded.`,
+        color: BRAND,
+        footer: footer('contracts'),
+      };
+
+    case 'peer_released':
+      return {
+        title: `Payout due: ${title}`,
+        description: `${price || 'A milestone'} released${details.feeLabel ? ` (platform fee ${details.feeLabel})` : ''}. Pay out to the delivering member.`,
+        color: GREEN,
+        footer: footer('contracts'),
+      };
+
+    case 'peer_dispute':
+      return {
+        title: `Dispute: ${title}`,
+        description: `${clip(details.reason, 300) || 'A milestone was disputed.'} Review the work and resolve it as release or refund.`,
+        color: RED,
+        footer: footer('disputes'),
       };
 
     case 'contract_signed':

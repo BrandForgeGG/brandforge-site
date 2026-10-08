@@ -118,6 +118,7 @@ function parseChatEmbed(artifactData) {
     };
   }
   if (type === 'agreement' && id) return { type, agreementId: id, status };
+  if (type === 'peer_contract' && id) return { type, contractId: id, status };
   if (type === 'funding' && id) {
     const paymentId = typeof artifactData.paymentId === 'string' ? artifactData.paymentId : undefined;
     return { type, agreementId: id, status, ...(paymentId ? { paymentId } : {}) };

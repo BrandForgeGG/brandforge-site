@@ -77,7 +77,16 @@ const SECTIONS: LegalSection[] = [
     ],
   },
   {
-    title: '11. Changes and contact',
+    title: '11. Contracts between members and the Trade Center',
+    body: [
+      'Members can list services or requests in the Trade Center and sign milestone contracts with each other in a private chat. In these contracts BrandForge is not a party to the work: it provides the workspace, holds the verified deposit of the person paying, and releases it milestone by milestone. Sections 6 and 4 describe BrandForge-delivered projects; this section applies to member-to-member contracts.',
+      'Before work starts, both people accept the written terms and the payer funds the contract. When the delivering person submits a milestone with a link to the finished work, the payer has 48 hours to approve it or raise an issue. If the payer does neither, that milestone is released automatically. If an issue is raised, release stops until a person at BrandForge reviews the work and decides to release or refund that milestone.',
+      'BrandForge charges one flat percentage of each milestone when it is released (shown on the contract before anyone signs, and fixed once both people have signed). It is taken from the amount paid to the person delivering the work. There are no late fees and no interest on any plan or contract.',
+      'Members are responsible for the quality, legality and taxes of the work they offer. BrandForge may decline to host listings or contracts for sectors it does not support, and may close listings that mislead.',
+    ],
+  },
+  {
+    title: '12. Changes and contact',
     body: [
       'We may update these terms as the product evolves; material changes are announced in our Discord and Telegram channels before they take effect. Continued use after the effective date means you accept the new terms.',
       'Questions: message the project manager on Telegram (@headstartup) or ask in our Discord. Links are on the homepage.',
@@ -89,8 +98,8 @@ export default function TermsPage() {
   return (
     <LegalPage
       title="Terms of Service"
-      updated="September 23, 2026"
-      intro="These terms govern your use of BrandForge: proposals, agreements, admin-verified crypto escrow and milestone releases. They are written to be read — if anything is unclear, ask a human before you fund a project."
+      updated="October 8, 2026"
+      intro="These terms govern your use of BrandForge: proposals, agreements, admin-verified crypto escrow, milestone releases and member contracts. They are written to be read — if anything is unclear, ask a human before you fund a project."
       sections={SECTIONS}
     />
   );

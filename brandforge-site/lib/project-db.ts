@@ -20,6 +20,7 @@ import { notifyUser } from './notify';
 import { postOpsEvent, postPublicActivity } from './ops-events';
 import { publishPost } from './marketing-poster';
 import { headers } from 'next/headers';
+import type { PeerContract, PeerMilestone } from './peer-contract';
 
 import { validateUsername } from '@/lib/identity';
 
@@ -4204,3 +4205,335 @@ export async function persistGuestChatQuota(
   return guestDbResult(error, 'chat quota write');
 }
 
+
+// ---------------------------------------------------------------------------
+// Peer contracts (0027): milestone contracts between two chat participants.
+// Service-role like the money tables; routes authorize before calling these.
+// Rules live in lib/peer-contract.js — this layer only maps rows.
+// ---------------------------------------------------------------------------
+
+export type PeerContractRow = {
+  id: string;
+  conversation_id: string;
+  created_by: string;
+  payer_id: string;
+  payee_id: string;
+  title: string;
+  scope: string;
+  currency: string;
+  total_cents: number | string;
+  due_date: string | null;
+  milestones: PeerMilestone[];
+  status: PeerContract['status'];
+  funding_status: PeerContract['fundingStatus'];
+  funding_tx: string | null;
+  payer_signed_at: string | null;
+  payee_signed_at: string | null;
+  fee_percent: number | string;
+  created_at: string;
+  updated_at: string;
+};
+
+const PEER_CONTRACT_COLUMNS =
+  'id, conversation_id, created_by, payer_id, payee_id, title, scope, currency, total_cents, due_date, milestones, status, funding_status, funding_tx, payer_signed_at, payee_signed_at, fee_percent, created_at, updated_at';
+
+export type PeerContractDbError = 'pending_migration' | 'not_configured' | 'not_found' | 'failed';
+
+export function peerRowToContract(
+  row: PeerContractRow
+): PeerContract & { id: string; conversationId: string; feePercent: number } {
+  return {
+    id: row.id,
+    conversationId: row.conversation_id,
+    payerId: row.payer_id,
+    payeeId: row.payee_id,
+    title: row.title,
+    scope: row.scope,
+    currency: row.currency,
+    milestones: Array.isArray(row.milestones) ? row.milestones : [],
+    totalCents: Number(row.total_cents),
+    dueDate: row.due_date,
+    status: row.status,
+    signatures: { payer: row.payer_signed_at, payee: row.payee_signed_at },
+    fundingStatus: row.funding_status,
+    fundingTx: row.funding_tx,
+    feePercent: Number(row.fee_percent),
+  };
+}
+
+export async function createPeerContract(input: {
+  conversationId: string;
+  createdBy: string;
+  payerId: string;
+  payeeId: string;
+  title: string;
+  scope: string;
+  currency: string;
+  totalCents: number;
+  dueDate: string | null;
+  milestones: PeerMilestone[];
+  feePercent: number;
+}): Promise<{ ok: true; row: PeerContractRow } | { ok: false; error: PeerContractDbError }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const signedNow = new Date().toISOString();
+  const { data, error } = await admin
+    .from('peer_contracts')
+    .insert({
+      conversation_id: input.conversationId,
+      created_by: input.createdBy,
+      payer_id: input.payerId,
+      payee_id: input.payeeId,
+      title: input.title,
+      scope: input.scope,
+      currency: input.currency,
+      total_cents: input.totalCents,
+      due_date: input.dueDate,
+      milestones: input.milestones,
+      fee_percent: input.feePercent,
+      // The proposer signs by proposing.
+      payer_signed_at: input.createdBy === input.payerId ? signedNow : null,
+      payee_signed_at: input.createdBy === input.payeeId ? signedNow : null,
+    })
+    .select(PEER_CONTRACT_COLUMNS)
+    .single();
+
+  if (error) {
+    if (isMissingTable(error)) return { ok: false, error: 'pending_migration' };
+    console.error('Peer contract create error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+  return { ok: true, row: data as unknown as PeerContractRow };
+}
+
+export async function getPeerContract(
+  id: string
+): Promise<{ ok: true; row: PeerContractRow } | { ok: false; error: PeerContractDbError }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('peer_contracts')
+    .select(PEER_CONTRACT_COLUMNS)
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingTable(error)) return { ok: false, error: 'pending_migration' };
+    console.error('Peer contract read error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+  if (!data) return { ok: false, error: 'not_found' };
+  return { ok: true, row: data as unknown as PeerContractRow };
+}
+
+export async function listPeerContractsFor(
+  userId: string
+): Promise<{ ok: true; rows: PeerContractRow[] } | { ok: false; error: PeerContractDbError }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('peer_contracts')
+    .select(PEER_CONTRACT_COLUMNS)
+    .or(`payer_id.eq.${userId},payee_id.eq.${userId}`)
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  if (error) {
+    if (isMissingTable(error)) return { ok: false, error: 'pending_migration' };
+    console.error('Peer contracts list error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+  return { ok: true, rows: (data ?? []) as unknown as PeerContractRow[] };
+}
+
+// Saves the result of a pure applyAction/settleDue. `expectedUpdatedAt` guards a double click or
+// two tabs: the write only lands if nobody changed the row since it was read.
+export async function savePeerContract(
+  id: string,
+  contract: PeerContract,
+  expectedUpdatedAt: string
+): Promise<{ ok: true; row: PeerContractRow } | { ok: false; error: PeerContractDbError | 'conflict' }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('peer_contracts')
+    .update({
+      title: contract.title,
+      scope: contract.scope,
+      currency: contract.currency,
+      total_cents: contract.totalCents,
+      due_date: contract.dueDate,
+      milestones: contract.milestones,
+      status: contract.status,
+      funding_status: contract.fundingStatus,
+      funding_tx: contract.fundingTx,
+      payer_signed_at: contract.signatures.payer,
+      payee_signed_at: contract.signatures.payee,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .eq('updated_at', expectedUpdatedAt)
+    .select(PEER_CONTRACT_COLUMNS)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingTable(error)) return { ok: false, error: 'pending_migration' };
+    console.error('Peer contract save error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+  if (!data) return { ok: false, error: 'conflict' };
+  return { ok: true, row: data as unknown as PeerContractRow };
+}
+
+// The people who can be on a contract in this chat: the owner plus every participant, with a
+// display name for the picker.
+export async function listConversationPeople(
+  conversationId: string
+): Promise<{ userId: string; name: string }[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+
+  const [{ data: conversation }, { data: participants }] = await Promise.all([
+    admin.from('conversations').select('user_id').eq('id', conversationId).maybeSingle(),
+    admin.from('participants').select('user_id, display_name').eq('conversation_id', conversationId),
+  ]);
+
+  const ids = new Set<string>();
+  if (conversation?.user_id) ids.add(String(conversation.user_id));
+  for (const row of participants ?? []) if (row.user_id) ids.add(String(row.user_id));
+
+  const people: { userId: string; name: string }[] = [];
+  for (const userId of ids) {
+    const fromParticipant = (participants ?? []).find((p) => p.user_id === userId)?.display_name;
+    people.push({
+      userId,
+      name: fromParticipant ? String(fromParticipant) : await getProfileDisplayName(userId),
+    });
+  }
+  return people;
+}
+
+// ---------------------------------------------------------------------------
+// Trade Center (0028): public listings; contact opens a chat between the two people.
+// ---------------------------------------------------------------------------
+
+export type TradeListingRow = {
+  id: string;
+  created_at: string;
+  owner_id: string;
+  kind: 'offer' | 'request';
+  category: string;
+  title: string;
+  description: string;
+  budget_min_cents: number | string | null;
+  budget_max_cents: number | string | null;
+  currency: string;
+  status: 'open' | 'closed';
+};
+
+const TRADE_COLUMNS =
+  'id, created_at, owner_id, kind, category, title, description, budget_min_cents, budget_max_cents, currency, status';
+
+export type TradeDbError = 'pending_migration' | 'not_configured' | 'not_found' | 'failed';
+
+export async function listOpenTradeListings(): Promise<
+  { ok: true; rows: TradeListingRow[] } | { ok: false; error: TradeDbError }
+> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('trade_listings')
+    .select(TRADE_COLUMNS)
+    .eq('status', 'open')
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (error) {
+    if (isMissingTable(error)) return { ok: false, error: 'pending_migration' };
+    console.error('Trade listings list error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+  return { ok: true, rows: (data ?? []) as unknown as TradeListingRow[] };
+}
+
+export async function getTradeListing(
+  id: string
+): Promise<{ ok: true; row: TradeListingRow } | { ok: false; error: TradeDbError }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin.from('trade_listings').select(TRADE_COLUMNS).eq('id', id).maybeSingle();
+  if (error) {
+    if (isMissingTable(error)) return { ok: false, error: 'pending_migration' };
+    console.error('Trade listing read error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+  if (!data) return { ok: false, error: 'not_found' };
+  return { ok: true, row: data as unknown as TradeListingRow };
+}
+
+export async function createTradeListing(
+  ownerId: string,
+  value: {
+    kind: string;
+    category: string;
+    title: string;
+    description: string;
+    currency: string;
+    budgetMinCents: number | null;
+    budgetMaxCents: number | null;
+  }
+): Promise<{ ok: true; row: TradeListingRow } | { ok: false; error: TradeDbError }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('trade_listings')
+    .insert({
+      owner_id: ownerId,
+      kind: value.kind,
+      category: value.category,
+      title: value.title,
+      description: value.description,
+      currency: value.currency,
+      budget_min_cents: value.budgetMinCents,
+      budget_max_cents: value.budgetMaxCents,
+    })
+    .select(TRADE_COLUMNS)
+    .single();
+
+  if (error) {
+    if (isMissingTable(error)) return { ok: false, error: 'pending_migration' };
+    console.error('Trade listing create error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+  return { ok: true, row: data as unknown as TradeListingRow };
+}
+
+export async function closeTradeListing(
+  id: string,
+  ownerId: string
+): Promise<{ ok: true } | { ok: false; error: TradeDbError }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('trade_listings')
+    .update({ status: 'closed', updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('owner_id', ownerId)
+    .select('id')
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingTable(error)) return { ok: false, error: 'pending_migration' };
+    console.error('Trade listing close error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+  return data ? { ok: true } : { ok: false, error: 'not_found' };
+}

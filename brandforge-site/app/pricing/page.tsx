@@ -1,4 +1,5 @@
 import { LandingNav } from '@/components/landing/landing-nav';
+import { PricingPlans } from '@/components/pricing-plans';
 import { LandingPackages } from '@/components/landing/landing-packages';
 import { LandingSections } from '@/components/landing/landing-sections';
 import { LandingFaq } from '@/components/landing/landing-faq';
@@ -22,6 +23,7 @@ export default function PricingPage() {
             Fixed price. Nothing charged until you accept.
           </h1>
         </header>
+        <PricingPlans />
         <LandingPackages />
         <LandingSections />
         <LandingFaq />

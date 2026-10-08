@@ -156,3 +156,8 @@ test('parseSlashCommand recognizes delivery commands and rejects unknown command
   assert.equal(canMutateMessage({ ...message, content_type: 'system' }, 'u1'), false);
   assert.equal(canMutateMessage({ ...message, deleted_at: new Date().toISOString() }, 'u1'), false);
 });
+
+test('parseChatEmbed accepts a peer contract card and needs its id', () => {
+  assert.deepEqual(parseChatEmbed({ type: 'peer_contract', id: 'c1', status: 'proposed' }), { type: 'peer_contract', contractId: 'c1', status: 'proposed' });
+  assert.equal(parseChatEmbed({ type: 'peer_contract' }), null);
+});

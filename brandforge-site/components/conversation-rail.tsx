@@ -313,6 +313,7 @@ onMobileClose,
               <Link href="/create" onClick={onMobileClose} className="rounded-lg px-3 py-1.5 text-[13px] text-muted transition hover:bg-overlay hover:text-foreground">Create</Link>
               <Link href="/distribute" onClick={onMobileClose} className="rounded-lg px-3 py-1.5 text-[13px] text-muted transition hover:bg-overlay hover:text-foreground">Distribute</Link>
               <Link href="/optimize" onClick={onMobileClose} className="rounded-lg px-3 py-1.5 text-[13px] text-muted transition hover:bg-overlay hover:text-foreground">Optimize</Link>
+              <Link href="/trade" onClick={onMobileClose} className="rounded-lg px-3 py-1.5 text-[13px] text-muted transition hover:bg-overlay hover:text-foreground">Trade</Link>
             </nav>
           </div>
         )}

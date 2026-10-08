@@ -22,6 +22,7 @@ import { fetchAuthed } from "@/lib/browser-auth";
 import { trackEvent } from "@/lib/funnel-client";
 import { GuestSaveBar } from "@/components/guest-save-bar";
 import { VideoReadyBar } from "@/components/video-ready-bar";
+import { PeerContractForm } from "@/components/peer-contract-card";
 import { extractOutline } from "@/lib/deliverable-outline";
 import { ChatTranscript, type ChatMessage } from "@/components/chat-transcript";
 import {
@@ -194,6 +195,7 @@ export function ChatWorkspace() {
   );
   const [inviteEmail, setInviteEmail] = useState("");
   const [showInviteForm, setShowInviteForm] = useState(false);
+  const [showContractForm, setShowContractForm] = useState(false);
   // Staff proposal composer: the send side of POST /api/proposals. Opens from the
   // "Brief ready" strip above the composer while the conversation waits for review.
   const [showProposalForm, setShowProposalForm] = useState(false);
@@ -2723,6 +2725,20 @@ return (
                             Invite my team
                           </button>
                         ) : null}
+                        {railMeta.userId && conversationId ? (
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="bf-menu-item"
+                            onClick={() => {
+                              setCommandsOpen(false);
+                              trackEvent("next_step_clicked", { source: "contract" });
+                              setShowContractForm(true);
+                            }}
+                          >
+                            Create a contract
+                          </button>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
@@ -2770,6 +2786,15 @@ return (
           }}
           onTaskAction={(taskId, payload) => {
             void handleTaskAction(taskId, payload);
+          }}
+        />
+      ) : null}
+      {showContractForm && conversationId ? (
+        <PeerContractForm
+          conversationId={conversationId}
+          onClose={() => setShowContractForm(false)}
+          onSaved={() => {
+            void refreshMessages(conversationId);
           }}
         />
       ) : null}

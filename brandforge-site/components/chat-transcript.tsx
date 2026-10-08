@@ -8,6 +8,7 @@ import { RichContent } from "@/components/rich-content";
 
 import { detectDeliverable, KINDS } from "@/lib/deliverable-intent";
 import { BlueprintEmbedCard } from "@/components/blueprint/blueprint-embed-card";
+import { PeerContractCard } from "@/components/peer-contract-card";
 
 export type ChatEmbedAction =
   | "accept"
@@ -38,6 +39,7 @@ export type ChatEmbed =
       counterNote?: string | null;
     }
   | { type: "agreement"; agreementId: string; status: string }
+  | { type: "peer_contract"; contractId: string; status: string }
   | { type: "review_request"; conversationId: string; percent?: number; complete?: boolean }
   | {
       type: "blueprint";
@@ -188,6 +190,11 @@ function SystemEmbedCard({
 
    const embed = message.embed;
    if (!embed) return null;
+
+   // Peer contracts load and act on themselves.
+   if (embed.type === "peer_contract") {
+     return <PeerContractCard contractId={embed.contractId} />;
+   }
 
    // Handle blueprint embeds
    if (embed.type === "blueprint") {

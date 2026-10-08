@@ -78,6 +78,13 @@ const FUNNEL_EVENTS = Object.freeze([
   'next_step_clicked',
   'invite_link_copied',
   'team_joined',
+  // Peer contracts (2026-10-08)
+  'peer_contract_proposed',
+  'peer_contract_signed',
+  'peer_contract_released',
+  'plan_interest',
+  'trade_listing_created',
+  'trade_offer_sent',
   // Specialist funnel
   'apply_started',
   'apply_submitted',
