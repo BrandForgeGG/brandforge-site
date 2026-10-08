@@ -19,7 +19,7 @@ import {
 import { summarizeTaskProgress } from "@/lib/task-board";
 import { shapeTaskRoster } from "@/lib/task-board";
 import { isNearBottom } from "@/lib/chat-scroll";
-import { fetchAuthed } from "@/lib/browser-auth";
+import { fetchAuthed, getSessionUser } from "@/lib/browser-auth";
 import { trackEvent } from "@/lib/funnel-client";
 import { useLogin } from "@/components/login-dialog";
 import { GuestSaveBar } from "@/components/guest-save-bar";
@@ -266,8 +266,30 @@ export function ChatWorkspace() {
   const [isGuestBrowser, setIsGuestBrowser] = useState(false);
   const { openLogin: openGuestLogin } = useLogin();
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- read a browser-only cookie once
-    setIsGuestBrowser(document.cookie.split(";").some((part) => part.trim().startsWith("bf_guest=")));
+    // Restore the idea typed before signing in, once, into an empty composer.
+    try {
+      const pending = localStorage.getItem("bf:pending-idea");
+      if (pending && /sb-[^=;]+-auth-token/.test(document.cookie)) {
+        localStorage.removeItem("bf:pending-idea");
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time restore of a browser-only draft
+        setInput((current) => current || pending);
+      }
+    } catch {
+      /* storage blocked */
+    }
+  }, []);
+  useEffect(() => {
+    // A stale marker can outlive a sign-in, so a guest is a marked browser with no session.
+    if (!document.cookie.split(";").some((part) => part.trim().startsWith("bf_guest="))) return;
+    let live = true;
+    void getSessionUser()
+      .then((user) => {
+        if (live) setIsGuestBrowser(user === null);
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
   }, []);
   useEffect(() => {
     try {
@@ -1119,6 +1141,18 @@ export function ChatWorkspace() {
         setError(checkedText.error);
         return;
       }
+      // Starting a new chat takes an account: the idea is kept and the sign-in pop-up opens. Chats a
+      // guest already has stay open, and the bots keep their own guest path.
+      if (isGuestBrowser && !conversationId && text) {
+        try {
+          localStorage.setItem("bf:pending-idea", text);
+        } catch {
+          /* storage blocked: the text stays in the composer anyway */
+        }
+        trackEvent("guest_send_gated", { source: "composer" });
+        openGuestLogin({ reason: "start", next: "/" });
+        return;
+      }
       const slash = parseSlashCommand(text);
       if (slash) {
         if (slash.error) {
@@ -1297,6 +1331,8 @@ export function ChatWorkspace() {
       attachment,
       conversationId,
       input,
+      isGuestBrowser,
+      openGuestLogin,
       isOwnConversation,
       isStreaming,
       loadRecents,

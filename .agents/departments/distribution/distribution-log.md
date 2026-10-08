@@ -645,3 +645,9 @@ we do not have.
 **Change:** the bar under a guest's first answer now says "Sign in to keep this chat and add your team" with a "Sign in" button (was "Save chat"); the sign-in pop-up is titled "Sign in to keep going".
 
 **Distribution move:** copy-only conversion tweak; watch `guest_save_clicked` rate in the funnel against last week to see if the plainer wording lifts sign-ins.
+
+## 2026-10-09 — Sign in before the first message
+
+**Change:** on the web, a signed-out visitor who sends their first message gets the sign-in pop-up ("Sign in to get your answer") instead of an anonymous chat; the idea is kept and put back in the composer after sign-in. Existing guest chats stay open, and the Telegram/Discord bots keep their own guest path. Funnel event `guest_send_gated` counts the gate.
+
+**Distribution move:** every visitor now becomes an account or leaves, so measure `guest_send_gated` against sign-ins for two weeks; if drop-off is heavy, the free-answer-first flow is one revert away. Landing and ad copy should promise "free, no card" next to the first button.

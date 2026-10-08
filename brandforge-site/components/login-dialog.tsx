@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { createPortal } from 'react-dom';
 import { SignInForm } from '@/components/sign-in-form';
 
-type OpenOptions = { next?: string; reason?: 'save' | 'signin' };
+type OpenOptions = { next?: string; reason?: 'save' | 'signin' | 'start' };
 type LoginApi = { openLogin: (options?: OpenOptions) => void };
 
 const LoginContext = createContext<LoginApi>({
@@ -21,6 +21,7 @@ export function useLogin(): LoginApi {
 
 const COPY = {
   save: { title: 'Sign in to keep going', line: 'Sign in free and everything here comes with you, so you can bring your team in.' },
+  start: { title: 'Sign in to get your answer', line: 'Free, no card. Your idea is kept and ready the moment you are in.' },
   signin: { title: 'Sign in to BrandForge', line: 'New or returning, same buttons. Free to start, no card.' },
 } as const;
 
