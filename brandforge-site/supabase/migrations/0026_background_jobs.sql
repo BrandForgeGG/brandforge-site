@@ -1,3 +1,4 @@
+-- NOTE: named background_jobs because prod already has an unrelated public.jobs table.
 -- Jobs table (master brief section 8): scheduled background work
 -- for quick wins, nurture sequences, and other async tasks.
 --
@@ -11,7 +12,7 @@
 -- - Foreign keys on delete cascade: deleted blueprints clean up their jobs.
 -- - Additive only. Nothing existing is altered.
 
-create table if not exists public.jobs (
+create table if not exists public.background_jobs (
   id uuid primary key default gen_random_uuid(),
   type text not null, -- 'quick_win', 'nurture', etc.
   blueprint_id uuid references public.blueprints(id) on delete cascade,
@@ -27,19 +28,19 @@ create table if not exists public.jobs (
   completed_at timestamptz
 );
 
-create index if not exists jobs_run_at_idx
-  on public.jobs (run_at) where status = 'pending';
-create index if not exists jobs_type_idx
-  on public.jobs (type);
-create index if not exists jobs_blueprint_id_idx
-  on public.jobs (blueprint_id) where blueprint_id is not null;
-create index if not exists jobs_user_id_idx
-  on public.jobs (user_id) where user_id is not null;
-create index if not exists jobs_idempotency_key_idx
-  on public.jobs (idempotency_key) where idempotency_key is not null;
+create index if not exists background_jobs_run_at_idx
+  on public.background_jobs (run_at) where status = 'pending';
+create index if not exists background_jobs_type_idx
+  on public.background_jobs (type);
+create index if not exists background_jobs_blueprint_id_idx
+  on public.background_jobs (blueprint_id) where blueprint_id is not null;
+create index if not exists background_jobs_user_id_idx
+  on public.background_jobs (user_id) where user_id is not null;
+create index if not exists background_jobs_idempotency_key_idx
+  on public.background_jobs (idempotency_key) where idempotency_key is not null;
 
 -- Locked down by default: RLS enabled with NO policies
-alter table public.jobs enable row level security;
+alter table public.background_jobs enable row level security;
 
-comment on table public.jobs is
+comment on table public.background_jobs is
   'Scheduled background work: quick wins, nurture sequences, async tasks. Executed by /api/cron/jobs worker.';

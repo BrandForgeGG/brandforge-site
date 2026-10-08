@@ -3419,7 +3419,7 @@ export async function runDueJobs(): Promise<JobsRunResult> {
 
   const nowIso = new Date().toISOString();
   const { data, error } = await admin
-    .from('jobs')
+    .from('background_jobs')
     .select('*')
     .eq('status', 'pending')
     .lte('run_at', nowIso)
@@ -3451,21 +3451,21 @@ export async function runDueJobs(): Promise<JobsRunResult> {
 
     if (status === 'completed') {
       await admin
-        .from('jobs')
+        .from('background_jobs')
         .update({ status: 'completed', attempts, error: null, completed_at: nowIso })
         .eq('id', row.id);
       completed += 1;
       results.push({ id: row.id, type: row.type, status: 'completed' });
     } else if (status === 'failed') {
       await admin
-        .from('jobs')
+        .from('background_jobs')
         .update({ status: 'failed', attempts, error: errorText })
         .eq('id', row.id);
       failed += 1;
       results.push({ id: row.id, type: row.type, status: 'failed', error: errorText ?? undefined });
     } else {
       await admin
-        .from('jobs')
+        .from('background_jobs')
         .update({ attempts, error: errorText })
         .eq('id', row.id);
       retried += 1;
@@ -4536,4 +4536,76 @@ export async function closeTradeListing(
     return { ok: false, error: 'failed' };
   }
   return data ? { ok: true } : { ok: false, error: 'not_found' };
+}
+
+// Delivery targets for one person (contract updates reach the other party on every channel they
+// have linked). Service-role read: the caller is the other party, not the target.
+export async function getUserNotifyTargets(userId: string): Promise<FounderNotifyTargets> {
+  const empty: FounderNotifyTargets = { email: null, telegramChatId: null };
+  const admin = createSupabaseAdminClient();
+  if (!admin) return empty;
+
+  const { data, error } = await admin
+    .from('profiles')
+    .select('email, telegram_chat_id')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error) {
+    console.error('Error fetching user notify targets:', error.message);
+    return empty;
+  }
+  return {
+    email: data?.email ? String(data.email) : null,
+    telegramChatId: data?.telegram_chat_id ? String(data.telegram_chat_id) : null,
+  };
+}
+
+// Staff queue for peer contracts: deposits to check, disputes to decide, payouts to send.
+// Filtering happens in JS over the live (non-cancelled, non-empty) set; the table stays small.
+export async function listPeerContractsNeedingStaff(): Promise<
+  { ok: true; rows: PeerContractRow[] } | { ok: false; error: PeerContractDbError }
+> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('peer_contracts')
+    .select(PEER_CONTRACT_COLUMNS)
+    .neq('status', 'cancelled')
+    .order('updated_at', { ascending: false })
+    .limit(500);
+  if (error) {
+    if (isMissingTable(error)) return { ok: false, error: 'pending_migration' };
+    console.error('Peer contract staff queue error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+
+  const rows = ((data ?? []) as unknown as PeerContractRow[]).filter((row) => {
+    const milestones = Array.isArray(row.milestones) ? row.milestones : [];
+    return (
+      row.funding_status === 'verifying' ||
+      row.status === 'disputed' ||
+      milestones.some((m) => (m.status === 'released' || m.status === 'refunded') && !m.paidAt)
+    );
+  });
+  return { ok: true, rows };
+}
+
+// Contracts that may hold a submitted milestone whose 48 hours have passed (daily settlement).
+export async function listPeerContractsWithPendingWork(): Promise<PeerContractRow[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+
+  const { data, error } = await admin
+    .from('peer_contracts')
+    .select(PEER_CONTRACT_COLUMNS)
+    .eq('status', 'active')
+    .limit(500);
+  if (error) {
+    if (!isMissingTable(error)) console.error('Peer contract settle list error:', error.message);
+    return [];
+  }
+  return ((data ?? []) as unknown as PeerContractRow[]).filter((row) =>
+    (Array.isArray(row.milestones) ? row.milestones : []).some((m) => m.status === 'submitted')
+  );
 }

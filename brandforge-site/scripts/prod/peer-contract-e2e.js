@@ -113,6 +113,9 @@ const check = (name, cond, detail) => {
     check('payer cannot resolve their own dispute (403)', (await call(payer, 'PATCH', `/api/peer-contracts/${contractId}`, { action: 'resolve_dispute', index: 1, outcome: 'refund' })).status === 403);
     check('worker cannot resolve it either (403)', (await call(worker, 'PATCH', `/api/peer-contracts/${contractId}`, { action: 'resolve_dispute', index: 1, outcome: 'release' })).status === 403);
 
+    check('payer cannot read the staff queue (403)', (await call(payer, 'GET', '/api/peer-contracts?staff=1')).status === 403);
+    check('payer cannot record payouts (403)', (await call(payer, 'PATCH', `/api/peer-contracts/${contractId}`, { action: 'mark_paid', index: 0 })).status === 403);
+    check('daily settle cron refuses unauthenticated calls', [401, 503].includes((await call(null, 'GET', '/api/cron/peer-contracts')).status));
     const list = await call(worker, 'GET', '/api/peer-contracts');
     check('"my contracts" lists it for the worker', list.status === 200 && list.body.contracts?.some((c) => c.id === contractId));
 

@@ -143,3 +143,20 @@ test('a rejected deposit returns to unfunded so the payer can resubmit', () => {
 test('money formatting', () => {
   assert.equal(pc.formatMoney(40050, 'EUR'), '€400.50');
 });
+
+test('staff record each payout once; releases owe the payee net of fee, refunds owe the payer in full', () => {
+  let c = funded();
+  c = run(c, 'submit_milestone', payee, { index: 0, proofUrl: 'https://x.co/script' });
+  c = run(c, 'approve_milestone', payer, { index: 0 });
+  c = run(c, 'submit_milestone', payee, { index: 1, proofUrl: 'https://x.co/video' });
+  c = run(c, 'dispute_milestone', payer, { index: 1, reason: 'The captions are missing.' });
+  c = run(c, 'resolve_dispute', staff, { index: 1, outcome: 'refund' });
+  const due = pc.payoutsDue(c);
+  assert.deepEqual(due.map((d) => [d.index, d.kind, d.toSide, d.amountCents]), [[0, 'payout', 'payee', 9500], [1, 'refund', 'payer', 30050]]);
+  assert.equal(pc.applyAction(c, 'mark_paid', payer, { index: 0 }, NOW).status, 403);
+  c = run(c, 'mark_paid', staff, { index: 0 });
+  assert.equal(pc.applyAction(c, 'mark_paid', staff, { index: 0 }, NOW).status, 409);
+  assert.equal(pc.payoutsDue(c).length, 1);
+  const open = run(run(run(base(), 'accept', payer), 'accept', payee), 'submit_funding', payer, { tx: '0xabc123' });
+  assert.equal(pc.applyAction(open, 'mark_paid', staff, { index: 0 }, NOW).status, 409);
+});

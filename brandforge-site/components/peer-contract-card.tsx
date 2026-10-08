@@ -159,7 +159,7 @@ export function PeerContractCard({ contractId }: { contractId: string }) {
                 <p className="shrink-0 text-xs tabular-nums text-muted">{formatMoney(m.amountCents, view.currency)}</p>
               </div>
               <p className="mt-0.5 text-[11px] text-muted">
-                {MILESTONE_WORDS[m.status]}
+                {MILESTONE_WORDS[m.status]}{m.paidAt ? " and paid out" : ""}
                 {m.status === "submitted" && left ? ` · releases automatically in ${left} unless the payer objects` : ""}
               </p>
               {m.proofUrl ? (

@@ -6,6 +6,7 @@ export type PeerMilestone = {
   submittedAt: string | null;
   autoReleaseAt: string | null;
   releasedAt: string | null;
+  paidAt: string | null;
   feeCents: number;
   note: string | null;
 };
@@ -43,5 +44,6 @@ export function applyAction(
 ): { ok: true; contract: PeerContract; event: string } | { ok: false; status: number; reason: string };
 export function settleDue(contract: PeerContract, now?: Date, percent?: number): PeerContract;
 export function summarize(contract: PeerContract): { releasedCents: number; feeCents: number; payeeCents: number; totalCents: number };
+export function payoutsDue(contract: PeerContract): { index: number; kind: 'payout' | 'refund'; toSide: 'payer' | 'payee'; amountCents: number; feeCents: number }[];
 export function sideOf(contract: PeerContract, userId: string | null | undefined): 'payer' | 'payee' | null;
 export function formatMoney(cents: number, currency: string): string;

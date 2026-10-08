@@ -201,6 +201,19 @@ function buildCore(event, details = {}) {
       };
     }
 
+    case 'peer_update': {
+      const message = line(details.message, 220);
+      if (!message) return null;
+      const paragraphs = [message];
+      return {
+        subject: title ? `Contract update: ${title}` : 'Contract update',
+        text: `${message}
+
+${chatUrl || ''}`.trim(),
+        html: card('Contract', title || 'Contract update', paragraphs, open, chatUrl),
+      };
+    }
+
     case 'welcome': {
       const chatUrl = typeof details.chatUrl === 'string' && details.chatUrl ? details.chatUrl : '';
       const paragraphs = [

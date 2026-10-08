@@ -76,6 +76,7 @@ function validateDraft(input) {
       submittedAt: null,
       autoReleaseAt: null,
       releasedAt: null,
+      paidAt: null,
       feeCents: 0,
       note: null,
     });
@@ -152,7 +153,7 @@ function applyAction(contract, action, actor, payload = {}, now = new Date(), pe
   const side = sideOf(contract, actor && actor.userId);
   const staff = Boolean(actor && actor.isStaff);
 
-  if (action === 'verify_funding' || action === 'resolve_dispute') {
+  if (action === 'verify_funding' || action === 'resolve_dispute' || action === 'mark_paid') {
     if (!staff) return fail(403, 'Only BrandForge staff can do that.');
   } else if (!side) {
     return fail(403, 'Only the two people on this contract can do that.');
@@ -287,6 +288,13 @@ function applyAction(contract, action, actor, payload = {}, now = new Date(), pe
       }
       return fail(400, 'Choose release or refund.');
     }
+    case 'mark_paid': {
+      const index = Number(payload.index);
+      const m = contract.milestones[index];
+      if (!m || !settled(m)) return fail(409, 'That milestone has nothing to pay out yet.');
+      if (m.paidAt) return fail(409, 'That payout is already recorded.');
+      return { ok: true, event: 'paid', contract: replaceMilestone(contract, index, { paidAt: now.toISOString() }) };
+    }
     default:
       return fail(400, 'Unknown action.');
   }
@@ -304,6 +312,18 @@ function settleDue(contract, now = new Date(), percent = feePercent()) {
     }
   });
   return changed ? next : contract;
+}
+
+// Money staff still have to move by hand: released milestones owe the delivering side (amount
+// minus the fee), refunded ones owe the payer the full amount.
+function payoutsDue(contract) {
+  const due = [];
+  contract.milestones.forEach((m, index) => {
+    if (m.paidAt) return;
+    if (m.status === 'released') due.push({ index, kind: 'payout', toSide: 'payee', amountCents: m.amountCents - m.feeCents, feeCents: m.feeCents });
+    if (m.status === 'refunded') due.push({ index, kind: 'refund', toSide: 'payer', amountCents: m.amountCents, feeCents: 0 });
+  });
+  return due;
 }
 
 // What the payee takes home across released milestones, and what the platform kept.
@@ -334,6 +354,7 @@ module.exports = {
   applyAction,
   settleDue,
   summarize,
+  payoutsDue,
   sideOf,
   formatMoney,
 };

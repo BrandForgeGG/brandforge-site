@@ -274,6 +274,9 @@ function buildPersonalMessageText(event, details = {}) {
     case 'payment_released':
       return `BrandForge: the payment for "${clip(details.title)}" has been released.`;
 
+    case 'peer_update':
+      return clip(details.message, 220) ? `BrandForge: ${clip(details.message, 220)}` : null;
+
     case 'telegram_linked':
       return 'BrandForge: your Telegram is linked. You will get a ping here whenever something needs you.';
 

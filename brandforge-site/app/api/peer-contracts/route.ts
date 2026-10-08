@@ -4,9 +4,10 @@ import {
   canAccessConversation,
   createPeerContract,
   getProfileDisplayName,
-  isStaffAccount,
+  isAdminAccount,
   listConversationPeople,
   listPeerContractsFor,
+  listPeerContractsNeedingStaff,
   recordFunnelEvent,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
@@ -30,6 +31,17 @@ export async function GET(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Sign in to use contracts' }, { status: 401 });
 
     const conversationId = request.nextUrl.searchParams.get('conversationId');
+
+    // Staff queue: deposits to check, disputes to decide, payouts to send.
+    if (request.nextUrl.searchParams.get('staff')) {
+      if (!(await isAdminAccount(user.id))) return NextResponse.json({ error: 'Admin access only' }, { status: 403 });
+      const queue = await listPeerContractsNeedingStaff();
+      if (!queue.ok) {
+        if (queue.error === 'pending_migration') return NextResponse.json({ contracts: [], pending: true });
+        return NextResponse.json({ error: 'Could not load the queue' }, { status: 500 });
+      }
+      return NextResponse.json({ contracts: await Promise.all(queue.rows.map((row) => toPeerView(row, user.id, true))) });
+    }
     if (request.nextUrl.searchParams.get('people') && conversationId) {
       if (!(await canAccessConversation(user.id, conversationId))) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 });
@@ -43,7 +55,7 @@ export async function GET(request: NextRequest) {
       if (result.error === 'pending_migration') return NextResponse.json({ contracts: [], pending: true });
       return NextResponse.json({ error: 'Could not load contracts' }, { status: 500 });
     }
-    const isStaff = await isStaffAccount(user.id);
+    const isStaff = await isAdminAccount(user.id);
     const contracts = await Promise.all(result.rows.map((row) => toPeerView(row, user.id, isStaff)));
     return NextResponse.json({ contracts });
   } catch (error) {
@@ -133,7 +145,7 @@ export async function POST(request: NextRequest) {
       milestoneCount: draft.value.milestones.length,
     });
 
-    const isStaff = await isStaffAccount(user.id);
+    const isStaff = await isAdminAccount(user.id);
     return NextResponse.json({ success: true, contract: await toPeerView(created.row, user.id, isStaff) });
   } catch (error) {
     console.error('Peer contract create error:', error);

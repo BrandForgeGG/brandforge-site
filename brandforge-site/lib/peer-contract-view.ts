@@ -1,5 +1,5 @@
 import { getProfileDisplayName, peerRowToContract, type PeerContractRow } from '@/lib/project-db';
-import { summarize, formatMoney } from '@/lib/peer-contract.js';
+import { summarize, formatMoney, payoutsDue } from '@/lib/peer-contract.js';
 
 // What the card needs, from one viewer's seat. Never includes the other side's payment reference.
 export async function toPeerView(row: PeerContractRow, viewerId: string, isStaff: boolean) {
@@ -30,6 +30,7 @@ export async function toPeerView(row: PeerContractRow, viewerId: string, isStaff
     viewerSide: side,
     viewerIsStaff: isStaff,
     summary,
+    payoutsDue: payoutsDue(contract),
     totalLabel: formatMoney(contract.totalCents, contract.currency),
   };
 }

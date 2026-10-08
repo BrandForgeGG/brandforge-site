@@ -14,6 +14,7 @@ type HubData = {
   marketingNote: string;
   campaigns: Counts | null;
   campaignsNote: string;
+  contractsDue: number;
 };
 
 function StatCard({
@@ -51,13 +52,14 @@ export default function AdminDashboardPage() {
   const [data, setData] = useState<HubData | null>(null);
 
   const load = useCallback(async () => {
-    const [applications, funnel, marketing, campaigns] = await Promise.all([
+    const [applications, funnel, marketing, campaigns, contracts] = await Promise.all([
       fetch('/api/admin/applications').then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch('/api/funnel').then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch('/api/admin/marketing').then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch('/api/admin/campaigns')
         .then(async (r) => ({ ok: r.ok, data: await r.json().catch(() => ({})) }))
         .catch(() => ({ ok: false, data: {} })),
+      fetch('/api/peer-contracts?staff=1').then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]);
 
     if (!applications) {
@@ -80,6 +82,7 @@ export default function AdminDashboardPage() {
       marketingNote: marketing
         ? `${marketingCounts?.queued ?? 0} queued · ${marketingCounts?.posted ?? 0} posted · ${marketingCounts?.failed ?? 0} failed`
         : 'Queue unavailable',
+      contractsDue: (contracts?.contracts ?? []).length,
       campaigns: campaignCounts,
       campaignsNote: campaigns.ok
         ? `${campaignCounts?.planned ?? 0} planned · ${(campaignCounts?.submitted ?? 0) + (campaignCounts?.in_progress ?? 0)} in progress · ${campaignCounts?.live ?? 0} live`
@@ -170,6 +173,13 @@ export default function AdminDashboardPage() {
             note="Real recorded product events since launch."
             href="/admin/funnel"
             linkLabel="Open the funnel"
+          />
+          <StatCard
+            title="Contracts"
+            stat={String(data?.contractsDue ?? 0)}
+            note="Deposits to check, disputes to decide and payouts to send."
+            href="/admin/contracts"
+            linkLabel="Open the queue"
           />
         </div>
       </section>
