@@ -555,3 +555,9 @@ we do not have.
 **Change:** Create's Image, Video and Copy tools now open with "Start from a format": pick a direction, a track, then a format (about 20 for images from logo and favicon to T-shirt, poster and packaging; 12 for copy from ad angles to investor update; 16 for video from TikTok and Reels to bumper ads and product videos). It fills the lead-in sentence and the matching options, and everything stays editable. The landing page got a short "Hire, or get hired" strip (list, chat, sign, get paid) and a Trade link in the nav; the FAQ answers how member contracts work and what the 5% is.
 
 **Distribution move:** screen-record "Create > Image > Start from a format > Physical > Merchandise > T-shirt graphic" (10 seconds) for X and TikTok with the line "Every format, one page." Use the landing Trade strip as the hero image when posting about the Trade Center.
+
+## 2026-10-08 — Review requests, listing edits and a livelier contract card
+
+**Change:** When a request is declined by the sector filter, the red banner now has "Ask a person to review", which sends the text to the team's channel (works for guests too). Trade Center owners can edit their listings, not only close them. The contract card refreshes every 15 seconds and the moment the tab comes back into view.
+
+**Distribution move:** none (trust and polish). Changelog line: "Blocked by mistake? Ask a person to review it. You can also edit your Trade listings."

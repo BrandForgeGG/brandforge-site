@@ -41,6 +41,7 @@ const KIND_BY_EVENT = {
   escrow_funded: 'contracts',
   escrow_rejected: 'disputes',
   milestone_released: 'contracts',
+  content_review: 'briefs',
   peer_funding_review: 'contracts',
   peer_released: 'contracts',
   // No #ops-disputes webhook exists yet; a dispute must never be silent, so it shares contracts.
@@ -163,6 +164,16 @@ function buildOpsEmbedBody(event, details = {}) {
           .join(' · ') || 'Terms drafted, awaiting signatures.',
         color: BRAND,
         footer: footer('contracts'),
+      };
+
+    case 'content_review':
+      return {
+        title: 'Content review requested',
+        description: `Declined as ${clip(details.category, 60) || 'unsupported'}: "${clip(details.text, 400)}"${details.note ? `
+Note: ${clip(details.note, 300)}` : ''}
+If it is fine, tell the person in the chat.`,
+        color: BRAND,
+        footer: footer('briefs'),
       };
 
     case 'peer_funding_review':

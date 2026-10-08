@@ -42,6 +42,7 @@ export function TradeCenter() {
   const [category, setCategory] = useState("");
   const [q, setQ] = useState("");
   const [posting, setPosting] = useState(false);
+  const [editing, setEditing] = useState<ListingView | null>(null);
   const [contacting, setContacting] = useState<ListingView | null>(null);
 
   const load = useCallback(async () => {
@@ -115,16 +116,21 @@ export function TradeCenter() {
                     <p className="truncate text-[11px] text-muted">{l.ownerName}</p>
                   </div>
                   {l.mine ? (
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        await fetchAuthed(`/api/trade/${l.id}`, { method: "DELETE" });
-                        void load();
-                      }}
-                      className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted hover:text-foreground"
-                    >
-                      Close
-                    </button>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setEditing(l)} className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted hover:text-foreground">
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await fetchAuthed(`/api/trade/${l.id}`, { method: "DELETE" });
+                          void load();
+                        }}
+                        className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted hover:text-foreground"
+                      >
+                        Close
+                      </button>
+                    </div>
                   ) : (
                     <button type="button" onClick={() => setContacting(l)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background">
                       {l.kind === "offer" ? "Hire" : "Offer to help"}
@@ -147,20 +153,21 @@ export function TradeCenter() {
       </p>
 
       {posting ? <PostForm onClose={() => setPosting(false)} onPosted={() => void load()} /> : null}
+      {editing ? <PostForm listing={editing} onClose={() => setEditing(null)} onPosted={() => void load()} /> : null}
       {contacting ? <ContactForm listing={contacting} onClose={() => setContacting(null)} /> : null}
     </div>
   );
 }
 
-function PostForm({ onClose, onPosted }: { onClose: () => void; onPosted: () => void }) {
+function PostForm({ onClose, onPosted, listing }: { onClose: () => void; onPosted: () => void; listing?: ListingView }) {
   const router = useRouter();
-  const [kind, setKind] = useState<"offer" | "request">("offer");
-  const [category, setCategory] = useState(CATEGORIES[0]);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [currency, setCurrency] = useState("EUR");
-  const [budgetMin, setBudgetMin] = useState("");
-  const [budgetMax, setBudgetMax] = useState("");
+  const [kind, setKind] = useState<"offer" | "request">((listing?.kind as "offer" | "request") ?? "offer");
+  const [category, setCategory] = useState(listing?.category ?? CATEGORIES[0]);
+  const [title, setTitle] = useState(listing?.title ?? "");
+  const [description, setDescription] = useState(listing?.description ?? "");
+  const [currency, setCurrency] = useState(listing?.currency ?? "EUR");
+  const [budgetMin, setBudgetMin] = useState(listing?.budgetMinCents != null ? String(listing.budgetMinCents / 100) : "");
+  const [budgetMax, setBudgetMax] = useState(listing?.budgetMaxCents != null ? String(listing.budgetMaxCents / 100) : "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -168,8 +175,8 @@ function PostForm({ onClose, onPosted }: { onClose: () => void; onPosted: () => 
     setBusy(true);
     setError(null);
     try {
-      const response = await fetchAuthed("/api/trade", {
-        method: "POST",
+      const response = await fetchAuthed(listing ? `/api/trade/${listing.id}` : "/api/trade", {
+        method: listing ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ kind, category, title, description, currency, budgetMin, budgetMax }),
       });
@@ -192,7 +199,7 @@ function PostForm({ onClose, onPosted }: { onClose: () => void; onPosted: () => 
   }
 
   return (
-    <Modal label="Post a listing" onClose={onClose}>
+    <Modal label={listing ? "Edit listing" : "Post a listing"} onClose={onClose}>
       <div className="mt-3 flex gap-2">
         {(["offer", "request"] as const).map((k) => (
           <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)} className={`flex-1 rounded-lg border px-3 py-1.5 text-xs ${kind === k ? "border-ember bg-ember/10 text-foreground" : "border-line text-muted"}`}>
@@ -244,7 +251,7 @@ function PostForm({ onClose, onPosted }: { onClose: () => void; onPosted: () => 
           Cancel
         </button>
         <button type="button" disabled={busy} onClick={() => void submit()} className="rounded-lg bg-ember px-4 py-1.5 text-xs font-semibold text-background disabled:opacity-60">
-          Post listing
+          {listing ? "Save changes" : "Post listing"}
         </button>
       </div>
     </Modal>

@@ -4609,3 +4609,45 @@ export async function listPeerContractsWithPendingWork(): Promise<PeerContractRo
     (Array.isArray(row.milestones) ? row.milestones : []).some((m) => m.status === 'submitted')
   );
 }
+
+export async function updateTradeListing(
+  id: string,
+  ownerId: string,
+  value: {
+    kind: string;
+    category: string;
+    title: string;
+    description: string;
+    currency: string;
+    budgetMinCents: number | null;
+    budgetMaxCents: number | null;
+  }
+): Promise<{ ok: true; row: TradeListingRow } | { ok: false; error: TradeDbError }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+
+  const { data, error } = await admin
+    .from('trade_listings')
+    .update({
+      kind: value.kind,
+      category: value.category,
+      title: value.title,
+      description: value.description,
+      currency: value.currency,
+      budget_min_cents: value.budgetMinCents,
+      budget_max_cents: value.budgetMaxCents,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .eq('owner_id', ownerId)
+    .eq('status', 'open')
+    .select(TRADE_COLUMNS)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingTable(error)) return { ok: false, error: 'pending_migration' };
+    console.error('Trade listing update error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+  return data ? { ok: true, row: data as unknown as TradeListingRow } : { ok: false, error: 'not_found' };
+}

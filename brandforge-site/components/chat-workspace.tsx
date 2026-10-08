@@ -275,6 +275,9 @@ export function ChatWorkspace() {
   const [isUploading, setIsUploading] = useState(false);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Set when the sector filter declined what the person typed, so they can ask a human to look.
+  const [policyHit, setPolicyHit] = useState<{ text: string; category: string } | null>(null);
+  const [reviewAsked, setReviewAsked] = useState(false);
   const [commandStatus, setCommandStatus] = useState<string | null>(null);
   // Desktop-style layout: the left rail is shown by default, the right insights panel is hidden
   // until the user asks for it. On mobile both become drawers.
@@ -706,7 +709,9 @@ export function ChatWorkspace() {
 
         if (!response.ok) {
           const payload = await response.json().catch(() => ({}));
-          throw new Error(payload.error || "BrandForge AI could not answer");
+          throw Object.assign(new Error(payload.error || "BrandForge AI could not answer"), {
+            policy: typeof payload.policy === "string" ? payload.policy : null,
+          });
         }
 
         const reader = response.body?.getReader();
@@ -829,6 +834,9 @@ export function ChatWorkspace() {
         }
       } catch (cause) {
         if (stillHere()) {
+          const policy = (cause as { policy?: string | null } | null)?.policy ?? null;
+          setPolicyHit(policy && message ? { text: message, category: policy } : null);
+          setReviewAsked(false);
           setError(
             cause instanceof Error
               ? cause.message
@@ -2304,7 +2312,26 @@ return (
               role="alert"
             >
               <span className="min-w-0 flex-1">{error}</span>
-              {input.trim() && !isStreaming ? (
+              {policyHit ? (
+                reviewAsked ? (
+                  <span className="shrink-0 text-xs">A person will take a look.</span>
+                ) : (
+                  <button
+                    type="button"
+                    className="bf-error-retry shrink-0"
+                    onClick={() => {
+                      setReviewAsked(true);
+                      void fetchAuthed("/api/content-review", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ text: policyHit.text, category: policyHit.category, conversationId }),
+                      }).catch(() => undefined);
+                    }}
+                  >
+                    Ask a person to review
+                  </button>
+                )
+              ) : input.trim() && !isStreaming ? (
                 <button
                   type="button"
                   className="bf-error-retry shrink-0"

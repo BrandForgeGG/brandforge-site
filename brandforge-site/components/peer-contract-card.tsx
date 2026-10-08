@@ -61,8 +61,15 @@ export function PeerContractCard({ contractId }: { contractId: string }) {
     // Initial fetch for this card; later changes arrive through act() and the 30s refresh.
     // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on mount
     void load();
-    const timer = window.setInterval(() => void load(), 30000);
-    return () => window.clearInterval(timer);
+    const timer = window.setInterval(() => void load(), 15000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [load]);
 
   async function act(action: string, extra: Record<string, unknown> = {}) {

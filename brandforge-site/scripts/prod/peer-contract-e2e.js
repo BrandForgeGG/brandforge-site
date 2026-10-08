@@ -141,6 +141,12 @@ const check = (name, cond, detail) => {
     const tradePeople = await call(payer, 'GET', `/api/peer-contracts?conversationId=${tradeConvId}&people=1`);
     check('the owner can start a contract with the visitor from there', tradePeople.status === 200 && tradePeople.body.people?.some((p) => p.userId === outsider.id));
     check('only the owner can close it (404 for others)', (await call(outsider, 'DELETE', `/api/trade/${listingId}`)).status === 404);
+    const edited = await call(payer, 'PATCH', `/api/trade/${listingId}`, { ...listing, title: 'Short-form video editing, fast', budgetMax: 700 });
+    check('owner edits the listing', edited.status === 200 && edited.body.listing?.title === 'Short-form video editing, fast' && edited.body.listing.budgetMaxCents === 70000, JSON.stringify(edited.body).slice(0, 200));
+    check('others cannot edit it (404)', (await call(outsider, 'PATCH', `/api/trade/${listingId}`, listing)).status === 404);
+    check('an edit into an unsupported sector is declined (422)', (await call(payer, 'PATCH', `/api/trade/${listingId}`, { ...listing, title: 'Promo for my online casino' })).status === 422);
+    check('a review request is accepted', (await call(null, 'POST', '/api/content-review', { text: 'ads for my winery tours', category: 'intoxicants' })).status === 200);
+    check('an empty review request is refused (400)', (await call(null, 'POST', '/api/content-review', { text: '' })).status === 400);
     check('owner closes the listing', (await call(payer, 'DELETE', `/api/trade/${listingId}`)).status === 200);
     check('closed listing disappears', !(await call(null, 'GET', '/api/trade')).body.listings?.some((l) => l.id === listingId));
   } catch (error) {
