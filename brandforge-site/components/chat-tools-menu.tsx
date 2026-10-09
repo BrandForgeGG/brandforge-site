@@ -97,7 +97,7 @@ export function ToolsMenu({
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label="Add or make something"
-        data-tip="Add a file, make something, bring in people"
+        data-tip={open ? undefined : "Add a file, make something, bring in people"}
         onClick={() => setOpen((value) => !value)}
       >
         <svg viewBox="0 0 20 20" className={`h-[18px] w-[18px] transition-transform ${open ? 'rotate-45' : ''}`} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
@@ -105,7 +105,7 @@ export function ToolsMenu({
         </svg>
       </button>
       {open ? (
-        <div role="menu" aria-label="Add or make something" className="bf-menu absolute bottom-full left-0 z-40 mb-2 max-h-[min(28rem,70dvh)] w-[min(20rem,calc(100vw-2rem))] overflow-y-auto p-1.5">
+        <div role="menu" aria-label="Add or make something" className="bf-menu absolute bottom-full left-0 z-40 mb-2 max-h-[min(26rem,50dvh)] w-[min(20rem,calc(100vw-2rem))] overflow-y-auto p-1.5">
           {groups.map((group) => {
             const items = group.items.filter((item) => !item.hidden);
             if (items.length === 0) return null;
