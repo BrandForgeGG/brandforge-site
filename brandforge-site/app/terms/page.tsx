@@ -13,18 +13,19 @@ const SECTIONS: LegalSection[] = [
     body: [
       'BrandForge is a chat-first studio. You describe your project in a conversation; our AI helps structure the brief, and a human member of the BrandForge team reviews it and sends you a written proposal with scope, milestones and a total price. When you accept a proposal, it becomes a binding agreement between you and BrandForge.',
       'Work is delivered by vetted independent specialists ("operators") who are engaged and paid by BrandForge. BrandForge — not the individual operator — is your counterparty for every agreement.',
+      'You can try BrandForge without an account. AI answers are drafts: they can contain mistakes and are not legal, financial or other professional advice. Check anything that matters, or ask a person on the team to.',
     ],
   },
   {
     title: '2. Accounts',
     body: [
-      'You sign in with a Google account. You are responsible for everything that happens under your account, so keep your Google account secured. We may suspend accounts that abuse the service, harass staff or operators, or attempt to defraud other users.',
+      'You sign in with a Google account or with a one-time link sent to your email. You are responsible for everything that happens under your account, so keep that account and inbox secured. These terms also apply if you use BrandForge through our Telegram or Discord bot. We may suspend accounts that abuse the service, harass staff or operators, or attempt to defraud other users.',
     ],
   },
   {
     title: '3. Proposals and agreements',
     body: [
-      'A proposal describes the deliverables, milestones, timeline and total price in US dollars. You can accept it, decline it, or request changes in the chat. Nothing is binding and no money moves until you explicitly accept a proposal.',
+      'A proposal describes the deliverables, milestones, timeline and total price in the currency shown on the proposal. You can accept it, decline it, or request changes in the chat. Nothing is binding and no money moves until you explicitly accept a proposal.',
       'Once accepted, the agreement can only be changed by mutual consent in the project chat. Material scope changes may result in a revised proposal.',
     ],
   },
@@ -98,7 +99,7 @@ export default function TermsPage() {
   return (
     <LegalPage
       title="Terms of Service"
-      updated="October 8, 2026"
+      updated="October 9, 2026"
       intro="These terms govern your use of BrandForge: proposals, agreements, admin-verified crypto escrow, milestone releases and member contracts. They are written to be read — if anything is unclear, ask a human before you fund a project."
       sections={SECTIONS}
     />

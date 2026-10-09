@@ -669,3 +669,9 @@ we do not have.
 **Change:** a /work page and one case-study page per real project (live screenshots, the founder's own descriptions, no invented numbers). Specialists get an editable profile and portfolio, listed on /specialists only if they tick the box, with a plain "how vetting works" page. Admins can invite a specialist by email from the dashboard, and the welcome and invitation emails now give clear next steps. Guest chats nobody signs in to keep are deleted after 90 days with their files, and the Privacy Policy now says what is true (guest cookie, Telegram and Discord data, AI providers, retention).
 
 **Distribution move:** share /work in the Discord #showcase and Telegram channel with one line per project; post the vetting page ("how we choose specialists") as the trust piece; invite the first five specialists from the community through the dashboard. Changelog: "Meet the work, and the people who finish it."
+
+## 2026-10-09 — Launch kit, ads, runbooks, accessibility and copy
+
+**Change:** a launch kit (pinned messages for the Telegram channel and group, Discord welcome line, three launch posts, changelog lines), three ad concepts in 4:5 and 9:16 made from the live app, fresh mobile screenshots, runbooks for deploys, bots, crons, AI spend, specialists and disputes, and an accessibility pass (links inside paragraphs are underlined). Terms sections 1 to 3 now describe the product as it is (free trial without an account, AI drafts are not professional advice, email sign-in, bots, currency shown on the proposal). Every signed-out visitor now sees a Sign in button and a "free to start, no card" line.
+
+**Distribution move:** post the pinned messages and the bot launch post, run the three ad concepts as a three-day test (see `.agents/departments/distribution/launch-kit-2026-10-09.md`), and share /work and /specialists in the channels.
