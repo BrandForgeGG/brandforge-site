@@ -98,7 +98,6 @@ export function ProjectContextPanel({
   isStaff,
   participants,
   files,
-  aiEnabled = true,
   onClose,
   onRequestReview,
   onSubmitPayment,
@@ -115,8 +114,6 @@ export function ProjectContextPanel({
   isStaff: boolean;
   participants: TaskParticipant[];
   files: { name: string; size: number; contentType: string; path: string }[];
-  /** False while the owner has paused the AI. The AI still reads along to keep this panel up to date. */
-  aiEnabled?: boolean;
   onClose: () => void;
   onRequestReview: () => void;
   onSubmitPayment: (txHash: string) => void;
@@ -231,10 +228,7 @@ export function ProjectContextPanel({
     <aside className="fixed inset-y-0 right-0 z-40 flex w-80 max-w-[85vw] shrink-0 flex-col border-l border-line bg-deep shadow-2xl xl:sticky xl:top-0 xl:z-auto xl:h-screen xl:max-w-none xl:shadow-none">
       <div className="bf-panel-header flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-copper">
-            Project
-            <span className={`rounded-full border px-1.5 py-px text-[9px] normal-case tracking-normal ${aiEnabled ? 'border-line text-muted' : 'border-ember/50 text-ember'}`}>{aiEnabled ? 'AI on' : 'AI paused'}</span>
-          </p>
+          <p className="text-xs uppercase tracking-[0.2em] text-copper">Project</p>
           <h2 className="mt-1 truncate font-serif text-lg text-foreground">
             {state?.project.name || state?.title || 'New project'}
           </h2>
@@ -425,10 +419,7 @@ export function ProjectContextPanel({
             <ul className="space-y-2">
               <li className="flex items-center gap-2">
                 <span className="bf-stack-item bf-stack-ai" aria-hidden="true">B</span>
-                <span className="min-w-0">
-                  <span className="block text-xs text-foreground">BrandForge AI</span>
-                  <span className="block text-[10px] uppercase tracking-[0.14em] text-muted">{aiEnabled ? 'Answering' : 'Paused, still reading'}</span>
-                </span>
+                <span className="text-xs text-foreground">BrandForge AI</span>
               </li>
               {participants.map((person) => (
                 <li key={person.userId} className="flex items-center gap-2">

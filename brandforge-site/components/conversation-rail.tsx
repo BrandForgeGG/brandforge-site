@@ -502,7 +502,6 @@ onMobileClose,
                                 <span aria-label="Nobody from the team has opened this chat yet" className="h-1.5 w-1.5 shrink-0 rounded-full bg-ember" />
                               ) : null}
                               <span className="min-w-0 flex-1 truncate text-sm text-foreground">{conversation.title}</span>
-                              {conversation.aiEnabled === false ? <span className="shrink-0 rounded-full border border-line px-1.5 py-px text-[9px] uppercase tracking-wide text-muted">AI paused</span> : null}
                               <span className="shrink-0 text-[10px] tabular-nums text-muted">{relativeTime(conversation.lastActivity).replace(" ago", "")}</span>
                             </Link>
                           );

@@ -855,3 +855,9 @@ we do not have.
 **Change:** Every chat reply failed with HTTP 402: the OpenRouter account has only a few thousandths of a dollar left and each answer asked for up to 3,072 tokens ("can only afford 2779"). The service now asks for what the account can afford, falls back to a free model if even that is too little, and when nothing works says plainly that the AI is out of credit and the message is saved, instead of a generic failure. Briefs already sent are unaffected: people can keep talking with or without the AI. The account still needs credit for full-length answers.
 
 **Distribution move:** none. Founder action: top up OpenRouter credit (even $5 covers thousands of answers at the standard model) or accept shorter, free-model answers.
+
+## 2026-10-10 — AI on/off at zero noise
+
+**Change:** The AI switch is now one small toggle in the top bar (icon only, a hover label, nothing else). Removed: the "AI on / AI paused" pill and menu, the "Want a person instead?" hint, the "AI is paused" banner, the confirmation messages, the "AI paused" tag in the sidebar chat list, and the AI badge and status lines in the project panel. What remains: the toggle, the box saying "Message the team" when the AI is off for you, and the two notices someone must act on (a teammate asking to use the AI, and the owner deciding). Call the team stays in the + menu and by typing.
+
+**Distribution move:** none; internal.

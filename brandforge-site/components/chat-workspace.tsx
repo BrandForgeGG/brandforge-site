@@ -23,7 +23,7 @@ import { fetchAuthed, getSessionUser } from "@/lib/browser-auth";
 import { trackEvent } from "@/lib/funnel-client";
 import { useLogin } from "@/components/login-dialog";
 import { GuestSaveBar } from "@/components/guest-save-bar";
-import { AiNotices, AiPill, useAiAccess } from "@/components/chat-ai-controls";
+import { AiNotices, AiSwitch, useAiAccess } from "@/components/chat-ai-controls";
 import { ToolsMenu } from "@/components/chat-tools-menu";
 import { VideoReadyBar } from "@/components/video-ready-bar";
 import { PeerContractForm } from "@/components/peer-contract-card";
@@ -1744,9 +1744,9 @@ export function ChatWorkspace() {
       }
       if (callTeam) {
         await handleRequestReview();
-        setCommandStatus("The AI is paused and the team has been called. Turn the AI back on any time from the top bar.");
+        setCommandStatus("The team has been called.");
       } else {
-        setCommandStatus("The AI is paused. Turn it back on any time from the top bar.");
+        // no confirmation: the switch and the box say it
       }
     },
     [conversationId, handleRequestReview, railMeta.userId],
@@ -1757,7 +1757,6 @@ export function ChatWorkspace() {
     try {
       const response = await (railMeta.userId ? fetchAuthed : fetch)(`/api/conversations/${conversationId}/ai-toggle`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aiEnabled: true }) });
       if (!response.ok) throw new Error("toggle failed");
-      setCommandStatus("The AI is back on.");
     } catch {
       setAiEnabled(false);
       setError("Could not turn the AI back on. Try again.");
@@ -2300,7 +2299,7 @@ return (
             ) : null}
             {conversationId ? (
               <>
-            {aiKnown ? <AiPill aiEnabled={aiEnabled} canControl={isChatOwner} onPause={() => void pauseAi(false)} onCallTeam={() => void pauseAi(true)} onResume={() => void resumeAi()} /> : null}
+            {aiKnown ? <AiSwitch aiEnabled={aiEnabled} canControl={isChatOwner} onToggle={() => void (aiEnabled ? pauseAi(false) : resumeAi())} /> : null}
             {/* Project team: real participants plus BrandForge AI - never a fabricated roster. */}
             <div className="bf-menu-root relative">
               <button
@@ -2694,12 +2693,8 @@ return (
         />
         {conversationId && railMeta.userId ? (
           <AiNotices
-            aiEnabled={aiEnabled}
             isOwner={isChatOwner}
             access={aiAccess}
-            showHint={aiKnown && !isStreaming && messages.some((message) => message.sender === "ai" && !message.streaming)}
-            onResume={() => void resumeAi()}
-            onCallTeam={() => void pauseAi(true)}
             onRequestAccess={() => void requestAiUse()}
             onDecide={(userId, decision) => void decideAiUse(userId, decision)}
           />
@@ -2961,7 +2956,7 @@ return (
                   isReplyingTo
                     ? "Type your reply…"
                     : conversationId
-                      ? aiEnabled
+                      ? aiEnabled && (!aiAccess || aiAccess.state === "allowed")
                         ? "Ask anything…"
                         : "Message the team…"
                       : "Describe your idea…"
@@ -3081,7 +3076,6 @@ return (
           isStaff={railMeta.isStaff && !isOwnConversation}
           participants={taskParticipants}
           files={conversationFiles}
-          aiEnabled={aiEnabled}
           onClose={() => setIsContextOpen(false)}
           onRequestReview={() => {
             void handleRequestReview();
