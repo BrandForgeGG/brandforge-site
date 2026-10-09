@@ -26,7 +26,7 @@ export function useAiAccess(conversationId: string, enabled: boolean) {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- load access when the chat changes
     setAccess(null);
     void reload();
-    const timer = window.setInterval(() => void reload(), 15000);
+    const timer = window.setInterval(() => void reload(), 5000);
     return () => {
       live.current = false;
       window.clearInterval(timer);
@@ -166,7 +166,7 @@ export function AiNotices({
     notices.push(
       <div key="request" className={`${bar} border-line bg-panel`} role="region" aria-label="AI access">
         <p className="min-w-0 text-sm text-foreground">
-          {access.state === 'requested' ? 'Request sent. You can use the AI once the chat owner allows it. Your messages still reach everyone here.' : access.state === 'denied' ? 'The chat owner has not allowed AI use for you. Your messages still reach everyone here.' : 'Only the chat owner can use the AI here. Your messages go to the people in this chat.'}
+          {access.state === 'requested' ? 'Request sent. Waiting for the chat owner.' : access.state === 'denied' ? 'The chat owner has not allowed AI use for you. Your messages still reach everyone here.' : 'Only the chat owner can use the AI here. Your messages go to the people in this chat.'}
         </p>
         {access.state !== 'requested' ? <button type="button" onClick={onRequestAccess} className="shrink-0 rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background transition hover:opacity-90">{access.state === 'denied' ? 'Ask again' : 'Ask to use the AI'}</button> : null}
       </div>,

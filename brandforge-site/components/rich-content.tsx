@@ -160,9 +160,9 @@ function renderToken(token: MarkdownToken, index: number) {
   }
 }
 
-// A long answer with two or more headings becomes a stack of collapsible sections (Pre-launch,
-// Launch week, ...): a person skims the titles and opens only what they need, which keeps
-// one AI message from dominating a chat that has humans in it. Short answers stay flat.
+// A long answer with two or more headings becomes a stack of foldable sections (Pre-launch, Launch week,
+// ...). They always start open, while the answer is written and after, so nothing the reader is looking at
+// ever folds away or changes height on its own; people fold what they do not need. Short answers stay flat.
 function sectionItemCount(tokens: MarkdownToken[]): number {
   let count = 0;
   for (const token of tokens) {
@@ -171,7 +171,7 @@ function sectionItemCount(tokens: MarkdownToken[]): number {
   return count;
 }
 
-export function RichContent({ content, streaming = false }: { content: string; streaming?: boolean }) {
+export function RichContent({ content }: { content: string; streaming?: boolean }) {
   const tokens = useMemo(() => parseMarkdown(content), [content]);
   const headingIndexes = tokens.reduce<number[]>((found, token, index) => {
     if (headingInlines(token)) found.push(index);
@@ -192,7 +192,7 @@ export function RichContent({ content, streaming = false }: { content: string; s
         const body = tokens.slice(start + 1, end);
         const count = sectionItemCount(body);
         return (
-          <details key={start} className="bf-fold" open={streaming || position === 0 ? true : undefined}>
+          <details key={start} className="bf-fold" open>
             <summary>
               <span className="bf-fold-title">{renderInlines(headingInlines(heading) ?? [], `fold${start}`)}</span>
               {count > 0 ? <span className="bf-fold-count">{count}</span> : null}

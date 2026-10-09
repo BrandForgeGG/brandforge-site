@@ -257,7 +257,8 @@ export function ChatWorkspace() {
   const [input, setInput] = useState("");
   const [isReplyingTo, setIsReplyingTo] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [isBooting, setIsBooting] = useState(false);
+  // A chat opened from a link starts in the loading state, so the empty-chat screen never flashes first.
+  const [isBooting, setIsBooting] = useState(Boolean(conversationId));
   // Older history pages. The first fetch returns the newest PAGE_SIZE rows; anything
   // older loads on demand above the transcript without moving the reader's viewport.
   const [hasOlder, setHasOlder] = useState(false);

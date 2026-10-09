@@ -813,3 +813,9 @@ we do not have.
 **Change:** The message you send was shown twice (a temporary copy plus the saved row pushed back over Realtime); the saved row now takes the temporary one's place. Rows pushed to other people now carry who wrote them and any attachment or card (they arrived without a name and as plain text until a refresh). A quiet six-second check, only while the tab is in front and nothing is streaming, covers guests and dropped connections, leaves the screen untouched when nothing changed, and never wipes an answer being written.
 
 **Distribution move:** none; internal quality. Real-time teammates is a selling point for the "bring your team" story once confirmed with two real accounts.
+
+## 2026-10-10 — The first-second glitch: no flash, no fold-away
+
+**Change:** Reproduced on production by recording the page while sending a first message. Two causes: (1) a chat opened from a link rendered one frame of the empty-chat screen ("What are you building?") before the loader, so the page changed height three times in the first moments; it now starts in the loading state. (2) A finished answer folded all but its first section shut, shrinking the page by about 260px right after it had grown, which read as the answer jumping to the top and back down; sections now stay open, before and after the answer finishes. Also: the access request notice is shorter ("Request sent. Waiting for the chat owner.") and disappears within five seconds of being allowed.
+
+**Distribution move:** none; internal quality.
