@@ -4,7 +4,7 @@ import { drawArt } from '@/lib/carousel-art.js';
 export type Theme = 'forge' | 'crystal' | 'mono' | 'violet' | 'emerald' | 'rose' | 'sunrise' | 'paper';
 export type Mode = 'words' | 'url' | 'file';
 export type Item = { n: number; name: string; bullets: string[] };
-export type Plan = { cover: { headline: string; subtitle: string }; items: Item[]; cta: { headline: string; button: string; note: string } };
+export type Plan = { cover: { headline: string; subtitle: string; scene?: string }; items: Item[]; cta: { headline: string; button: string; note: string } };
 export type Brand = { name: string; handle: string; accent: string };
 
 // Everything the maker keeps between visits and across the sign-in redirect. It lives in this
@@ -19,6 +19,8 @@ export type Draft = {
   type: string;
   count: number;
   theme: Theme;
+  /** Cover art style: photo, cinematic, render, surreal or drawn (no image model). */
+  coverStyle: string;
   seed: string;
   brand: Brand;
   cta: string;
@@ -37,7 +39,34 @@ export const DEFAULT_CTA = 'Try it free at brandforge.gg';
 const KEY = 'bf:carousel-draft';
 
 export function emptyDraft(): Draft {
-  return { v: 1, id: null, mode: 'words', topic: '', url: '', type: 'list', count: 7, theme: 'forge', seed: 'start', brand: { ...DEFAULT_BRAND }, cta: DEFAULT_CTA, plan: null, source: null, captions: {}, logo: null, pictures: {} };
+  return { v: 1, id: null, mode: 'words', topic: '', url: '', type: 'list', count: 7, theme: 'forge', coverStyle: 'photo', seed: 'start', brand: { ...DEFAULT_BRAND }, cta: DEFAULT_CTA, plan: null, source: null, captions: {}, logo: null, pictures: {} };
+}
+
+const RESUME_KEY = 'bf:carousel-resume';
+
+// A refresh starts a new carousel. Only a deliberate trip away (sign in, Distribute) marks the draft
+// to come back, and only for half an hour. Brand, closing line, look and logo are the person's
+// settings and always stay.
+export function markResume(): void {
+  try {
+    window.localStorage.setItem(RESUME_KEY, String(Date.now()));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function readStartDraft(): Draft {
+  const saved = readDraft();
+  let resume = false;
+  try {
+    const at = Number(window.localStorage.getItem(RESUME_KEY));
+    window.localStorage.removeItem(RESUME_KEY);
+    resume = Number.isFinite(at) && Date.now() - at < 30 * 60 * 1000;
+  } catch {
+    resume = false;
+  }
+  if (resume) return saved;
+  return { ...emptyDraft(), brand: saved.brand, cta: saved.cta, theme: saved.theme, coverStyle: saved.coverStyle, logo: saved.logo, count: saved.count };
 }
 
 export function readDraft(): Draft {
@@ -131,9 +160,10 @@ export function renderSlide(canvas: HTMLCanvasElement, index: number, draft: Dra
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   const last = plan.items.length + 1;
+  const coverPicture = pictures.items[-1] ?? null;
   const options = { theme: draft.theme, brand: { name: draft.brand.name, handle: draft.brand.handle, accent: draft.brand.accent, logo: pictures.logo } };
   if (index === 0) {
-    drawCover(ctx, { ...plan.cover, kicker: 'Swipe for more', art: drawArt(W, H, artOptions(draft, 'cover')) }, options);
+    drawCover(ctx, { ...plan.cover, kicker: 'Swipe for more', art: coverPicture ?? drawArt(W, H, artOptions(draft, 'cover')) }, options);
   } else if (index >= last) {
     drawCta(ctx, { ...plan.cta, art: drawArt(W, H, artOptions(draft, 'cta')) }, options);
   } else {

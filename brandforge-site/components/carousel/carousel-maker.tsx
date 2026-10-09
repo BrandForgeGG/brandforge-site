@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { zipStore } from '@/lib/zip-store.js';
 import { trackEvent } from '@/lib/funnel-client';
 import { getSessionUser } from '@/lib/browser-auth';
+import { STYLES as COVER_STYLES } from '@/lib/carousel-cover.js';
 import { useLogin } from '@/components/login-dialog';
 import {
   DEFAULT_BRAND,
@@ -18,14 +19,14 @@ import {
   loadFonts,
   loadImage,
   picturesFromDraft,
-  readDraft,
+  markResume,
+  readStartDraft,
   renderSlide,
   slideCount,
   slideFileName,
   writeDraft,
   type Draft,
   type Item,
-  type Mode,
   type Pictures,
   type Theme,
 } from '@/components/carousel/carousel-shared';
@@ -45,13 +46,13 @@ export function CarouselMaker() {
   const [loaded, setLoaded] = useState(false);
   const [pictures, setPictures] = useState<Pictures>({ items: {}, logo: null });
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
-  const [fileText, setFileText] = useState('');
-  const [fileName, setFileName] = useState('');
   const [selected, setSelected] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [fontsReady, setFontsReady] = useState(false);
+  const [coverBusy, setCoverBusy] = useState(false);
+  const variant = useRef(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const plan = draft.plan;
@@ -61,7 +62,7 @@ export function CarouselMaker() {
   // Restore what the person was doing (also after the sign-in redirect), and learn if they are signed in.
   useEffect(() => {
     let live = true;
-    const saved = readDraft();
+    const saved = readStartDraft();
     void picturesFromDraft(saved).then((restored) => {
       if (!live) return;
       setDraft(saved);
@@ -92,11 +93,7 @@ export function CarouselMaker() {
     renderSlide(canvasRef.current, Math.min(selected, total - 1), draft, pictures);
   }, [draft, pictures, selected, plan, total, fontsReady, loaded]);
 
-  const canMake = useMemo(() => {
-    if (draft.mode === 'words') return draft.topic.trim().length >= 8;
-    if (draft.mode === 'url') return /^(https?:\/\/)?[\w-]+(\.[\w-]+)+\S*$/i.test(draft.url.trim());
-    return fileText.trim().length >= 200;
-  }, [draft.mode, draft.topic, draft.url, fileText]);
+  const canMake = useMemo(() => draft.topic.trim().length >= 8, [draft.topic]);
 
   async function makePlan() {
     setBusy(true);
@@ -106,16 +103,18 @@ export function CarouselMaker() {
       const res = await fetch('/api/carousel/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: draft.mode, type: 'list', topic: draft.topic, url: draft.url, text: fileText, name: fileName, count: draft.count, cta: draft.cta }),
+        body: JSON.stringify({ mode: 'words', type: 'list', topic: draft.topic, count: draft.count, cta: draft.cta }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data.error || 'That did not work. Try again.');
         return;
       }
-      patch({ plan: data.plan, source: data.source ?? null, captions: {}, id: null, pictures: {}, seed: `${draft.mode}:${Date.now() % 9973}` });
+      patch({ plan: data.plan, source: null, captions: {}, id: null, pictures: {}, seed: `w${[...String(data.plan.cover.headline)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 9973, 7)}` });
       setPictures((current) => ({ ...current, items: {} }));
       setSelected(0);
+      variant.current = 0;
+      void makeCover(data.plan, draft.coverStyle);
     } catch {
       setError('Could not reach the writer. Check your connection and try again.');
     } finally {
@@ -123,7 +122,58 @@ export function CarouselMaker() {
     }
   }
 
+  // Paints the cover from what the post is about. The drawn art stays on the slide until the picture
+  // arrives, and stays for good if no picture can be made (the page never shows an error for it).
+  async function makeCover(forPlan: NonNullable<Draft['plan']>, style: string) {
+    if (style === 'drawn') {
+      setPictures((current) => ({ ...current, items: { ...current.items, [-1]: null } }));
+      patch({ pictures: Object.fromEntries(Object.entries(draft.pictures).filter(([k]) => k !== '-1')) as Draft['pictures'] });
+      return;
+    }
+    setCoverBusy(true);
+    try {
+      const res = await fetch('/api/carousel/cover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scene: forPlan.cover.scene ?? '', headline: forPlan.cover.headline, style, variant: variant.current }),
+      });
+      if (res.status === 429) {
+        const data = await res.json().catch(() => ({}));
+        setNote(data.error || 'Too much cover art for now.');
+        return;
+      }
+      if (!res.ok || res.status === 204) {
+        setNote('Cover art is busy right now, so the cover uses the drawn art. Try New cover art in a minute.');
+        return;
+      }
+      const blob = await res.blob();
+      const data = await downscale(new File([blob], 'cover.jpg', { type: blob.type || 'image/jpeg' }), 1080, 'image/jpeg');
+      const img = data ? await loadImage(data) : null;
+      if (!data || !img) return;
+      setPictures((current) => ({ ...current, items: { ...current.items, [-1]: img } }));
+      setDraft((current) => ({ ...current, pictures: { ...current.pictures, [-1]: data } }));
+      setSelected(0);
+    } catch {
+      setNote('Cover art could not be reached, so the cover uses the drawn art.');
+    } finally {
+      setCoverBusy(false);
+    }
+  }
+
+  function newCover(style = draft.coverStyle) {
+    if (!plan) return;
+    variant.current += 1;
+    patch({ seed: `v${variant.current}` });
+    void makeCover(plan, style);
+  }
+
+  function pickCoverStyle(style: string) {
+    patch({ coverStyle: style });
+    if (plan) newCover(style);
+  }
+
   function askToSignIn() {
+    markResume();
     writeDraft(draft);
     trackEvent('guest_save_clicked', { source: 'carousel' });
     openLogin({ reason: 'carousel', next: '/create' });
@@ -156,14 +206,6 @@ export function CarouselMaker() {
     if (!data || !img) return setNote('That logo could not be read.');
     setPictures((current) => ({ ...current, logo: img }));
     patch({ logo: data });
-  }
-
-  async function applyPagePicture(index: number) {
-    const image = draft.source?.image;
-    if (!image) return;
-    const img = await loadImage(`/api/carousel/image?url=${encodeURIComponent(image)}`);
-    if (!img) return setNote('That page picture could not be loaded. Upload one instead.');
-    setPictures((current) => ({ ...current, items: { ...current.items, [index]: img } }));
   }
 
   function removePicture(index: number) {
@@ -229,28 +271,14 @@ export function CarouselMaker() {
     }
   }
 
-  async function onFile(file: File | undefined) {
-    if (!file) return;
-    if (file.size > 2 * 1024 * 1024) return setError('That file is over 2 MB. Use a shorter text file.');
-    if (!/\.(txt|md|markdown|csv|json|html?)$/i.test(file.name) && !file.type.startsWith('text/')) {
-      return setError('Use a text file (.txt, .md, .csv, .json or .html). For a PDF, paste the text instead.');
-    }
-    setError(null);
-    setFileText((await file.text()).slice(0, 12000));
-    setFileName(file.name);
-  }
-
   function startOver() {
     clearDraft();
     setDraft(emptyDraft());
     setPictures({ items: {}, logo: null });
-    setFileText('');
-    setFileName('');
     setSelected(0);
     setNote(null);
   }
 
-  const tabs: [Mode, string][] = [['words', 'Your words'], ['url', 'A web page'], ['file', 'A text file']];
   const sel = Math.min(selected, Math.max(0, total - 1));
   const isCover = sel === 0;
   const isCta = plan ? sel === total - 1 : false;
@@ -259,45 +287,14 @@ export function CarouselMaker() {
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,26rem)_1fr]">
       <section aria-label="What the carousel is about" className="space-y-4">
-        <div role="tablist" aria-label="Where the words come from" className="flex gap-1 border-b border-line">
-          {tabs.map(([id, label]) => (
-            <button key={id} type="button" role="tab" aria-selected={draft.mode === id} onClick={() => patch({ mode: id })} className={`px-3 py-2 text-sm transition ${draft.mode === id ? 'border-b-2 border-ember text-foreground' : 'text-muted hover:text-foreground'}`}>
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {draft.mode === 'words' ? (
-          <label className="block text-sm text-foreground">What is it about?
+        <label className="block text-sm text-foreground">What is it about?
             <textarea className={`${field} mt-1.5 min-h-24`} value={draft.topic} onChange={(e) => patch({ topic: e.target.value })} maxLength={1500} placeholder="Seven mistakes first-time founders make with their landing page" />
             <span className="mt-2 flex flex-wrap gap-1.5">
               {EXAMPLES.map((example) => (
                 <button key={example} type="button" onClick={() => patch({ topic: example })} className="rounded-full border border-line px-2.5 py-1 text-xs text-muted transition hover:border-ember hover:text-foreground">{example}</button>
               ))}
             </span>
-          </label>
-        ) : null}
-        {draft.mode === 'url' ? (
-          <>
-            <label className="block text-sm text-foreground">Page address
-              <input className={`${field} mt-1.5`} value={draft.url} onChange={(e) => patch({ url: e.target.value })} placeholder="https://yourstore.com/blog/post" inputMode="url" autoCapitalize="none" />
-            </label>
-            <label className="block text-sm text-foreground">What should it focus on? <span className="text-muted">(optional)</span>
-              <input className={`${field} mt-1.5`} value={draft.topic} onChange={(e) => patch({ topic: e.target.value })} maxLength={300} placeholder="The main benefits for first-time buyers" />
-            </label>
-          </>
-        ) : null}
-        {draft.mode === 'file' ? (
-          <>
-            <label className="block text-sm text-foreground">Text file
-              <input type="file" accept=".txt,.md,.markdown,.csv,.json,.html,.htm,text/*" className={`${field} mt-1.5`} onChange={(e) => void onFile(e.target.files?.[0])} />
-            </label>
-            {fileName ? <p className="text-xs text-muted">{fileName}: {fileText.length.toLocaleString()} characters read</p> : null}
-            <label className="block text-sm text-foreground">What should it focus on? <span className="text-muted">(optional)</span>
-              <input className={`${field} mt-1.5`} value={draft.topic} onChange={(e) => patch({ topic: e.target.value })} maxLength={300} />
-            </label>
-          </>
-        ) : null}
+        </label>
 
         <fieldset>
           <legend className="text-sm text-foreground">Look</legend>
@@ -317,6 +314,16 @@ export function CarouselMaker() {
             ))}
           </div>
           <p className="mt-1.5 text-xs text-muted">{THEME_LIST.find((look: { id: string; label: string }) => look.id === draft.theme)?.label ?? 'Forge'}</p>
+        </fieldset>
+
+        <fieldset>
+          <legend className="text-sm text-foreground">Cover art</legend>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {COVER_STYLES.map((style: { id: string; label: string }) => (
+              <button key={style.id} type="button" aria-pressed={draft.coverStyle === style.id} disabled={coverBusy} onClick={() => pickCoverStyle(style.id)} className={`rounded-full border px-3 py-1.5 text-xs transition disabled:opacity-60 ${draft.coverStyle === style.id ? 'border-ember bg-ember/15 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>{style.label}</button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-xs text-muted">A picture made from what your post is about. Drawn skips the picture.</p>
         </fieldset>
 
         <details className="rounded-xl border border-line p-3">
@@ -368,7 +375,7 @@ export function CarouselMaker() {
           {plan ? <button type="button" className="text-xs text-muted underline-offset-2 hover:text-foreground hover:underline" onClick={startOver}>Start over</button> : <span className="text-xs text-muted">Free to make. Sign in to edit and download.</span>}
         </div>
         {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
-        <p className="text-xs leading-relaxed text-muted">Only facts from what you give it are used, and the numbers are never invented. Slides are drawn in your browser, so nothing is uploaded.</p>
+        <p className="text-xs leading-relaxed text-muted">Only facts from what you give it are used, and the numbers are never invented. Slides are drawn in your browser. Cover pictures are painted by an AI model and are not photos of real events.</p>
       </section>
 
       <section aria-label="Your carousel" className="min-w-0">
@@ -390,14 +397,15 @@ export function CarouselMaker() {
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button type="button" className={btnPrimary} disabled={busy || !fontsReady} onClick={() => void downloadAll()}>Download all (ZIP)</button>
                   <button type="button" className={btn} disabled={busy || !fontsReady} onClick={() => void downloadOne()}>This slide (PNG)</button>
-                  <button type="button" className={btn} onClick={() => patch({ seed: `${Date.now()}` })}>New cover art</button>
+                  <button type="button" className={btn} disabled={coverBusy} onClick={() => newCover()}>{coverBusy ? 'Painting…' : 'New cover art'}</button>
                   <button type="button" className={btn} disabled={busy} onClick={() => void saveToAccount()}>Save</button>
-                  <Link href="/distribute" className={btn}>Preview and distribute</Link>
+                  <Link href="/distribute" className={btn} onClick={markResume}>Preview and distribute</Link>
                 </div>
               ) : (
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button type="button" className={btnPrimary} onClick={askToSignIn}>Sign in to edit and download</button>
-                  <Link href="/distribute" className={btn}>See it on social</Link>
+                  <button type="button" className={btn} disabled={coverBusy} onClick={() => newCover()}>{coverBusy ? 'Painting…' : 'New cover art'}</button>
+                  <Link href="/distribute" className={btn} onClick={markResume}>See it on social</Link>
                 </div>
               )}
               {note ? <p role="status" className="mt-3 text-xs text-muted">{note}</p> : null}
@@ -440,7 +448,6 @@ export function CarouselMaker() {
                           {pictures.items[sel - 1] ? 'Change picture' : 'Add a picture'}
                           <input type="file" accept="image/*" className="sr-only" onChange={(e) => void onPickImage(sel - 1, e.target.files?.[0])} />
                         </label>
-                        {draft.source?.image ? <button type="button" className={btn} onClick={() => void applyPagePicture(sel - 1)}>Use the page&apos;s picture</button> : null}
                         {pictures.items[sel - 1] ? <button type="button" className={btn} onClick={() => removePicture(sel - 1)}>Remove</button> : null}
                       </div>
                       <p className="text-xs text-muted">The picture sits across the top. A screenshot works best.</p>

@@ -1,5 +1,5 @@
 export interface CarouselPlan {
-  cover: { headline: string; subtitle: string };
+  cover: { headline: string; subtitle: string; scene?: string };
   items: { n: number; name: string; bullets: string[] }[];
   cta: { headline: string; button: string; note: string };
 }

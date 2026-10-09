@@ -1,7 +1,7 @@
 import { addDays, buildWeekRows, mondayOf } from '@/lib/content-calendar.js';
 import { fallbackCaptions } from '@/lib/carousel-captions.js';
 import { makeCarouselPlan } from '@/lib/carousel-service';
-import { renderCarouselPngs } from '@/lib/carousel-server';
+import { renderCarouselWithCover } from '@/lib/carousel-server';
 import { postToOwnChannels } from '@/lib/carousel-publish';
 import { BRAND, CLOSING_LINE } from '@/lib/carousel-bots';
 import type { CarouselPlan } from '@/lib/carousel-plan.js';
@@ -42,9 +42,9 @@ export async function writeDay(dateIso: string): Promise<CalendarPost[]> {
   return listCalendarPosts(dateIso, dateIso);
 }
 
-export function renderPost(post: CalendarPost): Buffer[] | null {
+export async function renderPost(post: CalendarPost): Promise<Buffer[] | null> {
   if (!post.plan) return null;
-  return renderCarouselPngs({ plan: post.plan as CarouselPlan, theme: post.theme, seed: post.id, brand: BRAND });
+  return renderCarouselWithCover({ plan: post.plan as CarouselPlan, theme: post.theme, seed: post.id, brand: BRAND }, { style: 'photo', cacheKey: post.id });
 }
 
 // Posts one carousel to BrandForge's own channels and records exactly what happened on each.
@@ -62,7 +62,7 @@ export async function publishPost(id: string): Promise<CalendarPost | null> {
     }
     current = { ...written, status: 'posting' };
   }
-  const images = renderPost(current);
+  const images = await renderPost(current);
   if (!images) {
     await updateCalendarPost(id, { status: 'failed', attempts: post.attempts + 1, error: 'The slides could not be drawn.' });
     return getCalendarPost(id);

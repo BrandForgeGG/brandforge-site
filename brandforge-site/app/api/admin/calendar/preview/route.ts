@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   const id = request.nextUrl.searchParams.get('id') ?? '';
   if (!/^[0-9a-f-]{36}$/i.test(id)) return new NextResponse('Unknown post', { status: 400 });
   const post = await getCalendarPost(id);
-  const images = post ? renderPost(post) : null;
+  const images = post ? await renderPost(post) : null;
   if (!images) return new NextResponse('No slides yet', { status: 404 });
   const slide = Math.max(0, Math.min(images.length - 1, Number(request.nextUrl.searchParams.get('slide')) || 0));
   return new NextResponse(new Uint8Array(images[slide]), { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'private, max-age=60' } });

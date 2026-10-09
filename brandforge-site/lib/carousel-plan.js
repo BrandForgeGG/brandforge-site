@@ -21,10 +21,11 @@ const TYPES = {
 const PLAN_SYSTEM = `You write the words for a social media carousel (Instagram, TikTok, LinkedIn): a hook cover, one slide per item, and a closing call to action. You output ONLY one JSON object, no prose and no code fences.
 
 Shape:
-{"cover":{"headline":"...","subtitle":"..."},"items":[{"name":"...","bullets":["...","...","..."]}],"cta":{"headline":"...","button":"...","note":"..."}}
+{"cover":{"headline":"...","subtitle":"...","scene":"..."},"items":[{"name":"...","bullets":["...","...","..."]}],"cta":{"headline":"...","button":"...","note":"..."}}
 
 Rules:
 - cover.headline: a scroll-stopping hook of at most 8 words. Wrap the 1 to 3 most important words in asterisks, like: THESE TOOLS ARE *SHAKING* THE WORLD. cover.subtitle: at most 5 words, for example "7 tools worth knowing".
+- cover.scene: ONE sentence, at most 28 words, describing a single striking photographable scene or visual metaphor for the topic (concrete objects, setting, light). No text, no logos, no brand names, no real people's names. Smart, not a cliche stock photo.
 - items: the requested number. name is at most 3 words and names the thing (a tool, step, idea or tip), no numbering. Exactly 3 bullets per item, each a short plain sentence of at most 14 words, concrete and useful, no emoji.
 - Use ONLY facts that appear in the person's text or the source text provided. Never invent numbers, prices, statistics, awards, quotes or results. If the material is thin, make fewer, safer claims rather than inventing.
 - cta: headline of at most 8 words (accent words in asterisks), button a short action, note a short reassurance. Never mention any brand, website or handle that the person did not give you.
@@ -108,7 +109,7 @@ function normalizePlan(raw, { count = 7, cta: ctaInput = '' } = {}) {
   return {
     ok: true,
     plan: {
-      cover: { headline, subtitle: clean(cover.subtitle, LIMITS.subtitle) || `${items.length} things to know` },
+      cover: { headline, subtitle: clean(cover.subtitle, LIMITS.subtitle) || `${items.length} things to know`, scene: clean(cover.scene, 240) },
       items: items.map((item, i) => ({ n: i + 1, name: item.name, bullets: item.bullets })),
       cta: {
         headline: accentText(cta.headline, LIMITS.cta) || 'WANT MORE? *FOLLOW* FOR THE NEXT ONE',

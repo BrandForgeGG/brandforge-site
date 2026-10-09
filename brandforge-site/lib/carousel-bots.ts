@@ -1,5 +1,5 @@
 import { makeCarouselPlan } from '@/lib/carousel-service';
-import { renderCarouselPngs } from '@/lib/carousel-server';
+import { renderCarouselWithCover } from '@/lib/carousel-server';
 import { fallbackCaptions } from '@/lib/carousel-captions.js';
 import { THEME_LIST } from '@/lib/carousel-render.js';
 
@@ -21,7 +21,7 @@ export async function carouselForBot(topic: string, options: { type?: string; th
   for (const ch of words) hash = (hash * 31 + ch.charCodeAt(0)) % 1000003;
   const theme = options.theme && THEME_LIST.some((t: { id: string }) => t.id === options.theme) ? options.theme : THEME_LIST[hash % THEME_LIST.length].id;
   try {
-    const images = renderCarouselPngs({ plan: result.plan, theme, seed: words, brand: BRAND });
+    const images = await renderCarouselWithCover({ plan: result.plan, theme, seed: words, brand: BRAND }, { style: 'photo' });
     const caption = fallbackCaptions(result.plan, CLOSING_LINE).facebook;
     return { ok: true, images, caption, headline: result.plan.cover.headline.replace(/\*/g, '') };
   } catch (cause) {

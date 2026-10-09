@@ -10,6 +10,10 @@ export declare function generateImage(options: {
   fetchImpl?: typeof fetch;
   now?: () => number;
   timeoutMs?: number;
+  /** Providers to leave out, for example 'pollinations' when its watermark is not acceptable. */
+  skip?: string[];
+  /** 'photo' prefers the SDXL models (fast, photographic) over FLUX. */
+  prefer?: 'photo';
 }): Promise<ImageGenResult>;
 export declare function sniffImage(bytes: Uint8Array | null | undefined): string | null;
 export declare function cleanPrompt(text: unknown): string;

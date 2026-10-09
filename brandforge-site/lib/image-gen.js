@@ -77,17 +77,22 @@ const PROVIDERS = {
     enabled: (env) => Boolean(env.CF_ACCOUNT_ID && env.CF_API_TOKEN),
     // FLUX.2 first (it renders lettering far better, multipart form input), then FLUX.1 schnell
     // (JSON input, cheaper) as a safety net that still stays inside the free allowance.
-    async run({ prompt, aspect, quality, fetchImpl, env, timeoutMs }) {
+    async run({ prompt, aspect, quality, prefer, fetchImpl, env, timeoutMs }) {
       const klein = '@cf/black-forest-labs/flux-2-klein-4b';
       const schnell = '@cf/black-forest-labs/flux-1-schnell';
       // quality 'fast' (several images at once, e.g. video scenes) goes straight to schnell: three
       // FLUX.2 calls together were slow enough to threaten the 60 second request limit.
-      const models = env.CF_IMAGE_MODEL ? [env.CF_IMAGE_MODEL] : quality === 'fast' ? [schnell, klein] : [klein, schnell];
+      // prefer 'photo' (carousel covers): the SDXL models answer in 4 to 12 seconds with real photographic
+      // detail and return the picture as raw bytes; the FLUX models were timing out on the free tier.
+      const lightning = '@cf/bytedance/stable-diffusion-xl-lightning';
+      const sdxl = '@cf/stabilityai/stable-diffusion-xl-base-1.0';
+      const models = env.CF_IMAGE_MODEL ? [env.CF_IMAGE_MODEL] : prefer === 'photo' ? [lightning, sdxl] : quality === 'fast' ? [schnell, klein] : [klein, schnell];
       const { width, height } = sizeFor(aspect);
       const notes = [];
       for (const model of models) {
         try {
           const multipart = model.includes('flux-2');
+          const raw = model.includes('stable-diffusion');
           let body;
           const headers = { Authorization: `Bearer ${env.CF_API_TOKEN}` };
           if (multipart) {
@@ -97,13 +102,18 @@ const PROVIDERS = {
             body.append('height', String(height));
           } else {
             headers['Content-Type'] = 'application/json';
-            body = JSON.stringify({ prompt, steps: 6 });
+            body = JSON.stringify(raw ? { prompt, width: Math.min(width, 768), height: Math.min(height, 1024), num_steps: model.includes('lightning') ? 6 : 20 } : { prompt, steps: 6 });
           }
           const response = await fetchImpl(
             `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/ai/run/${model}`,
             { method: 'POST', headers, body, signal: AbortSignal.timeout(Math.min(timeoutMs, 20_000)) },
           );
           if (!response.ok) throw classify('cloudflare', response.status, await response.text().catch(() => ''));
+          if (raw) {
+            const picture = await readBytes(response);
+            if (notes.length > 0) picture.note = `cloudflare: ${notes.join('; ')}`.slice(0, 160);
+            return picture;
+          }
           const json = await response.json().catch(() => null);
           const base64 = json && json.result && json.result.image;
           if (typeof base64 !== 'string') throw failure('cloudflare', 'no image in response');
@@ -190,6 +200,7 @@ async function generateImage(options) {
 
   for (const name of ORDER) {
     const provider = PROVIDERS[name];
+    if (Array.isArray(options.skip) && options.skip.includes(name)) continue;
     if (!provider.enabled(env)) continue;
     const until = cooldowns.get(name) ?? 0;
     if (until > now()) {
@@ -197,7 +208,7 @@ async function generateImage(options) {
       continue;
     }
     try {
-      const bytes = await provider.run({ prompt, aspect: options.aspect, quality: options.quality, fetchImpl, env, timeoutMs });
+      const bytes = await provider.run({ prompt, aspect: options.aspect, quality: options.quality, prefer: options.prefer, fetchImpl, env, timeoutMs });
       const contentType = sniffImage(bytes);
       if (!contentType) throw failure(name, 'response was not a usable image');
       if (bytes.note) attempts.push(bytes.note);

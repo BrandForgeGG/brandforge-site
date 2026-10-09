@@ -1,5 +1,6 @@
 import path from 'node:path';
-import { createCanvas, GlobalFonts } from '@napi-rs/canvas';
+import { createCanvas, GlobalFonts, loadImage } from '@napi-rs/canvas';
+import { makeCoverImage } from '@/lib/carousel-cover-image';
 import { drawCover, drawCta, drawItem, THEMES, W, H } from '@/lib/carousel-render.js';
 import { drawArt } from '@/lib/carousel-art.js';
 import type { CarouselPlan } from '@/lib/carousel-plan.js';
@@ -23,6 +24,8 @@ export type ServerCarousel = {
   theme?: string;
   seed?: string;
   brand?: { name?: string; handle?: string; accent?: string };
+  /** A loaded cover picture (see renderCarouselWithCover); without one the cover uses the drawn art. */
+  coverImage?: unknown;
 };
 
 // A small cast: @napi-rs/canvas draws like the browser canvas, but its types are its own.
@@ -47,8 +50,33 @@ export function renderCarouselPngs(carousel: ServerCarousel): Buffer[] {
   };
 
   const { plan } = carousel;
-  draw((ctx) => drawCover(ctx, { ...plan.cover, kicker: 'Swipe for more', art: art('cover') }, options));
+  draw((ctx) => drawCover(ctx, { ...plan.cover, kicker: 'Swipe for more', art: (carousel.coverImage as CanvasImageSource | undefined) ?? art('cover') }, options));
   for (const item of plan.items) draw((ctx) => drawItem(ctx, { ...item, bullets: item.bullets.filter((line) => line.trim()), shot: null }, options));
   draw((ctx) => drawCta(ctx, { ...plan.cta, art: art('cta') }, options));
   return out;
+}
+
+// Small remembered covers, so a preview and the post that follows it show the same picture.
+const coverCache = new Map<string, Awaited<ReturnType<typeof loadImage>>>();
+
+/** Renders a carousel with an AI cover painted from the plan's scene. Falls back to drawn art, never fails because of the picture. */
+export async function renderCarouselWithCover(carousel: ServerCarousel, options: { style?: string; cacheKey?: string } = {}): Promise<Buffer[]> {
+  let coverImage: unknown;
+  const key = options.cacheKey ? `${options.cacheKey}:${options.style ?? 'photo'}` : '';
+  try {
+    coverImage = key ? coverCache.get(key) : undefined;
+    if (!coverImage && options.style !== 'drawn') {
+      const made = await makeCoverImage({ scene: carousel.plan.cover.scene, headline: carousel.plan.cover.headline, style: options.style ?? 'photo' });
+      if (made) {
+        coverImage = await loadImage(Buffer.from(made.bytes));
+        if (key) {
+          if (coverCache.size > 40) coverCache.clear();
+          coverCache.set(key, coverImage as Awaited<ReturnType<typeof loadImage>>);
+        }
+      }
+    }
+  } catch (cause) {
+    console.warn('cover art skipped:', cause instanceof Error ? cause.message : cause);
+  }
+  return renderCarouselPngs({ ...carousel, coverImage });
 }
