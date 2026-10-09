@@ -675,3 +675,9 @@ we do not have.
 **Change:** a launch kit (pinned messages for the Telegram channel and group, Discord welcome line, three launch posts, changelog lines), three ad concepts in 4:5 and 9:16 made from the live app, fresh mobile screenshots, runbooks for deploys, bots, crons, AI spend, specialists and disputes, and an accessibility pass (links inside paragraphs are underlined). Terms sections 1 to 3 now describe the product as it is (free trial without an account, AI drafts are not professional advice, email sign-in, bots, currency shown on the proposal). Every signed-out visitor now sees a Sign in button and a "free to start, no card" line.
 
 **Distribution move:** post the pinned messages and the bot launch post, run the three ad concepts as a three-day test (see `.agents/departments/distribution/launch-kit-2026-10-09.md`), and share /work and /specialists in the channels.
+
+## 2026-10-09 — Discord bot with buttons, one-click setup, presence script
+
+**Change:** `/brandforge` now opens a menu of buttons in Discord (plan, audit, ads, calendar, launch, image, video, fresh chat). Each button opens a small popup form with one question; the answer comes back privately to the person who asked, with Shorter / Go deeper / Turn into ads / What next? / Menu buttons and a link that opens the same chat on the web. Generated images arrive as attachments. The admin dashboard has a Discord bot panel (what is done and missing, a Register button, the install link with the commands permission). A small presence script keeps the bot showing online.
+
+**Distribution move:** once installed, pin "Type /brandforge in any channel" in #welcome and the Telegram group; post the bot launch text from the launch kit. Replies are private, so ask early users to share the best answers themselves (with consent) in #showcase.

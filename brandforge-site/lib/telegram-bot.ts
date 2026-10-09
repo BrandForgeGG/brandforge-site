@@ -125,11 +125,15 @@ async function askFor(chatId: string, kind: string) {
   });
 }
 
-// Generated images from this turn, sent as photos (up to four). Videos are assembled in the
-// browser, so for those the scenes arrive here and the button opens the full chat.
-async function sendGeneratedImages(chatId: string, conversationId: string, token: string) {
+// Generated images from this turn (up to four), downloaded with the person's own guest session.
+// Shared by the Telegram and Discord bots. Videos are assembled in the browser, so for those the
+// scenes arrive here and a button opens the full chat.
+export type BotImage = { bytes: ArrayBuffer; contentType: string; caption: string };
+
+export async function collectGeneratedImages(conversationId: string, token: string): Promise<BotImage[]> {
   const config = blueprintConfig();
   const cookie = `${config.sessionCookieName}=${token}`;
+  const found: BotImage[] = [];
   try {
     const list = await fetch(`${origin()}/api/messages?conversationId=${encodeURIComponent(conversationId)}&limit=12`, { headers: { Cookie: cookie }, signal: AbortSignal.timeout(15000) });
     const data = (await list.json().catch(() => ({}))) as { messages?: { sender_type: string; artifact_data?: { path?: string; contentType?: string; generated?: boolean; caption?: string } | null }[] };
@@ -140,18 +144,25 @@ async function sendGeneratedImages(chatId: string, conversationId: string, token
       .map((row) => row.artifact_data)
       .filter((art): art is NonNullable<typeof art> => Boolean(art && art.generated && art.path && String(art.contentType ?? '').startsWith('image/')))
       .slice(0, 4);
-    const botToken = String(process.env.TELEGRAM_BOT_TOKEN ?? '').trim();
     for (const art of images) {
       const file = await fetch(`${origin()}/api/attachments?path=${encodeURIComponent(art.path!)}`, { headers: { Cookie: cookie }, signal: AbortSignal.timeout(20000) });
       if (!file.ok) continue;
-      const form = new FormData();
-      form.append('chat_id', chatId);
-      if (art.caption) form.append('caption', String(art.caption).slice(0, 200));
-      form.append('photo', new Blob([await file.arrayBuffer()], { type: art.contentType || 'image/png' }), 'brandforge.png');
-      await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, { method: 'POST', body: form, signal: AbortSignal.timeout(20000) }).catch(() => undefined);
+      found.push({ bytes: await file.arrayBuffer(), contentType: art.contentType || 'image/png', caption: String(art.caption ?? '').slice(0, 200) });
     }
   } catch (cause) {
-    console.warn('telegram image delivery failed:', cause instanceof Error ? cause.message : cause);
+    console.warn('bot image collection failed:', cause instanceof Error ? cause.message : cause);
+  }
+  return found;
+}
+
+async function sendGeneratedImages(chatId: string, conversationId: string, token: string) {
+  const botToken = String(process.env.TELEGRAM_BOT_TOKEN ?? '').trim();
+  for (const image of await collectGeneratedImages(conversationId, token)) {
+    const form = new FormData();
+    form.append('chat_id', chatId);
+    if (image.caption) form.append('caption', image.caption);
+    form.append('photo', new Blob([image.bytes], { type: image.contentType }), 'brandforge.png');
+    await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, { method: 'POST', body: form, signal: AbortSignal.timeout(20000) }).catch(() => undefined);
   }
 }
 

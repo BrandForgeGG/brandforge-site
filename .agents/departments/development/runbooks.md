@@ -60,15 +60,21 @@ Root Directory: CLI deploys run from inside `brandforge-site/` and would double 
   A missing variable is a logged no-op, never an error.
 - Bot ("Execution Assistant"): `DISCORD_BOT_TOKEN`, used for link buttons. It has no Message Content
   intent, so read channels back through the webhook's own token, not the bot.
-- Slash command `/brandforge` (dormant until set up):
-  1. Discord Developer Portal, your application, **General Information**: copy the **Public Key**.
-  2. Add it to Vercel as `DISCORD_PUBLIC_KEY` (Production) and redeploy.
-  3. In the same page set **Interactions Endpoint URL** to
-     `https://brandforge.gg/api/discord/interactions` and save. Discord sends a signed ping; it saves
-     only if the endpoint answers (503 means the public key is missing, 401 a wrong key).
-  4. Register the command once: `DISCORD_BOT_TOKEN=<token> node scripts/prod/discord-register.js`
-     (the token is never printed).
-  5. In the server, type `/brandforge` and try a request.
+- Bot setup lives in the admin dashboard, **Discord bot** section: it shows what is done and what is
+  missing, registers the command with one button, and gives the install link.
+  1. Developer Portal, **General Information**: copy the **Public Key** into Vercel as
+     `DISCORD_PUBLIC_KEY` and redeploy.
+  2. Developer Portal, **General Information**: set **Interactions Endpoint URL** to
+     `https://brandforge.gg/api/discord/interactions` and save (it only saves if the endpoint answers).
+  3. Admin dashboard, **Discord bot**: press **Register the command**.
+  4. Install the bot with the dashboard's install link (scopes `bot` and `applications.commands`).
+     Without the commands scope the command never shows up in the picker. Installing again is safe.
+  5. In the server, type `/brandforge`: a menu of buttons opens; each button asks one question in a
+     popup form; answers are private to the person who asked and carry follow-up buttons.
+- Online status: a bot shows online only while something holds a gateway connection. The website
+  cannot, so run `scripts/discord-presence.js` on any always-on machine:
+  `DISCORD_BOT_TOKEN=... node scripts/discord-presence.js` (Node 22+; keep it alive with pm2, systemd
+  or a Docker restart policy). It reads no messages and sends nothing. Commands work without it.
 
 ## 6. Scheduled jobs (Vercel crons, all guarded by `CRON_SECRET`)
 
