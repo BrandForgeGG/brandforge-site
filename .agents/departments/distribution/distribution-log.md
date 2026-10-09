@@ -777,3 +777,9 @@ we do not have.
 **Change:** A closed listing used to vanish from its owner with no way to see or reopen it. Added "Your listings" (open and closed, with Edit and Reopen), a confirm before Close, and the category is now chosen on purpose instead of silently defaulting to the first one. API: GET /api/trade?mine=1, PATCH {reopen:true}.
 
 **Distribution move:** none; a bug fix that protects early Trade Center users. Worth a line in the next changelog.
+
+## 2026-10-10 — The AI talks to the person, not at them
+
+**Change:** First replies now follow a direct shape: one line showing the idea was understood, three specific points (who pays, how the best win, the biggest risk), what to do first this week, and ONE question. No "Great!", no numbered list of questions, no "problem statement / target users / platform" labels, under 170 words. Greetings get one or two plain sentences and two concrete things to try. Copy no longer invents "free" offers. Checked on four real first messages against the standard model before and after.
+
+**Distribution move:** none public. Re-read the first replies of real users in a week; this is the first thing every new visitor reads.
