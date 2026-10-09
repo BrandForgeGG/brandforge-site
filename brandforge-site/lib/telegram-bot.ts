@@ -186,6 +186,7 @@ async function deliverCarousel(chatId: string, topic: string) {
   images.forEach((bytes, i) => form.append(`slide${i}`, new Blob([new Uint8Array(bytes)], { type: 'image/png' }), `slide-${i + 1}.png`));
   const sent = await fetch(`https://api.telegram.org/bot${botToken}/sendMediaGroup`, { method: 'POST', body: form, signal: AbortSignal.timeout(45000) }).catch(() => null);
   if (!sent || !sent.ok) {
+    console.warn('telegram carousel album failed:', sent ? sent.status : 'no response', sent ? await sent.text().then((t) => t.slice(0, 200)).catch(() => '') : '');
     await telegram('sendMessage', { chat_id: chatId, text: 'The slides were ready but Telegram would not take them. Try again in a moment.', reply_markup: menuKeyboard() });
     return;
   }
