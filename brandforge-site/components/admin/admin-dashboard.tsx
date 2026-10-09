@@ -8,12 +8,11 @@ import type { PeerView } from '@/lib/peer-contract-view';
 import type { AdminChatRow, AdminOverview } from '@/lib/project-db';
 import { AdminAi } from '@/components/admin/admin-ai';
 import { AdminDiscord } from '@/components/admin/admin-discord';
+import { AdminCalendar } from '@/components/admin/admin-calendar';
 
 type Overview = AdminOverview & { funnel: { window: { since?: string }; events: { event: string; count: number }[] } | null };
 type MarketingPost = { id: string; channel: string; target: string; title: string | null; body: string; scheduled_at: string; status: string; error: string | null; permalink: string | null };
-type Campaign = { id: string; name: string; kind: string; status: string; target_url: string | null; category: string | null; live_url: string | null };
 
-const CAMPAIGN_STATUSES = ['planned', 'in_progress', 'submitted', 'live', 'declined', 'skipped'];
 
 function ago(iso: string): string {
   const seconds = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
@@ -83,7 +82,6 @@ export function AdminDashboard() {
   const [chats, setChats] = useState<AdminChatRow[]>([]);
   const [contracts, setContracts] = useState<PeerView[]>([]);
   const [posts, setPosts] = useState<MarketingPost[]>([]);
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [updated, setUpdated] = useState<Date | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -110,16 +108,14 @@ export function AdminDashboard() {
       setOverview(await res.json());
       setState('ok');
       setUpdated(new Date());
-      const [c, k, m, g] = await Promise.all([
+      const [c, k, m] = await Promise.all([
         fetchAuthed('/api/admin/chats').then((r) => (r.ok ? r.json() : { chats: [] })).catch(() => ({ chats: [] })),
         fetchAuthed('/api/peer-contracts?staff=1').then((r) => (r.ok ? r.json() : { contracts: [] })).catch(() => ({ contracts: [] })),
         fetchAuthed('/api/admin/marketing').then((r) => (r.ok ? r.json() : { posts: [] })).catch(() => ({ posts: [] })),
-        fetchAuthed('/api/admin/campaigns').then((r) => (r.ok ? r.json() : { campaigns: [] })).catch(() => ({ campaigns: [] })),
       ]);
       setChats(c.chats ?? []);
       setContracts(k.contracts ?? []);
       setPosts(m.posts ?? []);
-      setCampaigns(g.campaigns ?? []);
     } catch {
       setState('error');
     }
@@ -401,26 +397,7 @@ export function AdminDashboard() {
         </ul>
       </Section>
 
-      <Section title="Distribution campaigns" note={`${campaigns.filter((c) => c.status === 'live').length} live of ${campaigns.length}`}>
-        {campaigns.length === 0 ? <p className="text-sm text-muted">No campaigns tracked yet.</p> : (
-          <ul className="grid gap-x-8 sm:grid-cols-2">
-            {campaigns.map((c) => (
-              <li key={c.id} className="flex items-center justify-between gap-3 border-b border-line py-1.5 text-sm">
-                <span className="min-w-0 truncate text-foreground">{c.name}</span>
-                <select
-                  value={c.status}
-                  aria-label={`Status of ${c.name}`}
-                  disabled={busy}
-                  onChange={(e) => void run('Saved.', () => fetchAuthed(`/api/admin/campaigns/${c.id}`, { method: 'PATCH', headers: json, body: JSON.stringify({ status: e.target.value, previousStatus: c.status }) }))}
-                  className="rounded-md border border-line bg-background px-1.5 py-1 text-xs text-foreground"
-                >
-                  {CAMPAIGN_STATUSES.map((s) => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
-                </select>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Section>
+      <AdminCalendar />
     </div>
   );
 }

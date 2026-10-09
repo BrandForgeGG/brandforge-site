@@ -5351,3 +5351,145 @@ export async function deleteCarousel(userId: string, id: string): Promise<boolea
   const { error } = await admin.from('carousels').delete().eq('id', id).eq('user_id', userId);
   return !error;
 }
+
+
+// ---- BrandForge's weekly content calendar (migration 0032) ----
+export type CalendarPost = {
+  id: string;
+  post_date: string;
+  slot: number;
+  scheduled_at: string;
+  type: string;
+  topic: string;
+  theme: string;
+  status: 'planned' | 'ready' | 'approved' | 'posting' | 'posted' | 'failed' | 'skipped';
+  plan: unknown;
+  caption: string;
+  results: Record<string, { ok: boolean; note?: string }>;
+  attempts: number;
+  error: string | null;
+};
+
+const CALENDAR_COLUMNS = 'id, post_date, slot, scheduled_at, type, topic, theme, status, plan, caption, results, attempts, error';
+
+export async function listCalendarPosts(fromDate: string, toDate: string): Promise<CalendarPost[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const { data } = await admin.from('content_calendar_posts').select(CALENDAR_COLUMNS).gte('post_date', fromDate).lte('post_date', toDate).order('scheduled_at', { ascending: true });
+  return (data ?? []) as CalendarPost[];
+}
+
+export async function getCalendarPost(id: string): Promise<CalendarPost | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data } = await admin.from('content_calendar_posts').select(CALENDAR_COLUMNS).eq('id', id).maybeSingle();
+  return (data as CalendarPost | null) ?? null;
+}
+
+// Adds the rows for days that have none yet; existing rows are never overwritten.
+export async function insertCalendarRows(rows: { post_date: string; slot: number; scheduled_at: string; type: string; topic: string; theme: string }[]): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  if (!admin || rows.length === 0) return;
+  const { error } = await admin.from('content_calendar_posts').upsert(rows, { onConflict: 'post_date,slot', ignoreDuplicates: true });
+  if (error) console.error('insertCalendarRows error:', error.message);
+}
+
+export async function updateCalendarPost(id: string, patch: Partial<Pick<CalendarPost, 'status' | 'plan' | 'caption' | 'results' | 'attempts' | 'error' | 'type' | 'topic' | 'theme' | 'scheduled_at'>>): Promise<CalendarPost | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data } = await admin.from('content_calendar_posts').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', id).select(CALENDAR_COLUMNS).maybeSingle();
+  return (data as CalendarPost | null) ?? null;
+}
+
+// Moves a post from one status to another only if it is still in the first, so two runs of the
+// scheduler can never post the same carousel twice.
+export async function claimCalendarPost(id: string, from: CalendarPost['status'][], to: CalendarPost['status']): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const { data } = await admin.from('content_calendar_posts').update({ status: to, updated_at: new Date().toISOString() }).eq('id', id).in('status', from).select('id');
+  return (data ?? []).length === 1;
+}
+
+export async function listDueCalendarPosts(autoPost: boolean, limit: number): Promise<CalendarPost[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const statuses = autoPost ? ['approved', 'ready', 'planned'] : ['approved'];
+  const { data } = await admin
+    .from('content_calendar_posts')
+    .select(CALENDAR_COLUMNS)
+    .in('status', statuses)
+    .lte('scheduled_at', new Date().toISOString())
+    .gte('scheduled_at', new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString())
+    .lt('attempts', 3)
+    .order('scheduled_at', { ascending: true })
+    .limit(limit);
+  return (data ?? []) as CalendarPost[];
+}
+
+export async function recentCalendarTopics(days = 45): Promise<string[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const { data } = await admin.from('content_calendar_posts').select('topic').gte('post_date', since);
+  return ((data ?? []) as { topic: string }[]).map((row) => row.topic);
+}
+
+export async function getCalendarPrefs(): Promise<{ weekday: number; slots: { time?: string; type?: string }[] }[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const { data } = await admin.from('content_calendar_prefs').select('weekday, slots').order('weekday');
+  return (data ?? []) as { weekday: number; slots: { time?: string; type?: string }[] }[];
+}
+
+export async function saveCalendarPrefs(weekday: number, slots: { time?: string; type?: string }[]): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const { error } = await admin.from('content_calendar_prefs').upsert({ weekday, slots, updated_at: new Date().toISOString() }, { onConflict: 'weekday' });
+  return !error;
+}
+
+export async function getCalendarAutoPost(): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const { data } = await admin.from('content_calendar_settings').select('auto_post').eq('id', 1).maybeSingle();
+  return Boolean((data as { auto_post?: boolean } | null)?.auto_post);
+}
+
+export async function setCalendarAutoPost(on: boolean): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const { error } = await admin.from('content_calendar_settings').upsert({ id: 1, auto_post: on, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+  return !error;
+}
+
+
+// ---- Channels a person has linked to post carousels to (migration 0033: carousel_channels) ----
+export type CarouselChannelRow = { id: string; kind: 'telegram' | 'discord' | 'bluesky'; label: string; secret: string | null; meta: Record<string, unknown>; created_at: string };
+
+export async function listCarouselChannels(userId: string): Promise<CarouselChannelRow[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const { data } = await admin.from('carousel_channels').select('id, kind, label, secret, meta, created_at').eq('user_id', userId).order('created_at', { ascending: true }).limit(20);
+  return (data ?? []) as CarouselChannelRow[];
+}
+
+export async function addCarouselChannel(userId: string, channel: { kind: CarouselChannelRow['kind']; label: string; secret: string | null; meta: Record<string, unknown> }): Promise<{ ok: true; id: string } | { ok: false; error: 'limit' | 'duplicate' | 'failed' }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'failed' };
+  const existing = await listCarouselChannels(userId);
+  if (existing.length >= 10) return { ok: false, error: 'limit' };
+  if (existing.some((c) => c.kind === channel.kind && c.label.toLowerCase() === channel.label.toLowerCase())) return { ok: false, error: 'duplicate' };
+  const { data, error } = await admin.from('carousel_channels').insert({ user_id: userId, ...channel }).select('id').single();
+  if (error) {
+    console.error('addCarouselChannel error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+  return { ok: true, id: (data as { id: string }).id };
+}
+
+export async function removeCarouselChannel(userId: string, id: string): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const { error } = await admin.from('carousel_channels').delete().eq('id', id).eq('user_id', userId);
+  return !error;
+}

@@ -1,7 +1,7 @@
-import { drawCover, drawCta, drawItem, W, H } from '@/lib/carousel-render.js';
+import { drawCover, drawCta, drawItem, THEMES, THEME_LIST, W, H } from '@/lib/carousel-render.js';
 import { drawArt } from '@/lib/carousel-art.js';
 
-export type Theme = 'forge' | 'crystal' | 'mono';
+export type Theme = 'forge' | 'crystal' | 'mono' | 'violet' | 'emerald' | 'rose' | 'sunrise' | 'paper';
 export type Mode = 'words' | 'url' | 'file';
 export type Item = { n: number; name: string; bullets: string[] };
 export type Plan = { cover: { headline: string; subtitle: string }; items: Item[]; cta: { headline: string; button: string; note: string } };
@@ -29,10 +29,15 @@ export type Draft = {
   pictures: Record<number, string>;
 };
 
+// Out of the box a carousel carries BrandForge's name, address and closing line. Anyone can change or clear
+// them; the draft keeps whatever they choose.
+export const DEFAULT_BRAND: Brand = { name: 'BrandForge', handle: 'brandforge.gg', accent: '' };
+export const DEFAULT_CTA = 'Try it free at brandforge.gg';
+
 const KEY = 'bf:carousel-draft';
 
 export function emptyDraft(): Draft {
-  return { v: 1, id: null, mode: 'words', topic: '', url: '', type: 'list', count: 7, theme: 'forge', seed: 'start', brand: { name: '', handle: '', accent: '' }, cta: '', plan: null, source: null, captions: {}, logo: null, pictures: {} };
+  return { v: 1, id: null, mode: 'words', topic: '', url: '', type: 'list', count: 7, theme: 'forge', seed: 'start', brand: { ...DEFAULT_BRAND }, cta: DEFAULT_CTA, plan: null, source: null, captions: {}, logo: null, pictures: {} };
 }
 
 export function readDraft(): Draft {
@@ -111,6 +116,12 @@ export async function loadFonts(): Promise<void> {
 
 export type Pictures = { items: Record<number, HTMLImageElement | null>; logo: HTMLImageElement | null };
 
+// The illustration for the look, in the person's own colour when they chose one.
+function artOptions(draft: Draft, variant: 'cover' | 'cta') {
+  const look = THEMES[draft.theme] ?? THEMES.forge;
+  return { art: look.art as 'burst' | 'shards' | 'rings' | 'soft', variant, seed: draft.seed, accent: draft.brand.accent || look.accent };
+}
+
 // Draws slide `index` (0 = cover, last = closing slide) of a plan onto any canvas.
 export function renderSlide(canvas: HTMLCanvasElement, index: number, draft: Draft, pictures: Pictures): void {
   const plan = draft.plan;
@@ -122,9 +133,9 @@ export function renderSlide(canvas: HTMLCanvasElement, index: number, draft: Dra
   const last = plan.items.length + 1;
   const options = { theme: draft.theme, brand: { name: draft.brand.name, handle: draft.brand.handle, accent: draft.brand.accent, logo: pictures.logo } };
   if (index === 0) {
-    drawCover(ctx, { ...plan.cover, kicker: 'Swipe for more', art: drawArt(W, H, { theme: draft.theme, variant: 'cover', seed: draft.seed, accent: draft.brand.accent }) }, options);
+    drawCover(ctx, { ...plan.cover, kicker: 'Swipe for more', art: drawArt(W, H, artOptions(draft, 'cover')) }, options);
   } else if (index >= last) {
-    drawCta(ctx, { ...plan.cta, art: drawArt(W, H, { theme: draft.theme, variant: 'cta', seed: draft.seed, accent: draft.brand.accent }) }, options);
+    drawCta(ctx, { ...plan.cta, art: drawArt(W, H, artOptions(draft, 'cta')) }, options);
   } else {
     const item = plan.items[index - 1];
     drawItem(ctx, { ...item, bullets: item.bullets.filter((line) => line.trim()), shot: pictures.items[index - 1] ?? null }, options);
@@ -145,4 +156,4 @@ export function slideFileName(index: number, total: number): string {
   return `${String(index + 1).padStart(2, '0')}-${index === 0 ? 'cover' : index === total - 1 ? 'end' : `item-${index}`}.png`;
 }
 
-export { W, H };
+export { W, H, THEME_LIST };

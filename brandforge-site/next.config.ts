@@ -20,6 +20,11 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // The server-side carousel renderer is a native module, and it reads its fonts from public/fonts at run time.
+  serverExternalPackages: ["@napi-rs/canvas"],
+  outputFileTracingIncludes: {
+    "/api/**": ["./public/fonts/**"],
+  },
   // The standalone Blueprint page is gone: the same research and planning run inside chat.
   // Old links (including saved-blueprint return emails) land in the chat.
   async redirects() {

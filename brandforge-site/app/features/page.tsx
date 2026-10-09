@@ -4,7 +4,7 @@ import { SiteFooter } from '@/components/site-footer';
 export const metadata = {
   title: 'Features — BrandForge',
   description:
-    'Research, plans, images, ads and video in one chat. Teams, a Trade Center for specialists, and milestone contracts between members.',
+    "A carousel maker, plans, ads and audits in one chat. Teams, a Trade Center for specialists, and milestone contracts between members. Free to start.",
 };
 
 const FEATURES = [
@@ -13,12 +13,20 @@ const FEATURES = [
     body: 'Describe an idea, paste a URL or drop a file. The first answer is a researched plan, a fix list or a draft, not a question. Anything it cites, it read.',
   },
   {
-    title: 'Create from a format',
-    body: 'Pick a direction, a track and a format (logo, favicon, T-shirt, poster, TikTok, Reel, ad angles, investor update) and the form fills itself in. Images and video are free.',
+    title: 'Make a carousel in a minute',
+    body: 'Give it a sentence, a web page or a text file and get a hook cover, numbered slides with three points each and a closing slide, in a look you pick. Writing and previewing are free; sign in to edit every word, add your pictures and download. Your brand and closing line are yours to set.',
   },
   {
-    title: 'Distribute from your URL',
-    body: 'Ad copy per platform, a 30-day content calendar you can copy into a spreadsheet, a launch plan and an outreach sequence. Each opens in a chat you can keep refining.',
+    title: 'See it on each platform, then post',
+    body: 'Distribute shows your carousel as a post on Instagram, TikTok, LinkedIn, X and Facebook, writes a caption for each, and posts straight to your Telegram channel, Discord channel or Bluesky. More platforms follow as each one approves us.',
+  },
+  {
+    title: 'In Telegram and Discord too',
+    body: 'Open @brandforge_bot or type /brandforge, tap Make a carousel, say what it is about, and the slides arrive in the chat.',
+  },
+  {
+    title: 'Ads, calendars and launch plans in chat',
+    body: 'Ask in the chat for ad copy per platform, a 30-day content calendar, a launch plan or an outreach sequence, from your URL or a sentence. Keep refining it in the same chat.',
   },
   {
     title: 'Bring your team',
@@ -41,8 +49,8 @@ const FEATURES = [
     body: 'Link Telegram in Settings and get a ping when something needs you. Email covers every contract step, and the public feed in Discord and Telegram shows only real activity.',
   },
   {
-    title: 'Three looks',
-    body: 'Forge is fire orange, Crystal is crystal blue, and black and white is plain and quiet. Switch any time in Settings; your choice is remembered.',
+    title: 'Three looks for the app, eight for your slides',
+    body: 'The app comes in Forge (fire orange), Crystal (blue) and black and white; switch any time in Settings. Carousels have eight looks, from Forge and Crystal to Violet, Emerald, Rose, Sunrise and a light Paper look, each in your own accent colour if you like.',
   },
 ];
 

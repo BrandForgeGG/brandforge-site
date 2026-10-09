@@ -89,6 +89,8 @@ const FUNNEL_EVENTS = Object.freeze([
   // Gate, spend guard, returns and bot hand-offs (2026-10-09)
   'guest_send_gated',
   'carousel_planned',
+  'create_interest',
+  'carousel_published',
   'carousel_downloaded',
   'ai_budget_warn',
   'ai_budget_cap',

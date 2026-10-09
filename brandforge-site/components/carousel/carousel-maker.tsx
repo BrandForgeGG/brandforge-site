@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { zipStore } from '@/lib/zip-store.js';
-import { TYPES } from '@/lib/carousel-plan.js';
 import { trackEvent } from '@/lib/funnel-client';
 import { getSessionUser } from '@/lib/browser-auth';
 import { useLogin } from '@/components/login-dialog';
 import {
+  DEFAULT_BRAND,
+  DEFAULT_CTA,
+  THEME_LIST,
   W,
   H,
   clearDraft,
@@ -31,8 +33,7 @@ import {
 const field = 'w-full rounded-xl border border-line bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none';
 const btn = 'rounded-xl border border-line px-3.5 py-2 text-sm text-foreground transition hover:border-ember disabled:opacity-50';
 const btnPrimary = 'rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50';
-const THEME_LABEL: Record<Theme, string> = { forge: 'Forge', crystal: 'Crystal', mono: 'Mono' };
-const TYPE_IDS = Object.keys(TYPES) as (keyof typeof TYPES)[];
+const EXAMPLES = ['5 habits of calm teams', 'Why every small shop needs a newsletter', 'How to prepare for a job interview'];
 
 // Makes numbered-list style carousels (Instagram, TikTok, LinkedIn): a hook cover, one slide per point
 // and a closing call to action. Anyone can write one for free and preview every slide. Editing and
@@ -105,7 +106,7 @@ export function CarouselMaker() {
       const res = await fetch('/api/carousel/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: draft.mode, type: draft.type, topic: draft.topic, url: draft.url, text: fileText, name: fileName, count: draft.count, cta: draft.cta }),
+        body: JSON.stringify({ mode: draft.mode, type: 'list', topic: draft.topic, url: draft.url, text: fileText, name: fileName, count: draft.count, cta: draft.cta }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -266,16 +267,14 @@ export function CarouselMaker() {
           ))}
         </div>
 
-        <label className="block text-sm text-foreground">What kind of post?
-          <select className={`${field} mt-1.5`} value={draft.type} onChange={(e) => patch({ type: e.target.value })}>
-            {TYPE_IDS.map((id) => <option key={id} value={id}>{TYPES[id].label}</option>)}
-          </select>
-        </label>
-
         {draft.mode === 'words' ? (
           <label className="block text-sm text-foreground">What is it about?
-            <textarea className={`${field} mt-1.5 min-h-24`} value={draft.topic} onChange={(e) => patch({ topic: e.target.value })} maxLength={1500} placeholder={draft.type === 'news' ? 'What is happening with electric bikes this month' : 'Seven mistakes first-time founders make with their landing page'} />
-            {draft.type === 'news' ? <span className="mt-1 block text-xs text-muted">News and trends searches the web for real sources first, so the facts are not made up.</span> : null}
+            <textarea className={`${field} mt-1.5 min-h-24`} value={draft.topic} onChange={(e) => patch({ topic: e.target.value })} maxLength={1500} placeholder="Seven mistakes first-time founders make with their landing page" />
+            <span className="mt-2 flex flex-wrap gap-1.5">
+              {EXAMPLES.map((example) => (
+                <button key={example} type="button" onClick={() => patch({ topic: example })} className="rounded-full border border-line px-2.5 py-1 text-xs text-muted transition hover:border-ember hover:text-foreground">{example}</button>
+              ))}
+            </span>
           </label>
         ) : null}
         {draft.mode === 'url' ? (
@@ -300,23 +299,39 @@ export function CarouselMaker() {
           </>
         ) : null}
 
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block text-sm text-foreground">Items
-            <select className={`${field} mt-1.5`} value={draft.count} onChange={(e) => patch({ count: Number(e.target.value) })}>
-              {[3, 5, 7, 10].map((n) => <option key={n} value={n}>{n}</option>)}
-            </select>
-          </label>
-          <label className="block text-sm text-foreground">Look
-            <select className={`${field} mt-1.5`} value={draft.theme} onChange={(e) => patch({ theme: e.target.value as Theme })}>
-              {(Object.keys(THEME_LABEL) as Theme[]).map((t) => <option key={t} value={t}>{THEME_LABEL[t]}</option>)}
-            </select>
-          </label>
-        </div>
+        <fieldset>
+          <legend className="text-sm text-foreground">Look</legend>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {THEME_LIST.map((look: { id: string; label: string; accent: string; bg: string; light: boolean }) => (
+              <button
+                key={look.id}
+                type="button"
+                aria-label={look.label}
+                aria-pressed={draft.theme === look.id}
+                title={look.label}
+                onClick={() => patch({ theme: look.id as Theme })}
+                className={`flex h-11 w-11 items-center justify-center rounded-full border-2 transition ${draft.theme === look.id ? 'border-ember' : 'border-line hover:border-muted'}`}
+              >
+                <span className="block h-8 w-8 rounded-full border border-black/30" style={{ background: `linear-gradient(135deg, ${look.bg} 45%, ${look.accent} 46%)` }} />
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-xs text-muted">{THEME_LIST.find((look: { id: string; label: string }) => look.id === draft.theme)?.label ?? 'Forge'}</p>
+        </fieldset>
 
-        <details className="rounded-xl border border-line p-3" open={Boolean(draft.brand.name || draft.brand.handle || draft.cta || draft.logo)}>
-          <summary className="cursor-pointer text-sm text-foreground">Your brand and closing line <span className="text-muted">(optional)</span></summary>
+        <details className="rounded-xl border border-line p-3">
+          <summary className="cursor-pointer text-sm text-foreground">
+            Brand and closing line
+            <span className="mt-0.5 block truncate text-xs text-muted">
+              {draft.brand.name || draft.brand.handle || draft.cta || draft.logo ? [draft.brand.name, draft.brand.handle, draft.cta].filter(Boolean).join(' · ') : 'None. Nothing is added to your slides.'}
+            </span>
+          </summary>
           <div className="mt-3 space-y-3">
-            <p className="text-xs text-muted">Only what you add appears on the slides. Leave it blank for none.</p>
+            <p className="text-xs text-muted">Slides start with BrandForge&apos;s name and closing line. Put in your own, or clear them for none.</p>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className={btn} onClick={() => patch({ brand: { ...draft.brand, name: '', handle: '' }, cta: '', logo: null })}>Use my own</button>
+              <button type="button" className={btn} onClick={() => patch({ brand: { ...DEFAULT_BRAND, accent: draft.brand.accent }, cta: DEFAULT_CTA })}>Back to BrandForge</button>
+            </div>
             <label className="block text-sm text-foreground">Brand name
               <input className={`${field} mt-1.5`} value={draft.brand.name} maxLength={28} onChange={(e) => patch({ brand: { ...draft.brand, name: e.target.value } })} placeholder="Your name or business" />
             </label>
@@ -342,9 +357,15 @@ export function CarouselMaker() {
           </div>
         </details>
 
+        <label className="block text-sm text-foreground">Slides of content
+          <select className={`${field} mt-1.5 max-w-24`} value={draft.count} onChange={(e) => patch({ count: Number(e.target.value) })}>
+            {[3, 5, 7, 10].map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </label>
+
         <div className="flex flex-wrap items-center gap-3">
           <button type="button" className={btnPrimary} disabled={busy || !canMake} onClick={() => void makePlan()}>{busy && !plan ? 'Writing…' : plan ? 'Write it again' : 'Make my carousel'}</button>
-          {plan ? <button type="button" className="text-xs text-muted underline-offset-2 hover:text-foreground hover:underline" onClick={startOver}>Start over</button> : <span className="text-xs text-muted">Free to make.</span>}
+          {plan ? <button type="button" className="text-xs text-muted underline-offset-2 hover:text-foreground hover:underline" onClick={startOver}>Start over</button> : <span className="text-xs text-muted">Free to make. Sign in to edit and download.</span>}
         </div>
         {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
         <p className="text-xs leading-relaxed text-muted">Only facts from what you give it are used, and the numbers are never invented. Slides are drawn in your browser, so nothing is uploaded.</p>

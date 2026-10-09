@@ -10,6 +10,16 @@ export const metadata = {
 // Real shipping entries, dated to when they actually went live. New posts go on top.
 const POSTS = [
   {
+    date: '2026-10-09',
+    title: 'Make a swipeable carousel in a minute',
+    body: [
+      'Create is now one thing, done well: the carousel maker. Give it a sentence, a web page or a text file and it writes a hook cover, numbered slides with three points each and a closing slide. It only uses facts from what you gave it, and it never invents numbers. Writing and previewing are free. Sign in, free, to edit every word, add your own pictures and download the slides.',
+      'The brand is yours. Slides start with the BrandForge name and closing line, and you can swap in your own name, handle, logo, colour and closing line, or clear them for none. There are eight looks, including a light one.',
+      'Distribute shows your carousel the way each platform will: Instagram, TikTok, LinkedIn, X and Facebook, with a caption written for each. You can post straight to a Telegram channel, a Discord channel or Bluesky today. Instagram, TikTok, LinkedIn and X need each platform to approve us first, so for those you download the slides and post from the app.',
+      'The same tool is in the bots. Tap Make a carousel in @brandforge_bot, or use /brandforge in Discord, say what it is about, and the slides arrive in the chat. Videos are in development.',
+    ],
+  },
+  {
     date: '2026-10-08',
     title: 'brandforge.gg now opens in a chat',
     body: [

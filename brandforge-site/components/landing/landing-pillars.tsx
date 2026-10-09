@@ -114,7 +114,7 @@ function OptimizeVisual() {
 
 const PILLARS = [
   { name: 'Projects', line: 'Plan with research', visual: <ProjectsVisual /> },
-  { name: 'Create', line: 'Copy, images, video', visual: <CreateVisual /> },
+  { name: 'Create', line: 'Swipeable carousels', visual: <CreateVisual /> },
   { name: 'Distribute', line: 'Every channel', visual: <DistributeVisual /> },
   { name: 'Optimize', line: 'Know what works', visual: <OptimizeVisual /> },
 ];

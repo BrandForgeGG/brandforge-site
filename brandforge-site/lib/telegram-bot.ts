@@ -1,6 +1,7 @@
 import { blueprintConfig } from '@/lib/blueprint-config';
 import { createSessionToken } from '@/lib/blueprint-session';
 import { ensureBlueprintSessionWithId, getSessionConversationSummaries } from '@/lib/project-db';
+import { carouselForBot } from '@/lib/carousel-bots';
 import { ASK, FOLLOWUPS, MENU, botSessionId, collectStreamText, commandToPrompt, kindFromPrompt, parseCallback, parseCommand, parseIdList, promptForKind, toPlainChat } from '@/lib/bot-core.js';
 import { resolveSiteUrl } from '@/lib/auth-utils';
 
@@ -166,6 +167,35 @@ async function sendGeneratedImages(chatId: string, conversationId: string, token
   }
 }
 
+// A finished carousel as a swipeable album, up to ten slides, with buttons to make another or edit it.
+async function deliverCarousel(chatId: string, topic: string) {
+  await telegram('sendChatAction', { chat_id: chatId, action: 'upload_photo' });
+  const result = await carouselForBot(topic);
+  if (!result.ok) {
+    await telegram('sendMessage', { chat_id: chatId, text: result.message, reply_markup: menuKeyboard() });
+    return;
+  }
+  const botToken = String(process.env.TELEGRAM_BOT_TOKEN ?? '').trim();
+  const images = result.images.slice(0, 10);
+  const form = new FormData();
+  form.append('chat_id', chatId);
+  form.append(
+    'media',
+    JSON.stringify(images.map((_, i) => ({ type: 'photo', media: `attach://slide${i}`, ...(i === 0 ? { caption: result.caption.slice(0, 1000) } : {}) }))),
+  );
+  images.forEach((bytes, i) => form.append(`slide${i}`, new Blob([new Uint8Array(bytes)], { type: 'image/png' }), `slide-${i + 1}.png`));
+  const sent = await fetch(`https://api.telegram.org/bot${botToken}/sendMediaGroup`, { method: 'POST', body: form, signal: AbortSignal.timeout(45000) }).catch(() => null);
+  if (!sent || !sent.ok) {
+    await telegram('sendMessage', { chat_id: chatId, text: 'The slides were ready but Telegram would not take them. Try again in a moment.', reply_markup: menuKeyboard() });
+    return;
+  }
+  await telegram('sendMessage', {
+    chat_id: chatId,
+    text: 'Your carousel is above. Swipe through it, save the pictures and post them anywhere. To change the words, brand or look, open the maker.',
+    reply_markup: { inline_keyboard: [[{ text: 'Make another', callback_data: 'ask:carousel' }, { text: 'Menu', callback_data: 'menu' }], [{ text: 'Edit it on BrandForge', url: `${origin()}/create` }]] },
+  });
+}
+
 async function deliver(chatId: string, userId: string, built: { prompt: string; forceNew: boolean; media: boolean }) {
   await telegram('sendChatAction', { chat_id: chatId, action: 'typing' });
   const result = await runBotTurn({ platform: 'telegram', userId, prompt: built.prompt, forceNew: built.forceNew });
@@ -198,6 +228,7 @@ export async function handleTelegramMessage(message: { chatId: string; userId: s
   const { chatId, userId, text, isPrivate, replyToText } = message;
 
   const answered = kindFromPrompt(replyToText);
+  if (answered === 'carousel') return deliverCarousel(chatId, text);
   if (answered && answered !== 'link') {
     const built = promptForKind(answered, text);
     if (built) return deliver(chatId, userId, built);

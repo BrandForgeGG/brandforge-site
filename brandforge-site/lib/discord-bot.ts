@@ -1,6 +1,7 @@
 import { botCommandPrompt, parseCallback, promptForKind, toPlainChat } from '@/lib/bot-core.js';
 import { EPHEMERAL, answerComponents, menuComponents, modalFor, modalText } from '@/lib/discord-ui.js';
 import { collectGeneratedImages, continueUrl, runBotTurn } from '@/lib/telegram-bot';
+import { carouselForBot } from '@/lib/carousel-bots';
 import { resolveSiteUrl } from '@/lib/auth-utils';
 
 // Use BrandForge from Discord, with buttons, like the Telegram bot. `/brandforge` opens a menu of
@@ -59,6 +60,41 @@ async function postImages(interaction: DiscordInteraction, conversationId: strin
   }
 }
 
+// A finished carousel: the slides as attachments on one private message, then buttons to go on.
+async function deliverCarousel(interaction: DiscordInteraction, topic: string) {
+  const result = await carouselForBot(topic);
+  if (!result.ok) {
+    await edit(interaction, { content: result.message, components: menuComponents(resolveSiteUrl()) });
+    return;
+  }
+  try {
+    const images = result.images.slice(0, 10);
+    const form = new FormData();
+    form.append(
+      'payload_json',
+      JSON.stringify({
+        content: result.caption.slice(0, 1800),
+        flags: EPHEMERAL,
+        allowed_mentions: { parse: [] },
+        attachments: images.map((_, i) => ({ id: i, filename: `slide-${i + 1}.png` })),
+      }),
+    );
+    images.forEach((bytes, i) => form.append(`files[${i}]`, new Blob([new Uint8Array(bytes)], { type: 'image/png' }), `slide-${i + 1}.png`));
+    const sent = await fetch(`https://discord.com/api/v10/webhooks/${interaction.application_id}/${interaction.token}`, { method: 'POST', body: form, signal: AbortSignal.timeout(40000) });
+    if (!sent.ok) throw new Error(`discord ${sent.status}`);
+  } catch (cause) {
+    console.warn('discord carousel send failed:', cause instanceof Error ? cause.message : cause);
+    await edit(interaction, { content: 'The slides were ready but Discord would not take them. Try again in a moment.', components: menuComponents(resolveSiteUrl()) });
+    return;
+  }
+  await edit(interaction, {
+    content: `Your carousel is below: ${result.headline}`,
+    components: [
+      { type: 1, components: [{ type: 2, style: 1, label: 'Make another', custom_id: 'ask:carousel' }, { type: 2, style: 2, label: 'Menu', custom_id: 'menu' }, { type: 2, style: 5, label: 'Edit it on BrandForge', url: `${resolveSiteUrl()}/create` }] },
+    ],
+  });
+}
+
 async function deliver(interaction: DiscordInteraction, built: Built) {
   const userId = userIdOf(interaction);
   if (!userId) {
@@ -109,6 +145,9 @@ export function routeInteraction(interaction: DiscordInteraction): Routed {
   if (interaction.type === 5) {
     const parsed = parseCallback(interaction.data?.custom_id ?? '');
     const text = modalText(interaction);
+    if (parsed && parsed.type === 'ask' && parsed.kind === 'carousel' && text.length >= 3) {
+      return { response: DEFERRED_PRIVATE, work: () => deliverCarousel(interaction, text) };
+    }
     const built = parsed && parsed.type === 'ask' ? promptForKind(parsed.kind, text) : null;
     if (!built || text.length < 3) return { response: { type: 4, data: { content: 'Write a few words so I know what you need.', flags: EPHEMERAL, components: menuComponents(resolveSiteUrl()) } } };
     return { response: DEFERRED_PRIVATE, work: () => deliver(interaction, built) };

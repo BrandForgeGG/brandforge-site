@@ -7,6 +7,7 @@ const { ASK, MENU, FOLLOWUPS } = require('./bot-core');
 
 // Discord caps a popup field label at 45 characters, so these are the short forms of ASK.
 const LABELS = {
+  carousel: 'What should the carousel be about?',
   plan: "What's your idea?",
   audit: 'Which website? Send the address.',
   ads: 'What are you advertising?',

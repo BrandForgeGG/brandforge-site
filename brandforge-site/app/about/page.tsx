@@ -5,7 +5,7 @@ import { SiteFooter } from '@/components/site-footer';
 export const metadata = {
   title: 'About — BrandForge',
   description:
-    'BrandForge is where AI and people work on the same page: research, plans, images, ads and video in one chat, with your team and vetted specialists to finish the job.',
+    "BrandForge is where AI and people work on the same page: plans, ads and swipeable carousels in one chat, with your team and vetted specialists to finish the job.",
 };
 
 export default function AboutPage() {

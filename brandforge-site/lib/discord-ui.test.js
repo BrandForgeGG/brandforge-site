@@ -9,7 +9,7 @@ test('the menu fits Discord limits and every button maps to a question', () => {
   assert.ok(rows.length <= 5);
   for (const row of rows) assert.ok(row.components.length <= 5);
   const ids = rows.flatMap((r) => r.components).filter((c) => c.custom_id).map((c) => c.custom_id);
-  assert.equal(ids.length, 8);
+  assert.equal(ids.length, 9);
   for (const id of ids) {
     const parsed = parseCallback(id);
     assert.equal(parsed.type, 'ask');

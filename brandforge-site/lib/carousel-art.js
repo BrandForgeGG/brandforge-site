@@ -29,7 +29,8 @@
     return `${parseInt(h[1], 16)},${parseInt(h[2], 16)},${parseInt(h[3], 16)}`;
   }
 
-  function makeCanvas(w, h) {
+  function makeCanvas(w, h, factory) {
+    if (typeof factory === 'function') return factory(w, h);
     if (typeof document !== 'undefined') {
       const c = document.createElement('canvas');
       c.width = w;
@@ -187,6 +188,40 @@
     vignette(ctx, w, h);
   }
 
+  // "Soft" look for light themes: warm paper with large blurred colour shapes and a few fine lines.
+  function soft(ctx, w, h, variant, rand, accent) {
+    const c = rgb(accent, '#e8571e');
+    const page = ctx.createLinearGradient(0, 0, 0, h);
+    page.addColorStop(0, '#f8f4ec');
+    page.addColorStop(1, '#efe6d8');
+    ctx.fillStyle = page;
+    ctx.fillRect(0, 0, w, h);
+    const spots = variant === 'cta' ? [[0.25, 0.3, 0.7], [0.8, 0.55, 0.6], [0.5, 0.85, 0.5]] : [[0.75, 0.25, 0.75], [0.2, 0.5, 0.6], [0.6, 0.78, 0.55]];
+    for (const [px, py, size] of spots) {
+      const blob = ctx.createRadialGradient(w * px, h * py, 0, w * px, h * py, w * size);
+      blob.addColorStop(0, `rgba(${c},0.55)`);
+      blob.addColorStop(0.5, `rgba(${c},0.16)`);
+      blob.addColorStop(1, `rgba(${c},0)`);
+      ctx.fillStyle = blob;
+      ctx.fillRect(0, 0, w, h);
+    }
+    ctx.strokeStyle = `rgba(${c},0.28)`;
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 9; i++) {
+      const y = h * (0.1 + rand() * 0.6);
+      ctx.beginPath();
+      ctx.moveTo(-20, y);
+      ctx.bezierCurveTo(w * 0.3, y - 120 * rand(), w * 0.65, y + 160 * rand(), w + 20, y + (rand() - 0.5) * 220);
+      ctx.stroke();
+    }
+    ctx.fillStyle = `rgba(${c},0.5)`;
+    for (let i = 0; i < 60; i++) {
+      ctx.beginPath();
+      ctx.arc(rand() * w, rand() * h * 0.75, 1.5 + rand() * 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
   function mono(ctx, w, h, variant, rand) {
     ctx.fillStyle = '#050505';
     ctx.fillRect(0, 0, w, h);
@@ -220,11 +255,14 @@
   /** @returns {HTMLCanvasElement} a w x h canvas with the art drawn */
   function drawArt(w, h, options) {
     const o = options || {};
-    const canvas = makeCanvas(w, h);
+    const canvas = makeCanvas(w, h, o.createCanvas);
     const ctx = canvas.getContext('2d');
     const rand = rng(hashSeed(o.seed) + (o.variant === 'cta' ? 11 : 3));
-    const theme = o.theme === 'crystal' || o.theme === 'mono' ? o.theme : 'forge';
-    (theme === 'crystal' ? crystal : theme === 'mono' ? mono : forge)(ctx, w, h, o.variant === 'cta' ? 'cta' : 'cover', rand, o.accent);
+    // `art` is the illustration kind (burst, shards, rings, soft); older callers pass a theme name.
+    const legacy = { forge: 'burst', crystal: 'shards', mono: 'rings', paper: 'soft' };
+    const kind = ['burst', 'shards', 'rings', 'soft'].includes(o.art) ? o.art : legacy[o.theme] || 'burst';
+    const draw = kind === 'shards' ? crystal : kind === 'rings' ? mono : kind === 'soft' ? soft : forge;
+    draw(ctx, w, h, o.variant === 'cta' ? 'cta' : 'cover', rand, o.accent);
     return canvas;
   }
 

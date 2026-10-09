@@ -20,7 +20,7 @@ export function OverviewHero() {
           Describe it. AI drafts it. <span className="text-ember">People ship it.</span>
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-muted sm:text-lg">
-          Research, plans, images, ads and video in one chat. Bring your team, or hire a specialist when you want a person to finish the job.
+          Plans, ads and swipeable carousels in one chat. Bring your team, or hire a specialist when you want a person to finish the job.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link href="/" className="rounded-xl bg-ember px-6 py-3 text-sm font-semibold text-background transition hover:opacity-90">
@@ -41,7 +41,7 @@ export function OverviewHero() {
 
 const STEPS = [
   { title: 'You describe', line: 'Type an idea, paste a URL or drop a file.' },
-  { title: 'AI drafts', line: 'A researched plan, copy, images or a video, in seconds.' },
+  { title: 'AI drafts', line: 'A researched plan, ad copy or a swipeable carousel, in seconds.' },
   { title: 'People finish', line: 'Invite your team or bring in a vetted specialist. Agree milestones in a contract.' },
 ];
 
@@ -137,7 +137,7 @@ export function OverviewThemes() {
 
 export function OverviewPrice() {
   const rows = [
-    ['Create and distribute', 'Free. Images and video included.'],
+    ['Carousels and plans', 'Free to make. Sign in to edit and download.'],
     ['Teams', 'Invite anyone into a chat. Work on the same page.'],
     ['Contracts between members', 'A flat 5% when a milestone is paid. Nothing else.'],
   ];

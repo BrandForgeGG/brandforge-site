@@ -15,11 +15,29 @@
   const HEAD = "'BFAnton', 'Anton', Impact, 'Arial Narrow', sans-serif";
   const BODY = "'BFInter', Inter, 'Segoe UI', Arial, sans-serif";
 
+  // The looks. `art` picks the cover and closing-slide illustration (see carousel-art.js); `light` looks
+  // use a pale page and dark text. The accent can always be replaced with the person's own colour.
   const THEMES = {
-    forge: { bg: '#000000', text: '#ffffff', accent: '#ff6a2b', muted: '#9b958c' },
-    crystal: { bg: '#000000', text: '#ffffff', accent: '#7fc4ff', muted: '#8d99a6' },
-    mono: { bg: '#000000', text: '#ffffff', accent: '#e8e8e8', muted: '#8f8f8f' },
+    forge: { label: 'Forge', bg: '#000000', text: '#ffffff', accent: '#ff6a2b', muted: '#9b958c', art: 'burst', light: false },
+    crystal: { label: 'Crystal', bg: '#000000', text: '#ffffff', accent: '#7fc4ff', muted: '#8d99a6', art: 'shards', light: false },
+    mono: { label: 'Mono', bg: '#000000', text: '#ffffff', accent: '#e8e8e8', muted: '#8f8f8f', art: 'rings', light: false },
+    violet: { label: 'Violet', bg: '#05030b', text: '#ffffff', accent: '#a78bfa', muted: '#9a93b0', art: 'burst', light: false },
+    emerald: { label: 'Emerald', bg: '#020805', text: '#ffffff', accent: '#34d399', muted: '#8aa597', art: 'rings', light: false },
+    rose: { label: 'Rose', bg: '#0b0305', text: '#ffffff', accent: '#fb7185', muted: '#b09097', art: 'shards', light: false },
+    sunrise: { label: 'Sunrise', bg: '#0a0702', text: '#ffffff', accent: '#fbbf24', muted: '#b0a58a', art: 'burst', light: false },
+    paper: { label: 'Paper', bg: '#f6f1e9', text: '#14110e', accent: '#e8571e', muted: '#7a7268', art: 'soft', light: true },
   };
+
+  function hexToRgb(hex) {
+    const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex || ''));
+    return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [0, 0, 0];
+  }
+
+  // Black or white, whichever reads better on top of a colour (for button text).
+  function inkOn(hex) {
+    const [r, g, b] = hexToRgb(hex);
+    return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? '#000000' : '#ffffff';
+  }
 
   function cleanText(value, max) {
     return String(value == null ? '' : value).replace(/\s+/g, ' ').trim().slice(0, max);
@@ -107,10 +125,11 @@
     ctx.restore();
   }
 
-  function fade(ctx, y0, y1, color, from, to) {
+  // A vertical fade into the page colour, so text stays readable over art and pictures.
+  function fade(ctx, y0, y1, theme, from, to) {
     const g = ctx.createLinearGradient(0, y0, 0, y1);
-    g.addColorStop(0, color.replace('{a}', String(from)));
-    g.addColorStop(1, color.replace('{a}', String(to)));
+    g.addColorStop(0, `rgba(${theme.bgRgb},${from})`);
+    g.addColorStop(1, `rgba(${theme.bgRgb},${to})`);
     ctx.fillStyle = g;
     ctx.fillRect(0, Math.min(y0, y1), W, Math.abs(y1 - y0));
   }
@@ -119,7 +138,7 @@
   function themeFor(options) {
     const base = THEMES[(options && options.theme) || 'forge'] || THEMES.forge;
     const accent = options && options.brand && /^#[0-9a-f]{6}$/i.test(String(options.brand.accent || '')) ? options.brand.accent : base.accent;
-    return { ...base, accent };
+    return { ...base, accent, bgRgb: hexToRgb(base.bg).join(',') };
   }
 
   // The person's own mark: a logo if they added one, otherwise their name. Nothing when neither is set,
@@ -157,10 +176,10 @@
     const theme = themeFor(options);
     base(ctx, theme);
     coverFit(ctx, cover.art, 0, 0, W, H, false);
-    fade(ctx, 380, 900, 'rgba(0,0,0,{a})', 0, 0.92);
-    ctx.fillStyle = 'rgba(0,0,0,0.92)';
+    fade(ctx, 380, 900, theme, 0, 0.92);
+    ctx.fillStyle = `rgba(${theme.bgRgb},0.92)`;
     ctx.fillRect(0, 900, W, H - 900);
-    fade(ctx, 0, 220, 'rgba(0,0,0,{a})', 0.55, 0);
+    fade(ctx, 0, 220, theme, 0.55, 0);
 
     brandMark(ctx, theme, options, 60, 92, 54, 'left');
 
@@ -180,7 +199,21 @@
     }
     ctx.font = `600 30px ${BODY}`;
     ctx.fillStyle = theme.text;
-    ctx.fillText(cleanText(cover.kicker || 'SWIPE FOR MORE', 40).toUpperCase() + '  ↻', W / 2, 1318);
+    const kicker = cleanText(cover.kicker || 'SWIPE FOR MORE', 40).toUpperCase();
+    ctx.fillText(kicker, W / 2 - 22, 1318);
+    // An arrow drawn as lines: a font may not have the glyph, a drawing always works.
+    const ax = W / 2 - 22 + ctx.measureText(kicker).width / 2 + 24;
+    ctx.strokeStyle = theme.text;
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(ax, 1308);
+    ctx.lineTo(ax + 34, 1308);
+    ctx.moveTo(ax + 24, 1297);
+    ctx.lineTo(ax + 35, 1308);
+    ctx.lineTo(ax + 24, 1319);
+    ctx.stroke();
     ctx.textAlign = 'left';
   }
 
@@ -210,7 +243,7 @@
       ctx.fillText(String(item.n), W - 40, shotH + 30);
       ctx.restore();
     }
-    fade(ctx, shotH - 280, shotH, 'rgba(0,0,0,{a})', 0, 1);
+    fade(ctx, shotH - 280, shotH, theme, 0, 1);
 
     ctx.textBaseline = 'alphabetic';
     const title = `${item.n}. ${cleanText(item.name, 40).toUpperCase()}`;
@@ -262,9 +295,9 @@
     const theme = themeFor(options);
     base(ctx, theme);
     coverFit(ctx, cta.art, 0, 0, W, H, false);
-    ctx.fillStyle = 'rgba(0,0,0,0.58)';
+    ctx.fillStyle = `rgba(${theme.bgRgb},${theme.light ? 0.35 : 0.58})`;
     ctx.fillRect(0, 0, W, H);
-    fade(ctx, 700, H, 'rgba(0,0,0,{a})', 0, 0.9);
+    fade(ctx, 700, H, theme, 0, 0.9);
 
     brandMark(ctx, theme, options, W / 2, 190, 84, 'center');
     const fitted = fitHeadline(ctx, cleanText(cta.headline, 120), W - 160, 4, 120, 64);
@@ -286,7 +319,7 @@
     if (ctx.roundRect) ctx.roundRect(bx, by, bw, 112, 56);
     else ctx.rect(bx, by, bw, 112);
     ctx.fill();
-    ctx.fillStyle = '#000';
+    ctx.fillStyle = inkOn(theme.accent);
     ctx.textAlign = 'center';
     ctx.fillText(label, W / 2, by + 72);
     if (cta.note) {
@@ -297,5 +330,8 @@
     ctx.textAlign = 'left';
   }
 
-  return { W, H, THEMES, parseAccent, cleanText, drawCover, drawItem, drawCta };
+  // For pickers: id, label, accent and whether the look is light.
+  const THEME_LIST = Object.keys(THEMES).map((id) => ({ id, label: THEMES[id].label, accent: THEMES[id].accent, bg: THEMES[id].bg, light: THEMES[id].light, art: THEMES[id].art }));
+
+  return { W, H, THEMES, THEME_LIST, parseAccent, cleanText, drawCover, drawItem, drawCta };
 });

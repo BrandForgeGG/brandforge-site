@@ -102,6 +102,7 @@ function collectStreamText(sseText) {
 // state: when the reply arrives, the text it answers says which button was pressed, so nothing is
 // stored and nothing can go stale.
 const ASK = {
+  carousel: 'What should the carousel be about?',
   plan: "What's your idea?",
   audit: 'Which website should I audit? Send the address.',
   ads: 'What are you advertising?',
@@ -115,10 +116,11 @@ const ASK = {
 
 // Menu rows: label and the kind each button asks about.
 const MENU = [
-  [['Plan an idea', 'plan'], ['Audit a site', 'audit']],
-  [['Write ads', 'ads'], ['30-day calendar', 'calendar']],
-  [['Launch plan', 'launch'], ['Make an image', 'image']],
-  [['Make a video', 'video'], ['Fresh chat', 'new']],
+  [['Make a carousel', 'carousel'], ['Plan an idea', 'plan']],
+  [['Audit a site', 'audit'], ['Write ads', 'ads']],
+  [['30-day calendar', 'calendar'], ['Launch plan', 'launch']],
+  [['Make an image', 'image'], ['Make a video', 'video']],
+  [['Fresh chat', 'new']],
 ];
 
 // Buttons shown under every answer.

@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "BrandForge: AI and people, one workspace",
     description:
-      "Research, plans, images, ads and video in one chat, with your team and vetted specialists to finish the job.",
+      "Plans, ads and swipeable carousels in one chat, with your team and vetted specialists to finish the job. Free to start.",
     url: "https://brandforge.gg",
     siteName: "BrandForge",
     type: "website",
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "BrandForge: AI and people, one workspace",
     description:
-      "Research, plans, images, ads and video in one chat, with your team and vetted specialists to finish the job.",
+      "Plans, ads and swipeable carousels in one chat, with your team and vetted specialists to finish the job. Free to start.",
     images: ["/twitter-card.png"],
   },
 };

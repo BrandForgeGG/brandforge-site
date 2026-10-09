@@ -7,6 +7,7 @@ import { zipStore } from '@/lib/zip-store.js';
 import { trackEvent } from '@/lib/funnel-client';
 import { getSessionUser } from '@/lib/browser-auth';
 import { useLogin } from '@/components/login-dialog';
+import { ChannelPoster } from '@/components/carousel/channel-poster';
 import {
   W,
   H,
@@ -293,7 +294,7 @@ export function DistributePreview() {
                 <button type="button" className={btn} disabled={busy || !fontsReady} onClick={() => void downloadAll()}>Download slides (ZIP)</button>
                 <Link href="/create" className={btn}>Edit slides</Link>
               </div>
-              <p className="mt-3 text-xs leading-relaxed text-muted">Posting straight to Instagram, TikTok, LinkedIn and X is not live yet: each platform has to approve an app before anyone can post for you. For now, download the slides, copy the caption and post from the app. Your plan stays saved here.</p>
+              <p className="mt-3 text-xs leading-relaxed text-muted">Instagram, TikTok, LinkedIn and X: each platform has to approve an app before anyone can post for you, so for those, download the slides, copy the caption and post from the app. Telegram, Discord and Bluesky you can post to below.</p>
             </>
           ) : (
             <>
@@ -305,6 +306,8 @@ export function DistributePreview() {
           )}
           {note ? <p role="status" className="mt-3 text-xs text-muted">{note}</p> : null}
         </div>
+
+        {signedIn ? <ChannelPoster draft={draft} pictures={pictures} captions={captions} ready={fontsReady} /> : null}
 
         {signedIn && saved.length > 0 ? (
           <div>
