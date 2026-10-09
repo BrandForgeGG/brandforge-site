@@ -228,6 +228,63 @@ ${chatUrl || ''}`.trim(),
       };
     }
 
+    case 'seq_first_carousel':
+    case 'seq_hooks':
+    case 'seq_week':
+    case 'seq_checkin': {
+      // The product-update sequence (lib/email-sequences.js). Always carries the unsubscribe link.
+      const unsub = unsubscribeUrlFrom(details);
+      const site = 'https://brandforge.gg';
+      const copy = {
+        seq_first_carousel: {
+          subject: 'Your first carousel is one sentence away',
+          kicker: 'Your first post',
+          heading: 'Your first carousel is one sentence away',
+          paragraphs: [
+            'Tell BrandForge what your post is about, in one sentence. A minute later you have a cover picture, numbered slides and a closing slide, ready to edit.',
+            'Try something like: "5 mistakes first-time founders make with their landing page".',
+          ],
+          cta: ['Make a carousel', site + '/create'],
+        },
+        seq_hooks: {
+          subject: 'Three hooks that stop the scroll',
+          kicker: 'A small tip',
+          heading: 'Three hooks that stop the scroll',
+          paragraphs: [
+            'The cover decides whether anyone swipes. Three shapes that work: a number and a payoff ("7 tools that save an hour a day"), a mistake ("Stop doing this on your landing page"), or a myth ("Posting every day is not the secret").',
+            'Type any of them as your topic, then pick a cover style you like: photo, cinematic, 3D render or surreal.',
+          ],
+          cta: ['Try a hook', site + '/create'],
+        },
+        seq_week: {
+          subject: 'Plan your week of posts',
+          kicker: 'Keep it going',
+          heading: 'Plan your week of posts',
+          paragraphs: [
+            'You have made a carousel. The easy win now is a rhythm: write three this week, one topic each, and post them where your people are.',
+            'Connect Telegram, Discord or Bluesky in Settings and you can post in one tap from Distribute.',
+          ],
+          cta: ['Open Distribute', site + '/distribute'],
+        },
+        seq_checkin: {
+          subject: 'Did something get in the way?',
+          kicker: 'A quick question',
+          heading: 'Did something get in the way?',
+          paragraphs: [
+            'You joined two weeks ago and have not made anything yet. If it felt confusing, slow or just not for you, we would like to know.',
+            'Tell us in Discord in one line and we will fix it. Or make one carousel now: it is free and takes a minute.',
+          ],
+          cta: ['Tell us what happened', COMMUNITY_LINKS.discord.href],
+        },
+      }[event];
+      const text = [...copy.paragraphs, `${copy.cta[0]}: ${copy.cta[1]}`].join('\n\n');
+      return {
+        subject: copy.subject,
+        text,
+        html: card(copy.kicker, copy.heading, copy.paragraphs, copy.cta[0], copy.cta[1], 'AI drafts. People finish.', unsub, { preheader: copy.paragraphs[0] }),
+      };
+    }
+
     case 'welcome': {
       const chatUrl = typeof details.chatUrl === 'string' && details.chatUrl ? details.chatUrl : '';
       const paragraphs = [

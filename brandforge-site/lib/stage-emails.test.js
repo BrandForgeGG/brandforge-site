@@ -159,3 +159,18 @@ test('junk unsubscribe values never become links', () => {
     assert.ok(!email.text.includes('Unsubscribe:'), `no line for ${JSON.stringify(bad)}`);
   }
 });
+
+test('every sequence email builds, is short, links the site and carries the unsubscribe link', () => {
+  const url = 'https://brandforge.gg/api/email/unsubscribe?token=abc.def';
+  for (const event of ['seq_first_carousel', 'seq_hooks', 'seq_week', 'seq_checkin']) {
+    const email = buildStageEmail(event, { unsubscribeUrl: url });
+    assert.ok(email, `${event} builds`);
+    assert.ok(email.subject.split(' ').length <= 8, `${event} subject is at most eight words`);
+    assert.ok(email.html.includes(`href="${url}"`), `${event} html unsubscribe`);
+    assert.ok(email.text.includes(`Unsubscribe: ${url}`), `${event} text unsubscribe`);
+    assert.ok(!email.html.includes('href=""'), `${event} no empty cta`);
+    assert.ok(!email.text.includes('undefined'), `${event} no undefined`);
+    const body = email.text.split('--\n')[0];
+    assert.ok(body.length < 700, `${event} body is short, got ${body.length}`);
+  }
+});

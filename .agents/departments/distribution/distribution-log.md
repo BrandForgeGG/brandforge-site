@@ -723,3 +723,9 @@ we do not have.
 **Change:** Every transactional email (stage updates, welcome, blueprint saved, specialist invite and acceptance) now uses one branded layout: wordmark, serif heading, a facts table for price/timeline/amount, one bulletproof button with a paste-able fallback link, a hidden preheader, and a slim footer. Plain language replaces "on-chain"/"operator" wording; product-update mail sends the one-click List-Unsubscribe header.
 
 **Distribution move:** screenshot note: show the proposal email next to the chat card; mention in the changelog that founders now get cleaner, shorter deal emails. No outreach needed.
+
+## 2026-10-09 — Email sequence for new members
+
+**Change:** A four-step product-email sequence (day 1 first carousel, day 3 hooks, day 7 plan your week, day 14 check-in), sent once a day to members who opted in, skipped when they already did the thing, one email per person per two days, claimed in the database so nothing sends twice, unsubscribe link and header on each. Ships in dry-run: it reports who is due and sends nothing until LIFECYCLE_ENABLED=true.
+
+**Distribution move:** this is the activation and retention loop itself. Next: ask for opt-in at sign-up with a clearer line, add a one-time "what is new" note for existing members, and read the open and return numbers after a week.

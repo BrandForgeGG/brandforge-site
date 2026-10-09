@@ -5502,3 +5502,48 @@ export async function removeCarouselChannel(userId: string, id: string): Promise
   const { error } = await admin.from('carousel_channels').delete().eq('id', id).eq('user_id', userId);
   return !error;
 }
+
+// ---- Email sequence (migration 0034: email_sends) ----
+export type SequenceAudienceRow = { id: string; email: string; createdAt: string; hasCarousel: boolean; hasChat: boolean; sent: string[]; lastSentAt: string | null };
+
+// New members who opted in to product updates, with what they have done and which sequence emails
+// they already received. Test accounts are left out. Read-only.
+export async function getSequenceAudience(sinceIso: string): Promise<SequenceAudienceRow[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const { data: rows } = await admin.from('profiles').select('id, email, created_at').eq('marketing_opt_in', true).gt('created_at', sinceIso).limit(500);
+  const people = ((rows ?? []) as { id: string; email: string | null; created_at: string }[]).filter((p) => p.email && !isTestEmailAddress(p.email));
+  if (people.length === 0) return [];
+  const ids = people.map((p) => p.id);
+  const [sentRes, carouselRes, chatRes] = await Promise.all([
+    admin.from('email_sends').select('user_id, kind, sent_at').in('user_id', ids),
+    admin.from('carousels').select('user_id').in('user_id', ids),
+    admin.from('conversations').select('user_id').in('user_id', ids),
+  ]);
+  const sentBy = new Map<string, { kinds: string[]; last: string | null }>();
+  for (const row of (sentRes.data ?? []) as { user_id: string; kind: string; sent_at: string }[]) {
+    const entry = sentBy.get(row.user_id) ?? { kinds: [], last: null };
+    entry.kinds.push(row.kind);
+    if (!entry.last || row.sent_at > entry.last) entry.last = row.sent_at;
+    sentBy.set(row.user_id, entry);
+  }
+  const hasCarousel = new Set(((carouselRes.data ?? []) as { user_id: string }[]).map((r) => r.user_id));
+  const hasChat = new Set(((chatRes.data ?? []) as { user_id: string }[]).map((r) => r.user_id));
+  return people.map((p) => ({ id: p.id, email: p.email as string, createdAt: p.created_at, hasCarousel: hasCarousel.has(p.id), hasChat: hasChat.has(p.id), sent: sentBy.get(p.id)?.kinds ?? [], lastSentAt: sentBy.get(p.id)?.last ?? null }));
+}
+
+// Records that a sequence email is about to be sent. The unique (user_id, kind) key refuses a second
+// claim, so two overlapping runs can never both send the same step. False means someone already has it.
+export async function claimEmailSend(userId: string, kind: string): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const { error } = await admin.from('email_sends').insert({ user_id: userId, kind });
+  return !error;
+}
+
+// Gives a claim back when the email could not be sent, so the next run retries it.
+export async function releaseEmailSend(userId: string, kind: string): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return;
+  await admin.from('email_sends').delete().eq('user_id', userId).eq('kind', kind);
+}
