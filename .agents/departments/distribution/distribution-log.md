@@ -711,3 +711,9 @@ we do not have.
 **Change:** The sidebar account card no longer flashes a placeholder ("?", "BrandForge", "Signed in") and then jumps to the real name; it shows a fixed-size skeleton until the account loads, and the account is fetched once instead of twice.
 
 **Distribution move:** none. This is a bug fix with no marketing angle; it only removes a visible glitch from the first seconds after sign-in.
+
+## 2026-10-09 — Cover art from the topic, real-looking integrations, funnel ranges, playful overview
+
+**Change:** Carousel maker takes only your words and starts fresh on refresh (brand, look and closing line stay); every cover is an AI picture made from the topic in five styles (photo, cinematic, 3D render, surreal, drawn) via Cloudflare SDXL, also used by the bots and the weekly calendar. Settings: Notifications merged away, Integrations rebuilt (connected services light up in their own colour, others dashed and grey, approval-gated platforms votable), Distribute posts to ticked channel tiles. Admin: funnel with 24h/7d/30d/all ranges and up/down arrows; AI answers, Discord bot, invite specialist and outbound posts removed. Trade Center redesigned (two doors, category chips, deal diagram). Overview and Features swap screenshots for animated diagrams and a playable look picker.
+
+**Distribution move:** blog entry live ("Covers painted from your topic, and connections that look connected"); announce in Telegram and Discord with a new cover-art carousel as the example; screenshot note: show the five cover styles on one topic and the lit vs dashed integrations side by side.

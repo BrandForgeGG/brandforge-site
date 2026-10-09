@@ -6,12 +6,11 @@ import { fetchAuthed } from '@/lib/browser-auth';
 import { formatMoney } from '@/lib/peer-contract.js';
 import type { PeerView } from '@/lib/peer-contract-view';
 import type { AdminChatRow, AdminOverview } from '@/lib/project-db';
-import { AdminAi } from '@/components/admin/admin-ai';
-import { AdminDiscord } from '@/components/admin/admin-discord';
 import { AdminCalendar } from '@/components/admin/admin-calendar';
 
-type Overview = AdminOverview & { funnel: { window: { since?: string }; events: { event: string; count: number }[] } | null };
-type MarketingPost = { id: string; channel: string; target: string; title: string | null; body: string; scheduled_at: string; status: string; error: string | null; permalink: string | null };
+type FunnelEvent = { event: string; count: number; previous: number | null };
+type Range = '24h' | '7d' | '30d' | 'all';
+type Overview = AdminOverview & { funnel: { range: Range; window: { since?: string }; events: FunnelEvent[] } | null };
 
 
 function ago(iso: string): string {
@@ -76,12 +75,108 @@ function DailyChart({ daily }: { daily: Overview['daily'] }) {
   );
 }
 
+const RANGES: [Range, string][] = [['24h', 'Last 24 hours'], ['7d', '7 days'], ['30d', '30 days'], ['all', 'All time']];
+
+// The path a founder walks, in order. Each bar is the share of the first step that got this far, and the
+// small percentage is how many of the step before it came on. Everything else is listed below.
+const STAGES: [string, string][] = [
+  ['landing_viewed', 'Saw the landing page'],
+  ['signin_started', 'Started signing in'],
+  ['chat_started', 'Started a chat'],
+  ['project_described', 'Described a project'],
+  ['review_requested', 'Asked for review'],
+  ['proposal_received', 'Got a proposal'],
+  ['proposal_accepted', 'Accepted one'],
+  ['contract_signed', 'Signed the contract'],
+  ['funding_verified', 'Funded the escrow'],
+  ['payment_released', 'Released a payment'],
+];
+
+function Delta({ now, before }: { now: number; before: number | null }) {
+  if (before === null) return null;
+  if (now === before) return <span className="text-[11px] text-muted">same as before</span>;
+  const up = now > before;
+  return (
+    <span className={`text-[11px] ${up ? 'text-success' : 'text-danger'}`}>
+      {up ? '▲' : '▼'} {before === 0 ? 'new' : `${Math.round((Math.abs(now - before) / before) * 100)}%`}
+    </span>
+  );
+}
+
+function FunnelPanel({ funnel, range, onRange }: { funnel: Overview['funnel']; range: Range; onRange: (range: Range) => void }) {
+  const events = funnel?.events ?? [];
+  const byName = new Map(events.map((e) => [e.event, e]));
+  const stages = STAGES.map(([id, label]) => ({ id, label, e: byName.get(id) ?? { event: id, count: 0, previous: null } }));
+  const top = Math.max(1, ...stages.map((s) => s.e.count));
+  const staged = new Set(STAGES.map(([id]) => id));
+  const others = events.filter((e) => !staged.has(e.event) && e.count > 0).sort((a, b) => b.count - a.count);
+  return (
+    <Section
+      title="Funnel"
+      action={
+        <div role="group" aria-label="Time range" className="flex flex-wrap gap-1">
+          {RANGES.map(([id, label]) => (
+            <button key={id} type="button" aria-pressed={range === id} onClick={() => onRange(id)} className={`rounded-full border px-2.5 py-1 text-[11px] transition ${range === id ? 'border-ember bg-ember/15 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      }
+    >
+      {!funnel ? (
+        <p className="text-sm text-muted">No events recorded yet.</p>
+      ) : (
+        <>
+          <ol className="space-y-2">
+            {stages.map(({ id, label, e }, i) => {
+              const prev = i === 0 ? null : stages[i - 1].e.count;
+              return (
+                <li key={id}>
+                  <div className="flex items-baseline justify-between gap-3 text-sm">
+                    <span className="text-foreground">{label}</span>
+                    <span className="flex items-baseline gap-2">
+                      <Delta now={e.count} before={e.previous} />
+                      {prev ? <span className="text-[11px] text-muted">{Math.round((e.count / prev) * 100)}% of previous</span> : null}
+                      <span className="w-10 text-right tabular-nums text-foreground">{e.count}</span>
+                    </span>
+                  </div>
+                  <div className="mt-1 h-2 overflow-hidden rounded-full bg-overlay">
+                    <div className="h-full rounded-full bg-ember transition-all" style={{ width: `${(e.count / top) * 100}%`, minWidth: e.count ? 4 : 0 }} />
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+          {others.length > 0 ? (
+            <details className="mt-4">
+              <summary className="cursor-pointer text-xs text-muted">Everything else people did ({others.length})</summary>
+              <table className="mt-2 w-full text-sm">
+                <tbody className="divide-y divide-line">
+                  {others.map((e) => (
+                    <tr key={e.event}>
+                      <td className="py-1.5 text-muted">{e.event.replace(/_/g, ' ')}</td>
+                      <td className="py-1.5 text-right">
+                        <Delta now={e.count} before={e.previous} />
+                      </td>
+                      <td className="w-12 py-1.5 text-right tabular-nums text-foreground">{e.count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </details>
+          ) : null}
+        </>
+      )}
+    </Section>
+  );
+}
+
 export function AdminDashboard() {
   const [state, setState] = useState<'loading' | 'ok' | 'denied' | 'error'>('loading');
   const [overview, setOverview] = useState<Overview | null>(null);
   const [chats, setChats] = useState<AdminChatRow[]>([]);
   const [contracts, setContracts] = useState<PeerView[]>([]);
-  const [posts, setPosts] = useState<MarketingPost[]>([]);
+  const [range, setRange] = useState<Range>('7d');
   const [updated, setUpdated] = useState<Date | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -91,35 +186,25 @@ export function AdminDashboard() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleteAllText, setDeleteAllText] = useState('');
 
-  const [mChannel, setMChannel] = useState('discord');
-  const [mTarget, setMTarget] = useState('');
-  const [mBody, setMBody] = useState('');
-
-  const [invEmail, setInvEmail] = useState('');
-  const [invName, setInvName] = useState('');
-  const [invSpecialty, setInvSpecialty] = useState('');
-  const [invNote, setInvNote] = useState('');
 
   const load = useCallback(async () => {
     try {
-      const res = await fetchAuthed('/api/admin/overview');
+      const res = await fetchAuthed(`/api/admin/overview?range=${range}`);
       if (res.status === 401 || res.status === 403) return setState('denied');
       if (!res.ok) return setState('error');
       setOverview(await res.json());
       setState('ok');
       setUpdated(new Date());
-      const [c, k, m] = await Promise.all([
+      const [c, k] = await Promise.all([
         fetchAuthed('/api/admin/chats').then((r) => (r.ok ? r.json() : { chats: [] })).catch(() => ({ chats: [] })),
         fetchAuthed('/api/peer-contracts?staff=1').then((r) => (r.ok ? r.json() : { contracts: [] })).catch(() => ({ contracts: [] })),
-        fetchAuthed('/api/admin/marketing').then((r) => (r.ok ? r.json() : { posts: [] })).catch(() => ({ posts: [] })),
       ]);
       setChats(c.chats ?? []);
       setContracts(k.contracts ?? []);
-      setPosts(m.posts ?? []);
     } catch {
       setState('error');
     }
-  }, []);
+  }, [range]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on mount, then every 30s
@@ -161,7 +246,6 @@ export function AdminDashboard() {
   const contractTodo = deposits.length + disputes.length + payouts.length;
   const pendingApps = overview.applications.filter((a) => a.status === 'pending' && !a.isTest);
   const realApps = overview.applications.filter((a) => !a.isTest);
-  const eventsShown = (overview.funnel?.events ?? []).filter((e) => e.count > 0);
 
   return (
     <div className="space-y-8">
@@ -193,26 +277,9 @@ export function AdminDashboard() {
           </Section>
         </div>
         <div className="lg:col-span-2">
-          <Section title="Funnel" note={overview.funnel?.window?.since ? `since ${new Date(overview.funnel.window.since).toLocaleDateString()}` : undefined}>
-            {eventsShown.length === 0 ? <p className="text-sm text-muted">No events recorded yet.</p> : (
-              <table className="w-full text-sm">
-                <tbody className="divide-y divide-line">
-                  {eventsShown.map((e) => (
-                    <tr key={e.event}>
-                      <td className="py-1.5 text-muted">{e.event.replace(/_/g, ' ')}</td>
-                      <td className="py-1.5 text-right tabular-nums text-foreground">{e.count}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </Section>
+          <FunnelPanel funnel={overview.funnel} range={range} onRange={setRange} />
         </div>
       </div>
-
-      <AdminAi />
-
-      <AdminDiscord />
 
       <Section title="Happening now" note="The latest real activity">
         {overview.activity.length === 0 ? <p className="text-sm text-muted">Nothing yet.</p> : (
@@ -225,24 +292,6 @@ export function AdminDashboard() {
             ))}
           </ul>
         )}
-      </Section>
-
-      <Section title="Invite a specialist" note="They get an email with sign-in steps. Access switches on when they sign in.">
-        <form
-          className="grid max-w-2xl gap-2 sm:grid-cols-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void run('Invitation sent.', () => fetchAuthed('/api/admin/invitations', { method: 'POST', headers: json, body: JSON.stringify({ email: invEmail, name: invName, specialty: invSpecialty, note: invNote }) })).then((ok) => {
-              if (ok) { setInvEmail(''); setInvName(''); setInvSpecialty(''); setInvNote(''); }
-            });
-          }}
-        >
-          <input type="email" required value={invEmail} onChange={(e) => setInvEmail(e.target.value)} placeholder="Email address" aria-label="Specialist email" className="rounded-lg border border-line bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted" />
-          <input value={invName} onChange={(e) => setInvName(e.target.value)} placeholder="Name (optional)" aria-label="Specialist name" className="rounded-lg border border-line bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted" />
-          <input value={invSpecialty} onChange={(e) => setInvSpecialty(e.target.value)} placeholder="Specialty (optional)" aria-label="Specialty" className="rounded-lg border border-line bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted" />
-          <input value={invNote} onChange={(e) => setInvNote(e.target.value)} placeholder="Personal note in the email (optional)" aria-label="Note" maxLength={300} className="rounded-lg border border-line bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted" />
-          <div className="sm:col-span-2"><button type="submit" disabled={busy || !invEmail.trim()} className={btnPrimary}>Send invitation</button></div>
-        </form>
       </Section>
 
       <Section title="Specialist applications" note={`${pendingApps.length} waiting · ${realApps.length} total`}>
@@ -362,39 +411,6 @@ export function AdminDashboard() {
           <input value={deleteAllText} onChange={(e) => setDeleteAllText(e.target.value)} placeholder="Type DELETE ALL CHATS" aria-label="Type DELETE ALL CHATS to enable" className="w-56 rounded-lg border border-line bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted" />
           <button type="button" disabled={busy || deleteAllText !== 'DELETE ALL CHATS'} className={btn} onClick={() => void run('All chats deleted.', () => fetchAuthed('/api/admin/chats', { method: 'DELETE', headers: json, body: JSON.stringify({ mode: 'all', confirm: deleteAllText }) })).then(() => setDeleteAllText(''))}>Delete all chats</button>
         </div>
-      </Section>
-
-      <Section
-        title="Outbound posts"
-        note={`${posts.filter((p) => p.status === 'queued').length} queued · ${posts.filter((p) => p.status === 'posted').length} posted · ${posts.filter((p) => p.status === 'failed').length} failed`}
-        action={<button type="button" disabled={busy} className={btn} onClick={() => void run('Publishing run finished.', () => fetchAuthed('/api/admin/marketing/run', { method: 'POST' }))}>Publish due posts</button>}
-      >
-        <form
-          className="flex flex-wrap items-end gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void run('Queued.', () => fetchAuthed('/api/admin/marketing', { method: 'POST', headers: json, body: JSON.stringify({ channel: mChannel, target: mTarget, body: mBody }) })).then((ok) => { if (ok) { setMBody(''); } });
-          }}
-        >
-          <select value={mChannel} onChange={(e) => setMChannel(e.target.value)} aria-label="Channel" className="rounded-lg border border-line bg-background px-2 py-1.5 text-sm text-foreground">
-            <option>discord</option><option>telegram</option><option>reddit</option>
-          </select>
-          <input value={mTarget} onChange={(e) => setMTarget(e.target.value)} placeholder="Channel name" aria-label="Target" className="w-40 rounded-lg border border-line bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted" />
-          <input value={mBody} onChange={(e) => setMBody(e.target.value)} placeholder="Post text" aria-label="Post text" className="min-w-[14rem] flex-1 rounded-lg border border-line bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted" />
-          <button type="submit" disabled={busy || !mTarget.trim() || mBody.trim().length < 3} className={btnPrimary}>Queue post</button>
-        </form>
-        <ul className="mt-3 divide-y divide-line">
-          {posts.slice(0, 12).map((p) => (
-            <li key={p.id} className="flex flex-wrap items-baseline justify-between gap-3 py-2 text-sm">
-              <span className="min-w-0 truncate"><span className="text-foreground">{p.channel} · {p.target}</span> <span className="text-muted">{p.title || p.body.slice(0, 80)}</span></span>
-              <span className="flex shrink-0 items-center gap-3 text-xs text-muted">
-                <span className={p.status === 'failed' ? 'text-danger' : ''}>{p.status}</span>
-                {p.status === 'queued' || p.status === 'failed' ? <button type="button" disabled={busy} className="hover:text-danger" onClick={() => void run('Discarded.', () => fetchAuthed(`/api/admin/marketing/${p.id}`, { method: 'DELETE' }))}>Discard</button> : null}
-              </span>
-            </li>
-          ))}
-          {posts.length === 0 ? <li className="py-2 text-sm text-muted">Nothing queued.</li> : null}
-        </ul>
       </Section>
 
       <AdminCalendar />

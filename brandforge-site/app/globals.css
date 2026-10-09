@@ -2084,3 +2084,17 @@ main[data-empty='true'] > .bf-chat-footer { position: absolute; inset: auto 0 0 
     text-underline-offset: 2px;
   }
 }
+
+/* Playful diagram scenes (overview). All of it stops for people who ask for less motion. */
+.bf-dots { background-image: radial-gradient(var(--line) 1px, transparent 1px); background-size: 18px 18px; }
+@keyframes bf-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -6px; } }
+@keyframes bf-dot { 0%, 100% { opacity: 0.25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-3px); } }
+@keyframes bf-type { 0% { max-width: 0; } 55%, 100% { max-width: 100%; } }
+@keyframes bf-coin { 0%, 100% { transform: translateX(-6px) rotate(0); } 50% { transform: translateX(6px) rotate(180deg); } }
+.bf-float { animation: bf-float 4.2s ease-in-out infinite; }
+.bf-dot { animation: bf-dot 1.1s ease-in-out infinite; }
+.bf-type { animation: bf-type 3.2s steps(34, end) infinite alternate; }
+.bf-coin { animation: bf-coin 2.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .bf-float, .bf-dot, .bf-type, .bf-coin { animation: none !important; }
+}

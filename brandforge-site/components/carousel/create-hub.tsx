@@ -59,7 +59,7 @@ export function CreateHub() {
                   <span className="font-serif text-lg text-foreground">Carousel maker</span>
                   <span className="rounded-full bg-ember/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ember">Live</span>
                 </p>
-                <p className="mt-1 text-sm text-muted">Swipeable posts for Instagram, TikTok and LinkedIn, from a sentence, a web page or a file.</p>
+                <p className="mt-1 text-sm text-muted">Swipeable posts for Instagram, TikTok and LinkedIn, from a sentence, with a cover picture made from your topic.</p>
               </li>
               {COMING.map((tool) => (
                 <li key={tool.id} className="rounded-2xl border border-line bg-panel/50 p-4">

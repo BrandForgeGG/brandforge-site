@@ -11,6 +11,15 @@ export const metadata = {
 const POSTS = [
   {
     date: '2026-10-09',
+    title: 'Covers painted from your topic, and connections that look connected',
+    body: [
+      'The carousel maker now takes just your words, and starts fresh every time you open it. Your brand, closing line and look stay; the old topic does not.',
+      'Every cover is a picture made from what the post is about, in five styles: photo, cinematic, 3D render, surreal, or the drawn art we had before. Tap New cover art for another take. Pictures are made by an AI model and are not photos of real events.',
+      'Connections moved into Settings and got a proper face. Telegram, Discord and Bluesky light up in their own colour when linked and sit dashed and grey when not, and Distribute lets you tick where a carousel goes. The admin funnel can now be read for the last 24 hours, 7 days or 30 days, and the Trade Center and overview were redrawn.',
+    ],
+  },
+  {
+    date: '2026-10-09',
     title: 'Make a swipeable carousel in a minute',
     body: [
       'Create is now one thing, done well: the carousel maker. Give it a sentence, a web page or a text file and it writes a hook cover, numbered slides with three points each and a closing slide. It only uses facts from what you gave it, and it never invents numbers. Writing and previewing are free. Sign in, free, to edit every word, add your own pictures and download the slides.',

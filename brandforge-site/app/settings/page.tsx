@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/app-shell';
 import { supabase } from '@/lib/supabase';
 import { fetchAuthed, getSessionUser } from '@/lib/browser-auth';
+import { IntegrationsPanel } from '@/components/integrations/integrations-panel';
 import { getUserRoleFromEmail } from '@/lib/user-roles';
 import { avatarTone, initialsFor } from '@/lib/identity-display';
 import { getStoredTheme, setStoredTheme, type Theme } from '@/lib/theme';
@@ -50,39 +51,12 @@ export default function SettingsPage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme>(() => getStoredTheme());
-  const [telegramConnected, setTelegramConnected] = useState(false);
-  const [telegramCode, setTelegramCode] = useState('');
-  const [telegramBotUrl, setTelegramBotUrl] = useState('');
-  const [telegramBusy, setTelegramBusy] = useState(false);
-  const [telegramCopied, setTelegramCopied] = useState(false);
-  const [telegramError, setTelegramError] = useState('');
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [marketingBusy, setMarketingBusy] = useState(false);
 
   function handleThemeChange(next: Theme) {
     setStoredTheme(next);
     setTheme(next);
-  }
-
-  async function handleTelegramConnect() {
-    setTelegramBusy(true);
-    setTelegramError('');
-    try {
-      const response = await fetchAuthed('/api/identity/telegram-link', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(data.error || 'Could not start Telegram linking.');
-      }
-      setTelegramCode(data.code ?? '');
-      setTelegramBotUrl(data.botUrl ?? '');
-    } catch (cause) {
-      setTelegramError(cause instanceof Error ? cause.message : 'Could not start Telegram linking.');
-    } finally {
-      setTelegramBusy(false);
-    }
   }
 
   useEffect(() => {
@@ -117,7 +91,6 @@ export default function SettingsPage() {
             // profiles.role is the truth; the email hint in base only covers rows that predate it.
             if (identity.role) base.role = identity.role;
           }
-          setTelegramConnected(data?.telegram_connected === true);
           setMarketingOptIn(data?.marketing_opt_in === true);
         }
       } catch {
@@ -509,110 +482,28 @@ export default function SettingsPage() {
         </div>
 
         <div className="min-w-0 rounded-2xl border border-line bg-panel p-5">
-          <h2 className="text-xl font-medium text-foreground">Notifications</h2>
-          <div className="mt-4">
-            <p className="text-sm text-muted">Telegram</p>
-            {telegramConnected ? (
-              <p className="mt-1 text-sm text-foreground">
-                Connected — project updates are delivered to your Telegram.
-              </p>
-            ) : telegramCode ? (
-              <div className="mt-2 rounded-lg border border-ember/30 bg-ember/10 px-3 py-2 text-xs">
-                <p className="mb-1.5 leading-snug text-muted">
-                  Paste this code in the bot to get project updates in Telegram:
-                </p>
-                <div className="flex items-center gap-2">
-                  <code className="select-all font-mono text-sm font-bold tracking-[0.2em] text-foreground">
-                    {telegramCode}
-                  </code>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void navigator.clipboard?.writeText(telegramCode).then(() => {
-                        setTelegramCopied(true);
-                        setTimeout(() => setTelegramCopied(false), 1500);
-                      });
-                    }}
-                    className="ml-auto rounded border border-ember/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ember transition hover:bg-ember/20"
-                  >
-                    {telegramCopied ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
-                {telegramBotUrl ? (
-                  <a
-                    href={telegramBotUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-1.5 inline-flex items-center gap-1 font-semibold text-ember underline-offset-2 transition hover:underline"
-                  >
-                    <span aria-hidden="true">✈</span> Open the bot
-                  </a>
-                ) : null}
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => void handleTelegramConnect()}
-                disabled={telegramBusy}
-                className="mt-2 flex w-full items-center gap-2 rounded-lg border border-line px-3 py-2 text-sm text-muted transition hover:border-ember hover:text-foreground disabled:opacity-60"
-              >
-                <span aria-hidden="true">✈</span>
-                {telegramBusy ? 'Starting…' : 'Connect Telegram'}
-              </button>
-            )}
-            {telegramError ? (
-              <p role="alert" className="mt-2 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
-                {telegramError}
-              </p>
-            ) : null}
-            <p className="mt-2 text-xs text-muted">
-              Get pinged the moment a brief, proposal, or delivery needs you.
-            </p>
-            <div className="mt-5 border-t border-line pt-4">
-              <label
-                htmlFor="marketing-emails"
-                className="flex min-h-9 cursor-pointer items-start gap-3"
-              >
-                <input
-                  id="marketing-emails"
-                  type="checkbox"
-                  checked={marketingOptIn}
-                  disabled={marketingBusy}
-                  onChange={(event) => void handleMarketingToggle(event.target.checked)}
-                  className="mt-0.5 h-4 w-4 accent-ember"
-                />
-                <span className="text-sm text-foreground">
-                  Email me occasional product updates
-                </span>
-              </label>
-              <p className="mt-1 text-xs text-muted">
-                Off means only project email arrives — proposals, contracts, delivery. Every email
-                also carries its own unsubscribe link.
-              </p>
-            </div>
-          </div>
+          <h2 className="text-xl font-medium text-foreground">Email</h2>
+          <p className="mt-1 text-sm text-muted">Project email always arrives: proposals, contracts, delivery. This switch is only for product news.</p>
+          <label htmlFor="marketing-emails" className="mt-4 flex min-h-9 cursor-pointer items-start gap-3">
+            <input
+              id="marketing-emails"
+              type="checkbox"
+              checked={marketingOptIn}
+              disabled={marketingBusy}
+              onChange={(event) => void handleMarketingToggle(event.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-ember"
+            />
+            <span className="text-sm text-foreground">Email me occasional product updates</span>
+          </label>
+          <p className="mt-1 text-xs text-muted">Every email also carries its own unsubscribe link.</p>
         </div>
 
         <div id="integrations" className="min-w-0 scroll-mt-6 rounded-2xl border border-line bg-panel p-5 lg:col-span-2">
           <h2 className="text-xl font-medium text-foreground">Integrations</h2>
-          <p className="mt-1 text-sm text-muted">Channels BrandForge can create for, publish to and learn from.</p>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <div className="rounded-xl border border-line px-3 py-2.5">
-              <p className="text-sm text-foreground">Telegram</p>
-              <p className="text-xs text-muted">{telegramConnected ? 'Connected. Project updates arrive here.' : 'Not linked. Use the code under Notifications.'}</p>
-            </div>
-            <div className="rounded-xl border border-line px-3 py-2.5">
-              <p className="text-sm text-foreground">Discord</p>
-              <p className="text-xs text-muted">Team alerts and changelog run through the BrandForge server.</p>
-            </div>
+          <p className="mt-1 text-sm text-muted">Where BrandForge can reach you and post for you. Connected services light up in their own colour.</p>
+          <div className="mt-4">
+            <IntegrationsPanel />
           </div>
-          <p className="mt-4 text-xs uppercase tracking-[0.15em] text-muted">Coming next</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {['Buffer', 'X', 'LinkedIn', 'Instagram', 'TikTok', 'YouTube', 'Meta Ads', 'Google Ads'].map((name) => (
-              <span key={name} className="rounded-full border border-line px-3 py-1 text-xs text-muted">{name}</span>
-            ))}
-          </div>
-          <p className="mt-3 text-xs text-muted">Tell us in Discord which one you need first. It moves up the list.</p>
         </div>
 
         <div className="lg:col-span-2">

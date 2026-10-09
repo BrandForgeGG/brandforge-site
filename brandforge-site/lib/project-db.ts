@@ -28,7 +28,9 @@ import { validateUsername } from '@/lib/identity';
 
 // Admin-only funnel read. Lives here (rather than in the API route) so the service-role client
 // stays confined to this single allow-listed module, preserving the H7 boundary.
-export async function getFunnelSummary(limit = 10000) {
+// `sinceIso` limits the count to a window; `prevSinceIso` also reads the period before it, so the
+// dashboard can show whether a number is up or down.
+export async function getFunnelSummary(limit = 10000, sinceIso?: string, prevSinceIso?: string) {
   const admin = createSupabaseAdminClient();
 
   if (!admin) {
@@ -43,7 +45,8 @@ export async function getFunnelSummary(limit = 10000) {
       .select('event, created_at')
       .order('created_at', { ascending: true })
       .limit(limit);
-    return organicOnly ? query.eq('source', 'organic') : query;
+    const windowed = prevSinceIso || sinceIso ? query.gte('created_at', prevSinceIso || sinceIso!) : query;
+    return organicOnly ? windowed.eq('source', 'organic') : windowed;
   };
 
   let { data, error } = await run(true);
@@ -63,10 +66,15 @@ export async function getFunnelSummary(limit = 10000) {
   const rows = (data ?? []) as { event: string; created_at: string }[];
 
   const counts = new Map<string, number>();
+  const previous = new Map<string, number>();
   let first: string | null = null;
   let last: string | null = null;
 
   for (const row of rows) {
+    if (sinceIso && prevSinceIso && row.created_at < sinceIso) {
+      previous.set(row.event, (previous.get(row.event) ?? 0) + 1);
+      continue;
+    }
     counts.set(row.event, (counts.get(row.event) ?? 0) + 1);
     if (!first) first = row.created_at;
     last = row.created_at;
@@ -75,6 +83,7 @@ export async function getFunnelSummary(limit = 10000) {
   return {
     window: { firstEventAt: first, lastEventAt: last, eventsCounted: rows.length },
     counts,
+    previous,
   };
 }
 

@@ -50,7 +50,7 @@ const TOPIC_POOL = {
     'Turn a sentence into a swipeable carousel in about a minute, free to try at BrandForge',
     'One chat from idea to ads, images and a plan, on BrandForge',
     'Hire vetted specialists on BrandForge, with money held until you approve the work',
-    'Make carousels from a web page or a text file with BrandForge',
+    'Make a carousel from one sentence with BrandForge',
     'Ask BrandForge for a plan, an audit or ads right inside Telegram or Discord',
     'Milestone contracts on BrandForge: you approve each step before it is paid',
   ],

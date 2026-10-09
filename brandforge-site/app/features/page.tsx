@@ -1,5 +1,6 @@
 import { LandingNav } from '@/components/landing/landing-nav';
 import { SiteFooter } from '@/components/site-footer';
+import { HeroDiagram } from '@/components/overview/diagrams';
 
 export const metadata = {
   title: 'Features — BrandForge',
@@ -14,7 +15,7 @@ const FEATURES = [
   },
   {
     title: 'Make a carousel in a minute',
-    body: 'Give it a sentence, a web page or a text file and get a hook cover, numbered slides with three points each and a closing slide, in a look you pick. Writing and previewing are free; sign in to edit every word, add your pictures and download. Your brand and closing line are yours to set.',
+    body: 'Give it a sentence and get a hook cover with a cover picture painted from your topic, in five styles, numbered slides with three points each and a closing slide, in a look you pick. Writing and previewing are free; sign in to edit every word, add your pictures and download. Your brand and closing line are yours to set.',
   },
   {
     title: 'See it on each platform, then post',
@@ -65,6 +66,10 @@ export default function FeaturesPage() {
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted">
           AI drafts it in seconds. Your team and vetted specialists take it from there, on the same page.
         </p>
+
+        <div className="mt-10">
+          <HeroDiagram />
+        </div>
 
         <dl className="mt-12 grid gap-x-12 gap-y-8 sm:grid-cols-2">
           {FEATURES.map((feature) => (

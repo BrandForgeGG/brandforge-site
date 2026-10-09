@@ -10,6 +10,7 @@ import { CATEGORIES } from "@/lib/trade.js";
 import { budgetLabel } from "@/lib/trade.js";
 import { formatMoney } from "@/lib/peer-contract.js";
 import type { ListingView } from "@/lib/trade-view";
+import { avatarTone, initialsFor } from "@/lib/identity-display";
 
 const field =
   "w-full rounded-lg border border-line bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted";
@@ -69,56 +70,83 @@ export function TradeCenter() {
     return () => window.clearTimeout(timer);
   }, [load, q]);
 
+  const shown = listings ?? [];
+  const steps: [string, string, string][] = [
+    ['List', 'Say what you offer or need', 'M4 5h12M4 10h12M4 15h7'],
+    ['Chat', 'Agree the details in private', 'M4 5.5h12v7.5H9.5L6 16v-3H4z'],
+    ['Sign', 'A milestone contract, in the chat', 'M5 15l2-.5 7-7-1.5-1.5-7 7zM12 5.5l1.5 1.5'],
+    ['Get paid', 'Money moves as each milestone lands', 'M4 7h11l-3-3M16 13H5l3 3'],
+  ];
+
   return (
     <div className="max-w-5xl">
-      <div className="flex flex-wrap items-center gap-2">
-        {(
-          [
-            ["", "All"],
-            ["offer", "Services offered"],
-            ["request", "Work wanted"],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setKind(value)}
-            aria-pressed={kind === value}
-            className={`rounded-full border px-3 py-1 text-xs transition ${kind === value ? "border-ember bg-ember/10 text-foreground" : "border-line text-muted hover:text-foreground"}`}
-          >
-            {label}
-          </button>
-        ))}
-        <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Category" className={`${field} w-auto`}>
-          <option value="">Any category</option>
-          {CATEGORIES.map((c: string) => (
-            <option key={c}>{c}</option>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => setKind("offer")}
+          aria-pressed={kind === "offer"}
+          className={`group rounded-2xl border p-4 text-left transition ${kind === "offer" ? "border-ember bg-ember/10" : "border-line bg-panel hover:border-ember"}`}
+        >
+          <p className="font-serif text-lg text-foreground">I want to hire</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted">Browse people who offer a service. Message one, agree the work, sign a contract.</p>
+        </button>
+        <button
+          type="button"
+          onClick={() => setKind("request")}
+          aria-pressed={kind === "request"}
+          className={`group rounded-2xl border p-4 text-left transition ${kind === "request" ? "border-ember bg-ember/10" : "border-line bg-panel hover:border-ember"}`}
+        >
+          <p className="font-serif text-lg text-foreground">I want work</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted">See what people need done. Approved specialists can offer to help.</p>
+        </button>
+      </div>
+
+      <div className="mt-5 flex flex-wrap items-center gap-2">
+        <div className="-mx-1 flex max-w-full gap-1.5 overflow-x-auto px-1 pb-1" role="group" aria-label="Category">
+          {["", ...CATEGORIES].map((c: string) => (
+            <button
+              key={c || "all"}
+              type="button"
+              aria-pressed={category === c}
+              onClick={() => setCategory(c)}
+              className={`shrink-0 rounded-full border px-3 py-1 text-xs transition ${category === c ? "border-ember bg-ember/10 text-foreground" : "border-line text-muted hover:text-foreground"}`}
+            >
+              {c || "Everything"}
+            </button>
           ))}
-        </select>
+        </div>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label="Search listings" className={`${field} w-40`} />
+        {kind ? (
+          <button type="button" className="text-xs text-muted underline-offset-2 hover:text-foreground hover:underline" onClick={() => setKind("")}>
+            Show both
+          </button>
+        ) : null}
         <button type="button" onClick={() => setPosting(true)} className="ml-auto rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background">
           Post a listing
         </button>
       </div>
+      {listings ? <p className="mt-2 text-xs text-muted" aria-live="polite">{shown.length} {shown.length === 1 ? "listing" : "listings"}</p> : null}
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {listings === null
-          ? Array.from({ length: 4 }).map((_, i) => <div key={i} className="bf-card h-36 animate-pulse" />)
-          : listings.map((l) => (
+          ? Array.from({ length: 4 }).map((_, i) => <div key={i} className="bf-card h-40 animate-pulse" />)
+          : shown.map((l) => (
               <article key={l.id} className="bf-card flex flex-col p-4">
                 <div className="flex items-center gap-2 text-[11px]">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold" style={avatarTone(l.ownerName || l.id)} aria-hidden="true">
+                    {initialsFor(l.ownerName || "?")}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-foreground">{l.ownerName}</span>
+                  {l.mine ? <span className="rounded-full bg-overlay px-2 py-0.5 text-muted">Yours</span> : null}
                   <span className={`rounded-full border px-2 py-0.5 ${l.kind === "offer" ? "border-trust/30 bg-trust/10 text-trust-light" : "border-ember/40 bg-ember/10 text-ember-light"}`}>
                     {l.kind === "offer" ? "Offers" : "Wants"}
                   </span>
-                  <span className="text-muted">{l.category}</span>
                 </div>
-                <h3 className="mt-2 font-serif text-base text-foreground">{l.title}</h3>
+                <p className="mt-3 text-[11px] uppercase tracking-[0.12em] text-muted">{l.category}</p>
+                <h3 className="mt-0.5 font-serif text-base text-foreground">{l.title}</h3>
                 <p className="mt-1 line-clamp-3 flex-1 text-xs leading-relaxed text-muted">{l.description}</p>
-                <div className="mt-3 flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm tabular-nums text-foreground">{budgetLabel(l, formatMoney)}</p>
-                    <p className="truncate text-[11px] text-muted">{l.ownerName}</p>
-                  </div>
+                <div className="mt-3 flex items-center justify-between gap-2 border-t border-line pt-3">
+                  <p className="min-w-0 truncate text-sm font-semibold tabular-nums text-foreground">{budgetLabel(l, formatMoney)}</p>
                   {l.mine ? (
                     <div className="flex gap-2">
                       <button type="button" onClick={() => setEditing(l)} className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted hover:text-foreground">
@@ -135,16 +163,14 @@ export function TradeCenter() {
                         Close
                       </button>
                     </div>
+                  ) : l.kind === "request" && !isSpecialist ? (
+                    <Link href="/apply" data-tip="Only approved specialists can answer requests" className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">
+                      Apply to help
+                    </Link>
                   ) : (
-                    l.kind === "request" && !isSpecialist ? (
-                      <Link href="/apply" data-tip="Only approved specialists can answer requests" className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">
-                        Apply to help
-                      </Link>
-                    ) : (
-                      <button type="button" onClick={() => setContacting(l)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background">
-                        {l.kind === "offer" ? "Hire" : "Offer to help"}
-                      </button>
-                    )
+                    <button type="button" onClick={() => setContacting(l)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background">
+                      {l.kind === "offer" ? "Hire" : "Offer to help"}
+                    </button>
                   )}
                 </div>
               </article>
@@ -153,22 +179,36 @@ export function TradeCenter() {
 
       {listings && listings.length === 0 ? (
         <div className="bf-card mt-2 p-6 text-center">
-          <p className="text-sm text-foreground">{pending ? "The Trade Center opens shortly." : "No listings match yet."}</p>
-          {!pending ? <p className="mt-1 text-xs text-muted">Be the first: post what you offer or what you need.</p> : null}
-          <ol className="mx-auto mt-4 flex max-w-md flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-muted" aria-label="How it works">
-            {["List", "Chat", "Sign", "Get paid"].map((step, index) => (
-              <li key={step} className="flex items-center gap-2">
-                <span className="rounded-full border border-line px-2.5 py-1 text-foreground">{step}</span>
-                {index < 3 ? <span aria-hidden="true">→</span> : null}
-              </li>
-            ))}
-          </ol>
+          <p className="font-serif text-lg text-foreground">{pending ? "The Trade Center opens shortly." : "Nothing here yet."}</p>
+          {!pending ? (
+            <>
+              <p className="mt-1 text-xs text-muted">Be the first. A listing takes a minute and stays until you close it.</p>
+              <button type="button" onClick={() => setPosting(true)} className="mt-3 rounded-lg bg-ember px-4 py-2 text-xs font-semibold text-background">
+                Post what you offer or need
+              </button>
+            </>
+          ) : null}
         </div>
       ) : null}
 
-      <p className="mt-4 text-[11px] text-muted">
-        Agree the deal in a private chat, then sign a milestone contract there. A flat 5% is taken when each milestone is released.
-      </p>
+      <section aria-label="How trading works" className="mt-8 rounded-2xl border border-line bg-panel p-5">
+        <p className="font-serif text-lg text-foreground">How a deal goes</p>
+        <ol className="mt-4 grid gap-4 sm:grid-cols-4">
+          {steps.map(([name, line, path], index) => (
+            <li key={name} className="relative flex gap-3 sm:flex-col">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ember/15 text-ember" aria-hidden="true">
+                <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d={path} /></svg>
+              </span>
+              {index < steps.length - 1 ? <span aria-hidden="true" className="absolute right-0 top-3 hidden text-muted sm:block" style={{ right: "-0.9rem" }}>→</span> : null}
+              <span>
+                <span className="block text-sm font-semibold text-foreground">{name}</span>
+                <span className="block text-xs leading-relaxed text-muted">{line}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+        <p className="mt-4 text-[11px] text-muted">A flat 5% is taken when each milestone is released. Nothing is charged to list or to chat.</p>
+      </section>
 
       {posting ? <PostForm canOffer={isSpecialist} onClose={() => setPosting(false)} onPosted={() => void load()} /> : null}
       {editing ? <PostForm canOffer={isSpecialist} listing={editing} onClose={() => setEditing(null)} onPosted={() => void load()} /> : null}
