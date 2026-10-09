@@ -15,14 +15,14 @@ const TABS: [Tab, string][] = [['carousel', 'Carousel'], ['update', TYPES.update
 // link can open straight to a poll.
 export function DistributeHub() {
   const { openLogin } = useLogin();
-  const [tab, setTab] = useState<Tab>('carousel');
+  const [tab, setTab] = useState<Tab | null>(null);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
     let live = true;
     const wanted = new URLSearchParams(window.location.search).get('type');
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the address is only readable in the browser
-    if (wanted && TABS.some(([id]) => id === wanted)) setTab(wanted as Tab);
+    setTab(wanted && TABS.some(([id]) => id === wanted) ? (wanted as Tab) : 'carousel');
     void getSessionUser()
       .then((user) => live && setSignedIn(Boolean(user)))
       .catch(() => live && setSignedIn(false));
@@ -59,7 +59,7 @@ export function DistributeHub() {
           </button>
         ))}
       </div>
-      {tab === 'carousel' ? <DistributePreview /> : <PostComposer key={tab} type={tab} signedIn={signedIn} onSignIn={() => openLogin({ reason: 'signin', next: `/distribute?type=${tab}` })} />}
+      {tab === null ? null : tab === 'carousel' ? <DistributePreview /> : <PostComposer key={tab} type={tab} signedIn={signedIn} onSignIn={() => openLogin({ reason: 'signin', next: `/distribute?type=${tab}` })} />}
     </div>
   );
 }
