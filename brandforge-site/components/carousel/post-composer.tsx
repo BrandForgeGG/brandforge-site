@@ -225,7 +225,7 @@ export function PostComposer({ type, platform, signedIn, onSignIn }: { type: Pos
 
         <div className="rounded-2xl border border-line bg-panel p-5">
           <p className="font-serif text-xl text-foreground">Post it now</p>
-          <p className="mb-3 mt-1 text-xs text-muted">Tick where it should go. Polls and quizzes are real polls on Telegram and Discord. Bluesky has no polls, so it gets the question as a post people reply to.</p>
+          <p className="mb-3 mt-1 text-xs text-muted">{platform ? 'Tick where it should go.' : 'Tick where it should go. Polls and quizzes are real polls on Telegram and Discord. Bluesky has no polls, so it gets the question as a post people reply to.'}</p>
           {signedIn === false ? (
             <button type="button" className={btnPrimary} onClick={onSignIn}>Sign in to post</button>
           ) : (
