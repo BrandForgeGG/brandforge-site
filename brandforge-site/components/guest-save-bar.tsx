@@ -22,9 +22,9 @@ export function GuestSaveBar({
 
   useEffect(() => {
     try {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time read of browser-only state
       // A leftover bf_guest cookie does not make a registered person a guest: any sign-in cookie wins.
       const signedIn = /sb-[^=;]+-auth-token/.test(document.cookie);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time read of browser-only state
       setIsGuest(!signedIn && document.cookie.split(';').some((part) => part.trim().startsWith('bf_guest=')));
       setDismissed(window.sessionStorage.getItem(DISMISS_KEY) === '1');
     } catch {
