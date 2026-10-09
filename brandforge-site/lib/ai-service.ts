@@ -56,8 +56,37 @@ export async function getLiveModelIds(): Promise<Set<string> | null> {
 
 // The model that writes the answer a visitor reads: the best routable quality model unless an
 // env pin says otherwise (OPENROUTER_MODEL_QUALITY). The cheap model remains the fallback.
+// Remaining provider credit in dollars (total bought minus used), read at most every ten minutes.
+// Null when it cannot be read; treated as "affordable" so a network blip never downgrades answers.
+let creditCache: { at: number; remaining: number | null } | null = null;
+
+export async function getRemainingCredit(): Promise<number | null> {
+  if (creditCache && Date.now() - creditCache.at < 10 * 60 * 1000) return creditCache.remaining;
+  let remaining: number | null = null;
+  const key = process.env.OPENROUTER_API_KEY || '';
+  if (key) {
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/credits', { headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(6000) });
+      if (response.ok) {
+        const data = (await response.json()) as { data?: { total_credits?: number; total_usage?: number } };
+        remaining = Number(data.data?.total_credits ?? 0) - Number(data.data?.total_usage ?? 0);
+      }
+    } catch {
+      remaining = null;
+    }
+  }
+  creditCache = { at: Date.now(), remaining };
+  return remaining;
+}
+
+// Premium models need real credit: under a dollar left, they cannot afford a full answer.
+export async function canAffordPremium(): Promise<boolean> {
+  const remaining = await getRemainingCredit();
+  return remaining === null || remaining >= 1;
+}
+
 export async function answerModel(): Promise<string> {
-  return pickModel('quality', await getLiveModelIds(), process.env);
+  return pickModel('quality', await getLiveModelIds(), process.env, undefined, await canAffordPremium());
 }
 
 // System prompt for BrandForge AI

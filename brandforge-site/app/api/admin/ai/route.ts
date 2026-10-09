@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { answerModel, getLiveModelIds } from '@/lib/ai-service';
+import { answerModel, getLiveModelIds, getRemainingCredit } from '@/lib/ai-service';
 import { describeModels } from '@/lib/model-catalog.js';
 import { budgetLimits } from '@/lib/ai-budget.js';
 import { getAiUsageToday, getFunnelSummary, getReturnMetrics, isAdminAccount } from '@/lib/project-db';
@@ -29,10 +29,12 @@ export async function GET(request: NextRequest) {
 
     const [live, usage, funnel, returns] = await Promise.all([getLiveModelIds(), getAiUsageToday(null), getFunnelSummary(), getReturnMetrics()]);
     const answering = await answerModel();
+    const credit = await getRemainingCredit();
     return NextResponse.json({
       answering,
       fastModel: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
       liveListRead: live !== null,
+      creditRemaining: credit === null ? null : Math.max(0, Math.round(credit * 100) / 100),
       models: describeModels(live),
       limits: budgetLimits(process.env),
       aiToday: usage.aiToday,

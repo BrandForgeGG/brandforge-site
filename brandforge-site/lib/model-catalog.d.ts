@@ -5,4 +5,4 @@ export declare const MODEL_CATALOG: CatalogModel[];
 export declare const QUALITY_PREFERENCE: string[];
 export declare const FAST_FALLBACK: string;
 export declare function describeModels(liveIds: Set<string> | string[] | null, catalog?: CatalogModel[]): DescribedModel[];
-export declare function pickModel(tier: 'fast' | 'quality', liveIds: Set<string> | string[] | null, env?: Record<string, string | undefined>, catalog?: CatalogModel[]): string;
+export declare function pickModel(tier: 'fast' | 'quality', liveIds: Set<string> | string[] | null, env?: Record<string, string | undefined>, catalog?: CatalogModel[], canAffordPremium?: boolean): string;

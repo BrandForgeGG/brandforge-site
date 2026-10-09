@@ -50,10 +50,13 @@ function describeModels(liveIds, catalog = MODEL_CATALOG) {
 
 // The OpenRouter id to answer with. An explicit env pin always wins; otherwise the best routable
 // preference; if the live list is unreadable, the safe cheap model.
-function pickModel(tier, liveIds, env = {}, catalog = MODEL_CATALOG) {
+// `canAffordPremium` is false when the provider account has (almost) no credit: premium models then
+// fail with HTTP 402 on every call, so the standard model answers directly instead of failing first.
+function pickModel(tier, liveIds, env = {}, catalog = MODEL_CATALOG, canAffordPremium = true) {
   const pinned = String((tier === 'fast' ? env.OPENROUTER_MODEL : env.OPENROUTER_MODEL_QUALITY) || '').trim();
   if (pinned) return pinned;
   if (tier === 'fast') return FAST_FALLBACK;
+  if (!canAffordPremium) return String(env.OPENROUTER_MODEL || '').trim() || FAST_FALLBACK;
   if (!liveIds) return String(env.OPENROUTER_MODEL || '').trim() || FAST_FALLBACK;
   for (const name of QUALITY_PREFERENCE) {
     const entry = catalog.find((item) => item.name === name);

@@ -21,3 +21,11 @@ test('the answer model is the best routable one, env pins win, and the fallback 
   assert.equal(pickModel('quality', null, { OPENROUTER_MODEL: 'openai/gpt-4o' }), 'openai/gpt-4o');
   assert.equal(pickModel('fast', live, {}), 'openai/gpt-4o-mini');
 });
+
+test('without credit the standard model answers directly, premium models never get tried', () => {
+  const live = new Set(['anthropic/claude-sonnet-5.5', 'openai/gpt-4o-mini']);
+  assert.equal(pickModel('quality', live, {}, undefined, false), 'openai/gpt-4o-mini');
+  assert.equal(pickModel('quality', live, { OPENROUTER_MODEL: 'openai/gpt-4o' }, undefined, false), 'openai/gpt-4o');
+  assert.equal(pickModel('quality', live, {}, undefined, true), 'anthropic/claude-sonnet-5.5');
+  assert.equal(pickModel('quality', live, { OPENROUTER_MODEL_QUALITY: 'google/gemini-2.5-pro' }, undefined, false), 'google/gemini-2.5-pro');
+});

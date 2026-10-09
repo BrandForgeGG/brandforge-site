@@ -8,6 +8,7 @@ type AiInfo = {
   answering: string;
   fastModel: string;
   liveListRead: boolean;
+  creditRemaining: number | null;
   models: Model[];
   limits: { userDaily: number; alertAt: number; hardCap: number };
   aiToday: number;
@@ -80,6 +81,11 @@ export function AdminAi() {
           ))}
         </div>
         {!info.liveListRead ? <p className="mt-3 text-xs text-muted">OpenRouter&apos;s model list could not be read just now, so availability shows as unknown.</p> : null}
+        {info.creditRemaining !== null && info.creditRemaining < 1 ? (
+          <p className="mt-3 text-xs text-foreground">
+            OpenRouter credit left: ${info.creditRemaining.toFixed(2)}. Premium models need at least $1 of credit, so answers use {info.fastModel} until you add some. Free models can run background steps.
+          </p>
+        ) : null}
         <p className="mt-3 text-xs text-muted">A model shows as available only when OpenRouter lists it today. &ldquo;Watching&rdquo; rows are models we expect to arrive. Pin one with OPENROUTER_MODEL_QUALITY in Vercel.</p>
       </Block>
 
