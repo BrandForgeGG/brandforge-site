@@ -2,6 +2,7 @@ import { createCanvas, loadImage } from '@napi-rs/canvas';
 import { decryptSecret, encryptSecret } from '@/lib/secret-box.js';
 import { postCarouselToDiscordWebhook, postCarouselToTelegram, type PublishResult } from '@/lib/carousel-publish';
 import { getUserNotifyTargets, type CarouselChannelRow } from '@/lib/project-db';
+import { postCarouselToTumblr } from '@/lib/tumblr';
 
 // Linking a channel and posting to it. Only platforms that need no app approval are here: a Telegram
 // channel (the person must be its admin), a Discord channel webhook, and Bluesky (an app password the
@@ -73,6 +74,23 @@ export async function blueskySession(identifier: string, password: string): Prom
   }
 }
 
+const SLACK_HOOK = /^https:\/\/hooks\.slack\.com\/services\/T[A-Z0-9]+\/B[A-Z0-9]+\/[A-Za-z0-9]+$/;
+
+export async function linkSlackWebhook(raw: string): Promise<LinkResult> {
+  const url = String(raw ?? '').trim().replace(/\?.*$/, '');
+  if (!SLACK_HOOK.test(url)) return { ok: false, error: 'Paste the full webhook address from Slack. It starts with https://hooks.slack.com/services/.' };
+  try {
+    // An empty message is refused by a real webhook with "no_text" and by a missing one with a 404, so
+    // nothing is ever posted while we check.
+    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}', signal: AbortSignal.timeout(8000) });
+    const body = (await res.text().catch(() => '')).trim();
+    if (!(res.status === 400 && body === 'no_text')) return { ok: false, error: 'Slack did not recognise that webhook. Check that it still exists and was copied in full.' };
+    return { ok: true, kind: 'slack', label: 'Slack channel', secret: encryptSecret(url), meta: {} };
+  } catch {
+    return { ok: false, error: 'Could not reach Slack. Try again.' };
+  }
+}
+
 export async function linkBluesky(handleRaw: string, appPassword: string): Promise<LinkResult> {
   const handle = String(handleRaw ?? '').trim().replace(/^@/, '');
   const password = String(appPassword ?? '').trim();
@@ -133,9 +151,11 @@ async function postCarouselToBluesky(handle: string, password: string, images: B
 }
 
 export async function publishToChannel(channel: CarouselChannelRow, images: Buffer[], caption: string): Promise<PublishResult> {
+  if (channel.kind === 'tumblr') return postCarouselToTumblr(channel, images, caption);
   if (channel.kind === 'telegram') return postCarouselToTelegram(String(channel.meta.chatId ?? ''), images, caption);
   const secret = channel.secret ? decryptSecret(channel.secret) : null;
   if (!secret) return { ok: false, note: 'The saved login could not be read. Link this channel again.' };
   if (channel.kind === 'discord') return postCarouselToDiscordWebhook(secret, images, caption);
+  if (channel.kind === 'slack') return { ok: false, note: 'Slack cannot take pictures through a webhook. Post an update there instead.' };
   return postCarouselToBluesky(String(channel.meta.handle ?? ''), secret, images, caption);
 }

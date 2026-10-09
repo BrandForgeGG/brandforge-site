@@ -741,3 +741,9 @@ we do not have.
 **Change:** Distribute now has tabs for Carousel, Update, Poll, Quiz and Thread. One sentence gets a first draft; everything is editable; a preview shows Telegram, Discord and Bluesky; posting goes to connected channels. Telegram and Discord polls and quizzes are real polls (Discord quiz hides the answer behind a spoiler), Bluesky gets the question as a post with the answer in a reply, threads are linked posts with working links. Channel picker is shared with the carousel poster.
 
 **Distribution move:** announce "polls, quizzes and threads in one place" in Telegram and Discord; post a poll in our own channel as the example; screenshot note: the same quiz in the three previews. Next in the calendar: rotate polls and threads with carousels.
+
+## 2026-10-09 — Slack and Tumblr channels
+
+**Change:** Slack (paste an incoming-webhook address; updates, polls, quizzes and threads as Block Kit, a quiz answer follows as a second message) and Tumblr (OAuth, text posts and carousels as photo posts; dormant until TUMBLR_CLIENT_ID and TUMBLR_CLIENT_SECRET are set). Both appear as cards in Settings and as tiles in Distribute; Slack is left out of the carousel poster because webhooks cannot carry pictures.
+
+**Distribution move:** announce "post to Slack and Tumblr too"; a how-to for connecting a Slack webhook in under a minute; community outreach to Slack-based creator groups once a real test post is verified.

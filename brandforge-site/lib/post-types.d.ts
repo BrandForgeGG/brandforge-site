@@ -15,3 +15,6 @@ export declare function blueskyPosts(post: Post): { text: string; facets: Return
 export declare function discordEmbed(post: Post): { description: string; color: number };
 export declare function graphemes(text: string): number;
 export declare function numbered(options: string[]): string;
+export declare function slackMrkdwn(text: string): string;
+export declare function slackMessages(post: Post): { text: string; blocks: unknown[] }[];
+export declare function tumblrBlocks(post: Post): { content: { type: string; text: string; subtype?: string }[]; layout?: unknown[] };

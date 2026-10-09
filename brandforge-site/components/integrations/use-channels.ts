@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-export type ChannelKind = 'telegram' | 'discord' | 'bluesky';
+export type ChannelKind = 'telegram' | 'discord' | 'bluesky' | 'slack' | 'tumblr';
 export type Channel = { id: string; kind: ChannelKind; label: string };
 
 // The linked channels (names only, never a secret) and whether the person's own Telegram is linked
@@ -11,13 +11,15 @@ export function useChannels() {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [telegramLinked, setTelegramLinked] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [tumblrReady, setTumblrReady] = useState(false);
 
   const reload = useCallback(async () => {
     const res = await fetch('/api/carousel/channels').catch(() => null);
     if (res && res.ok) {
-      const data = (await res.json()) as { channels: Channel[]; telegramLinked: boolean };
+      const data = (await res.json()) as { channels: Channel[]; telegramLinked: boolean; tumblrReady?: boolean };
       setChannels(data.channels);
       setTelegramLinked(data.telegramLinked);
+      setTumblrReady(Boolean(data.tumblrReady));
     }
     setLoading(false);
   }, []);
@@ -35,5 +37,5 @@ export function useChannels() {
     [reload],
   );
 
-  return { channels, telegramLinked, loading, reload, unlink };
+  return { channels, telegramLinked, tumblrReady, loading, reload, unlink };
 }

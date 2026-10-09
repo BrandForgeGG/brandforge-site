@@ -6,12 +6,16 @@ import { ServiceTile, SERVICES } from '@/components/integrations/brand-icons';
 import { ChannelLinkForm } from '@/components/integrations/channel-link-form';
 import { useChannels, type ChannelKind } from '@/components/integrations/use-channels';
 
-const KINDS: ChannelKind[] = ['telegram', 'discord', 'bluesky'];
+const ALL_KINDS: ChannelKind[] = ['telegram', 'discord', 'bluesky', 'slack', 'tumblr'];
 
 // Where a post should go: the person's connected channels as tiles to tick, and a one-tap way to connect
 // one that is missing. Used by every kind of post (carousel, update, poll, quiz, thread).
-export function ChannelPicker({ value, onChange, onNote }: { value: Record<string, boolean>; onChange: (next: Record<string, boolean>) => void; onNote?: (text: string) => void }) {
-  const { channels, telegramLinked, loading, reload } = useChannels();
+export function ChannelPicker({ value, onChange, onNote, kinds }: { value: Record<string, boolean>; onChange: (next: Record<string, boolean>) => void; onNote?: (text: string) => void; kinds?: ChannelKind[] }) {
+  const { channels: every, telegramLinked, tumblrReady, loading, reload } = useChannels();
+  // A post type some platform cannot carry (a carousel on Slack) leaves that platform out.
+  const allowed = (kinds ?? ALL_KINDS).filter((k) => k !== 'tumblr' || tumblrReady || every.some((c) => c.kind === 'tumblr'));
+  const channels = every.filter((c) => allowed.includes(c.kind));
+  const KINDS = allowed;
   const [adding, setAdding] = useState<ChannelKind | null>(null);
 
   return (

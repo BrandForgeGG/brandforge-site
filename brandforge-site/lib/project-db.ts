@@ -5473,7 +5473,7 @@ export async function setCalendarAutoPost(on: boolean): Promise<boolean> {
 
 
 // ---- Channels a person has linked to post carousels to (migration 0033: carousel_channels) ----
-export type CarouselChannelRow = { id: string; kind: 'telegram' | 'discord' | 'bluesky'; label: string; secret: string | null; meta: Record<string, unknown>; created_at: string };
+export type CarouselChannelRow = { id: string; kind: 'telegram' | 'discord' | 'bluesky' | 'slack' | 'tumblr'; label: string; secret: string | null; meta: Record<string, unknown>; created_at: string };
 
 export async function listCarouselChannels(userId: string): Promise<CarouselChannelRow[]> {
   const admin = createSupabaseAdminClient();
@@ -5494,6 +5494,13 @@ export async function addCarouselChannel(userId: string, channel: { kind: Carous
     return { ok: false, error: 'failed' };
   }
   return { ok: true, id: (data as { id: string }).id };
+}
+
+// Replaces a channel's stored (already encrypted) secret, for tokens that refresh themselves.
+export async function updateCarouselChannelSecret(id: string, secret: string): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return;
+  await admin.from('carousel_channels').update({ secret }).eq('id', id);
 }
 
 export async function removeCarouselChannel(userId: string, id: string): Promise<boolean> {

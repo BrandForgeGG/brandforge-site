@@ -2,7 +2,8 @@ import { after, NextRequest, NextResponse } from 'next/server';
 import { sendFirstTimeEmail } from '@/lib/first-time-email';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { addCarouselChannel, getUserNotifyTargets, listCarouselChannels, removeCarouselChannel } from '@/lib/project-db';
-import { linkBluesky, linkDiscordWebhook, linkTelegramChannel, type LinkResult } from '@/lib/carousel-channels';
+import { linkBluesky, linkDiscordWebhook, linkSlackWebhook, linkTelegramChannel, type LinkResult } from '@/lib/carousel-channels';
+import { tumblrConfigured } from '@/lib/tumblr';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     channels: channels.map((c) => ({ id: c.id, kind: c.kind, label: c.label })),
     telegramLinked: Boolean(targets.telegramChatId),
+    tumblrReady: tumblrConfigured(),
   });
 }
 
@@ -36,8 +38,9 @@ export async function POST(request: NextRequest) {
   let linked: LinkResult;
   if (body.kind === 'telegram') linked = await linkTelegramChannel(auth.user.id, String(body.channel ?? ''));
   else if (body.kind === 'discord') linked = await linkDiscordWebhook(String(body.webhook ?? ''));
+  else if (body.kind === 'slack') linked = await linkSlackWebhook(String(body.webhook ?? ''));
   else if (body.kind === 'bluesky') linked = await linkBluesky(String(body.handle ?? ''), String(body.password ?? ''));
-  else return NextResponse.json({ error: 'Pick Telegram, Discord or Bluesky.' }, { status: 400 });
+  else return NextResponse.json({ error: 'Pick Telegram, Discord, Slack or Bluesky. Tumblr connects from its own button.' }, { status: 400 });
   if (!linked.ok) return NextResponse.json({ error: linked.error }, { status: 422 });
 
   const saved = await addCarouselChannel(auth.user.id, { kind: linked.kind, label: linked.label, secret: linked.secret, meta: linked.meta });

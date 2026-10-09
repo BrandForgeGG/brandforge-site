@@ -134,4 +134,56 @@ function discordEmbed(post) {
   return { description: body.slice(0, 4000), color: 0xe8571e };
 }
 
-module.exports = { TYPES, LIMITS, normalizePost, telegramHtml, telegramText, stripMarkup, linkFacets, blueskyPosts, discordEmbed, graphemes, numbered };
+
+// ---- Slack: incoming webhooks take text and Block Kit, no polls and no pictures ----
+
+function slackEscape(text) {
+  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/** Slack's own markup: **bold** becomes *bold*; web addresses are left for Slack to link. */
+function slackMrkdwn(text) {
+  return slackEscape(text).replace(/\*\*([^*\n]+)\*\*/g, '*$1*').replace(/(^|[\s(])_([^_\n]+)_(?=[\s).,!?]|$)/g, '$1_$2_');
+}
+
+const DIGITS = ['1\uFE0F\u20E3', '2\uFE0F\u20E3', '3\uFE0F\u20E3', '4\uFE0F\u20E3', '5\uFE0F\u20E3', '6\uFE0F\u20E3', '7\uFE0F\u20E3', '8\uFE0F\u20E3', '9\uFE0F\u20E3', '\uD83D\uDD1F'];
+
+function slackSection(text) {
+  return { type: 'section', text: { type: 'mrkdwn', text: text.slice(0, 2900) } };
+}
+
+/** The Slack messages to send, in order. A quiz sends its answer as a second message. Each is { text, blocks }. */
+function slackMessages(post) {
+  const message = (blocks, fallback) => ({ text: stripMarkup(fallback).slice(0, 300), blocks });
+  if (post.type === 'update') return [message([slackSection(slackMrkdwn(post.text))], post.text)];
+  if (post.type === 'thread') {
+    return [message(post.parts.map((part, i) => slackSection(`*${i + 1}/${post.parts.length}*  ${slackMrkdwn(part)}`)), post.parts[0])];
+  }
+  const lines = post.options.map((option, i) => `${DIGITS[i]}  ${slackMrkdwn(option)}`).join('\n');
+  const ask = message(
+    [slackSection(`*${slackMrkdwn(post.question)}*\n\n${lines}`), { type: 'context', elements: [{ type: 'mrkdwn', text: post.type === 'quiz' ? 'React with your answer. The answer follows.' : 'React with the number of your choice.' }] }],
+    post.question,
+  );
+  if (post.type === 'poll') return [ask];
+  const answer = `*Answer:* ${DIGITS[post.correct]}  ${slackMrkdwn(post.options[post.correct])}${post.explanation ? `\n${slackMrkdwn(post.explanation)}` : ''}`;
+  return [ask, message([slackSection(answer)], `Answer: ${post.options[post.correct]}`)];
+}
+
+// ---- Tumblr: NPF content blocks. The quiz answer sits under a "keep reading" cut. ----
+
+function textBlock(text, subtype) {
+  return { type: 'text', text: stripMarkup(text).slice(0, 4000), ...(subtype ? { subtype } : {}) };
+}
+
+/** { content, layout? } for a Tumblr post. */
+function tumblrBlocks(post) {
+  if (post.type === 'update') return { content: post.text.split(/\n{2,}/).map((p) => textBlock(p)).filter((b) => b.text) };
+  if (post.type === 'thread') return { content: post.parts.map((part, i) => textBlock(`${i + 1}/${post.parts.length}  ${part}`)) };
+  const content = [textBlock(post.question, 'heading2'), ...post.options.map((option) => textBlock(option, 'ordered-list-item'))];
+  if (post.type === 'poll') return { content, layout: undefined };
+  const visible = content.length;
+  content.push(textBlock(`Answer: ${post.correct + 1}. ${post.options[post.correct]}${post.explanation ? ` ${post.explanation}` : ''}`));
+  return { content, layout: [{ type: 'rows', display: content.map((_, i) => ({ blocks: [i] })), truncate_after: visible - 1 }] };
+}
+
+module.exports = { TYPES, LIMITS, normalizePost, telegramHtml, telegramText, stripMarkup, linkFacets, blueskyPosts, discordEmbed, graphemes, numbered, slackMessages, slackMrkdwn, tumblrBlocks };

@@ -41,7 +41,7 @@ export function ChannelPoster({ draft, pictures, captions, ready }: { draft: Dra
       const lines: string[] = [];
       let failed = false;
       // One request per kind, because each platform gets its own caption.
-      for (const k of ['telegram', 'discord', 'bluesky'] as const) {
+      for (const k of ['telegram', 'discord', 'bluesky', 'tumblr'] as const) {
         const group = picked.filter((c) => c.kind === k);
         if (group.length === 0) continue;
         const form = new FormData();
@@ -83,7 +83,7 @@ export function ChannelPoster({ draft, pictures, captions, ready }: { draft: Dra
       </div>
 
       <div className="mt-4">
-        <ChannelPicker value={chosen} onChange={setChosen} onNote={(text) => setNote({ tone: 'ok', text })} />
+        <ChannelPicker kinds={['telegram', 'discord', 'bluesky', 'tumblr']} value={chosen} onChange={setChosen} onNote={(text) => setNote({ tone: 'ok', text })} />
       </div>
 
       <div className="mt-4">

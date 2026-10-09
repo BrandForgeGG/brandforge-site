@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { normalizePost, telegramHtml, telegramText, blueskyPosts, linkFacets, discordEmbed, graphemes } = require('./post-types');
+const { slackMessages, slackMrkdwn, tumblrBlocks, normalizePost, telegramHtml, telegramText, blueskyPosts, linkFacets, discordEmbed, graphemes } = require('./post-types');
 
 test('every post type validates and rejects what is missing', () => {
   assert.equal(normalizePost({ type: 'nope' }).ok, false);
@@ -54,4 +54,23 @@ test('telegram threads and discord embeds carry every part', () => {
   const post = { type: 'thread', parts: ['alpha', 'beta'] };
   assert.ok(telegramText(post).includes('alpha') && telegramText(post).includes('beta'));
   assert.ok(discordEmbed(post).description.includes('2/2'));
+});
+
+test('slack escapes markup and turns bold into slack bold; a quiz sends its answer second', () => {
+  assert.equal(slackMrkdwn('**Big** <b>&'), '*Big* &lt;b&gt;&amp;');
+  const quiz = slackMessages({ type: 'quiz', question: 'What is 2 + 2?', options: ['3', '4'], correct: 1, explanation: 'Basic sums.' });
+  assert.equal(quiz.length, 2);
+  assert.ok(!JSON.stringify(quiz[0]).includes('Answer:'));
+  assert.ok(JSON.stringify(quiz[1]).includes('Answer:'));
+  assert.equal(slackMessages({ type: 'poll', question: 'Which day is best?', options: ['Mon', 'Tue'] }).length, 1);
+  assert.ok(slackMessages({ type: 'thread', parts: ['a', 'b'] })[0].blocks.length === 2);
+});
+
+test('tumblr blocks hide the quiz answer under a cut and strip markup', () => {
+  const quiz = tumblrBlocks({ type: 'quiz', question: 'What is 2 + 2?', options: ['3', '4'], correct: 1, explanation: '' });
+  assert.equal(quiz.content.length, 4);
+  assert.equal(quiz.layout[0].truncate_after, 2);
+  const update = tumblrBlocks({ type: 'update', text: '**Hi** there\n\nSecond paragraph' });
+  assert.equal(update.content.length, 2);
+  assert.equal(update.content[0].text, 'Hi there');
 });

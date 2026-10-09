@@ -20,6 +20,8 @@ const SAY: Record<ChannelKind, { line: string; add: string }> = {
   telegram: { line: 'Alerts to you, and carousels to your channel.', add: 'Link a channel' },
   discord: { line: 'Post carousels to a server channel.', add: 'Link a channel' },
   bluesky: { line: 'Post carousels as a thread.', add: 'Link an account' },
+  slack: { line: 'Post updates, polls and threads to a channel.', add: 'Link a channel' },
+  tumblr: { line: 'Post carousels and text to your blog.', add: 'Connect your blog' },
 };
 
 function Pill({ on, children }: { on: boolean; children: React.ReactNode }) {
@@ -35,7 +37,7 @@ function Pill({ on, children }: { on: boolean; children: React.ReactNode }) {
 // the names you linked, a live badge); one that is not linked looks switched off, with one clear
 // button to connect it. Services waiting on a platform's approval say so and let you vote.
 export function IntegrationsPanel() {
-  const { channels, telegramLinked, loading, reload, unlink } = useChannels();
+  const { channels, telegramLinked, tumblrReady, loading, reload, unlink } = useChannels();
   const [open, setOpen] = useState<ChannelKind | null>(null);
   const [code, setCode] = useState<{ code: string; botUrl: string } | null>(null);
   const [alertBusy, setAlertBusy] = useState(false);
@@ -68,7 +70,7 @@ export function IntegrationsPanel() {
   return (
     <div className="space-y-6">
       <div className="grid gap-3 lg:grid-cols-3">
-        {(['telegram', 'discord', 'bluesky'] as ChannelKind[]).map((kind) => {
+        {(['telegram', 'discord', 'bluesky', 'slack', 'tumblr'] as ChannelKind[]).map((kind) => {
           const mine = channels.filter((c) => c.kind === kind);
           const live = kind === 'telegram' ? telegramLinked || mine.length > 0 : mine.length > 0;
           return (
@@ -124,8 +126,8 @@ export function IntegrationsPanel() {
               </div>
 
               <div className="mt-3">
-                <button type="button" aria-expanded={open === kind} className={`${btn} w-full`} onClick={() => setOpen(open === kind ? null : kind)}>
-                  {open === kind ? 'Close' : mine.length > 0 ? 'Link another' : SAY[kind].add}
+                <button type="button" aria-expanded={open === kind} disabled={kind === 'tumblr' && !tumblrReady && mine.length === 0} className={`${btn} w-full`} onClick={() => setOpen(open === kind ? null : kind)}>
+                  {open === kind ? 'Close' : kind === 'tumblr' && !tumblrReady && mine.length === 0 ? 'Coming soon' : mine.length > 0 ? 'Link another' : SAY[kind].add}
                 </button>
                 {open === kind ? (
                   <div className="mt-3 rounded-xl border border-line p-3">

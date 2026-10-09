@@ -2,7 +2,8 @@ import { decryptSecret } from '@/lib/secret-box.js';
 import { blueskySession } from '@/lib/carousel-channels';
 import type { PublishResult } from '@/lib/carousel-publish';
 import type { CarouselChannelRow } from '@/lib/project-db';
-import { blueskyPosts, discordEmbed, numbered, telegramText, type Post } from '@/lib/post-types.js';
+import { blueskyPosts, discordEmbed, numbered, slackMessages, telegramText, type Post } from '@/lib/post-types.js';
+import { postToTumblr } from '@/lib/tumblr';
 
 // Sends an update, poll, quiz or thread to a channel the person linked. Each platform gets the closest
 // native form: Telegram polls and quizzes are real polls, Discord polls are real polls, and Bluesky
@@ -71,6 +72,19 @@ export async function postToDiscord(webhookUrl: string, post: Post): Promise<Pub
   }
 }
 
+export async function postToSlack(webhookUrl: string, post: Post): Promise<PublishResult> {
+  if (!/^https:\/\/hooks\.slack\.com\/services\//.test(webhookUrl)) return { ok: false, note: 'That is not a Slack webhook address.' };
+  try {
+    for (const message of slackMessages(post)) {
+      const res = await fetch(webhookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(message), signal: AbortSignal.timeout(15000) });
+      if (!res.ok) return { ok: false, note: `Slack said: ${res.status}` };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, note: 'Could not reach Slack.' };
+  }
+}
+
 export async function postToBluesky(handle: string, password: string, post: Post): Promise<PublishResult> {
   const session = await blueskySession(handle, password);
   if (!session) return { ok: false, note: 'Bluesky did not accept the saved login. Link it again.' };
@@ -100,8 +114,10 @@ export async function postToBluesky(handle: string, password: string, post: Post
 
 export async function publishPostToChannel(channel: CarouselChannelRow, post: Post): Promise<PublishResult> {
   if (channel.kind === 'telegram') return postToTelegram(String(channel.meta.chatId ?? ''), post);
+  if (channel.kind === 'tumblr') return postToTumblr(channel, post);
   const secret = channel.secret ? decryptSecret(channel.secret) : null;
   if (!secret) return { ok: false, note: 'The saved login could not be read. Link this channel again.' };
   if (channel.kind === 'discord') return postToDiscord(secret, post);
+  if (channel.kind === 'slack') return postToSlack(secret, post);
   return postToBluesky(String(channel.meta.handle ?? ''), secret, post);
 }
