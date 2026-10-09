@@ -14,6 +14,7 @@ export interface SearchResponse {
 }
 
 export interface ResearchPage {
+  image?: string | null;
   url: string;
   title: string;
   text: string;

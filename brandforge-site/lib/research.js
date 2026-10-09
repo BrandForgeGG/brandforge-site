@@ -204,6 +204,26 @@ function extractTitle(html) {
   return decodeEntities(match[1].replace(/\s+/g, ' ').trim()).slice(0, 200);
 }
 
+// The page's own preview picture (Open Graph / Twitter card), as an absolute URL. Null when absent.
+function extractOgImage(html, baseUrl) {
+  const tags = String(html).match(/<meta\s[^>]*>/gi) || [];
+  for (const key of ['og:image:secure_url', 'og:image', 'twitter:image']) {
+    for (const tag of tags) {
+      const name = /(?:property|name)\s*=\s*["']([^"']+)["']/i.exec(tag);
+      if (!name || name[1].toLowerCase() !== key) continue;
+      const content = /content\s*=\s*["']([^"']+)["']/i.exec(tag);
+      if (!content) continue;
+      try {
+        const url = new URL(decodeEntities(content[1]).trim(), baseUrl);
+        if (url.protocol === 'https:' || url.protocol === 'http:') return url.href;
+      } catch {
+        /* try the next tag */
+      }
+    }
+  }
+  return null;
+}
+
 function extractText(html, maxChars) {
   const cleaned = String(html)
     .replace(/<(script|style|noscript|svg|template)[^>]*>[\s\S]*?<\/\1>/gi, ' ')
@@ -509,6 +529,7 @@ async function fetchPage(
     url: current.href,
     title: extractTitle(html),
     text: extractText(html, maxChars),
+    image: extractOgImage(html, current.href),
   };
   cacheSet(cacheKey, value, cacheTtlMs, now());
   return { ...value, cached: false };
@@ -693,6 +714,7 @@ module.exports = {
   normalizeSearchResults,
   searchWeb,
   fetchPage,
+  extractOgImage,
   parseQueries,
   planQueries,
   runResearch,

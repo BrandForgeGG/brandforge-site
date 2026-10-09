@@ -15,6 +15,7 @@ export declare function completeJson(options: {
   system: string;
   user: string;
   temperature?: number;
+  maxTokens?: number;
   timeoutMs?: number;
   fetchImpl?: typeof fetch;
 }): Promise<LlmCompletion>;

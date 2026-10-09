@@ -687,3 +687,9 @@ we do not have.
 **Change:** a nine-slide carousel in the numbered-list style that is getting traction on Instagram (hook cover, one screenshot slide per step with a big numbered title and three bullets, closing call to action), built from real screenshots of the product, with a ready caption. The drawing code (`lib/carousel-render.js`, Canvas 2D) is reusable: it will power an in-app tool where anyone can make the same kind of carousel from their own words, a URL or a file.
 
 **Distribution move:** post the nine slides as an Instagram carousel and TikTok photo post (caption in `marketing/carousels/idea-to-shipped-2026-10-09/caption.md`), and slide 7 alone as a story. Track profile visits and clicks to brandforge.gg against the ad test.
+
+## 2026-10-09 — Carousel maker (free, no sign-up)
+
+**Change:** a new tool at /create/carousel. Give it a sentence, a web page address or a text file; it writes a hook cover, 3 to 10 numbered slides with three bullets each and a closing call to action, using only facts from what was given. The slides are drawn in the visitor's browser (three looks: Forge, Crystal, Mono), every word is editable, pictures can be uploaded or taken from the page's own preview image, and the result downloads as PNGs or one ZIP. Free to try, no account; guarded by a per-hour limit and the daily AI ceiling. Also fixed: answers now use the standard model directly when the provider account has no credit, instead of failing on the premium model first.
+
+**Distribution move:** this is the shareable-content hook. Post a short demo (type a sentence, get nine slides, download) on TikTok and Reels; invite people in Discord and Telegram to make a carousel about their own project and post it with the BrandForge link; use our own "Idea to shipped" carousel as the example. Changelog: "Make a swipeable carousel from a sentence, a page or a file. Free."

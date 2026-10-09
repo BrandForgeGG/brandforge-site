@@ -22,6 +22,7 @@ async function completeJson({
   system,
   user,
   temperature = 0.2,
+  maxTokens,
   timeoutMs = 60000,
   fetchImpl = fetch,
 }) {
@@ -46,6 +47,8 @@ async function completeJson({
       body: JSON.stringify({
         model,
         temperature,
+        // A cap keeps a request affordable on an account with little credit.
+        ...(maxTokens ? { max_tokens: maxTokens } : {}),
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: user },

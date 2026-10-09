@@ -1,0 +1,4 @@
+Fonts used by the carousel tool, both under the SIL Open Font License 1.1:
+- Anton (Vernon Adams), via @fontsource/anton
+- Inter (Rasmus Andersson), via @fontsource/inter
+License text: https://openfontlicense.org

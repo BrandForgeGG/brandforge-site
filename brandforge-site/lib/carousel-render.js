@@ -173,11 +173,24 @@
     const shotH = 700;
     coverFit(ctx, item.shot, 0, 0, W, shotH, true, item.crop);
     if (!item.shot) {
-      const g = ctx.createLinearGradient(0, 0, W, shotH);
-      g.addColorStop(0, '#1a0f08');
-      g.addColorStop(1, '#000');
-      ctx.fillStyle = g;
+      // No picture yet: a glow in the theme colour with the item's number as a huge outline, so the
+      // slide still looks designed rather than empty.
+      const glow = ctx.createRadialGradient(W * 0.72, shotH * 0.38, 0, W * 0.72, shotH * 0.38, W * 0.85);
+      glow.addColorStop(0, theme.accent + '66');
+      glow.addColorStop(0.55, theme.accent + '1a');
+      glow.addColorStop(1, '#00000000');
+      ctx.fillStyle = glow;
       ctx.fillRect(0, 0, W, shotH);
+      ctx.save();
+      ctx.font = `760px ${HEAD}`;
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'alphabetic';
+      ctx.strokeStyle = theme.accent + '88';
+      ctx.lineWidth = 5;
+      ctx.strokeText(String(item.n), W - 40, shotH + 30);
+      ctx.fillStyle = theme.accent + '14';
+      ctx.fillText(String(item.n), W - 40, shotH + 30);
+      ctx.restore();
     }
     fade(ctx, shotH - 280, shotH, 'rgba(0,0,0,{a})', 0, 1);
 
