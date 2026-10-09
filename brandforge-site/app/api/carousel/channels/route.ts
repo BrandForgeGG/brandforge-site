@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
+import { sendFirstTimeEmail } from '@/lib/first-time-email';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { addCarouselChannel, getUserNotifyTargets, listCarouselChannels, removeCarouselChannel } from '@/lib/project-db';
 import { linkBluesky, linkDiscordWebhook, linkTelegramChannel, type LinkResult } from '@/lib/carousel-channels';
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
     const message = saved.error === 'limit' ? 'You can link up to 10 channels.' : saved.error === 'duplicate' ? 'That channel is already linked.' : 'Could not save that channel. Try again.';
     return NextResponse.json({ error: message }, { status: saved.error === 'failed' ? 500 : 409 });
   }
+  after(() => sendFirstTimeEmail(auth.user.id, auth.user.email, 'first_channel', { label: linked.label }));
   return NextResponse.json({ channel: { id: saved.id, kind: linked.kind, label: linked.label } });
 }
 

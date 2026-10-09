@@ -285,6 +285,77 @@ ${chatUrl || ''}`.trim(),
       };
     }
 
+    case 'first_chat':
+    case 'first_carousel':
+    case 'first_listing':
+    case 'first_channel':
+    case 'whats_new': {
+      // Confirmations of something the person just did, plus the one-time "what is new" note. Each tells
+      // them what happened and offers exactly one next step.
+      const unsub = unsubscribeUrlFrom(details);
+      const site = 'https://brandforge.gg';
+      const url = (value, fallback) => (typeof value === 'string' && /^https:\/\/\S+$/.test(value) ? value : fallback);
+      const label = line(details.title || details.label, 80);
+      const copy = {
+        first_chat: {
+          subject: 'Your first chat is saved',
+          kicker: 'Your first chat',
+          heading: 'Your first chat is saved',
+          paragraphs: [
+            'Your chat is saved to your account, so you can pick it up on any device. Invite a teammate with a link, or ask for a specialist when you want a person to finish the job.',
+          ],
+          cta: ['Open your chat', url(details.chatUrl, site + '/chat')],
+        },
+        first_carousel: {
+          subject: 'Your first carousel is saved',
+          kicker: 'Your first carousel',
+          heading: 'Your first carousel is saved',
+          paragraphs: [
+            label ? `"${label}" is saved to your account.` : 'Your carousel is saved to your account.',
+            'Next, see how it looks as a post on each platform, write a caption for it and post it to a channel you connected.',
+          ],
+          cta: ['Preview and distribute', url(details.distributeUrl, site + '/distribute')],
+        },
+        first_listing: {
+          subject: 'Your listing is live',
+          kicker: 'Trade Center',
+          heading: 'Your listing is live',
+          paragraphs: [
+            label ? `"${label}" is now in the Trade Center.` : 'Your listing is now in the Trade Center.',
+            'When someone messages you, the chat opens here and you will get an email. You can edit or close the listing at any time.',
+          ],
+          cta: ['See your listing', url(details.tradeUrl, site + '/trade')],
+        },
+        first_channel: {
+          subject: 'Your channel is connected',
+          kicker: 'Connected',
+          heading: 'Your channel is connected',
+          paragraphs: [
+            label ? `${label} is connected.` : 'Your channel is connected.',
+            'Any carousel can now be posted there in one tap from Distribute. You can disconnect it at any time in Settings.',
+          ],
+          cta: ['Post a carousel', url(details.distributeUrl, site + '/distribute')],
+        },
+        whats_new: {
+          subject: 'What is new at BrandForge',
+          kicker: 'What is new',
+          heading: 'What is new at BrandForge',
+          paragraphs: [
+            'You joined BrandForge a while ago, so here is what changed. Create is now one thing, done well: type a sentence and get a swipeable carousel with a cover picture painted from your topic, in five styles.',
+            'Distribute shows it as a post on each platform and posts straight to Telegram, Discord or Bluesky. The Trade Center was redrawn, and your connections now live in Settings.',
+            'It is free to make and preview. Sign in to edit and download.',
+          ],
+          cta: ['Make a carousel', site + '/create'],
+        },
+      }[event];
+      const text = [...copy.paragraphs, `${copy.cta[0]}: ${copy.cta[1]}`].join('\n\n');
+      return {
+        subject: copy.subject,
+        text,
+        html: card(copy.kicker, copy.heading, copy.paragraphs, copy.cta[0], copy.cta[1], 'AI drafts. People finish.', unsub, { preheader: copy.paragraphs[0] }),
+      };
+    }
+
     case 'welcome': {
       const chatUrl = typeof details.chatUrl === 'string' && details.chatUrl ? details.chatUrl : '';
       const paragraphs = [

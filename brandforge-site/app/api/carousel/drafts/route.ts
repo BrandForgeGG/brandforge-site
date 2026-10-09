@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
+import { sendFirstTimeEmail } from '@/lib/first-time-email';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { deleteCarousel, listCarousels, saveCarousel } from '@/lib/project-db';
 import { sanitizeDraft } from '@/lib/carousel-draft.js';
@@ -36,6 +37,10 @@ export async function POST(request: NextRequest) {
     if (saved.error === 'not_found') return NextResponse.json({ error: 'That carousel no longer exists.' }, { status: 404 });
     if (saved.error === 'limit') return NextResponse.json({ error: 'You have 100 saved carousels. Delete one to save another.' }, { status: 409 });
     return NextResponse.json({ error: 'Could not save. Try again.' }, { status: 500 });
+  }
+  if (!id) {
+    const headline = String(checked.draft.plan?.cover?.headline ?? '').replace(/\*/g, '');
+    after(() => sendFirstTimeEmail(auth.user.id, auth.user.email, 'first_carousel', { title: headline }));
   }
   return NextResponse.json({ carousel: saved.row });
 }

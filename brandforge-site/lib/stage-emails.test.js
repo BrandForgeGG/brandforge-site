@@ -174,3 +174,14 @@ test('every sequence email builds, is short, links the site and carries the unsu
     assert.ok(body.length < 700, `${event} body is short, got ${body.length}`);
   }
 });
+
+test('first-time confirmations and the what-is-new note build with one next step each', () => {
+  for (const event of ['first_chat', 'first_carousel', 'first_listing', 'first_channel', 'whats_new']) {
+    const email = buildStageEmail(event, { title: 'My <b>thing</b>', label: '@mychannel' });
+    assert.ok(email, `${event} builds`);
+    assert.ok(email.subject.split(' ').length <= 8, `${event} subject is short`);
+    assert.ok(!email.html.includes('<b>thing'), `${event} escapes the title`);
+    assert.ok(!email.html.includes('href=""'), `${event} no empty cta`);
+    assert.ok(email.text.includes('https://brandforge.gg'), `${event} text has a link`);
+  }
+});

@@ -729,3 +729,9 @@ we do not have.
 **Change:** A four-step product-email sequence (day 1 first carousel, day 3 hooks, day 7 plan your week, day 14 check-in), sent once a day to members who opted in, skipped when they already did the thing, one email per person per two days, claimed in the database so nothing sends twice, unsubscribe link and header on each. Ships in dry-run: it reports who is due and sends nothing until LIFECYCLE_ENABLED=true.
 
 **Distribution move:** this is the activation and retention loop itself. Next: ask for opt-in at sign-up with a clearer line, add a one-time "what is new" note for existing members, and read the open and return numbers after a week.
+
+## 2026-10-09 — First-action emails, what-is-new note, opt-in unticked, branded sign-in emails
+
+**Change:** Confirmation emails for the first chat, first saved carousel, first listing and first connected channel (once each, claimed in the database, best effort). One-time "What is new" note for opted-in members who joined before the sequence (manual trigger, reports who would get it). Sign-up opt-in is now unticked with a clearer line. Branded Supabase sign-in and confirm-email templates written for pasting into the dashboard. The 4-step sequence is switched on.
+
+**Distribution move:** the activation loop is now complete from sign-up to first post. Watch return rate and carousel count a week after the first sends; the what-is-new note is the first outreach to existing members.

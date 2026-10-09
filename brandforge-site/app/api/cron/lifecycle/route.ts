@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { runLifecycle } from '@/lib/lifecycle-service';
+import { runBroadcast, runLifecycle } from '@/lib/lifecycle-service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -24,7 +24,10 @@ async function handle(request: NextRequest) {
     const ok = (cron && bearer === `Bearer ${cron}`) || (tick && token && token === tick);
     if (!cron && !tick) return NextResponse.json({ error: 'The scheduler is not configured' }, { status: 503 });
     if (!ok) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    return NextResponse.json(await runLifecycle({ forceDry: request.nextUrl.searchParams.get('dry') === '1' }));
+    const forceDry = request.nextUrl.searchParams.get('dry') === '1';
+    // ?broadcast=whats_new is the one-time note to members who joined before the sequence existed.
+    if (request.nextUrl.searchParams.get('broadcast') === 'whats_new') return NextResponse.json(await runBroadcast('whats_new', { forceDry }));
+    return NextResponse.json(await runLifecycle({ forceDry }));
   } catch (error) {
     console.error('Cron lifecycle error:', error);
     return NextResponse.json({ error: 'Run failed' }, { status: 500 });

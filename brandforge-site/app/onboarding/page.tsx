@@ -43,7 +43,7 @@ export default function OnboardingPage() {
   const nextPathRef = useRef('/chat');
 
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [marketingOptIn, setMarketingOptIn] = useState(true);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -175,7 +175,7 @@ export default function OnboardingPage() {
             onChange={(event) => setMarketingOptIn(event.target.checked)}
             className="mt-0.5 h-4 w-4 accent-[var(--ember)]"
           />
-          <span>Send me product updates. Opt out anytime in Settings.</span>
+          <span>Email me tips for getting started and news about new features. About one a week at most, and one click to stop.</span>
         </label>
 
         {error ? (

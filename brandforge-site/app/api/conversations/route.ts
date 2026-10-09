@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
+import { sendFirstTimeEmail } from '@/lib/first-time-email';
 import {
   addMessage,
   createConversation,
@@ -127,6 +128,8 @@ export async function POST(request: NextRequest) {
     if (!conversationId) {
       return NextResponse.json({ error: 'Failed to create conversation' }, { status: 500 });
     }
+
+    if (!staff) after(() => sendFirstTimeEmail(user.id, user.email, 'first_chat'));
 
     let messageId: string | null = null;
 
