@@ -64,7 +64,7 @@ export async function linkDiscordWebhook(raw: string): Promise<LinkResult> {
   }
 }
 
-async function blueskySession(identifier: string, password: string): Promise<{ did: string; handle: string; accessJwt: string } | null> {
+export async function blueskySession(identifier: string, password: string): Promise<{ did: string; handle: string; accessJwt: string } | null> {
   try {
     const res = await fetch(`${BSKY}/com.atproto.server.createSession`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, password }), signal: AbortSignal.timeout(10000) });
     return res.ok ? ((await res.json()) as { did: string; handle: string; accessJwt: string }) : null;

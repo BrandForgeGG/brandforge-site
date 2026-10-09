@@ -1,15 +1,15 @@
 import { AppShell } from '@/components/app-shell';
-import { DistributePreview } from '@/components/carousel/distribute-preview';
+import { DistributeHub } from '@/components/carousel/distribute-hub';
 
 export const metadata = {
   title: 'Distribute — BrandForge',
-  description: 'See your carousel as a post on each platform, get captions written, and plan when it goes out.',
+  description: 'Carousels, updates, polls, quizzes and threads: write it, see it on each platform, post it to your channels.',
 };
 
 export default function DistributePage() {
   return (
-    <AppShell title="Distribute" subtitle="See it on each platform, get captions, plan when it goes out." wide>
-      <DistributePreview />
+    <AppShell title="Distribute" subtitle="Write it, see it on each platform, post it." wide>
+      <DistributeHub />
     </AppShell>
   );
 }

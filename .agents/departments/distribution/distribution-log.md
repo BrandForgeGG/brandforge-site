@@ -735,3 +735,9 @@ we do not have.
 **Change:** Confirmation emails for the first chat, first saved carousel, first listing and first connected channel (once each, claimed in the database, best effort). One-time "What is new" note for opted-in members who joined before the sequence (manual trigger, reports who would get it). Sign-up opt-in is now unticked with a clearer line. Branded Supabase sign-in and confirm-email templates written for pasting into the dashboard. The 4-step sequence is switched on.
 
 **Distribution move:** the activation loop is now complete from sign-up to first post. Watch return rate and carousel count a week after the first sends; the what-is-new note is the first outreach to existing members.
+
+## 2026-10-09 — Posts beyond the carousel: update, poll, quiz, thread
+
+**Change:** Distribute now has tabs for Carousel, Update, Poll, Quiz and Thread. One sentence gets a first draft; everything is editable; a preview shows Telegram, Discord and Bluesky; posting goes to connected channels. Telegram and Discord polls and quizzes are real polls (Discord quiz hides the answer behind a spoiler), Bluesky gets the question as a post with the answer in a reply, threads are linked posts with working links. Channel picker is shared with the carousel poster.
+
+**Distribution move:** announce "polls, quizzes and threads in one place" in Telegram and Discord; post a poll in our own channel as the example; screenshot note: the same quiz in the three previews. Next in the calendar: rotate polls and threads with carousels.
