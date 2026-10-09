@@ -4,20 +4,19 @@
 // application is accepted. Pure builders (no sending here), same rules as lib/stage-emails.js:
 // user text is escaped, nothing is promised that the product does not do.
 const { escapeHtml, oneLine } = require('./html');
+const { renderCard } = require('./stage-emails');
 
 function steps(items) {
   return items.map((item, i) => `${i + 1}. ${item}`).join('\n');
 }
 
-function shell(heading, paragraphs, stepList, cta) {
-  const p = (text) => `<p style="margin:0 0 14px;line-height:1.55">${text}</p>`;
+function shell(heading, paragraphs, stepList, cta, extraHtml = '') {
+  const p = (text) => `<p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#4a443c;line-height:1.65;margin:0 0 14px">${text}</p>`;
   const list = stepList.length
-    ? `<ol style="margin:0 0 18px;padding-left:20px;line-height:1.6">${stepList.map((s) => `<li>${s}</li>`).join('')}</ol>`
+    ? `<ol style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#4a443c;margin:0 0 18px;padding-left:20px;line-height:1.65">${stepList.map((item) => `<li style="margin-bottom:6px">${item}</li>`).join('')}</ol>`
     : '';
-  const button = cta
-    ? `<p style="margin:22px 0"><a href="${escapeHtml(cta.href)}" style="background:#e8571e;color:#fff;text-decoration:none;padding:11px 18px;border-radius:10px;font-weight:600">${escapeHtml(cta.label)}</a></p>`
-    : '';
-  return `<div style="font-family:Inter,Arial,sans-serif;font-size:15px;color:#1a1816;max-width:520px"><h2 style="font-size:20px;margin:0 0 14px">${escapeHtml(heading)}</h2>${paragraphs.map(p).join('')}${list}${button}</div>`;
+  const raw = paragraphs.map(p).join('') + list + extraHtml;
+  return renderCard('Specialists', heading, [], cta && cta.label, cta && cta.href, 'AI drafts. People finish.', undefined, { rawHtml: raw, preheader: heading });
 }
 
 /**
@@ -46,7 +45,7 @@ function buildSpecialistEmail(kind, details = {}) {
         [hello, 'The BrandForge team invited you to join as a specialist.' + (note ? ` They added: &ldquo;${escapeHtml(note)}&rdquo;` : '')],
         how.map(escapeHtml),
         { href: url, label: 'Sign in and get started' }
-      ).replace('</div>', `<p style="color:#6d6a66;font-size:13px">How we vet and pay specialists: <a href="${escapeHtml(vetting)}">${escapeHtml(vetting)}</a></p></div>`),
+        , `<p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#8a8174;margin:0 0 6px">How we vet and pay specialists: <a href="${escapeHtml(vetting)}" style="color:#8a8174">${escapeHtml(vetting)}</a></p>`),
     };
   }
 
@@ -62,10 +61,7 @@ function buildSpecialistEmail(kind, details = {}) {
     return {
       subject: 'You are in: welcome to BrandForge specialists',
       text: `${hello}\n\nYour application was accepted. Here is how it works from here:\n\n${steps(how)}\n\nOpen your inbox: ${inbox}\nHow we vet and pay specialists: ${vetting}\n`,
-      html: shell('You are in', [hello, 'Your application was accepted. Here is how it works from here:'], how.map(escapeHtml), { href: inbox, label: 'Open your inbox' }).replace(
-        '</div>',
-        `<p style="color:#6d6a66;font-size:13px">How we vet and pay specialists: <a href="${escapeHtml(vetting)}">${escapeHtml(vetting)}</a></p></div>`
-      ),
+      html: shell('You are in', [hello, 'Your application was accepted. Here is how it works from here:'], how.map(escapeHtml), { href: inbox, label: 'Open your inbox' }, `<p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#8a8174;margin:0 0 6px">How we vet and pay specialists: <a href="${escapeHtml(vetting)}" style="color:#8a8174">${escapeHtml(vetting)}</a></p>`),
     };
   }
 

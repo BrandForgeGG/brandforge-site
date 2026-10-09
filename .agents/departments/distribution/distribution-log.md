@@ -717,3 +717,9 @@ we do not have.
 **Change:** Carousel maker takes only your words and starts fresh on refresh (brand, look and closing line stay); every cover is an AI picture made from the topic in five styles (photo, cinematic, 3D render, surreal, drawn) via Cloudflare SDXL, also used by the bots and the weekly calendar. Settings: Notifications merged away, Integrations rebuilt (connected services light up in their own colour, others dashed and grey, approval-gated platforms votable), Distribute posts to ticked channel tiles. Admin: funnel with 24h/7d/30d/all ranges and up/down arrows; AI answers, Discord bot, invite specialist and outbound posts removed. Trade Center redesigned (two doors, category chips, deal diagram). Overview and Features swap screenshots for animated diagrams and a playable look picker.
 
 **Distribution move:** blog entry live ("Covers painted from your topic, and connections that look connected"); announce in Telegram and Discord with a new cover-art carousel as the example; screenshot note: show the five cover styles on one topic and the lit vs dashed integrations side by side.
+
+## 2026-10-09 — Emails redesigned
+
+**Change:** Every transactional email (stage updates, welcome, blueprint saved, specialist invite and acceptance) now uses one branded layout: wordmark, serif heading, a facts table for price/timeline/amount, one bulletproof button with a paste-able fallback link, a hidden preheader, and a slim footer. Plain language replaces "on-chain"/"operator" wording; product-update mail sends the one-click List-Unsubscribe header.
+
+**Distribution move:** screenshot note: show the proposal email next to the chat card; mention in the changelog that founders now get cleaner, shorter deal emails. No outreach needed.

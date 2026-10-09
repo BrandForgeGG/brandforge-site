@@ -9,6 +9,7 @@ export type SendEmailInput = {
   subject: string;
   html: string;
   text?: string;
+  headers?: Record<string, string>;
 };
 
 export type SendEmailResult =
@@ -46,6 +47,7 @@ export async function sendEmail(
       subject: input.subject,
       html: input.html,
       ...(input.text ? { text: input.text } : {}),
+      ...(input.headers ? { headers: input.headers } : {}),
     });
 
     // The SDK has no per-request timeout; never let a hung provider call
@@ -80,8 +82,12 @@ export async function sendStageEmail(
   const template = buildStageEmail(event, details);
   if (!template) return { ok: false, error: 'Unknown stage event', skipped: true };
 
+  // Product-update mail carries the one-click unsubscribe header mail apps look for.
+  const unsubscribe = typeof details.unsubscribeUrl === 'string' && /^https:\/\/\S+$/.test(details.unsubscribeUrl) ? details.unsubscribeUrl : null;
+
   return sendEmail({
     to: recipient,
+    ...(unsubscribe ? { headers: { 'List-Unsubscribe': `<${unsubscribe}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } } : {}),
     subject: template.subject,
     text: template.text,
     html: template.html,

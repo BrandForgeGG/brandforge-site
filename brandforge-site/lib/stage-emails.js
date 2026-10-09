@@ -19,7 +19,6 @@
 const { escapeHtml, oneLine } = require('./html');
 const { formatMoney: money } = require('./format');
 const { COMMUNITY_LINKS } = require('./community');
-const { SOCIAL_LINKS } = require('./social-links');
 
 function line(value, max = 90) {
   return oneLine(String(value ?? ''), max);
@@ -32,18 +31,16 @@ function unsubscribeUrlFrom(details) {
   return /^https:\/\/\S+$/.test(value) ? value : null;
 }
 
-// The compliance footer every email carries: site + policies + community +
-// socials, plus an unsubscribe line when a valid URL was provided.
+// The slim footer every email carries: site, policies and community, plus an unsubscribe line when a
+// valid URL was provided. Short on purpose; the message is the point.
 function footerBlock(unsubscribeUrl) {
   const link = (href, label) =>
-    `<a href="${escapeHtml(href)}" style="color:#8f959b;text-decoration:underline">${escapeHtml(label)}</a>`;
-  const socials = SOCIAL_LINKS.map((social) => link(social.href, social.label)).join(' · ');
+    `<a href="${escapeHtml(href)}" style="color:#8a8174;text-decoration:underline">${escapeHtml(label)}</a>`;
   return `
-        <div style="border-top:1px solid rgba(255,255,255,0.08);margin-top:18px;padding-top:14px;font-family:Arial,sans-serif;font-size:11px;line-height:1.9;color:#8f959b">
-          <p style="margin:0">${link('https://brandforge.gg', 'brandforge.gg')} · ${link('https://brandforge.gg/terms', 'Terms')} · ${link('https://brandforge.gg/privacy', 'Privacy')}</p>
-          <p style="margin:0">${link(COMMUNITY_LINKS.discord.href, COMMUNITY_LINKS.discord.label)} · ${link(COMMUNITY_LINKS.telegramChannel.href, COMMUNITY_LINKS.telegramChannel.label)} · ${socials}</p>
-          ${unsubscribeUrl ? `<p style="margin:6px 0 0">${link(unsubscribeUrl, 'Unsubscribe from product updates')}</p>` : ''}
-        </div>`;
+          <tr><td style="padding:18px 32px 26px;border-top:1px solid #eee6d9;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.8;color:#8a8174">
+            ${link('https://brandforge.gg', 'brandforge.gg')} &middot; ${link('https://brandforge.gg/terms', 'Terms')} &middot; ${link('https://brandforge.gg/privacy', 'Privacy')} &middot; ${link(COMMUNITY_LINKS.discord.href, COMMUNITY_LINKS.discord.label)} &middot; ${link(COMMUNITY_LINKS.telegramChannel.href, COMMUNITY_LINKS.telegramChannel.label)}
+            ${unsubscribeUrl ? `<br>${link(unsubscribeUrl, 'Unsubscribe from product updates')}` : ''}
+          </td></tr>`;
 }
 
 function footerText(unsubscribeUrl) {
@@ -51,41 +48,58 @@ function footerText(unsubscribeUrl) {
     '--',
     'BrandForge · https://brandforge.gg (Terms https://brandforge.gg/terms · Privacy https://brandforge.gg/privacy)',
     `Community ${COMMUNITY_LINKS.discord.href} · ${COMMUNITY_LINKS.telegramChannel.href}`,
-    `Socials ${SOCIAL_LINKS.map((social) => social.href).join(' · ')}`,
   ];
   if (unsubscribeUrl) parts.push(`Unsubscribe: ${unsubscribeUrl}`);
   return parts.join('\n');
 }
 
-// The shared dark card, same shape as the invite email so every message from
-// BrandForge looks like one hand wrote it.
-function card(kicker, heading, paragraphs, ctaLabel, ctaUrl, footer, unsubscribeUrl) {
+// One look for every message from BrandForge: warm paper, a white card, the wordmark, a serif
+// heading, the facts that matter, one orange button. Table layout and inline styles so it holds up
+// in Gmail, Outlook and Apple Mail. `extra.facts` is a list of [label, value] shown as a small table;
+// the hidden preheader is the line mail apps show next to the subject.
+function card(kicker, heading, paragraphs, ctaLabel, ctaUrl, footer, unsubscribeUrl, extra = {}) {
   const body = paragraphs
     .map(
       (p) =>
-        `<p style="font-family:Arial,sans-serif;font-size:14px;color:#9aa0a6;line-height:1.6;margin:0 0 12px">${escapeHtml(p)}</p>`
+        `<p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#4a443c;line-height:1.65;margin:0 0 14px">${escapeHtml(p)}</p>`
     )
     .join('');
+  const facts = (extra.facts || []).filter(([, value]) => value);
+  const factsHtml = facts.length
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:6px 0 18px;border:1px solid #eee6d9;border-radius:12px;background:#faf6ef">${facts
+        .map(
+          ([label, value], i) =>
+            `<tr><td style="padding:10px 16px;${i ? 'border-top:1px solid #eee6d9;' : ''}font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#8a8174;text-transform:uppercase;letter-spacing:0.08em">${escapeHtml(label)}</td><td align="right" style="padding:10px 16px;${i ? 'border-top:1px solid #eee6d9;' : ''}font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#1a1816">${escapeHtml(value)}</td></tr>`
+        )
+        .join('')}</table>`
+    : '';
   const cta =
     ctaLabel && ctaUrl
-      ? `<a href="${escapeHtml(ctaUrl)}" style="display:inline-block;background:#e8571e;color:#14171a;font-family:Arial,sans-serif;font-weight:bold;font-size:14px;padding:12px 20px;border-radius:8px;text-decoration:none">${escapeHtml(ctaLabel)}</a>`
+      ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 6px"><tr><td bgcolor="#e8571e" style="border-radius:10px"><a href="${escapeHtml(ctaUrl)}" style="display:inline-block;font-family:Arial,Helvetica,sans-serif;font-weight:bold;font-size:15px;color:#ffffff;padding:13px 24px;border-radius:10px;text-decoration:none">${escapeHtml(ctaLabel)}</a></td></tr></table>
+         <p style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#8a8174;line-height:1.5;margin:8px 0 0;word-break:break-all">Button not working? Paste this into your browser: <span style="color:#4a443c">${escapeHtml(ctaUrl)}</span></p>`
       : '';
-  const signoff =
-    footer ||
-    'This is your project on BrandForge — everything lives in the chat.';
+  const signoff = footer || 'This is your project on BrandForge. Everything lives in the chat.';
+  const preheader = escapeHtml(String(extra.preheader || paragraphs[0] || '').slice(0, 110));
   return `
-    <div style="background:#14171a;padding:32px;font-family:Georgia,serif">
-      <div style="max-width:520px;margin:0 auto;background:#1c2024;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:32px">
-        <p style="color:#e8571e;text-transform:uppercase;letter-spacing:0.18em;font-size:11px;margin:0 0 16px">BrandForge</p>
-        <h1 style="font-size:20px;color:#ece7de;margin:0 0 12px;font-weight:600">${escapeHtml(heading)}</h1>
-        ${body}
-        ${cta}
-        <p style="font-family:Arial,sans-serif;font-size:12px;color:#8f959b;margin:20px 0 0">
-          ${escapeHtml(signoff)}
-        </p>
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;font-size:1px;line-height:1px">${preheader}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f6f1e9" style="background:#f6f1e9"><tr><td align="center" style="padding:28px 12px">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border:1px solid #e7dfd2;border-radius:16px">
+        <tr><td style="padding:26px 32px 0">
+          <span style="font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:bold;color:#1a1816;letter-spacing:-0.01em">Brand<span style="color:#e8571e">Forge</span></span>
+        </td></tr>
+        <tr><td style="padding:22px 32px 0">
+          <p style="font-family:Arial,Helvetica,sans-serif;color:#e8571e;text-transform:uppercase;letter-spacing:0.16em;font-size:11px;font-weight:bold;margin:0 0 10px">${escapeHtml(kicker)}</p>
+          <h1 style="font-family:Georgia,'Times New Roman',serif;font-size:26px;line-height:1.2;color:#1a1816;margin:0 0 16px;font-weight:bold;letter-spacing:-0.01em">${escapeHtml(heading)}</h1>
+          ${body}
+          ${extra.rawHtml || ''}
+          ${factsHtml}
+          ${cta}
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#8a8174;margin:22px 0 0">${escapeHtml(signoff)}</p>
+        </td></tr>
+        <tr><td style="height:22px;font-size:0;line-height:0">&nbsp;</td></tr>
         ${footerBlock(unsubscribeUrl)}
-      </div>
-    </div>`;
+      </table>
+    </td></tr></table>`;
 }
 
 function buildCore(event, details = {}) {
@@ -105,7 +119,7 @@ function buildCore(event, details = {}) {
           : 'BrandForge sent you a proposal.',
         facts ? `${facts}. Read the full scope in the chat, then accept, decline or ask for changes.` : 'Read it in the chat, then accept, decline or ask for changes.',
       ];
-      return { subject, text: `${paragraphs.join('\n\n')}\n\n${chatUrl || ''}`.trim(), html: card('Proposal', 'Your proposal is ready', paragraphs, open, chatUrl) };
+      return { subject, text: `${paragraphs.join('\n\n')}\n\n${chatUrl || ''}`.trim(), html: card('Proposal', 'Your proposal is ready', facts ? [paragraphs[0], 'Read the full scope in the chat, then accept, decline or ask for changes.'] : paragraphs, open, chatUrl, undefined, undefined, { facts: [['Price', price], ['Timeline', weeks]], preheader: title ? `${title}: ${facts}` : facts }) };
     }
 
     case 'counter_back_ready': {
@@ -121,7 +135,7 @@ function buildCore(event, details = {}) {
           ? `${facts}. This is the final offer: accept it or decline in the chat and the deal closes.`
           : 'This is the final offer: accept it or decline in the chat and the deal closes.',
       ];
-      return { subject, text: `${paragraphs.join('\n\n')}\n\n${chatUrl || ''}`.trim(), html: card('Proposal', 'Counter offer received', paragraphs, open, chatUrl) };
+      return { subject, text: `${paragraphs.join('\n\n')}\n\n${chatUrl || ''}`.trim(), html: card('Proposal', 'Counter offer received', facts ? [paragraphs[0], 'This is the final offer: accept it or decline in the chat and the deal closes.'] : paragraphs, open, chatUrl, undefined, undefined, { facts: [['Price', price], ['Timeline', weeks]] }) };
     }
 
     case 'contract_accepted':
@@ -129,7 +143,7 @@ function buildCore(event, details = {}) {
       if (details.side !== 'team') return null;
       {
         const paragraphs = [
-          'The BrandForge team accepted the contract terms. Accept it in the chat to complete signing — the project starts once both sides have signed.',
+          'The team accepted the contract terms. Accept it in the chat to finish signing. The project starts once both sides have signed.',
         ];
         return {
           subject: 'The team accepted your contract',
@@ -140,7 +154,7 @@ function buildCore(event, details = {}) {
 
     case 'contract_signed': {
       const paragraphs = [
-        'Both sides signed the contract. Fund escrow when you are ready — work starts once the transfer clears on-chain.',
+        'Both sides signed the contract. Fund the escrow when you are ready. Work starts as soon as the transfer is confirmed.',
       ];
       return {
         subject: 'Contract signed — ready to fund',
@@ -151,7 +165,7 @@ function buildCore(event, details = {}) {
 
     case 'funding_verified': {
       const paragraphs = [
-        'Your transfer cleared on-chain. The project is funded and the team has started delivery — milestones will land in the chat for your approval.',
+        'Your transfer is confirmed. The project is funded and the team has started. Each milestone lands in the chat for your approval.',
       ];
       return {
         subject: 'Funding verified — work has started',
@@ -177,7 +191,7 @@ function buildCore(event, details = {}) {
     case 'milestone_ready': {
       const paragraphs = [
         title
-          ? `The team delivered "${title}". Review it in the chat — approving it releases the milestone payment.`
+          ? `The team delivered "${title}". Review it in the chat. Approving it releases the milestone payment.`
           : 'The team delivered work that is waiting for your approval in the chat.',
       ];
       return {
@@ -191,13 +205,13 @@ function buildCore(event, details = {}) {
       const price = money(details.amount, details.currency);
       const paragraphs = [
         price
-          ? `${price} for "${title || 'the milestone'}" has been released to the operator. This milestone's escrow loop is complete.`
-          : `The payment for "${title || 'the milestone'}" has been released to the operator.`,
+          ? `${price} for "${title || 'the milestone'}" has been released to the specialist. That milestone is done.`
+          : `The payment for "${title || 'the milestone'}" has been released to the specialist.`,
       ];
       return {
         subject: title ? `Payment released: ${title}` : 'Payment released',
         text: `${paragraphs[0]}\n\n${chatUrl || ''}`.trim(),
-        html: card('Escrow', 'Payment released', paragraphs, open, chatUrl),
+        html: card('Escrow', 'Payment released', paragraphs, open, chatUrl, undefined, undefined, { facts: [['Amount', price], ['Milestone', title]] }),
       };
     }
 
@@ -217,8 +231,8 @@ ${chatUrl || ''}`.trim(),
     case 'welcome': {
       const chatUrl = typeof details.chatUrl === 'string' && details.chatUrl ? details.chatUrl : '';
       const paragraphs = [
-        'You are in. Open BrandForge and describe an idea, paste a URL or drop a file. The first answer is a researched plan, not a list of questions.',
-        'Bring your team into any chat with a link, and use the Trade Center to hire or get hired. Creating and distributing is free; a flat 5% applies only when a contract milestone is paid.',
+        'You are in. Describe an idea in the chat and the first answer is a plan, not a list of questions. Or open Create and turn one sentence into a swipeable carousel.',
+        'Invite your team into any chat with a link, and use the Trade Center to hire or get hired. Making and posting is free. A flat 5% applies only when a contract milestone is paid.',
       ];
       const subject = 'Welcome to BrandForge';
       return {
@@ -282,4 +296,4 @@ function buildStageEmail(event, details = {}) {
   return { ...built, text: `${built.text}\n\n${footerText(unsubscribeUrl)}`.trim() };
 }
 
-module.exports = { buildStageEmail };
+module.exports = { buildStageEmail, renderCard: card };
