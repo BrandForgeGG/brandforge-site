@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
+import { readChatSilently } from '@/lib/silent-reader';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
-import { addMessage, canAccessConversation, getConversationOwnerSession, getProfileDisplayName, runAsGuestSession } from '@/lib/project-db';
+import { addMessage, canAccessConversation, getConversationOwnerSession, getProfileDisplayName, isConversationAiEnabled, runAsGuestSession } from '@/lib/project-db';
 import { resolveGuestSession } from '@/lib/guest-session';
 import { screenText } from '@/lib/content-policy.js';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -43,5 +44,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     });
   const messageId = guest ? await runAsGuestSession(guest.sessionId, write) : await write();
   if (!messageId) return NextResponse.json({ error: 'Your message could not be sent.' }, { status: 500 });
+  // With the AI paused it does not answer, but it still reads this to keep the project panel up to date.
+  if (!(await isConversationAiEnabled(id))) {
+    after(async () => {
+      const read = () => readChatSilently(id, { ownerId: user?.id, guest: Boolean(guest) });
+      await (guest ? runAsGuestSession(guest.sessionId, read) : read()).catch(() => 0);
+    });
+  }
   return NextResponse.json({ messageId });
 }

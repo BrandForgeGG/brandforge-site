@@ -70,7 +70,7 @@ export function useConversationPresence(
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           const current = identityRef.current;
-          void channel.track({ ...current, typing: false });
+          void channel.track({ ...current, userId, typing: false });
         }
       });
 
@@ -82,8 +82,8 @@ export function useConversationPresence(
 
   useEffect(() => {
     if (!channelRef.current) return;
-    void channelRef.current.track({ ...identityRef.current, typing });
-  }, [typing]);
+    void channelRef.current.track({ ...identityRef.current, userId, typing });
+  }, [typing, userId]);
 
   return presence;
 }

@@ -32,6 +32,7 @@ import {
   syncDiscoveryCompleteness,
 } from "@/lib/conversation-state";
 import { executeTool } from "@/lib/ai-tools";
+import { readChatSilently } from "@/lib/silent-reader";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { screenText } from "@/lib/content-policy.js";
 
@@ -369,6 +370,8 @@ export async function POST(request: NextRequest) {
   });
   const aiEnabled = convData?.ai_enabled !== false;
   if (!aiEnabled) {
+    // The AI stays quiet in the chat but still reads along, so the project panel keeps filling in.
+    await scope(() => readChatSilently(conversationId, { ownerId: user?.id, guest: Boolean(guest) })).catch(() => 0);
     return NextResponse.json(
       { error: "The AI is paused in this chat. Your message was sent to the people in it.", code: "ai_paused" },
       { status: 409 },

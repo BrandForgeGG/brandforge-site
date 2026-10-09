@@ -837,3 +837,9 @@ we do not have.
 **Change:** (1) Accept and decline relied on the admin's session reaching the database and failed silently; they now run as server-checked admin actions, results show in a visible banner, and the exact steps were proven on a throwaway user and application. (2) Admins can give any member a role (Member, Specialist, Admin) from People, Members and roles; admin grants and removals ask first, you cannot change your own role, the last admin cannot be demoted. (3) With the AI paused, sending a message just sends it to the people in the chat, with the composer saying "Message the team", and a chat paused in another tab never shows an error. Works for guests too.
 
 **Distribution move:** none; internal. The admin can now promote specialists in two clicks, which unblocks onboarding the first real operators.
+
+## 2026-10-10 — "BR is typing" was you; the AI reads along while paused; a better project panel
+
+**Change:** (1) The typing signal never carried the person's id, so the page could not tell it was the same person and showed your own typing back to you as "BR is typing…" (and "who else is here" could never work). It now carries the id; typing names show in full. (2) With the AI paused it stays quiet in the chat but still reads what people say and keeps the project panel filling in (goal, who it is for, requirements, open questions) through a small token-capped pass, for owners and guests, in chat and when people use the paused-chat message box. (3) The right project panel: Next step first, About (goal, who it is for, platforms), Still to answer (open questions), Captured so far, then the rest; the header and Team show whether the AI is on or paused and still reading.
+
+**Distribution move:** none; internal.

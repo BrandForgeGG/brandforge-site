@@ -1435,7 +1435,7 @@ export function ChatTranscript({
           <p className="bf-streaming-state" role="status">
             <span className="bf-streaming-dot" aria-hidden="true" />
             {typingNames.length === 1
-              ? `${initialsFor(typingNames[0])} is typing…`
+              ? `${typingNames[0]} is typing…`
               : `${typingNames.length} people are typing…`}
           </p>
         </div>

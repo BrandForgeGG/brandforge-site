@@ -98,6 +98,7 @@ export function ProjectContextPanel({
   isStaff,
   participants,
   files,
+  aiEnabled = true,
   onClose,
   onRequestReview,
   onSubmitPayment,
@@ -114,6 +115,8 @@ export function ProjectContextPanel({
   isStaff: boolean;
   participants: TaskParticipant[];
   files: { name: string; size: number; contentType: string; path: string }[];
+  /** False while the owner has paused the AI. The AI still reads along to keep this panel up to date. */
+  aiEnabled?: boolean;
   onClose: () => void;
   onRequestReview: () => void;
   onSubmitPayment: (txHash: string) => void;
@@ -228,7 +231,10 @@ export function ProjectContextPanel({
     <aside className="fixed inset-y-0 right-0 z-40 flex w-80 max-w-[85vw] shrink-0 flex-col border-l border-line bg-deep shadow-2xl xl:sticky xl:top-0 xl:z-auto xl:h-screen xl:max-w-none xl:shadow-none">
       <div className="bf-panel-header flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs uppercase tracking-[0.2em] text-copper">Project</p>
+          <p className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-copper">
+            Project
+            <span className={`rounded-full border px-1.5 py-px text-[9px] normal-case tracking-normal ${aiEnabled ? 'border-line text-muted' : 'border-ember/50 text-ember'}`}>{aiEnabled ? 'AI on' : 'AI paused'}</span>
+          </p>
           <h2 className="mt-1 truncate font-serif text-lg text-foreground">
             {state?.project.name || state?.title || 'New project'}
           </h2>
@@ -245,26 +251,54 @@ export function ProjectContextPanel({
 
       <div className="flex-1 overflow-y-auto p-4">
         <div className="bf-panel-section">
-          <p className="bf-section-label">Goal</p>
-          <p className="text-sm leading-relaxed text-foreground">
-            {state?.project.problemStatement || outline?.goal || 'Define what you want to achieve in the chat.'}
-          </p>
+          <p className="bf-section-label">Next</p>
+          <div className="bf-panel-card bf-panel-card-emphasis">
+            <p className="text-sm leading-relaxed text-foreground">{nextStepLabel}</p>
+          </div>
         </div>
 
         <div className="bf-panel-section">
-          <p className="bf-section-label">We have</p>
-          <div className="bf-panel-card">
-            {haveItems.length > 0 ? (
-              <p className="text-xs leading-relaxed text-muted">
-                {haveItems.join(' · ')}
-              </p>
-            ) : outline && outline.sections.length === 0 ? (
-              <p className="text-xs text-muted">Working on it in the chat.</p>
-            ) : !outline ? (
-              <p className="text-xs text-muted">Nothing yet — start the conversation.</p>
-            ) : null}
-          </div>
+          <p className="bf-section-label">About</p>
+          <p className="text-sm leading-relaxed text-foreground">
+            {state?.project.problemStatement || outline?.goal || 'Define what you want to achieve in the chat.'}
+          </p>
+          {state && (state.project.targetUsers.length > 0 || state.project.platforms.length > 0) ? (
+            <dl className="mt-2 space-y-1.5 text-xs">
+              {state.project.targetUsers.length > 0 ? (
+                <div className="flex gap-2"><dt className="w-12 shrink-0 text-muted">For</dt><dd className="text-foreground">{state.project.targetUsers.slice(0, 4).join(', ')}</dd></div>
+              ) : null}
+              {state.project.platforms.length > 0 ? (
+                <div className="flex gap-2"><dt className="w-12 shrink-0 text-muted">On</dt><dd className="text-foreground">{state.project.platforms.slice(0, 4).join(', ')}</dd></div>
+              ) : null}
+            </dl>
+          ) : null}
         </div>
+
+        {state && state.openQuestions.length > 0 ? (
+          <div className="bf-panel-section">
+            <p className="bf-section-label">Still to answer</p>
+            <ul className="bf-panel-card space-y-1.5">
+              {state.openQuestions.slice(0, 4).map((question) => (
+                <li key={question.id} className="flex gap-2 text-xs leading-snug text-foreground">
+                  <span aria-hidden="true" className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-ember" />
+                  <span>{question.title}</span>
+                </li>
+              ))}
+              {state.openQuestions.length > 4 ? <li className="text-[11px] text-muted">and {state.openQuestions.length - 4} more</li> : null}
+            </ul>
+          </div>
+        ) : null}
+
+        {haveItems.length > 0 ? (
+          <div className="bf-panel-section">
+            <p className="bf-section-label">Captured so far</p>
+            <ul className="flex flex-wrap gap-1.5">
+              {haveItems.map((item) => (
+                <li key={item} className="rounded-full border border-line px-2.5 py-1 text-[11px] text-muted">{item}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         {outline && outline.sections.length > 0 ? (
           <div className="bf-panel-section">
@@ -282,13 +316,6 @@ export function ProjectContextPanel({
             </ul>
           </div>
         ) : null}
-
-        <div className="bf-panel-section">
-          <p className="bf-section-label">Next</p>
-          <div className="bf-panel-card bf-panel-card-emphasis">
-            <p className="text-sm leading-relaxed text-foreground">{nextStepLabel}</p>
-          </div>
-        </div>
 
         {taskProgress && state ? (
           <div className="bf-panel-section">
@@ -398,7 +425,10 @@ export function ProjectContextPanel({
             <ul className="space-y-2">
               <li className="flex items-center gap-2">
                 <span className="bf-stack-item bf-stack-ai" aria-hidden="true">B</span>
-                <span className="text-xs text-foreground">BrandForge AI</span>
+                <span className="min-w-0">
+                  <span className="block text-xs text-foreground">BrandForge AI</span>
+                  <span className="block text-[10px] uppercase tracking-[0.14em] text-muted">{aiEnabled ? 'Answering' : 'Paused, still reading'}</span>
+                </span>
               </li>
               {participants.map((person) => (
                 <li key={person.userId} className="flex items-center gap-2">

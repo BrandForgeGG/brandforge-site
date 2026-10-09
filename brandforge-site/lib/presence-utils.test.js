@@ -70,3 +70,9 @@ test('staff counting and typing labels', () => {
   assert.equal(formatTypingLabel(['Ada', 'Bo']), 'Ada and Bo are typing…');
   assert.equal(formatTypingLabel(['Ada', 'Bo', 'Cy']), 'Ada and 2 others are typing…');
 });
+
+test('typing never includes the person typing: the tracked state carries their user id', () => {
+  const state = { a: [{ userId: 'me', name: 'Me', typing: true }], b: [{ userId: 'other', name: 'Sam', typing: true }] };
+  assert.deepEqual(shapeTypingState(state, 'me'), ['Sam']);
+  assert.deepEqual(shapePresenceState({ a: [{ userId: 'me', name: 'Me' }], b: [{ userId: 'other', name: 'Sam' }] }, { userId: 'me', name: 'Me', staff: false }).map((v) => v.name), ['Sam']);
+});

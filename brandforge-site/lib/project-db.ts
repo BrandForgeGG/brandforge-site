@@ -5745,3 +5745,11 @@ export async function setMemberRole(adminId: string, userId: string, role: 'user
   }
   return 'ok';
 }
+
+// Whether the AI is switched on for a chat (it is unless the owner paused it).
+export async function isConversationAiEnabled(conversationId: string): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return true;
+  const { data } = await admin.from('conversations').select('ai_enabled').eq('id', conversationId).maybeSingle();
+  return (data as { ai_enabled?: boolean | null } | null)?.ai_enabled !== false;
+}

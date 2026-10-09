@@ -3058,6 +3058,7 @@ return (
           isStaff={railMeta.isStaff && !isOwnConversation}
           participants={taskParticipants}
           files={conversationFiles}
+          aiEnabled={aiEnabled}
           onClose={() => setIsContextOpen(false)}
           onRequestReview={() => {
             void handleRequestReview();
