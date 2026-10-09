@@ -825,3 +825,9 @@ we do not have.
 **Change:** (1) "Could not pause the AI": the pause route never passed the request to the sign-in check, so refreshed sessions and guests were refused; it now checks the owner with the service role and guests can pause their own chat. (2) Numbered answers showed 1. 1. 1.; items split by blank lines now stay one list. (3) Optimize is no longer a placeholder: audit any page (opens the chat with the audit ready), sharpen your own hook/caption/headline/ad into three stronger versions with the reason (never adds claims), and a blurred "what worked on your channels" card that says plainly it needs a platform to read results. (4) Sidebar recents: grouped Today / Yesterday / Previous 7 and 30 days, search once there are more than five chats, the time on each row and an "AI paused" mark. (5) Admin: tabs (Overview, People, Money, Chats, Content) with counts on the ones that need action, a "Needs you" strip, and a Dashboard link in the sidebar.
 
 **Distribution move:** Optimize now has two genuinely free tools worth a post each ("audit your page", "three sharper versions of your hook"). Add both to the launch kit.
+
+## 2026-10-10 — Pausing the AI actually works now
+
+**Change:** The conversations.ai_enabled column from migration 0024 was missing in production (the notes said applied; a column probe proved otherwise), so every pause and resume failed with "Could not pause the AI". Applied it. Verified on production as a guest: pause 200, resume 200, value read back. Lesson: probe the column, do not trust the log.
+
+**Distribution move:** none; fix. The headline feature "tell the AI to stop and call the team" is now genuinely live.
