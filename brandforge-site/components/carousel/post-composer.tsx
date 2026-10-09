@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react';
 import { trackEvent } from '@/lib/funnel-client';
 import { ChannelPicker } from '@/components/integrations/channel-picker';
-import { LIMITS, TYPES, blueskyPosts, normalizePost, telegramHtml, type Post, type PostType } from '@/lib/post-types.js';
+import { LIMITS, TYPES, blueskyPosts, normalizePost, stripMarkup, telegramHtml, type Post, type PostType } from '@/lib/post-types.js';
+import type { ChannelKind } from '@/components/integrations/use-channels';
 
 const field = 'w-full rounded-xl border border-line bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none';
 const btn = 'rounded-xl border border-line px-3.5 py-2 text-sm text-foreground transition hover:border-ember disabled:opacity-50';
@@ -31,15 +32,23 @@ function fromPost(post: Post, current: Fields): Fields {
 
 // Previews are close to what each platform shows, not exact: Telegram renders the formatting, Discord
 // shows an embed or a poll, and Bluesky shows plain posts (it has no polls, so a question is a post).
-function Preview({ post }: { post: Post }) {
+function Preview({ post, only }: { post: Post; only?: ChannelKind }) {
   const bsky = blueskyPosts(post);
+  const want = (kind: ChannelKind) => !only || only === kind;
+  const plain = post.type === 'update' ? stripMarkup(post.text) : post.type === 'thread' ? post.parts.map((p, i) => `${i + 1}/${post.parts.length} ${stripMarkup(p)}`).join('\n\n') : `${post.question}\n\n${post.options.map((o, i) => `${i + 1}. ${o}`).join('\n')}${post.type === 'quiz' ? `\n\nAnswer: ${post.correct + 1}` : ''}`;
   const telegram =
     post.type === 'poll' || post.type === 'quiz' ? null : post.type === 'thread' ? post.parts.map((p, i) => `**${i + 1}/${post.parts.length}** ${p}`).join('\n\n') : post.text;
   const shell = 'rounded-xl border border-line bg-background p-3 text-sm text-foreground';
   const label = 'mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted';
   return (
-    <div className="grid gap-3 md:grid-cols-3">
-      <div>
+    <div className={`grid gap-3 ${only ? '' : 'md:grid-cols-3'}`}>
+      {only === 'slack' || only === 'tumblr' ? (
+        <div>
+          <p className={label}>{only === 'slack' ? 'Slack' : 'Tumblr'}</p>
+          <div className={shell}><p className="whitespace-pre-wrap break-words">{plain}</p></div>
+        </div>
+      ) : null}
+      <div className={want('telegram') && only !== 'slack' && only !== 'tumblr' ? '' : 'hidden'}>
         <p className={label}>Telegram</p>
         <div className={shell}>
           {telegram !== null ? (
@@ -57,7 +66,7 @@ function Preview({ post }: { post: Post }) {
           )}
         </div>
       </div>
-      <div>
+      <div className={want('discord') && only !== 'slack' && only !== 'tumblr' ? '' : 'hidden'}>
         <p className={label}>Discord</p>
         <div className={`${shell} border-l-4 border-l-ember`}>
           {post.type === 'poll' || post.type === 'quiz' ? (
@@ -75,7 +84,7 @@ function Preview({ post }: { post: Post }) {
           )}
         </div>
       </div>
-      <div>
+      <div className={want('bluesky') && only !== 'slack' && only !== 'tumblr' ? '' : 'hidden'}>
         <p className={label}>Bluesky{bsky.length > 1 ? ` · ${bsky.length} posts` : ''}</p>
         <div className="space-y-2">
           {bsky.slice(0, 3).map((p, i) => (
@@ -91,7 +100,7 @@ function Preview({ post }: { post: Post }) {
 // Writes and posts the text-first post types: an update, a poll, a quiz or a thread. One sentence gets a
 // first draft; everything stays editable; the preview shows each platform; posting goes to the channels
 // the person connected.
-export function PostComposer({ type, signedIn, onSignIn }: { type: PostType; signedIn: boolean | null; onSignIn: () => void }) {
+export function PostComposer({ type, platform, signedIn, onSignIn }: { type: PostType; platform?: ChannelKind; signedIn: boolean | null; onSignIn: () => void }) {
   const [fields, setFields] = useState<Fields>(EMPTY);
   const [topic, setTopic] = useState('');
   const [chosen, setChosen] = useState<Record<string, boolean>>({});
@@ -210,7 +219,7 @@ export function PostComposer({ type, signedIn, onSignIn }: { type: PostType; sig
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">How it looks</p>
           <div className="mt-2">
-            {checked.ok ? <Preview post={checked.post} /> : <p className="rounded-xl border border-dashed border-line p-4 text-sm text-muted">{checked.error}</p>}
+            {checked.ok ? <Preview post={checked.post} only={platform} /> : <p className="rounded-xl border border-dashed border-line p-4 text-sm text-muted">{checked.error}</p>}
           </div>
         </div>
 
@@ -221,7 +230,7 @@ export function PostComposer({ type, signedIn, onSignIn }: { type: PostType; sig
             <button type="button" className={btnPrimary} onClick={onSignIn}>Sign in to post</button>
           ) : (
             <>
-              <ChannelPicker value={chosen} onChange={setChosen} onNote={(text) => setNote({ tone: 'ok', text })} />
+              <ChannelPicker kinds={platform ? [platform] : undefined} value={chosen} onChange={setChosen} onNote={(text) => setNote({ tone: 'ok', text })} />
               <button type="button" className={`${btnPrimary} mt-4`} disabled={busy !== null || !checked.ok || picked.length === 0} onClick={() => void post()}>
                 {busy === 'post' ? 'Posting…' : picked.length === 0 ? 'Tick a channel to post' : `Post to ${picked.length} channel${picked.length === 1 ? '' : 's'}`}
               </button>

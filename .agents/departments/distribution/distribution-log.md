@@ -753,3 +753,9 @@ we do not have.
 **Change:** Create now shows only the carousel maker (no "soon" cards, no locked Videos tab). Distribute shows only the carousel flow; the update/poll/quiz/thread composer is built but hidden until wanted. Added /data-deletion (required by platform reviews) and `.agents/departments/distribution/platform-approvals.md` with the shared description, permission table, screen-recording script and apply order for Meta, TikTok, LinkedIn, Pinterest, YouTube and Google Business.
 
 **Distribution move:** none public yet. Once Meta or LinkedIn approve, announce "post straight to Instagram and LinkedIn" with the recording as the demo.
+
+## 2026-10-09 — Format catalog in the UI
+
+**Change:** The full list of formats (46) is now in the product, by platform, each with an honest status: Live (opens its tool), Almost ready, Waiting for approval, Not built yet. Default view is "Live now", with "Show everything" for the rest and an "I want this" vote on every unbuilt format (counted as create_interest, so demand picks what gets built next). Distribute opens the live ones as platform-named tools (Telegram poll, Telegram quiz, Discord poll and embed, Slack message, Bluesky thread) and the carousel; Create shows the visual and video formats under the maker. Replaces the generic Update/Poll/Quiz/Thread tabs.
+
+**Distribution move:** the "I want this" counts are the build order; review them weekly. Use the live list as the launch post ("what you can post today").
