@@ -360,6 +360,9 @@ export function ChatWorkspace() {
   const stickToBottomRef = useRef(true);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
 
+  // The last position we saw, so a scroll event can be told apart: the reader moving up (unstick), or the
+  // page simply growing under a streamed answer (never unstick, or the view would fight itself).
+  const lastScrollRef = useRef({ top: 0, height: 0 });
   const handleTranscriptScroll = useCallback(() => {
     const node = scrollerRef.current;
 
@@ -367,12 +370,54 @@ export function ChatWorkspace() {
       return;
     }
 
-    const atEnd = isNearBottom(node);
-    stickToBottomRef.current = atEnd;
-    if (atEnd) {
+    const previous = lastScrollRef.current;
+    const movedUp = node.scrollTop < previous.top - 3;
+    const grewOrSame = node.scrollHeight >= previous.height;
+    lastScrollRef.current = { top: node.scrollTop, height: node.scrollHeight };
+
+    if (isNearBottom(node)) {
+      stickToBottomRef.current = true;
       setShowJumpToLatest(false);
+    } else if (movedUp && grewOrSame) {
+      stickToBottomRef.current = false;
     }
   }, []);
+
+  // One pin per frame, however many tokens or layout changes ask for it: this is what keeps a streaming
+  // answer from bumping up and down.
+  const pinFrameRef = useRef(0);
+  const pinToBottom = useCallback(() => {
+    if (pinFrameRef.current) return;
+    pinFrameRef.current = requestAnimationFrame(() => {
+      pinFrameRef.current = 0;
+      const node = scrollerRef.current;
+      if (node) {
+        node.scrollTop = node.scrollHeight;
+        lastScrollRef.current = { top: node.scrollTop, height: node.scrollHeight };
+      }
+    });
+  }, []);
+
+  // Anything inside the transcript changing height (tokens, the thinking strip, images, the saved answer
+  // replacing the streamed one) re-pins once, after layout, while the reader is at the end.
+  useEffect(() => {
+    const node = scrollerRef.current;
+    if (!node || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      if (stickToBottomRef.current) pinToBottom();
+    });
+    const watch = () => {
+      observer.disconnect();
+      for (const child of Array.from(node.children)) observer.observe(child);
+    };
+    watch();
+    const mutations = new MutationObserver(watch);
+    mutations.observe(node, { childList: true });
+    return () => {
+      observer.disconnect();
+      mutations.disconnect();
+    };
+  }, [conversationId, isBooting, pinToBottom]);
 
   // force = the reader sent a message or opened a chat, so the newest row must come into view
   // even if they were reading something older.
@@ -384,13 +429,8 @@ export function ChatWorkspace() {
 
     stickToBottomRef.current = true;
     setShowJumpToLatest(false);
-    requestAnimationFrame(() => {
-      const node = scrollerRef.current;
-      if (node) {
-        node.scrollTop = node.scrollHeight;
-      }
-    });
-  }, []);
+    pinToBottom();
+  }, [pinToBottom]);
 
   // Rows already rendered, so a pushed row can never duplicate one the poll just delivered.
   const seenMessageIdsRef = useRef<Set<string>>(new Set());
@@ -818,6 +858,18 @@ export function ChatWorkspace() {
       scrollToBottom(true);
 
       let streamedText = "";
+      // Tokens arrive far faster than a screen can show them: apply what has arrived once per frame.
+      let flushQueued = false;
+      let streamClosed = false;
+      const flushStreamed = () => {
+        flushQueued = false;
+        if (streamClosed) return;
+        const text = streamedText;
+        setMessages((prev) =>
+          prev.map((entry) => (entry.id === assistantMessageId ? { ...entry, content: text } : entry)),
+        );
+        scrollToBottom();
+      };
       let succeeded = false;
       // Real activity labels streamed by the server for steps that actually ran this turn.
       const turnThoughts: string[] = [];
@@ -910,19 +962,15 @@ export function ChatWorkspace() {
               typeof payload.chunk === "string"
             ) {
               streamedText += payload.chunk;
-              setMessages((prev) =>
-                prev.map((entry) =>
-                  entry.id === assistantMessageId
-                    ? { ...entry, content: streamedText }
-                    : entry,
-                ),
-              );
-              // Conditional on purpose: never pull a reader back down mid-answer.
-              scrollToBottom();
+              if (!flushQueued) {
+                flushQueued = true;
+                requestAnimationFrame(flushStreamed);
+              }
             } else if (payload.type === "discard") {
               // Tool-round scaffolding text the server retracted: it was never saved, so
               // showing it would make the live transcript disagree with the database.
               streamedText = "";
+              flushQueued = false;
               setMessages((prev) =>
                 prev.map((entry) =>
                   entry.id === assistantMessageId
@@ -940,6 +988,7 @@ export function ChatWorkspace() {
           }
         }
 
+        streamClosed = true;
         succeeded = true;
         await refreshMessages(id);
         await loadRecents();
@@ -959,6 +1008,7 @@ export function ChatWorkspace() {
           });
         }
       } catch (cause) {
+        streamClosed = true;
         if (stillHere()) {
           const policy = (cause as { policy?: string | null } | null)?.policy ?? null;
           setPolicyHit(policy && message ? { text: message, category: policy } : null);
@@ -2334,6 +2384,7 @@ return (
 
         <div
           ref={scrollerRef}
+          style={{ overflowAnchor: "none" }}
           className="bf-scroller flex-1 overflow-y-auto px-6 py-6"
           onScroll={handleTranscriptScroll}
         >

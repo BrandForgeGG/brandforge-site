@@ -795,3 +795,9 @@ we do not have.
 **Change:** (1) The top bar has a clear AI on/paused control: pause the AI and call the team in one tap, or just pause; it stays paused until switched back on, and typing "shut up", "stop talking", "call the team" or "get me a person" does the same. A one-line hint tells people they can do this. (2) In a shared chat only the owner and admins make the AI generate; teammates see "Only the chat owner can use the AI here", can ask, the owner gets Allow / Not now, and teammates still talk to the people in the chat meanwhile (server enforced, migration 0036). (3) The sidebar card shows Admin, Operator, or the person's own @username, never "user". (4) The paperclip and Actions buttons became one + menu in the style of the big assistants: grouped (Add, Make, Bring in people), icon, name and one line each.
 
 **Distribution move:** none public yet. Worth a launch line: "Tell the AI to stop and call the team, any time."
+
+## 2026-10-10 — Smooth streaming: no more bumping while an answer arrives
+
+**Change:** The transcript used to be re-pinned on every token, fought the browser's own scroll anchoring, and treated the page growing as the reader scrolling up. Now tokens are applied once per frame, the view re-pins once per frame after layout (a ResizeObserver, so the thinking strip, images and the saved answer replacing the streamed one are covered), scroll anchoring is off on the transcript, and only the reader moving up lets go of the bottom.
+
+**Distribution move:** none; internal quality. This is the first thing every new user watches.
