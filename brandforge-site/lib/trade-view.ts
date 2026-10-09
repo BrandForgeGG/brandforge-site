@@ -13,6 +13,7 @@ export function toListingView(row: TradeListingRow, ownerName: string, viewerId:
     budgetMaxCents: row.budget_max_cents == null ? null : Number(row.budget_max_cents),
     ownerName,
     mine: viewerId !== null && viewerId === row.owner_id,
+    status: row.status,
   };
 }
 

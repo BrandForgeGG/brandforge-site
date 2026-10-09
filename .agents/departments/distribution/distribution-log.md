@@ -771,3 +771,9 @@ we do not have.
 **Change:** One page, /create: five live cards (Carousel, Update, Poll, Quiz, Thread) with small live visuals, a "pick up where you left off" row of saved carousels, and a quiet "Coming next" row (votable). Opening a card shows the maker; once made there is one Publish step: choose platforms, edit the caption written for each (or write it with AI), copy or download, and a Publish button that is locked for now. Choosing a platform counts as interest (create_interest, publish-<platform>), so we open the ones people want first. /distribute redirects to /create; the nav lost one item. Posting APIs stay in the code behind the lock.
 
 **Distribution move:** the platform-interest counts are the order for platform approvals and launch posts. When Publish unlocks for a platform, announce it with the recorded demo.
+
+## 2026-10-10 — Trade listings: nothing you list disappears
+
+**Change:** A closed listing used to vanish from its owner with no way to see or reopen it. Added "Your listings" (open and closed, with Edit and Reopen), a confirm before Close, and the category is now chosen on purpose instead of silently defaulting to the first one. API: GET /api/trade?mine=1, PATCH {reopen:true}.
+
+**Distribution move:** none; a bug fix that protects early Trade Center users. Worth a line in the next changelog.

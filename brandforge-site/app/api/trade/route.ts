@@ -4,6 +4,7 @@ import {
   createTradeListing,
   getProfileDisplayName,
   getProfileRole,
+  listMyTradeListings,
   listOpenTradeListings,
   announceReal,
   recordFunnelEvent,
@@ -28,6 +29,15 @@ export async function GET(request: NextRequest) {
       category: params.get('category') || undefined,
       q: (params.get('q') || '').slice(0, 80) || undefined,
     };
+
+    // ?mine=1: everything you have listed, open or closed, so nothing you made ever disappears.
+    if (params.get('mine') === '1') {
+      if (!viewer) return NextResponse.json({ listings: [] });
+      const mine = await listMyTradeListings(viewer.id);
+      if (!mine.ok) return NextResponse.json({ listings: [] });
+      const name = await getProfileDisplayName(viewer.id);
+      return NextResponse.json({ listings: mine.rows.map((row) => toListingView(row, name, viewer.id)) });
+    }
 
     const result = await listOpenTradeListings();
     if (!result.ok) {

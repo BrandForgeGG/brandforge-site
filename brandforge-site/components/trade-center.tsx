@@ -48,8 +48,20 @@ export function TradeCenter() {
   const [posting, setPosting] = useState(false);
   const [editing, setEditing] = useState<ListingView | null>(null);
   const [contacting, setContacting] = useState<ListingView | null>(null);
+  const [mine, setMine] = useState<ListingView[]>([]);
+
+  const loadMine = useCallback(async () => {
+    try {
+      const response = await fetchAuthed('/api/trade?mine=1');
+      const data = await response.json().catch(() => ({}));
+      setMine(response.ok ? (data.listings ?? []) : []);
+    } catch {
+      setMine([]);
+    }
+  }, []);
 
   const load = useCallback(async () => {
+    void loadMine();
     const params = new URLSearchParams();
     if (kind) params.set("kind", kind);
     if (category) params.set("category", category);
@@ -63,7 +75,7 @@ export function TradeCenter() {
     } catch {
       setListings([]);
     }
-  }, [kind, category, q]);
+  }, [kind, category, q, loadMine]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), q ? 250 : 0);
@@ -155,6 +167,7 @@ export function TradeCenter() {
                       <button
                         type="button"
                         onClick={async () => {
+                          if (!window.confirm("Close this listing? It stops showing to others. You can reopen it from Your listings.")) return;
                           await fetchAuthed(`/api/trade/${l.id}`, { method: "DELETE" });
                           void load();
                         }}
@@ -191,6 +204,41 @@ export function TradeCenter() {
         </div>
       ) : null}
 
+      {mine.length > 0 ? (
+        <section aria-label="Your listings" className="mt-8">
+          <p className="font-serif text-lg text-foreground">Your listings</p>
+          <ul className="mt-3 divide-y divide-line rounded-2xl border border-line bg-panel">
+            {mine.map((l) => (
+              <li key={l.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">{l.title}</p>
+                  <p className="text-xs text-muted">
+                    {l.kind === "offer" ? "Offers" : "Wants"} · {l.category} · <span className={l.status === "open" ? "text-success" : ""}>{l.status === "open" ? "Open" : "Closed"}</span>
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setEditing(l)} className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted hover:text-foreground">
+                    Edit
+                  </button>
+                  {l.status === "closed" ? (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await fetchAuthed(`/api/trade/${l.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reopen: true }) });
+                        void load();
+                      }}
+                      className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background"
+                    >
+                      Reopen
+                    </button>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <section aria-label="How trading works" className="mt-8 rounded-2xl border border-line bg-panel p-5">
         <p className="font-serif text-lg text-foreground">How a deal goes</p>
         <ol className="mt-4 grid gap-4 sm:grid-cols-4">
@@ -220,7 +268,7 @@ export function TradeCenter() {
 function PostForm({ onClose, onPosted, listing, canOffer }: { onClose: () => void; onPosted: () => void; listing?: ListingView; canOffer: boolean }) {
   const { openLogin } = useLogin();
   const [kind, setKind] = useState<"offer" | "request">((listing?.kind as "offer" | "request") ?? "offer");
-  const [category, setCategory] = useState(listing?.category ?? CATEGORIES[0]);
+  const [category, setCategory] = useState(listing?.category ?? "");
   const [title, setTitle] = useState(listing?.title ?? "");
   const [description, setDescription] = useState(listing?.description ?? "");
   const [currency, setCurrency] = useState(listing?.currency ?? "EUR");
@@ -277,6 +325,9 @@ function PostForm({ onClose, onPosted, listing, canOffer }: { onClose: () => voi
       <label className="mt-3 block text-[11px] text-muted">
         Category
         <select value={category} onChange={(e) => setCategory(e.target.value)} className={`${field} mt-1`}>
+          <option value="" disabled>
+            Choose a category
+          </option>
           {CATEGORIES.map((c: string) => (
             <option key={c}>{c}</option>
           ))}
@@ -317,7 +368,7 @@ function PostForm({ onClose, onPosted, listing, canOffer }: { onClose: () => voi
         <button type="button" onClick={onClose} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground">
           Cancel
         </button>
-        <button type="button" disabled={busy || (kind === "offer" && !canOffer)} onClick={() => void submit()} className="rounded-lg bg-ember px-4 py-1.5 text-xs font-semibold text-background disabled:opacity-60">
+        <button type="button" disabled={busy || !category || (kind === "offer" && !canOffer)} onClick={() => void submit()} className="rounded-lg bg-ember px-4 py-1.5 text-xs font-semibold text-background disabled:opacity-60">
           {listing ? "Save changes" : "Post listing"}
         </button>
       </div>

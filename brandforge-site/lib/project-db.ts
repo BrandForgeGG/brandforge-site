@@ -4526,6 +4526,32 @@ export async function createTradeListing(
   return { ok: true, row: data as unknown as TradeListingRow };
 }
 
+// Everything one person has listed, open and closed, so a closed listing is never lost from their view.
+export async function listMyTradeListings(ownerId: string): Promise<{ ok: true; rows: TradeListingRow[] } | { ok: false; error: TradeDbError }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+  const { data, error } = await admin.from('trade_listings').select(TRADE_COLUMNS).eq('owner_id', ownerId).order('created_at', { ascending: false }).limit(50);
+  if (error) {
+    if (isMissingTable(error)) return { ok: false, error: 'pending_migration' };
+    console.error('Trade my listings error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+  return { ok: true, rows: (data ?? []) as unknown as TradeListingRow[] };
+}
+
+// Puts a closed listing of yours back in the Trade Center.
+export async function reopenTradeListing(id: string, ownerId: string): Promise<{ ok: true } | { ok: false; error: TradeDbError }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+  const { data, error } = await admin.from('trade_listings').update({ status: 'open', updated_at: new Date().toISOString() }).eq('id', id).eq('owner_id', ownerId).select('id').maybeSingle();
+  if (error) {
+    if (isMissingTable(error)) return { ok: false, error: 'pending_migration' };
+    console.error('Trade listing reopen error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+  return data ? { ok: true } : { ok: false, error: 'not_found' };
+}
+
 export async function closeTradeListing(
   id: string,
   ownerId: string

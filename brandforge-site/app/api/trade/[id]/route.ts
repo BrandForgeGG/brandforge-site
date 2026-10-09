@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { closeTradeListing, getProfileDisplayName, getProfileRole, updateTradeListing } from '@/lib/project-db';
+import { closeTradeListing, getProfileDisplayName, getProfileRole, reopenTradeListing, updateTradeListing } from '@/lib/project-db';
 import { toListingView } from '@/lib/trade-view';
 import { validateListing } from '@/lib/trade.js';
 import { screenText } from '@/lib/content-policy.js';
@@ -17,6 +17,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (!id || id.length > 64) return NextResponse.json({ error: 'Invalid listing' }, { status: 400 });
 
     const body = await request.json().catch(() => ({}));
+    // { reopen: true } puts a closed listing of yours back in the Trade Center.
+    if (body && (body as { reopen?: unknown }).reopen === true) {
+      const reopened = await reopenTradeListing(id, user.id);
+      if (!reopened.ok) return NextResponse.json({ error: 'Listing not found' }, { status: reopened.error === 'not_found' ? 404 : 500 });
+      return NextResponse.json({ reopened: true });
+    }
     const draft = validateListing(body);
     if (!draft.ok) return NextResponse.json({ error: draft.error }, { status: 400 });
     const screened = screenText(`${draft.value.title}\n${draft.value.description}`);
