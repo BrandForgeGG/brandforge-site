@@ -10,6 +10,8 @@ import { AdminCalendar } from '@/components/admin/admin-calendar';
 
 type FunnelEvent = { event: string; count: number; previous: number | null };
 type Range = '24h' | '7d' | '30d' | 'all';
+type Tab = 'overview' | 'people' | 'money' | 'chats' | 'content';
+const TABS: [Tab, string][] = [['overview', 'Overview'], ['people', 'People'], ['money', 'Money'], ['chats', 'Chats'], ['content', 'Content']];
 type Overview = AdminOverview & { funnel: { range: Range; window: { since?: string }; events: FunnelEvent[] } | null };
 
 
@@ -177,6 +179,23 @@ export function AdminDashboard() {
   const [chats, setChats] = useState<AdminChatRow[]>([]);
   const [contracts, setContracts] = useState<PeerView[]>([]);
   const [range, setRange] = useState<Range>('7d');
+  const [tab, setTabState] = useState<Tab>('overview');
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get('tab');
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- the address is only readable in the browser
+    if (wanted && TABS.some(([id]) => id === wanted)) setTabState(wanted as Tab);
+  }, []);
+  function setTab(next: Tab) {
+    setTabState(next);
+    try {
+      const url = new URL(window.location.href);
+      if (next === 'overview') url.searchParams.delete('tab');
+      else url.searchParams.set('tab', next);
+      window.history.replaceState(null, '', url.toString());
+    } catch {
+      /* the tab still works without the address */
+    }
+  }
   const [updated, setUpdated] = useState<Date | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -270,6 +289,33 @@ export function AdminDashboard() {
         <Kpi value={overview.totals.milestonesReleased} label="Milestones released" />
       </div>
 
+      <div role="tablist" aria-label="Dashboard sections" className="-mx-1 flex gap-1 overflow-x-auto border-b border-line px-1">
+        {TABS.map(([id, label]) => {
+          const badge = id === 'people' ? pendingApps.length : id === 'money' ? contractTodo : 0;
+          return (
+            <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`flex shrink-0 items-center gap-1.5 px-3 py-2 text-sm transition ${tab === id ? 'border-b-2 border-ember text-foreground' : 'text-muted hover:text-foreground'}`}>
+              {label}
+              {badge > 0 ? <span className="rounded-full bg-ember px-1.5 text-[10px] font-bold text-background">{badge}</span> : null}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab === 'overview' ? (
+        <>
+      {contractTodo + pendingApps.length > 0 ? (
+        <section aria-label="Needs you" className="rounded-2xl border border-ember/40 bg-ember/10 p-4">
+          <p className="font-serif text-lg text-foreground">Needs you</p>
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {pendingApps.length > 0 ? (
+              <li><button type="button" onClick={() => setTab('people')} className="rounded-full border border-ember/50 bg-background px-3 py-1.5 text-sm text-foreground transition hover:border-ember">{pendingApps.length} specialist application{pendingApps.length === 1 ? '' : 's'} waiting</button></li>
+            ) : null}
+            {contractTodo > 0 ? (
+              <li><button type="button" onClick={() => setTab('money')} className="rounded-full border border-ember/50 bg-background px-3 py-1.5 text-sm text-foreground transition hover:border-ember">{contractTodo} contract action{contractTodo === 1 ? '' : 's'} to do</button></li>
+            ) : null}
+          </ul>
+        </section>
+      ) : null}
       <div className="grid gap-8 lg:grid-cols-5">
         <div className="lg:col-span-3">
           <Section title="Last 14 days">
@@ -294,6 +340,10 @@ export function AdminDashboard() {
         )}
       </Section>
 
+        </>
+      ) : null}
+
+      {tab === 'people' ? (
       <Section title="Specialist applications" note={`${pendingApps.length} waiting · ${realApps.length} total`}>
         {realApps.length === 0 ? <p className="text-sm text-muted">No applications yet.</p> : (
           <ul className="divide-y divide-line">
@@ -322,6 +372,9 @@ export function AdminDashboard() {
         )}
       </Section>
 
+      ) : null}
+
+      {tab === 'money' ? (
       <Section title="Contracts" note={contractTodo === 0 ? 'Nothing to do' : `${contractTodo} to do`}>
         {contractTodo === 0 ? <p className="text-sm text-muted">No deposits to check, disputes to decide or payouts to send.</p> : (
           <ul className="divide-y divide-line">
@@ -353,6 +406,9 @@ export function AdminDashboard() {
         )}
       </Section>
 
+      ) : null}
+
+      {tab === 'chats' ? (
       <Section
         title="Chats"
         note={`${overview.chats.total} real · ${overview.chats.test} test or staff · ${overview.chats.withMoney} with money committed`}
@@ -413,7 +469,9 @@ export function AdminDashboard() {
         </div>
       </Section>
 
-      <AdminCalendar />
+      ) : null}
+
+      {tab === 'content' ? <AdminCalendar /> : null}
     </div>
   );
 }

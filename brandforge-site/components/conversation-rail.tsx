@@ -45,7 +45,6 @@ const NAV_ITEMS = [
   { href: "/trade", label: "Trade", hint: "Hire or get hired", path: "M4 7h11l-3-3M16 13H5l3 3" },
   { href: "/overview", label: "Overview", hint: "What BrandForge is and how it works", path: "M10 3.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM10 9v4.5M10 6.6h.01" },
 ];
-const CHAT_ICON = "M4 5.5h12v7.5H9.5L6 16v-3H4z";
 
 function RailIcon({ path, className = "h-4 w-4" }: { path: string; className?: string }) {
   return (
@@ -53,6 +52,20 @@ function RailIcon({ path, className = "h-4 w-4" }: { path: string; className?: s
       <path d={path} />
     </svg>
   );
+}
+
+// Recents are grouped by how recently each chat moved, newest first, so the one you want is near the top.
+function recencyGroup(value: string | null): string {
+  const time = value ? new Date(value).getTime() : NaN;
+  if (Number.isNaN(time)) return "Older";
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const days = Math.floor((startOfToday.getTime() - time) / 86400000) + (time >= startOfToday.getTime() ? 0 : 1);
+  if (time >= startOfToday.getTime()) return "Today";
+  if (days <= 1) return "Yesterday";
+  if (days <= 7) return "Previous 7 days";
+  if (days <= 30) return "Previous 30 days";
+  return "Older";
 }
 
 export function relativeTime(value: string | null): string {
@@ -116,6 +129,7 @@ onMobileClose,
   const [isAdmin, setIsAdmin] = useState(false);
   const [unseenCount, setUnseenCount] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [recentQuery, setRecentQuery] = useState("");
 
   // Remember how wide the founder left the sidebar. Read after mount so the server render and the
   // first client render agree (no hydration mismatch); the flip one frame later is invisible.
@@ -409,6 +423,13 @@ onMobileClose,
                 <p className="bf-rail-section-label">Admin</p>
                 <div className="flex flex-col gap-1">
                   <Link
+                    href="/admin"
+                    onClick={onMobileClose}
+                    className="rounded-lg px-3 py-2 text-sm text-foreground transition hover:bg-overlay"
+                  >
+                    Dashboard
+                  </Link>
+                  <Link
                     href="/admin/applications"
                     onClick={onMobileClose}
                     className="rounded-lg px-3 py-2 text-sm text-muted transition hover:bg-overlay hover:text-foreground"
@@ -440,40 +461,55 @@ onMobileClose,
                 </div>
               ) : (
                 <div className="bf-recents">
-                  {recents.map((conversation) => {
-                    const isActive = conversation.id === activeConversationId;
-
-                    return (
-                      <div
-                        key={conversation.id}
-                        className={
-                          "bf-recent-item " +
-                          (isActive ? "bf-recent-item-active" : "")
-                        }
-                      >
-                        <div className="flex items-start gap-2 px-3 py-2">
-                          <Link
-                            href={"/chat?conversationId=" + conversation.id}
-                            onClick={onMobileClose}
-                            className="min-w-0 flex-1"
-                          >
-                            <p className="flex items-center gap-2 text-sm text-foreground">
-                              <RailIcon path={CHAT_ICON} className="h-3.5 w-3.5 shrink-0 text-muted" />
+                  {recents.length > 5 ? (
+                    <div className="px-1 pb-2">
+                      <input
+                        type="search"
+                        value={recentQuery}
+                        onChange={(event) => setRecentQuery(event.target.value)}
+                        placeholder="Search chats"
+                        aria-label="Search chats"
+                        className="w-full rounded-lg border border-line bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none"
+                      />
+                    </div>
+                  ) : null}
+                  {(() => {
+                    const query = recentQuery.trim().toLowerCase();
+                    const shown = recents.filter((conversation) => !query || (conversation.title + " " + (conversation.preview ?? "")).toLowerCase().includes(query));
+                    if (shown.length === 0) return <p className="px-3 py-2 text-xs text-muted">No chat matches &ldquo;{recentQuery}&rdquo;.</p>;
+                    const groups: { label: string; items: typeof shown }[] = [];
+                    for (const conversation of shown) {
+                      const label = recencyGroup(conversation.lastActivity);
+                      const group = groups.find((entry) => entry.label === label);
+                      if (group) group.items.push(conversation);
+                      else groups.push({ label, items: [conversation] });
+                    }
+                    return groups.map((group) => (
+                      <div key={group.label} className="mb-2">
+                        <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">{group.label}</p>
+                        {group.items.map((conversation) => {
+                          const isActive = conversation.id === activeConversationId;
+                          return (
+                            <Link
+                              key={conversation.id}
+                              href={"/chat?conversationId=" + conversation.id}
+                              onClick={onMobileClose}
+                              aria-current={isActive ? "page" : undefined}
+                              title={conversation.preview ? conversation.title + " — " + conversation.preview : conversation.title}
+                              className={"bf-recent-item flex items-center gap-2 px-3 py-2 " + (isActive ? "bf-recent-item-active" : "")}
+                            >
                               {isStaff && conversation.isUnseen ? (
-                                <span
-                                  aria-label="Nobody from the team has opened this chat yet"
-                                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-ember"
-                                />
+                                <span aria-label="Nobody from the team has opened this chat yet" className="h-1.5 w-1.5 shrink-0 rounded-full bg-ember" />
                               ) : null}
-                              <span className="min-w-0 truncate">
-                                {conversation.title}
-                              </span>
-                            </p>
-                          </Link>
-                        </div>
+                              <span className="min-w-0 flex-1 truncate text-sm text-foreground">{conversation.title}</span>
+                              {conversation.aiEnabled === false ? <span className="shrink-0 rounded-full border border-line px-1.5 py-px text-[9px] uppercase tracking-wide text-muted">AI paused</span> : null}
+                              <span className="shrink-0 text-[10px] tabular-nums text-muted">{relativeTime(conversation.lastActivity).replace(" ago", "")}</span>
+                            </Link>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
+                    ));
+                  })()}
                 </div>
               )}
             </section>

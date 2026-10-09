@@ -11,7 +11,7 @@ export type MarkdownToken =
   | { type: 'heading'; depth: number; inlines: MarkdownInline[] }
   | { type: 'paragraph'; inlines: MarkdownInline[] }
   | { type: 'quote'; inlines: MarkdownInline[] }
-  | { type: 'list'; ordered: boolean; items: MarkdownInline[][] }
+  | { type: 'list'; ordered: boolean; start?: number; items: MarkdownInline[][] }
   | { type: 'code'; lang: string; code: string }
   | { type: 'table'; header: MarkdownInline[][]; rows: MarkdownInline[][][] }
   | { type: 'hr' };

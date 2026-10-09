@@ -5644,3 +5644,23 @@ export async function decideAiAccess(conversationId: string, ownerId: string, us
   }
   return true;
 }
+
+// Turns the AI on or off for one chat. Only the chat's owner may: a signed-in owner, or the guest session
+// that started it. Checked here with the service role so a refreshed session or a guest is never refused
+// for a cookie quirk, and a stranger always is.
+export async function setConversationAiEnabled(conversationId: string, who: { userId?: string; guestSessionId?: string }, enabled: boolean): Promise<'ok' | 'not_found' | 'forbidden' | 'failed'> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return 'failed';
+  const { data } = await admin.from('conversations').select('id, user_id').eq('id', conversationId).maybeSingle();
+  const row = data as { id: string; user_id: string | null } | null;
+  if (!row) return 'not_found';
+  let owns = Boolean(who.userId && row.user_id === who.userId);
+  if (!owns && who.guestSessionId && !row.user_id) owns = (await getConversationOwnerSession(conversationId)) === who.guestSessionId;
+  if (!owns) return 'forbidden';
+  const { error } = await admin.from('conversations').update({ ai_enabled: enabled }).eq('id', conversationId);
+  if (error) {
+    console.error('setConversationAiEnabled error:', error.message);
+    return 'failed';
+  }
+  return 'ok';
+}

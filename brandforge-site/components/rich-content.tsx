@@ -144,7 +144,7 @@ function renderToken(token: MarkdownToken, index: number) {
     case 'list': {
       const ListTag = token.ordered ? 'ol' : 'ul';
       return (
-        <ListTag key={index}>
+        <ListTag key={index} {...(token.ordered && token.start && token.start > 1 ? { start: token.start } : {})}>
           {token.items.map((item, itemIndex) => (
             <li key={`${index}-${itemIndex}`}>{renderInlines(item, `li${index}-${itemIndex}`)}</li>
           ))}

@@ -172,8 +172,20 @@ function parseMarkdown(source) {
     const listItem = line.match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/);
     if (listItem) {
       const ordered = /\d/.test(listItem[2]);
+      const start = ordered ? Number.parseInt(listItem[2], 10) || 1 : 1;
       const items = [];
       while (index < lines.length) {
+        // A blank line between items of the same list ("1. a", blank, "2. b") keeps it one list, so the
+        // numbers run 1, 2, 3 instead of restarting at 1 every time.
+        if (items.length > 0 && lines[index].trim() === '') {
+          let ahead = index;
+          while (ahead < lines.length && lines[ahead].trim() === '') ahead += 1;
+          const next = ahead < lines.length ? lines[ahead].match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/) : null;
+          if (next && /\d/.test(next[2]) === ordered) {
+            index = ahead;
+            continue;
+          }
+        }
         const current = lines[index].match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/);
         if (current && /\d/.test(current[2]) === ordered) {
           items.push([current[3]]);
@@ -191,6 +203,7 @@ function parseMarkdown(source) {
       tokens.push({
         type: 'list',
         ordered,
+        start,
         items: items.map((parts) => parseInlines(parts.join(' '))),
       });
       continue;

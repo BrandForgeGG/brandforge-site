@@ -1706,7 +1706,7 @@ export function ChatWorkspace() {
       if (!conversationId) return;
       setAiEnabled(false);
       try {
-        const response = await fetchAuthed(`/api/conversations/${conversationId}/ai-toggle`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aiEnabled: false }) });
+        const response = await (railMeta.userId ? fetchAuthed : fetch)(`/api/conversations/${conversationId}/ai-toggle`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aiEnabled: false }) });
         if (!response.ok) throw new Error("toggle failed");
       } catch {
         setAiEnabled(true);
@@ -1720,20 +1720,20 @@ export function ChatWorkspace() {
         setCommandStatus("The AI is paused. Turn it back on any time from the top bar.");
       }
     },
-    [conversationId, handleRequestReview],
+    [conversationId, handleRequestReview, railMeta.userId],
   );
   const resumeAi = useCallback(async () => {
     if (!conversationId) return;
     setAiEnabled(true);
     try {
-      const response = await fetchAuthed(`/api/conversations/${conversationId}/ai-toggle`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aiEnabled: true }) });
+      const response = await (railMeta.userId ? fetchAuthed : fetch)(`/api/conversations/${conversationId}/ai-toggle`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aiEnabled: true }) });
       if (!response.ok) throw new Error("toggle failed");
       setCommandStatus("The AI is back on.");
     } catch {
       setAiEnabled(false);
       setError("Could not turn the AI back on. Try again.");
     }
-  }, [conversationId]);
+  }, [conversationId, railMeta.userId]);
   useEffect(() => {
     pauseAiRef.current = pauseAi;
   }, [pauseAi]);

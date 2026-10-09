@@ -121,3 +121,11 @@ test('a lone pipe line or a pipe in prose is not a table', () => {
   assert.equal(parseMarkdown('use a | b to choose')[0].type, 'paragraph');
   assert.equal(parseMarkdown('| not | a table |\nnext line')[0].type, 'paragraph');
 });
+
+test('numbered items split by blank lines stay one list and keep their numbers', () => {
+  const tokens = parseMarkdown('Intro\n\n1. **A**: x\n\n2. **B**: y\n\n3. **C**: z\n\nAfter');
+  const lists = tokens.filter((token) => token.type === 'list');
+  assert.equal(lists.length, 1);
+  assert.equal(lists[0].items.length, 3);
+  assert.equal(parseMarkdown('3. c\n4. d')[0].start, 3);
+});

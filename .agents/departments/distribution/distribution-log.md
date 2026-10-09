@@ -819,3 +819,9 @@ we do not have.
 **Change:** Reproduced on production by recording the page while sending a first message. Two causes: (1) a chat opened from a link rendered one frame of the empty-chat screen ("What are you building?") before the loader, so the page changed height three times in the first moments; it now starts in the loading state. (2) A finished answer folded all but its first section shut, shrinking the page by about 260px right after it had grown, which read as the answer jumping to the top and back down; sections now stay open, before and after the answer finishes. Also: the access request notice is shorter ("Request sent. Waiting for the chat owner.") and disappears within five seconds of being allowed.
 
 **Distribution move:** none; internal quality.
+
+## 2026-10-10 — Pause fixed, Optimize rebuilt, easier recents and admin
+
+**Change:** (1) "Could not pause the AI": the pause route never passed the request to the sign-in check, so refreshed sessions and guests were refused; it now checks the owner with the service role and guests can pause their own chat. (2) Numbered answers showed 1. 1. 1.; items split by blank lines now stay one list. (3) Optimize is no longer a placeholder: audit any page (opens the chat with the audit ready), sharpen your own hook/caption/headline/ad into three stronger versions with the reason (never adds claims), and a blurred "what worked on your channels" card that says plainly it needs a platform to read results. (4) Sidebar recents: grouped Today / Yesterday / Previous 7 and 30 days, search once there are more than five chats, the time on each row and an "AI paused" mark. (5) Admin: tabs (Overview, People, Money, Chats, Content) with counts on the ones that need action, a "Needs you" strip, and a Dashboard link in the sidebar.
+
+**Distribution move:** Optimize now has two genuinely free tools worth a post each ("audit your page", "three sharper versions of your hook"). Add both to the launch kit.
