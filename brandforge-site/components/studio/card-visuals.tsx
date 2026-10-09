@@ -97,3 +97,50 @@ export function ThreadVisual() {
     </Stage>
   );
 }
+
+export function ImageVisual() {
+  return (
+    <Stage>
+      <div className="relative h-24 w-20 overflow-hidden rounded-lg border border-line bg-panel shadow-md">
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 70% 25%, var(--ember), transparent 60%), #0b0b0b' }} />
+        <div className="absolute inset-x-2 bottom-2 space-y-1"><div className="h-1.5 w-5/6 rounded-sm bg-white/90" /><div className="h-1.5 w-1/2 rounded-sm bg-ember" /></div>
+      </div>
+    </Stage>
+  );
+}
+
+export function VideoVisual() {
+  return (
+    <Stage>
+      <div className="relative flex h-24 w-14 items-center justify-center overflow-hidden rounded-lg border border-line bg-panel shadow-md">
+        <div className="absolute inset-0 bg-gradient-to-b from-ember/30 to-transparent" />
+        <span className="bf-pulse relative flex h-7 w-7 items-center justify-center rounded-full bg-background/80">
+          <svg viewBox="0 0 20 20" className="h-3 w-3 translate-x-px fill-ember"><path d="M6 3.5v13l11-6.5z" /></svg>
+        </span>
+        <div className="absolute inset-x-2 bottom-2 h-1 rounded-full bg-foreground/30"><div className="bf-grow h-full w-2/3 rounded-full bg-ember" /></div>
+      </div>
+    </Stage>
+  );
+}
+
+export function DocumentVisual() {
+  return (
+    <Stage>
+      <div className="h-24 w-[4.5rem] space-y-1.5 rounded-md border border-line bg-panel p-2 shadow-md">
+        <div className="h-2 w-2/3 rounded-sm bg-ember" />
+        {['w-full', 'w-11/12', 'w-full', 'w-3/4', 'w-full', 'w-1/2'].map((w, i) => <div key={i} className={`h-1 rounded-full bg-foreground/25 ${w}`} />)}
+      </div>
+    </Stage>
+  );
+}
+
+export function OfferVisual() {
+  return (
+    <Stage>
+      <div className="relative flex h-16 w-36 items-center justify-between rounded-xl border border-dashed border-ember bg-panel px-3 shadow-md">
+        <div className="space-y-1.5"><div className="h-1.5 w-14 rounded-full bg-foreground/40" /><div className="h-1 w-10 rounded-full bg-foreground/20" /></div>
+        <span className="font-serif text-2xl text-ember">%</span>
+      </div>
+    </Stage>
+  );
+}

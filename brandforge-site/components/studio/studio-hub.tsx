@@ -6,13 +6,16 @@ import { getSessionUser } from '@/lib/browser-auth';
 import { useLogin } from '@/components/login-dialog';
 import { CarouselMaker } from '@/components/carousel/carousel-maker';
 import { PostComposer } from '@/components/carousel/post-composer';
-import { CarouselVisual, PollVisual, QuizVisual, ThreadVisual, UpdateVisual } from '@/components/studio/card-visuals';
+import { CarouselVisual, DocumentVisual, ImageVisual, OfferVisual, PollVisual, QuizVisual, ThreadVisual, UpdateVisual, VideoVisual } from '@/components/studio/card-visuals';
 import { emptyDraft, markResume, writeDraft, type Draft } from '@/components/carousel/carousel-shared';
 import { CREATIONS } from '@/lib/creation-catalog.js';
 import type { Format } from '@/lib/format-catalog.js';
 import type { PostType } from '@/lib/post-types.js';
 
 type Kind = 'carousel' | PostType;
+
+// What a card that is not built yet looks like: the kind of thing it will make, shown blurred.
+const COMING_VISUAL: Record<string, React.ReactNode> = { images: <ImageVisual />, text: <UpdateVisual />, video: <VideoVisual />, documents: <DocumentVisual />, offers: <OfferVisual /> };
 
 const CARDS: { id: Kind; name: string; line: string; visual: React.ReactNode }[] = [
   { id: 'carousel', name: 'Carousel', line: 'Swipeable slides from one sentence', visual: <CarouselVisual /> },
@@ -130,15 +133,23 @@ export function StudioHub() {
         </section>
       ) : null}
 
-      <section aria-label="Coming next">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Coming next</p>
-        <p className="mt-1 text-xs text-muted">Tap the ones you want. They move up.</p>
-        <ul className="mt-3 flex flex-wrap gap-2">
+      <section aria-label="Coming soon">
+        <h2 className="font-serif text-2xl text-foreground sm:text-3xl">Coming soon</h2>
+        <p className="mt-1 text-sm text-muted">Tap the ones you want. They move up.</p>
+        <ul className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-3">
           {coming.map((creation: Format) => (
             <li key={creation.n}>
-              <button type="button" onClick={() => vote(creation)} disabled={voted[creation.n]} title={creation.line} className="rounded-full border border-dashed border-line px-3 py-1.5 text-xs text-muted transition hover:border-ember hover:text-foreground disabled:border-ember/40 disabled:text-ember">
-                {voted[creation.n] ? `${creation.name}: noted` : creation.name}
-              </button>
+              <div className="relative rounded-2xl border border-dashed border-line bg-panel/60 p-3 sm:p-4">
+                <div className="relative">
+                  <div className="pointer-events-none select-none opacity-60 blur-[3px]" aria-hidden="true">{COMING_VISUAL[creation.group]}</div>
+                  <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-line bg-background/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-foreground shadow">Coming soon</span>
+                </div>
+                <span className="mt-3 block font-serif text-lg text-muted">{creation.name}</span>
+                <span className="mt-0.5 block text-xs leading-snug text-muted sm:text-sm">{creation.line}</span>
+                <button type="button" onClick={() => vote(creation)} disabled={voted[creation.n]} className="mt-2 text-xs text-ember underline-offset-2 hover:underline disabled:text-muted disabled:no-underline">
+                  {voted[creation.n] ? 'Noted, thanks' : 'I want this'}
+                </button>
+              </div>
             </li>
           ))}
         </ul>
