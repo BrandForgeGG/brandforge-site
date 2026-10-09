@@ -176,7 +176,7 @@ onMobileClose,
       setAccount({
         name: fullName?.trim() || email.split("@")[0],
         email,
-        role: account?.role ?? 'user',
+        role: "user",
         username,
       });
     }
@@ -185,7 +185,7 @@ onMobileClose,
     return () => {
       cancelled = true;
     };
-  }, [account?.role]);
+  }, []);
 
   const [selfRecents, setSelfRecents] = useState<RecentConversation[] | null>(
     null,
@@ -502,8 +502,8 @@ onMobileClose,
                   ? `${account.name}, ${account.role} — account settings`
                   : "Account settings"
               }
-              className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
-              style={avatarTone(accountId || account?.name || "guest")}
+              className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${!account && !isVisitor && !isGuestBrowser ? "animate-pulse bg-overlay" : ""}`}
+              style={!account && !isVisitor && !isGuestBrowser ? undefined : avatarTone(accountId || account?.name || "guest")}
             >
               {isStaff && unseenCount > 0 ? (
                 <span
@@ -512,7 +512,7 @@ onMobileClose,
                 />
               ) : null}
               <span aria-hidden="true">
-                {initialsFor(account?.name ?? "?")}
+                {account || isVisitor || isGuestBrowser ? initialsFor(account?.name ?? "?") : ""}
               </span>
             </Link>
           </div>
@@ -547,26 +547,40 @@ onMobileClose,
               aria-haspopup="menu"
               aria-label="Account menu"
             >
-              <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
-                style={avatarTone(accountId || account?.name || "guest")}
-                aria-hidden="true"
-              >
-                {initialsFor(account?.name ?? "?")}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium text-foreground">
-                  {account?.name ?? (isGuestBrowser ? "Guest" : "BrandForge")}
-                </span>
-                {account?.username ? (
-                  <span className="block truncate text-[11px] text-muted">
-                    @{account.username}
+              {!account && !isGuestBrowser ? (
+                /* Signed in, account still loading: a fixed-size skeleton, so the card never
+                   flashes placeholder text or shifts when the real name arrives. */
+                <>
+                  <span className="h-9 w-9 shrink-0 animate-pulse rounded-full bg-overlay" aria-hidden="true" />
+                  <span className="min-w-0 flex-1 space-y-1.5" aria-hidden="true">
+                    <span className="block h-3.5 w-24 animate-pulse rounded bg-overlay" />
+                    <span className="block h-2.5 w-14 animate-pulse rounded bg-overlay" />
                   </span>
-                ) : null}
-                <span className="block truncate text-[10px] uppercase tracking-[0.15em] text-muted">
-                  {account ? account.role : isGuestBrowser ? "Not saved yet" : "Signed in"}
-                </span>
-              </span>
+                </>
+              ) : (
+                <>
+                  <span
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+                    style={avatarTone(accountId || account?.name || "guest")}
+                    aria-hidden="true"
+                  >
+                    {initialsFor(account?.name ?? "?")}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-foreground">
+                      {account?.name ?? "Guest"}
+                    </span>
+                    {account?.username ? (
+                      <span className="block truncate text-[11px] text-muted">
+                        @{account.username}
+                      </span>
+                    ) : null}
+                    <span className="block truncate text-[10px] uppercase tracking-[0.15em] text-muted">
+                      {account ? account.role : "Not saved yet"}
+                    </span>
+                  </span>
+                </>
+              )}
             </button>
             {dropdownOpen ? (
               <div className="absolute bottom-full left-0 mb-2 w-56 rounded-xl border border-line bg-panel p-3 shadow-xl">

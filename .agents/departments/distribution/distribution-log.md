@@ -705,3 +705,9 @@ we do not have.
 **Change:** Create now opens on a choice: Images (the carousel maker, with the other image tools we may build shown and votable) and Videos (locked, in development). The maker lost the post-type question, shows looks as colour swatches (eight, including a light one) and starts with BrandForge as the brand and closing line, which anyone can replace with their own or clear. "Make a carousel" is the first button in the Telegram and Discord menus and sends the slides back as an album or attachments. The admin dashboard swaps the launch-campaign tracker for a weekly posts calendar: five carousels a day, each weekday with its own mix (educational, news, promotional, list, funny, story, explainer) and its own times, written ahead, reviewed and approved in the dashboard, and posted to the Telegram channel and a Discord content channel; automatic posting is off by default. Distribute can post to a Telegram channel (admin-checked), a Discord channel webhook or Bluesky. Website copy updated everywhere to match.
 
 **Distribution move:** announce in the Telegram channel and Discord changelog (done with this change); a blog entry is live; show the bot flow in a short screen recording; invite members to make a carousel about their own project.
+
+## 2026-10-09 — Account card loads without flashing
+
+**Change:** The sidebar account card no longer flashes a placeholder ("?", "BrandForge", "Signed in") and then jumps to the real name; it shows a fixed-size skeleton until the account loads, and the account is fetched once instead of twice.
+
+**Distribution move:** none. This is a bug fix with no marketing angle; it only removes a visible glitch from the first seconds after sign-in.
