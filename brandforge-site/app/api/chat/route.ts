@@ -553,9 +553,12 @@ export async function POST(request: NextRequest) {
         send({ type: "done" });
       } catch (error) {
         console.error("Chat turn failed:", error);
+        const outOfCredit = error instanceof Error && /\(402\)/.test(error.message);
         send({
           type: "error",
-          error: "BrandForge AI could not answer. Please try again.",
+          error: outOfCredit
+            ? "The AI is out of credit for the moment. Your message is saved and the team can still reply. Try again in a little while."
+            : "BrandForge AI could not answer. Please try again.",
         });
       } finally {
         controller.close();

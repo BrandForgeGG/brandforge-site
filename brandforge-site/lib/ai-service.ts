@@ -415,6 +415,25 @@ export class BrandForgeAIService {
       response = await send({ ...body, model: this.model });
     }
 
+    // Out of credit is not the end of the chat. OpenRouter says how many tokens the account can still afford:
+    // ask for a little less and answer; if even that is too little, use a free model.
+    if (response.status === 402) {
+      const refusal = await response.text();
+      const affordable = Number(/can only afford (\d+)/.exec(refusal)?.[1] ?? 0);
+      if (affordable >= 500) {
+        console.warn(`Credit is low: asking for ${affordable - 20} tokens instead of ${String(body.max_tokens)}`);
+        response = await send({ ...body, max_tokens: affordable - 20 });
+      }
+      if (!response.ok) {
+        const free = (process.env.OPENROUTER_FREE_MODELS || 'nvidia/nemotron-3-super-120b-a12b:free').split(',').map((id) => id.trim()).filter(Boolean);
+        for (const id of free) {
+          console.warn(`Credit is out: answering with the free model ${id}`);
+          response = await send({ ...body, model: id });
+          if (response.ok) break;
+        }
+      }
+    }
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error('OpenRouter API error:', response.status, errorText.slice(0, 400));

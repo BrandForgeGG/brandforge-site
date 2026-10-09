@@ -849,3 +849,9 @@ we do not have.
 **Change:** Green confirmations and red errors now leave on their own (3.5 and 5 seconds; a red notice with an action stays until used). The "brief with the team" notice is one short line. On refresh the page used to assume the AI was on until the chat list arrived (and never learned it for guests), so people who had paused the AI saw "Pause AI and call the team" again; the real on/paused state now travels with the project state, and the hint and pause control wait for it.
 
 **Distribution move:** none; internal.
+
+## 2026-10-10 — "BrandForge AI could not answer": the OpenRouter credit ran out
+
+**Change:** Every chat reply failed with HTTP 402: the OpenRouter account has only a few thousandths of a dollar left and each answer asked for up to 3,072 tokens ("can only afford 2779"). The service now asks for what the account can afford, falls back to a free model if even that is too little, and when nothing works says plainly that the AI is out of credit and the message is saved, instead of a generic failure. Briefs already sent are unaffected: people can keep talking with or without the AI. The account still needs credit for full-length answers.
+
+**Distribution move:** none. Founder action: top up OpenRouter credit (even $5 covers thousands of answers at the standard model) or accept shorter, free-model answers.
