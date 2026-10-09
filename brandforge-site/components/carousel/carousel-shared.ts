@@ -1,0 +1,148 @@
+import { drawCover, drawCta, drawItem, W, H } from '@/lib/carousel-render.js';
+import { drawArt } from '@/lib/carousel-art.js';
+
+export type Theme = 'forge' | 'crystal' | 'mono';
+export type Mode = 'words' | 'url' | 'file';
+export type Item = { n: number; name: string; bullets: string[] };
+export type Plan = { cover: { headline: string; subtitle: string }; items: Item[]; cta: { headline: string; button: string; note: string } };
+export type Brand = { name: string; handle: string; accent: string };
+
+// Everything the maker keeps between visits and across the sign-in redirect. It lives in this
+// browser only: logos and pictures are stored as small data URLs and never leave the device until the
+// person saves a carousel, and then only the words and look are saved, never the pictures.
+export type Draft = {
+  v: 1;
+  id: string | null;
+  mode: Mode;
+  topic: string;
+  url: string;
+  type: string;
+  count: number;
+  theme: Theme;
+  seed: string;
+  brand: Brand;
+  cta: string;
+  plan: Plan | null;
+  source: { title: string; image: string | null; url: string | null } | null;
+  captions: Record<string, string>;
+  logo: string | null;
+  pictures: Record<number, string>;
+};
+
+const KEY = 'bf:carousel-draft';
+
+export function emptyDraft(): Draft {
+  return { v: 1, id: null, mode: 'words', topic: '', url: '', type: 'list', count: 7, theme: 'forge', seed: 'start', brand: { name: '', handle: '', accent: '' }, cta: '', plan: null, source: null, captions: {}, logo: null, pictures: {} };
+}
+
+export function readDraft(): Draft {
+  try {
+    const raw = window.localStorage.getItem(KEY);
+    if (!raw) return emptyDraft();
+    const parsed = JSON.parse(raw) as Partial<Draft>;
+    return parsed && parsed.v === 1 ? { ...emptyDraft(), ...parsed } : emptyDraft();
+  } catch {
+    return emptyDraft();
+  }
+}
+
+export function writeDraft(draft: Draft): void {
+  try {
+    window.localStorage.setItem(KEY, JSON.stringify(draft));
+  } catch {
+    // Storage full (pictures are large): keep the words and look, drop the pictures.
+    try {
+      window.localStorage.setItem(KEY, JSON.stringify({ ...draft, pictures: {} }));
+    } catch {
+      /* storage blocked: the page still works, it just will not remember */
+    }
+  }
+}
+
+export function clearDraft(): void {
+  try {
+    window.localStorage.removeItem(KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function loadImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+// Shrinks a picked picture so it can be remembered: slides are 1080 wide, so anything larger is waste.
+export async function downscale(file: File, maxWidth: number, type: 'image/jpeg' | 'image/png'): Promise<string | null> {
+  const source = await loadImage(URL.createObjectURL(file));
+  if (!source) return null;
+  const scale = Math.min(1, maxWidth / source.naturalWidth);
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(source.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(source.naturalHeight * scale));
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL(type, 0.82);
+}
+
+export async function loadFonts(): Promise<void> {
+  const faces: [string, string, string][] = [
+    ['BFAnton', '/fonts/anton-latin-400-normal.woff2', '400'],
+    ['BFInter', '/fonts/inter-latin-600-normal.woff2', '600'],
+    ['BFInter', '/fonts/inter-latin-700-normal.woff2', '700'],
+  ];
+  await Promise.all(
+    faces.map(async ([family, url, weight]) => {
+      try {
+        const face = new FontFace(family, `url(${url})`, { weight });
+        await face.load();
+        document.fonts.add(face);
+      } catch {
+        /* the drawing falls back to a system condensed font */
+      }
+    }),
+  );
+}
+
+export type Pictures = { items: Record<number, HTMLImageElement | null>; logo: HTMLImageElement | null };
+
+// Draws slide `index` (0 = cover, last = closing slide) of a plan onto any canvas.
+export function renderSlide(canvas: HTMLCanvasElement, index: number, draft: Draft, pictures: Pictures): void {
+  const plan = draft.plan;
+  if (!plan) return;
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const last = plan.items.length + 1;
+  const options = { theme: draft.theme, brand: { name: draft.brand.name, handle: draft.brand.handle, accent: draft.brand.accent, logo: pictures.logo } };
+  if (index === 0) {
+    drawCover(ctx, { ...plan.cover, kicker: 'Swipe for more', art: drawArt(W, H, { theme: draft.theme, variant: 'cover', seed: draft.seed, accent: draft.brand.accent }) }, options);
+  } else if (index >= last) {
+    drawCta(ctx, { ...plan.cta, art: drawArt(W, H, { theme: draft.theme, variant: 'cta', seed: draft.seed, accent: draft.brand.accent }) }, options);
+  } else {
+    const item = plan.items[index - 1];
+    drawItem(ctx, { ...item, bullets: item.bullets.filter((line) => line.trim()), shot: pictures.items[index - 1] ?? null }, options);
+  }
+}
+
+export function slideCount(plan: Plan | null): number {
+  return plan ? plan.items.length + 2 : 0;
+}
+
+export async function picturesFromDraft(draft: Draft): Promise<Pictures> {
+  const items: Record<number, HTMLImageElement | null> = {};
+  for (const [key, src] of Object.entries(draft.pictures)) items[Number(key)] = await loadImage(src);
+  return { items, logo: draft.logo ? await loadImage(draft.logo) : null };
+}
+
+export function slideFileName(index: number, total: number): string {
+  return `${String(index + 1).padStart(2, '0')}-${index === 0 ? 'cover' : index === total - 1 ? 'end' : `item-${index}`}.png`;
+}
+
+export { W, H };

@@ -44,3 +44,23 @@ test('unreadable, headline-less or too-short plans are refused with a plain reas
   assert.equal(extractJson('text {"a":1} more').a, 1);
   assert.equal(extractJson(''), null);
 });
+
+test('the post type shapes the brief, and news is the only type that needs a source', () => {
+  const { TYPES } = require('./carousel-plan');
+  assert.equal(Object.values(TYPES).filter((t) => t.needsSource).length, 1);
+  assert.equal(TYPES.news.needsSource, true);
+  const funny = buildPlanPrompt({ mode: 'words', type: 'funny', topic: 'Mondays', count: 5 });
+  assert.match(funny.user, /Post type: Funny/);
+  assert.equal(buildPlanPrompt({ mode: 'words', type: 'nonsense', topic: 'x' }).type, 'list');
+});
+
+test("the person's own closing line is used exactly, and the model cannot name a brand", () => {
+  const prompt = buildPlanPrompt({ mode: 'words', topic: 'candles', cta: 'Order at acme-candles.com' });
+  assert.match(prompt.user, /acme-candles\.com/);
+  assert.match(prompt.system, /Never mention any brand, website or handle/);
+  const reply = { cover: { headline: 'A fine hook' }, items: [{ name: 'A', bullets: ['x'] }, { name: 'B', bullets: ['y'] }, { name: 'C', bullets: ['z'] }], cta: { headline: 'BUY *NOW*', button: 'Visit brandforge.gg', note: 'Made by us' } };
+  const withOwn = normalizePlan(reply, { cta: 'Order at acme-candles.com' });
+  assert.equal(withOwn.plan.cta.button, 'Order at acme-candles.com');
+  assert.equal(withOwn.plan.cta.note, '');
+  assert.equal(normalizePlan(reply).plan.cta.button, 'Visit brandforge.gg');
+});

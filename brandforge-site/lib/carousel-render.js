@@ -115,18 +115,36 @@
     ctx.fillRect(0, Math.min(y0, y1), W, Math.abs(y1 - y0));
   }
 
-  function wordmark(ctx, theme, x, y, size, align) {
+  // The look for a slide: the chosen theme, with the person's own accent colour if they set one.
+  function themeFor(options) {
+    const base = THEMES[(options && options.theme) || 'forge'] || THEMES.forge;
+    const accent = options && options.brand && /^#[0-9a-f]{6}$/i.test(String(options.brand.accent || '')) ? options.brand.accent : base.accent;
+    return { ...base, accent };
+  }
+
+  // The person's own mark: a logo if they added one, otherwise their name. Nothing when neither is set,
+  // so no slide ever carries a name the person did not choose.
+  function brandMark(ctx, theme, options, x, y, size, align) {
+    const brand = (options && options.brand) || {};
+    if (brand.logo) {
+      const iw = brand.logo.width || brand.logo.naturalWidth;
+      const ih = brand.logo.height || brand.logo.naturalHeight;
+      if (iw && ih) {
+        const h = Math.round(size * 1.35);
+        const w = Math.min(420, Math.round((iw / ih) * h));
+        const left = align === 'center' ? x - w / 2 : x;
+        ctx.drawImage(brand.logo, left, y - h + 14, w, h);
+        return;
+      }
+    }
+    const name = cleanText(brand.name, 28).toUpperCase();
+    if (!name) return;
     ctx.font = `${size}px ${HEAD}`;
-    const a = 'BRAND';
-    const b = 'FORGE';
-    const wa = ctx.measureText(a).width;
-    const wb = ctx.measureText(b).width;
-    const start = align === 'center' ? x - (wa + wb) / 2 : x;
     ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = theme.text;
-    ctx.fillText(a, start, y);
-    ctx.fillStyle = theme.accent;
-    ctx.fillText(b, start + wa, y);
+    ctx.textAlign = align === 'center' ? 'center' : 'left';
+    ctx.fillText(name, x, y);
+    ctx.textAlign = 'left';
   }
 
   function base(ctx, theme) {
@@ -136,7 +154,7 @@
 
   /** Slide 1: the hook over full-bleed art. cover = { headline, kicker?, art } */
   function drawCover(ctx, cover, options) {
-    const theme = THEMES[(options && options.theme) || 'forge'];
+    const theme = themeFor(options);
     base(ctx, theme);
     coverFit(ctx, cover.art, 0, 0, W, H, false);
     fade(ctx, 380, 900, 'rgba(0,0,0,{a})', 0, 0.92);
@@ -144,7 +162,7 @@
     ctx.fillRect(0, 900, W, H - 900);
     fade(ctx, 0, 220, 'rgba(0,0,0,{a})', 0.55, 0);
 
-    wordmark(ctx, theme, 60, 92, 54, 'left');
+    brandMark(ctx, theme, options, 60, 92, 54, 'left');
 
     const fitted = fitHeadline(ctx, cleanText(cover.headline, 160), W - 140, 4, 128, 64);
     const lineHeight = Math.round(fitted.size * 1.04);
@@ -168,7 +186,7 @@
 
   /** An item slide. item = { n, name, tag?, bullets[], shot } */
   function drawItem(ctx, item, options) {
-    const theme = THEMES[(options && options.theme) || 'forge'];
+    const theme = themeFor(options);
     base(ctx, theme);
     const shotH = 700;
     coverFit(ctx, item.shot, 0, 0, W, shotH, true, item.crop);
@@ -229,23 +247,26 @@
       y += lines.length * 58 + 26;
     }
 
-    ctx.font = `600 26px ${BODY}`;
-    ctx.fillStyle = theme.muted;
-    ctx.textAlign = 'right';
-    ctx.fillText(cleanText((options && options.handle) || 'brandforge.gg', 40), W - 60, H - 44);
-    ctx.textAlign = 'left';
+    const handle = cleanText(options && options.brand && options.brand.handle, 40);
+    if (handle) {
+      ctx.font = `600 26px ${BODY}`;
+      ctx.fillStyle = theme.muted;
+      ctx.textAlign = 'right';
+      ctx.fillText(handle, W - 60, H - 44);
+      ctx.textAlign = 'left';
+    }
   }
 
   /** The last slide: a call to action over art. cta = { headline, button, note?, art } */
   function drawCta(ctx, cta, options) {
-    const theme = THEMES[(options && options.theme) || 'forge'];
+    const theme = themeFor(options);
     base(ctx, theme);
     coverFit(ctx, cta.art, 0, 0, W, H, false);
     ctx.fillStyle = 'rgba(0,0,0,0.58)';
     ctx.fillRect(0, 0, W, H);
     fade(ctx, 700, H, 'rgba(0,0,0,{a})', 0, 0.9);
 
-    wordmark(ctx, theme, W / 2, 190, 84, 'center');
+    brandMark(ctx, theme, options, W / 2, 190, 84, 'center');
     const fitted = fitHeadline(ctx, cleanText(cta.headline, 120), W - 160, 4, 120, 64);
     const lineHeight = Math.round(fitted.size * 1.06);
     ctx.font = `${fitted.size}px ${HEAD}`;
@@ -262,7 +283,8 @@
     const by = y + 50;
     ctx.fillStyle = theme.accent;
     ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(bx, by, bw, 112, 56) : ctx.rect(bx, by, bw, 112);
+    if (ctx.roundRect) ctx.roundRect(bx, by, bw, 112, 56);
+    else ctx.rect(bx, by, bw, 112);
     ctx.fill();
     ctx.fillStyle = '#000';
     ctx.textAlign = 'center';

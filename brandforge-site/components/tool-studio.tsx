@@ -322,13 +322,6 @@ function StudioView({ title, subtitle, storageKey, source, groups, referenceFiel
     <AppShell
       title={title}
       subtitle={subtitle}
-      actions={
-        storageKey.includes('create') ? (
-          <Link href="/create/carousel" className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">
-            Carousel maker
-          </Link>
-        ) : null
-      }
     >
       <StudioFlow />
       <div role="tablist" aria-label="Tool groups" className="flex gap-1 border-b border-line">

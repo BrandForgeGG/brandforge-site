@@ -5298,3 +5298,56 @@ export async function inviteSpecialistByEmail(input: {
   }
   return { ok: true, existingAccount: Boolean(existing) };
 }
+
+
+// ---- Saved carousels (migration 0031: carousels) ----
+export type CarouselRow = {
+  id: string;
+  title: string;
+  type: string;
+  theme: string;
+  plan: unknown;
+  brand: unknown;
+  captions: unknown;
+  planned_for: string | null;
+  updated_at: string;
+};
+
+const CAROUSEL_COLUMNS = 'id, title, type, theme, plan, brand, captions, planned_for, updated_at';
+
+export async function listCarousels(userId: string): Promise<CarouselRow[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const { data } = await admin.from('carousels').select(CAROUSEL_COLUMNS).eq('user_id', userId).order('updated_at', { ascending: false }).limit(50);
+  return (data ?? []) as CarouselRow[];
+}
+
+export async function saveCarousel(
+  userId: string,
+  id: string | null,
+  draft: { title: string; type: string; theme: string; plan: unknown; brand: unknown; captions: unknown; plannedFor: string | null }
+): Promise<{ ok: true; row: CarouselRow } | { ok: false; error: 'not_found' | 'limit' | 'failed' }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'failed' };
+  const fields = { title: draft.title, type: draft.type, theme: draft.theme, plan: draft.plan, brand: draft.brand, captions: draft.captions, planned_for: draft.plannedFor, updated_at: new Date().toISOString() };
+  if (id) {
+    const { data, error } = await admin.from('carousels').update(fields).eq('id', id).eq('user_id', userId).select(CAROUSEL_COLUMNS).maybeSingle();
+    if (error) return { ok: false, error: 'failed' };
+    return data ? { ok: true, row: data as CarouselRow } : { ok: false, error: 'not_found' };
+  }
+  const { count } = await admin.from('carousels').select('id', { count: 'exact', head: true }).eq('user_id', userId);
+  if ((count ?? 0) >= 100) return { ok: false, error: 'limit' };
+  const { data, error } = await admin.from('carousels').insert({ user_id: userId, ...fields }).select(CAROUSEL_COLUMNS).single();
+  if (error) {
+    console.error('saveCarousel error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+  return { ok: true, row: data as CarouselRow };
+}
+
+export async function deleteCarousel(userId: string, id: string): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const { error } = await admin.from('carousels').delete().eq('id', id).eq('user_id', userId);
+  return !error;
+}

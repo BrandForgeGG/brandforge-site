@@ -1,5 +1,6 @@
 type Drawable = CanvasImageSource | null;
-export interface CarouselOptions { theme?: 'forge' | 'crystal' | 'mono'; handle?: string }
+export interface CarouselBrand { name?: string; handle?: string; accent?: string; logo?: CanvasImageSource | null }
+export interface CarouselOptions { theme?: 'forge' | 'crystal' | 'mono'; brand?: CarouselBrand }
 export declare const W: number;
 export declare const H: number;
 export declare const THEMES: Record<string, { bg: string; text: string; accent: string; muted: string }>;

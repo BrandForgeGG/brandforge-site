@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { completeJson } from '@/lib/blueprint-llm';
-import { buildPlanPrompt, normalizePlan } from '@/lib/carousel-plan.js';
-import { fetchPage } from '@/lib/research';
+import { buildPlanPrompt, normalizePlan, TYPES } from '@/lib/carousel-plan.js';
+import { fetchPage, searchWeb } from '@/lib/research';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { screenText } from '@/lib/content-policy.js';
 import { budgetLimits, decideBudget } from '@/lib/ai-budget.js';
@@ -39,6 +39,8 @@ export async function POST(request: NextRequest) {
     const mode = body.mode === 'url' || body.mode === 'file' ? body.mode : 'words';
     const topic = String(body.topic ?? '').trim().slice(0, 1500);
     const count = Number(body.count) || 7;
+    const type = typeof body.type === 'string' && Object.prototype.hasOwnProperty.call(TYPES, body.type) ? body.type : 'list';
+    const cta = String(body.cta ?? '').trim().slice(0, 80);
 
     let sourceText = '';
     let sourceTitle = '';
@@ -66,6 +68,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Say what the carousel is about in a sentence.' }, { status: 400 });
     }
 
+    // News and trends cannot come from the model's memory: search the web and write from what is found.
+    if (type === 'news' && mode === 'words') {
+      const provider = process.env.SEARCH_PROVIDER || 'serper';
+      const key = process.env.SEARCH_API_KEY || '';
+      if (!key && provider !== 'ddg') {
+        return NextResponse.json({ error: 'News and trends needs web search, which is not switched on. Paste a news page address or a text file instead.' }, { status: 422 });
+      }
+      try {
+        const found = await searchWeb({ query: topic, num: 4, provider, apiKey: key, timeoutMs: 6000 });
+        const parts: string[] = [];
+        const titles: string[] = [];
+        for (const result of found.results.slice(0, 3)) {
+          titles.push(result.title);
+          let text = result.snippet ?? '';
+          try {
+            const page = await fetchPage(result.url, { timeoutMs: 4000, maxChars: 3000 });
+            text = page.text || text;
+          } catch {
+            /* the search snippet is still a real source */
+          }
+          parts.push(`[${result.title}] ${text}`);
+        }
+        sourceText = parts.join('\n\n');
+        sourceTitle = titles.join(' | ');
+      } catch {
+        return NextResponse.json({ error: 'Could not search the news right now. Paste a news page address instead.' }, { status: 422 });
+      }
+      if (sourceText.length < 200) return NextResponse.json({ error: 'No usable news was found for that. Try different words, or paste a page address.' }, { status: 422 });
+    }
+
     const screened = screenText(`${topic}\n${sourceText.slice(0, 4000)}`);
     if (!screened.ok) return NextResponse.json({ error: screened.message, policy: screened.category }, { status: 422 });
 
@@ -73,13 +105,13 @@ export async function POST(request: NextRequest) {
     const budget = decideBudget({ userToday: 0, aiToday: usage.aiToday }, budgetLimits(process.env));
     if (!budget.allowed) return NextResponse.json({ error: budget.message }, { status: 429 });
 
-    const prompt = buildPlanPrompt({ mode, topic, sourceText, sourceTitle, count });
+    const prompt = buildPlanPrompt({ mode, type, topic, sourceText, sourceTitle, count, cta });
     let plan = null;
     let lastError = 'The writer is busy. Try again in a moment.';
     for (const model of MODELS) {
       try {
         const completion = await completeJson({ apiKey, model, system: prompt.system, user: prompt.user, temperature: 0.6, maxTokens: 1600, timeoutMs: model.endsWith(':free') ? 40000 : 30000 });
-        const checked = normalizePlan(completion.text, { count: prompt.count });
+        const checked = normalizePlan(completion.text, { count: prompt.count, cta });
         if (checked.ok) {
           plan = checked.plan;
           break;
@@ -91,7 +123,7 @@ export async function POST(request: NextRequest) {
     }
     if (!plan) return NextResponse.json({ error: `${lastError} Try again, or give it a little more to work with.` }, { status: 502 });
 
-    void recordFunnelEvent('carousel_planned', { signedIn: Boolean(user), source: 'organic', properties: { source: mode } }).catch(() => undefined);
+    void recordFunnelEvent('carousel_planned', { signedIn: Boolean(user), source: 'organic', properties: { source: mode, status: type } }).catch(() => undefined);
     return NextResponse.json({ plan, source: { title: sourceTitle, image: sourceImage, url: sourceUrl } });
   } catch (error) {
     console.error('Carousel plan error:', error);
