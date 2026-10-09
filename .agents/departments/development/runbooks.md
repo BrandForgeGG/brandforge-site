@@ -124,3 +124,27 @@ Hobby plan: daily at most. No `CRON_SECRET` returns 503, a wrong one 401.
 4. OpenRouter: key valid and credit left.
 5. Resend: sending domain verified (`hello@brandforge.gg`), API key send-only.
 6. Roll back (section 2) if the last deploy is the cause.
+
+## 11. Weekly content calendar and carousel channels (added 2026-10-09)
+
+- **What it is:** admin dashboard, **Weekly posts calendar**. Five carousels a day, each weekday with its own
+  mix of post types and times (UTC), written ahead, reviewed and approved there, then posted to BrandForge's own
+  channels. Rows are created per week on demand; **nothing posts until a post is approved**, unless
+  "Post automatically at the times" is switched on (it is off by default).
+- **Where it posts:** Telegram `TELEGRAM_ANNOUNCE_CHAT_ID` (set) and a Discord channel webhook in
+  `DISCORD_CONTENT_URL` (not set yet; falls back to `DISCORD_SHOWCASE_URL`). A channel that is not set up is shown as
+  "not connected" and reported honestly on the post, never skipped silently.
+- **Scheduler:** Supabase `pg_cron` job `brandforge-calendar-tick` (every 10 minutes) calls
+  `https://brandforge.gg/api/cron/calendar` with the header `x-tick-token` (= env `CALENDAR_TICK_TOKEN`; the same
+  value is inside the cron job). Vercel's daily cron cannot do sub-daily times. A post is claimed before it is
+  sent, so overlapping ticks cannot post twice. To pause everything: `select cron.unschedule('brandforge-calendar-tick');`
+  To rotate the token: change `CALENDAR_TICK_TOKEN` in Vercel, redeploy, and re-run the `cron.schedule` with the new value.
+- **Server-side images:** `@napi-rs/canvas` draws the slides with the same code as the browser; fonts are read from
+  `public/fonts` (kept in the function bundle by `outputFileTracingIncludes` in `next.config.ts`).
+- **News posts** search the web first (`SEARCH_PROVIDER` and `SEARCH_API_KEY`), so the facts come from fetched pages.
+- **User channels** (Distribute, "Post it now"): Telegram channel (the person must be an admin, checked with their
+  linked Telegram), Discord webhook, Bluesky (app password). Secrets are encrypted (AES-256-GCM) with
+  `CHANNEL_SECRET_KEY`, or a key derived from the service key when that is unset. Instagram, TikTok, LinkedIn and X
+  need app approval and are not connected.
+- **Data:** tables `content_calendar_posts`, `content_calendar_prefs`, `content_calendar_settings`, `carousels`,
+  `carousel_channels` (migrations 0031 to 0033). Guest chats and these tables are not touched by the retention cron.

@@ -11,7 +11,10 @@ until the platform approves our app, which we do not control.
 - Brand name, handle, logo, accent colour and closing line are the user's choice. Nothing of ours is on a slide.
 - `/distribute`: the carousel as a post on Instagram, TikTok, LinkedIn, X and Facebook, a caption written for each
   platform (limits enforced), copy, ZIP download, a planned date, and saved carousels in the account.
-- Not live: posting to the platforms, and reminders at the planned time.
+- Also live (2026-10-09): the Create hub (Images and a locked Videos tab), eight looks, BrandForge as the default brand with
+  your own one-click replacement, the carousel in the Telegram and Discord bots, a server-side renderer, post to a Telegram
+  channel, a Discord channel or Bluesky, and BrandForge's own weekly calendar (admin) with a database scheduler.
+- Not live: Instagram, TikTok, LinkedIn, X and Facebook posting (each needs platform approval), and reminders at the planned time.
 
 ## Phase 1: better slides (about 2 weeks)
 
