@@ -51,7 +51,7 @@ export function useAiAccess(conversationId: string, enabled: boolean) {
   return { access, reload, request, decide };
 }
 
-// The AI switch: a small toggle in the top bar and nothing else. On means the AI answers; off means it stays quiet
+// The AI switch: a small toggle in the top bar and nothing else. A thumbs up means the AI answers; a raised hand means it stays quiet
 // and the chat is just people. It says what it is only to screen readers and on hover. No label, no banner, no
 // confirmation: the box under the chat says "Message the team" when it is off, and that is all the page needs.
 export function AiSwitch({ aiEnabled, canControl, onToggle }: { aiEnabled: boolean; canControl: boolean; onToggle: () => void }) {
@@ -65,10 +65,10 @@ export function AiSwitch({ aiEnabled, canControl, onToggle }: { aiEnabled: boole
       data-tip={aiEnabled ? 'AI on. Tap to turn it off.' : 'AI off. Tap to turn it on.'}
       data-tip-pos="below"
       onClick={onToggle}
-      className="group flex h-8 w-11 items-center justify-center"
+      className="group flex h-8 w-12 items-center justify-center"
     >
-      <span aria-hidden="true" className={`relative h-[18px] w-8 rounded-full border transition-colors ${aiEnabled ? 'border-ember bg-ember' : 'border-line bg-overlay'}`}>
-        <span className={`absolute top-px h-3.5 w-3.5 rounded-full bg-background shadow transition-all ${aiEnabled ? 'left-[15px]' : 'left-px'}`} />
+      <span aria-hidden="true" className={`relative h-6 w-11 rounded-full border transition-colors ${aiEnabled ? 'border-ember/60 bg-ember/25' : 'border-line bg-overlay'}`}>
+        <span className={`absolute top-px flex h-[20px] w-[20px] items-center justify-center rounded-full bg-background text-[12px] leading-none shadow transition-all ${aiEnabled ? 'left-[21px]' : 'left-px'}`}>{aiEnabled ? '👍' : '✋'}</span>
       </span>
     </button>
   );

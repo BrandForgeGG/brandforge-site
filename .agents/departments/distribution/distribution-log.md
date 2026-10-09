@@ -861,3 +861,9 @@ we do not have.
 **Change:** The AI switch is now one small toggle in the top bar (icon only, a hover label, nothing else). Removed: the "AI on / AI paused" pill and menu, the "Want a person instead?" hint, the "AI is paused" banner, the confirmation messages, the "AI paused" tag in the sidebar chat list, and the AI badge and status lines in the project panel. What remains: the toggle, the box saying "Message the team" when the AI is off for you, and the two notices someone must act on (a teammate asking to use the AI, and the owner deciding). Call the team stays in the + menu and by typing.
 
 **Distribution move:** none; internal.
+
+## 2026-10-10 — The AI switch shows a thumbs up (on) and a raised hand (off)
+
+**Change:** The knob of the AI switch is now an emoji: thumbs up while the AI answers, raised hand while it is off. Still no text, banner or badge.
+
+**Distribution move:** none.
