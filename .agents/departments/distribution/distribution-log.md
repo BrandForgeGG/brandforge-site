@@ -843,3 +843,9 @@ we do not have.
 **Change:** (1) The typing signal never carried the person's id, so the page could not tell it was the same person and showed your own typing back to you as "BR is typing…" (and "who else is here" could never work). It now carries the id; typing names show in full. (2) With the AI paused it stays quiet in the chat but still reads what people say and keeps the project panel filling in (goal, who it is for, requirements, open questions) through a small token-capped pass, for owners and guests, in chat and when people use the paused-chat message box. (3) The right project panel: Next step first, About (goal, who it is for, platforms), Still to answer (open questions), Captured so far, then the rest; the header and Team show whether the AI is on or paused and still reading.
 
 **Distribution move:** none; internal.
+
+## 2026-10-10 — Calm banners, one-line team notice, no stale "pause the AI" hint
+
+**Change:** Green confirmations and red errors now leave on their own (3.5 and 5 seconds; a red notice with an action stays until used). The "brief with the team" notice is one short line. On refresh the page used to assume the AI was on until the chat list arrived (and never learned it for guests), so people who had paused the AI saw "Pause AI and call the team" again; the real on/paused state now travels with the project state, and the hint and pause control wait for it.
+
+**Distribution move:** none; internal.

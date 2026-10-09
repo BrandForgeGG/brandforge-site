@@ -489,6 +489,8 @@ export function ChatWorkspace() {
   const [slashClosed, setSlashClosed] = useState(false);
   // AI participation: when false, the AI does not automatically reply or update project context.
   const [aiEnabled, setAiEnabled] = useState(true);
+  // Notices and the pause control wait until the chat's real AI state is known, so a refresh never flashes
+  // "pause the AI" at someone who already paused it.
 
   // Matches only when the composer starts with a slash word: typing "/" anywhere else
   // is just prose and must never summon the popup.
@@ -2161,6 +2163,30 @@ export function ChatWorkspace() {
     recents.find((conversation) => conversation.id === conversationId) ?? null;
 
   // Sync AI enabled state from the conversation data (adjusted during render, not in an effect).
+  const aiKnown = Boolean(state && state.conversationId === conversationId);
+  useEffect(() => {
+    if (state && state.conversationId === conversationId && typeof state.aiEnabled === "boolean") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- mirror the saved AI state once it loads
+      setAiEnabled(state.aiEnabled);
+    }
+  }, [state, conversationId]);
+  // Green confirmations and red errors are moments, not furniture: they leave on their own, quickly. A red
+  // notice that offers an action (a policy review) stays until it is used.
+  useEffect(() => {
+    if (!commandStatus) return;
+    const timer = window.setTimeout(() => setCommandStatus(null), 3500);
+    return () => window.clearTimeout(timer);
+  }, [commandStatus]);
+  useEffect(() => {
+    if (!error || policyHit) return;
+    const timer = window.setTimeout(() => setError(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [error, policyHit]);
+  useEffect(() => {
+    if (!inviteNote) return;
+    const timer = window.setTimeout(() => setInviteNote(""), 3500);
+    return () => window.clearTimeout(timer);
+  }, [inviteNote]);
   const [syncedAiEnabled, setSyncedAiEnabled] = useState<boolean | undefined>(undefined);
   if (activeConversation?.aiEnabled !== undefined && activeConversation.aiEnabled !== syncedAiEnabled) {
     setSyncedAiEnabled(activeConversation.aiEnabled);
@@ -2274,7 +2300,7 @@ return (
             ) : null}
             {conversationId ? (
               <>
-            <AiPill aiEnabled={aiEnabled} canControl={isChatOwner} onPause={() => void pauseAi(false)} onCallTeam={() => void pauseAi(true)} onResume={() => void resumeAi()} />
+            {aiKnown ? <AiPill aiEnabled={aiEnabled} canControl={isChatOwner} onPause={() => void pauseAi(false)} onCallTeam={() => void pauseAi(true)} onResume={() => void resumeAi()} /> : null}
             {/* Project team: real participants plus BrandForge AI - never a fabricated roster. */}
             <div className="bf-menu-root relative">
               <button
@@ -2671,7 +2697,7 @@ return (
             aiEnabled={aiEnabled}
             isOwner={isChatOwner}
             access={aiAccess}
-            showHint={!isStreaming && messages.some((message) => message.sender === "ai" && !message.streaming)}
+            showHint={aiKnown && !isStreaming && messages.some((message) => message.sender === "ai" && !message.streaming)}
             onResume={() => void resumeAi()}
             onCallTeam={() => void pauseAi(true)}
             onRequestAccess={() => void requestAiUse()}
@@ -2792,14 +2818,11 @@ return (
                 context — but the next move belongs to the team, not another send-for-review. */}
             {state?.status === "READY_FOR_REVIEW" && !railMeta.isStaff ? (
               <div
-                className="mb-2 flex items-center gap-2 rounded-xl border border-ember/25 bg-ember/10 px-3 py-2 text-xs leading-relaxed text-ember-light"
+                className="mb-2 flex items-center gap-2 rounded-xl border border-ember/25 bg-ember/10 px-3 py-1.5 text-xs text-ember-light"
                 role="status"
               >
-                <span className="bf-status-dot" aria-hidden="true" />
-                <span>
-                  Brief with the team — waiting for review. Keep adding context here;
-                  they reply in this chat.
-                </span>
+                <span className="bf-status-dot shrink-0" aria-hidden="true" />
+                <span className="min-w-0 truncate">With the team, waiting for review. Keep adding context; they reply here.</span>
               </div>
             ) : null}
             {/* Staff send side of the proposal flow: brief is waiting, an operator

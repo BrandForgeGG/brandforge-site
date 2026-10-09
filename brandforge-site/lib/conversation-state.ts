@@ -32,6 +32,8 @@ export interface ConversationSnapshot {
   milestones: Milestone[];
   tasks: Task[];
   discovery: DiscoveryState;
+  /** False while the owner has paused the AI in this chat. */
+  aiEnabled: boolean;
 }
 
 function truncate(value: unknown, maxLength: number): string {
@@ -80,6 +82,7 @@ export async function getConversationSnapshot(
     milestones,
     tasks,
     discovery: computeDiscovery(context, requirements),
+    aiEnabled: (conversation as { ai_enabled?: boolean | null }).ai_enabled !== false,
   };
 }
 
@@ -235,6 +238,7 @@ export interface ClientProjectState {
     weeksMax: number | null;
   } | null;
   discovery: DiscoveryState;
+  aiEnabled: boolean;
 }
 
 export function buildClientState(
@@ -252,6 +256,7 @@ export function buildClientState(
     conversationId: snapshot.conversationId,
     title: snapshot.title,
     status: snapshot.status,
+    aiEnabled: snapshot.aiEnabled,
     project: {
       name: context?.project_name ?? null,
       problemStatement: context?.problem_statement ?? null,
