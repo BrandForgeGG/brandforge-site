@@ -9,7 +9,7 @@ import { PostComposer } from '@/components/carousel/post-composer';
 import type { Format } from '@/lib/format-catalog.js';
 import type { ChannelKind } from '@/components/integrations/use-channels';
 
-type Open = { kind: 'carousel' } | { kind: 'post'; type: 'update' | 'poll' | 'quiz' | 'thread'; platform: ChannelKind; name: string };
+type Open = { kind: 'carousel' } | { kind: 'post'; type: 'update' | 'poll' | 'quiz' | 'thread'; platform?: ChannelKind; name: string };
 
 // Distribute: pick a format, then shape it and send it. The catalog lists every format we are making, by
 // platform, with an honest status; only the live ones open. The carousel keeps its platform previews.
@@ -22,9 +22,15 @@ export function DistributeHub() {
 
   useEffect(() => {
     let live = true;
-    const wanted = Number(new URLSearchParams(window.location.search).get('format'));
+    const query = new URLSearchParams(window.location.search);
+    const make = query.get('make');
+    const wanted = Number(query.get('format'));
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the address is only readable in the browser
     setReady(true);
+    // From Create: open a poll, quiz, thread or update with every connected channel to choose from.
+    if (make && ['update', 'poll', 'quiz', 'thread'].includes(make)) {
+      setOpen({ kind: 'post', type: make as 'update' | 'poll' | 'quiz' | 'thread', name: make.charAt(0).toUpperCase() + make.slice(1) });
+    }
     if (Number.isFinite(wanted) && new URLSearchParams(window.location.search).has('format')) {
       import('@/lib/format-catalog.js').then((mod) => {
         const found = mod.FORMATS.find((f: Format) => f.n === wanted && f.status === 'live');
@@ -45,6 +51,7 @@ export function DistributeHub() {
     setOpen(tool.kind === 'carousel' ? { kind: 'carousel' } : { kind: 'post', type: tool.type, platform: tool.platform, name: format.name });
     try {
       const url = new URL(window.location.href);
+      url.searchParams.delete('make');
       if (format.n === 0) url.searchParams.delete('format');
       else url.searchParams.set('format', String(format.n));
       window.history.replaceState(null, '', url.toString());
@@ -59,6 +66,7 @@ export function DistributeHub() {
     try {
       const url = new URL(window.location.href);
       url.searchParams.delete('format');
+      url.searchParams.delete('make');
       window.history.replaceState(null, '', url.toString());
     } catch {
       /* ignore */

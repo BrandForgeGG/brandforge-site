@@ -1,5 +1,5 @@
 export type FormatStatus = 'live' | 'setup' | 'approval' | 'building';
-export type FormatTool = { kind: 'carousel' } | { kind: 'post'; type: 'update' | 'poll' | 'quiz' | 'thread'; platform: 'telegram' | 'discord' | 'bluesky' | 'slack' | 'tumblr' };
+export type FormatTool = { kind: 'carousel' } | { kind: 'post'; type: 'update' | 'poll' | 'quiz' | 'thread'; platform?: 'telegram' | 'discord' | 'bluesky' | 'slack' | 'tumblr' };
 export interface Format {
   n: number;
   group: string;

@@ -7,7 +7,14 @@ import { FORMATS, GROUPS, STATUS_LABEL, type Format } from '@/lib/format-catalog
 
 const OTHER_NAMES: Record<string, string> = { reddit: 'Reddit', mastodon: 'Mastodon', threads: 'Threads', whatsapp: 'WhatsApp', pinterest: 'Pinterest', google: 'Google', medium: 'Medium' };
 
-function Mark({ platform, on }: { platform: string; on: boolean }) {
+function Mark({ platform, name, on }: { platform: string; name: string; on: boolean }) {
+  if (!platform) {
+    return (
+      <span aria-hidden="true" className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-serif text-lg ${on ? 'bg-ember text-background' : 'border border-dashed border-line bg-overlay text-muted'}`}>
+        {name.slice(0, 1)}
+      </span>
+    );
+  }
   if (platform in SERVICES) return <ServiceTile id={platform as ServiceId} on={on} size={36} />;
   return (
     <span aria-hidden="true" className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold ${on ? 'bg-ember text-background' : 'border border-dashed border-line bg-overlay text-muted'}`}>
@@ -26,11 +33,11 @@ const badge: Record<string, string> = {
 // Every format we are making, by platform, with an honest status. By default only what is live shows;
 // "Show everything" adds the rest, each with the reason it is not usable yet and a way to ask for it
 // (counted, so the next one built is the one people want). Live formats open their tool.
-export function FormatCatalog({ onPick, groups, title = 'Formats' }: { onPick?: (format: Format) => void; groups?: string[]; title?: string }) {
+export function FormatCatalog({ onPick, formats = FORMATS, groupList = GROUPS, title = 'Formats' }: { onPick?: (format: Format) => void; formats?: Format[]; groupList?: { id: string; label: string }[]; title?: string }) {
   const [all, setAll] = useState(true);
   const [voted, setVoted] = useState<Record<number, boolean>>({});
-  const shown = FORMATS.filter((f: Format) => (all || f.status === 'live') && (!groups || groups.includes(f.group)));
-  const liveCount = FORMATS.filter((f: Format) => f.status === 'live').length;
+  const shown = formats.filter((f: Format) => all || f.status === 'live');
+  const liveCount = formats.filter((f: Format) => f.status === 'live').length;
 
   function vote(f: Format) {
     if (voted[f.n]) return;
@@ -43,7 +50,7 @@ export function FormatCatalog({ onPick, groups, title = 'Formats' }: { onPick?: 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-serif text-xl text-foreground">{title}</h2>
-          <p className="text-xs text-muted">{liveCount} live now{all ? `, ${FORMATS.length - liveCount} more coming. Tap "I want this" on the ones you need and they move up.` : ''}.</p>
+          <p className="text-xs text-muted">{liveCount} live now{all ? `, ${formats.length - liveCount} more coming. Tap "I want this" on the ones you need and they move up.` : ''}.</p>
         </div>
         <div role="group" aria-label="Which formats to show" className="flex gap-1">
           {([[true, 'Live and coming'], [false, 'Live only']] as const).map(([value, label]) => (
@@ -55,7 +62,7 @@ export function FormatCatalog({ onPick, groups, title = 'Formats' }: { onPick?: 
       </div>
 
       <div className="mt-4 space-y-6">
-        {GROUPS.map((group: { id: string; label: string }) => {
+        {groupList.map((group: { id: string; label: string }) => {
           const items = shown.filter((f: Format) => f.group === group.id).sort((a: Format, b: Format) => Number(b.status === 'live') - Number(a.status === 'live'));
           if (items.length === 0) return null;
           return (
@@ -66,7 +73,7 @@ export function FormatCatalog({ onPick, groups, title = 'Formats' }: { onPick?: 
                   const live = f.status === 'live';
                   const body = (
                     <>
-                      <Mark platform={f.platform} on={live} />
+                      <Mark platform={f.platform} name={f.name} on={live} />
                       <span className="min-w-0 flex-1 text-left">
                         <span className="flex items-center justify-between gap-2">
                           <span className={`truncate text-sm font-medium ${live ? 'text-foreground' : 'text-muted'}`}>{f.name}</span>

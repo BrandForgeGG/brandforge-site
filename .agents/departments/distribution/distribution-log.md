@@ -759,3 +759,9 @@ we do not have.
 **Change:** The full list of formats (46) is now in the product, by platform, each with an honest status: Live (opens its tool), Almost ready, Waiting for approval, Not built yet. Default view is "Live now", with "Show everything" for the rest and an "I want this" vote on every unbuilt format (counted as create_interest, so demand picks what gets built next). Distribute opens the live ones as platform-named tools (Telegram poll, Telegram quiz, Discord poll and embed, Slack message, Bluesky thread) and the carousel; Create shows the visual and video formats under the maker. Replaces the generic Update/Poll/Quiz/Thread tabs.
 
 **Distribution move:** the "I want this" counts are the build order; review them weekly. Use the live list as the launch post ("what you can post today").
+
+## 2026-10-09 — Create lists creations, Distribute lists platform formats
+
+**Change:** Create now shows what you can make, with no platforms in it (Images, Text and engagement, Video, Documents and articles, Offers and events): carousel, update, poll, quiz and thread are live, the rest are votable. Live text creations open on Distribute (?make=poll etc.) with every connected channel to choose from. Distribute keeps the platform-specific format list. Votes on creations use numbers 100+ so they never mix with distribution formats.
+
+**Distribution move:** none public. Read the two sets of "I want this" votes separately: creations tell us what to build, formats tell us where to post.
