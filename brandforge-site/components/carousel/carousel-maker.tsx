@@ -412,7 +412,7 @@ export function CarouselMaker() {
                   <button key={i} type="button" aria-label={`Slide ${i + 1}`} aria-current={i === sel} onClick={() => setSelected(i)} className={`h-8 min-w-8 rounded-lg border px-2 text-xs transition ${i === sel ? 'border-ember bg-ember/15 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>{i + 1}</button>
                 ))}
               </div>
-              {signedIn ? (
+              {signedIn === null ? null : signedIn ? (
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button type="button" className={btnPrimary} disabled={busy || !fontsReady} onClick={() => void downloadAll()}>Download all (ZIP)</button>
                   <button type="button" className={btn} disabled={busy || !fontsReady} onClick={() => void downloadOne()}>This slide (PNG)</button>
@@ -429,7 +429,7 @@ export function CarouselMaker() {
             </div>
 
             <div className="space-y-3">
-              {!signedIn ? (
+              {signedIn === null ? null : !signedIn ? (
                 <div className="rounded-2xl border border-line bg-panel p-5">
                   <p className="font-serif text-xl text-foreground">Like it? Make it yours.</p>
                   <p className="mt-2 text-sm leading-relaxed text-muted">Sign in, free, to edit every word, add your own pictures and download the slides. Your carousel is saved and waiting for you, and brand, colour and closing line stay yours.</p>

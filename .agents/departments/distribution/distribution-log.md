@@ -783,3 +783,9 @@ we do not have.
 **Change:** First replies now follow a direct shape: one line showing the idea was understood, three specific points (who pays, how the best win, the biggest risk), what to do first this week, and ONE question. No "Great!", no numbered list of questions, no "problem statement / target users / platform" labels, under 170 words. Greetings get one or two plain sentences and two concrete things to try. Copy no longer invents "free" offers. Checked on four real first messages against the standard model before and after.
 
 **Distribution move:** none public. Re-read the first replies of real users in a week; this is the first thing every new visitor reads.
+
+## 2026-10-10 — First seconds in chat; no sign-in prompts for registered people
+
+**Change:** The "Sign in to keep this chat" bar trusted a leftover guest cookie, so registered people who had once tried BrandForge as guests saw it. It now requires that there is no sign-in cookie. The review handoff had the same flaw. The carousel maker no longer flashes the signed-out view while it checks. First screen: the top bar on an empty new chat shows only Sign in and the menu (no AI toggle or team stack until there is a chat), and the suggestion chips now lead with Make a carousel and drop Get a specialist.
+
+**Distribution move:** none public. Watch chat_started and signin_started from landing_viewed over the next week.

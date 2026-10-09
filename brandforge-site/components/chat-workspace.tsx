@@ -153,11 +153,11 @@ const NEXT_STEP_ACTIONS = [
 
 // Starting points under the composer: one tap fills it, the tooltip says what comes back.
 const START_PROMPTS = [
+  { label: 'Make a carousel', hint: 'Swipeable slides from one sentence', text: '', href: '/create?make=carousel', icon: 'M5 5h8v10H5zM7 3.5h8V13M3.5 7v8' },
   { label: 'Plan my idea', hint: 'Scope, roadmap and estimate', text: 'I have an idea: ', icon: 'M4 4.5h4v4H4zM12 4.5h4v4h-4zM8 6.5h4M6 8.5v4h6M12 12.5h4v3h-4z' },
   { label: 'Audit a URL', hint: 'A ranked fix list from your page', text: 'Audit this site and tell me what to fix first: https://', icon: 'M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM13 13l3.5 3.5' },
   { label: 'Write ads', hint: 'Hooks and copy for each platform', text: 'Write ads for ', icon: 'M3.5 9.5v-3l9-3v9zM12.5 6.5h3a1.5 1.5 0 010 3h-3M6 12.5l1 3.5h2l-.8-3' },
   { label: 'Make an image', hint: 'Free, right in the chat', text: 'Create an image: ', icon: 'M4 5h12v10H4zM4 13l3.5-3.5 3 3 2-2L16 14M13 8.2h.01' },
-  { label: 'Get a specialist', hint: 'A vetted person joins this chat', text: 'I need a specialist to help me build ', icon: 'M7 8a3 3 0 106 0 3 3 0 00-6 0zM4 16c.5-2.8 2.6-4.5 6-4.5s5.5 1.7 6 4.5' },
 ] as const;
 
 function StartPrompts({ onPick }: { onPick: (text: string) => void }) {
@@ -165,7 +165,7 @@ function StartPrompts({ onPick }: { onPick: (text: string) => void }) {
     <div className="bf-start-prompts mx-auto w-full max-w-3xl px-4 sm:px-6">
       <div className="flex flex-wrap justify-center gap-2" role="group" aria-label="Starting points">
         {START_PROMPTS.map((item) => (
-          <button key={item.label} type="button" data-tip={item.hint} onClick={() => onPick(item.text)} className="bf-start-chip">
+          <button key={item.label} type="button" data-tip={item.hint} onClick={() => ('href' in item && item.href ? window.location.assign(item.href) : onPick(item.text))} className="bf-start-chip">
             <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d={item.icon} />
             </svg>
@@ -1491,7 +1491,7 @@ export function ChatWorkspace() {
 
     // A guest has no account for the team to answer: sending a brief for human review
     // is the natural moment to ask them to save the chat, then continue here.
-    if (!railMeta.userId && document.cookie.includes("bf_guest=")) {
+    if (!railMeta.userId && !/sb-[^=;]+-auth-token/.test(document.cookie) && document.cookie.includes("bf_guest=")) {
       router.push(
         `/login?next=${encodeURIComponent(`/chat?conversationId=${conversationId}`)}`,
       );
@@ -2084,6 +2084,8 @@ return (
                 Sign in
               </button>
             ) : null}
+            {conversationId ? (
+              <>
             <button
               type="button"
               onClick={() => {
@@ -2192,6 +2194,8 @@ return (
                 </div>
               ) : null}
             </div>
+              </>
+            ) : null}
             <div className="bf-menu-root relative">
             <button
               type="button"
