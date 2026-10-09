@@ -10,3 +10,5 @@ export declare function avatarTone(key: string | null | undefined): AvatarTone;
 export declare function avatarLabel(displayName: string | null | undefined): string;
 export declare function formatRole(role: string | null | undefined): string;
 export declare const AVATAR_TONES: AvatarTone[];
+
+export declare function roleLine(role: string | null | undefined, username: string | null | undefined): string;

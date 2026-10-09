@@ -62,7 +62,18 @@ function formatRole(role) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+// The role line under a person's name. Admins read "Admin", operators "Operator", everyone else shows their
+// own @username (or "Member" until they have picked one). The word "user" is never shown.
+function roleLine(role, username) {
+  const key = String(role ?? '').trim().toLowerCase();
+  if (key === 'admin' || key === 'founder') return 'Admin';
+  if (key === 'operator') return 'Operator';
+  const handle = String(username ?? '').trim().replace(/^@/, '');
+  return handle ? `@${handle}` : 'Member';
+}
+
 module.exports = {
+  roleLine,
   initialsFor,
   avatarTone,
   avatarLabel,

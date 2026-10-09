@@ -789,3 +789,9 @@ we do not have.
 **Change:** The "Sign in to keep this chat" bar trusted a leftover guest cookie, so registered people who had once tried BrandForge as guests saw it. It now requires that there is no sign-in cookie. The review handoff had the same flaw. The carousel maker no longer flashes the signed-out view while it checks. First screen: the top bar on an empty new chat shows only Sign in and the menu (no AI toggle or team stack until there is a chat), and the suggestion chips now lead with Make a carousel and drop Get a specialist.
 
 **Distribution move:** none public. Watch chat_started and signin_started from landing_viewed over the next week.
+
+## 2026-10-10 — AI pause and call-the-team, AI access requests, roles, a better actions menu
+
+**Change:** (1) The top bar has a clear AI on/paused control: pause the AI and call the team in one tap, or just pause; it stays paused until switched back on, and typing "shut up", "stop talking", "call the team" or "get me a person" does the same. A one-line hint tells people they can do this. (2) In a shared chat only the owner and admins make the AI generate; teammates see "Only the chat owner can use the AI here", can ask, the owner gets Allow / Not now, and teammates still talk to the people in the chat meanwhile (server enforced, migration 0036). (3) The sidebar card shows Admin, Operator, or the person's own @username, never "user". (4) The paperclip and Actions buttons became one + menu in the style of the big assistants: grouped (Add, Make, Bring in people), icon, name and one line each.
+
+**Distribution move:** none public yet. Worth a launch line: "Tell the AI to stop and call the team, any time."

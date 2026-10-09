@@ -23,6 +23,8 @@ import { fetchAuthed, getSessionUser } from "@/lib/browser-auth";
 import { trackEvent } from "@/lib/funnel-client";
 import { useLogin } from "@/components/login-dialog";
 import { GuestSaveBar } from "@/components/guest-save-bar";
+import { AiNotices, AiPill, useAiAccess } from "@/components/chat-ai-controls";
+import { ToolsMenu } from "@/components/chat-tools-menu";
 import { VideoReadyBar } from "@/components/video-ready-bar";
 import { PeerContractForm } from "@/components/peer-contract-card";
 import { extractOutline } from "@/lib/deliverable-outline";
@@ -138,17 +140,6 @@ const SLASH_COMMANDS = [
   { command: "/attach", label: "How to attach a file" },
   { command: "/help", label: "List all commands" },
 ];
-
-// Suggested next moves live in the Actions menu, not as a row under every answer.
-// Every action works like "Create an image:": a short prefix lands in the box with the cursor after
-// the colon, and the person finishes the sentence.
-const NEXT_STEP_ACTIONS = [
-  { key: 'image', label: 'Create an image', text: 'Create an image: ' },
-  { key: 'ads', label: 'Create ads', text: 'Create ads: ' },
-  { key: 'calendar', label: 'Create a 30-day calendar', text: 'Create a 30-day content calendar: ' },
-  { key: 'audit', label: 'Audit a URL', text: 'Audit this URL: https://' },
-  { key: 'video', label: 'Create a video', text: 'Create a video: ' },
-] as const;
 
 
 // Starting points under the composer: one tap fills it, the tooltip says what comes back.
@@ -1157,6 +1148,11 @@ export function ChatWorkspace() {
   const canDeleteConversation =
     Boolean(conversationId) && (!railMeta.isStaff || isOwnConversation);
 
+  // Who may make the AI generate here. The server enforces it on every message; this is what the screen shows.
+  const { access: aiAccess, request: requestAiUse, decide: decideAiUse } = useAiAccess(conversationId, Boolean(railMeta.userId) && Boolean(conversationId));
+  const isChatOwner = aiAccess ? aiAccess.isOwner : isOwnConversation;
+  const pauseAiRef = useRef<((callTeam: boolean) => Promise<void>) | null>(null);
+
   const handleSend = useCallback(
     async (suggestion?: string) => {
       const checkedText = validateMessageInput((suggestion ?? input).trim());
@@ -1276,6 +1272,30 @@ export function ChatWorkspace() {
       setInput("");
       setIsReplyingTo(null);
 
+      // "Shut up and call the team", in the person's own words: pause the AI and call the team instead of
+      // sending that sentence to the AI.
+      if (conversationId && isChatOwner && aiEnabled && /^\s*(please\s+)?(shut up|be quiet|stop (talking|replying|answering|the ai)|pause( the)? ai|call (the |a )?team|(i )?(want|need) (to talk to )?(a |the )?(human|person|someone|the team)|get (me )?(a )?(human|person|someone))\b/i.test(text)) {
+        void pauseAiRef.current?.(true);
+        return;
+      }
+
+      // A teammate who has not been allowed to use the AI still talks to the people in the chat.
+      if (conversationId && !railMeta.isStaff && aiAccess && !aiAccess.isOwner && aiAccess.state !== "allowed") {
+        try {
+          const response = await fetchAuthed(`/api/conversations/${conversationId}/say`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: text }),
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data.error || "The message could not be sent");
+          await refreshMessages(conversationId);
+        } catch (cause) {
+          setError(cause instanceof Error ? cause.message : "The message could not be sent");
+        }
+        return;
+      }
+
       // BrandForge staff reply as the team (human_operator) inside a founder chat instead of
       // triggering the AI, so the founder always sees a human voice in the same chat. Sending
       // without an open chat falls through to the creation path below - staff can start one too.
@@ -1352,6 +1372,9 @@ export function ChatWorkspace() {
       await runTurn(conversationId, text);
     },
     [
+      aiAccess,
+      aiEnabled,
+      isChatOwner,
       attachment,
       conversationId,
       input,
@@ -1576,6 +1599,44 @@ export function ChatWorkspace() {
       setInviteNote("Could not copy the link.");
     }
   }, [conversationId]);
+
+  // Pausing lasts until the owner turns the AI back on. "Call the team" also hands the chat to the team.
+  const pauseAi = useCallback(
+    async (callTeam: boolean) => {
+      if (!conversationId) return;
+      setAiEnabled(false);
+      try {
+        const response = await fetchAuthed(`/api/conversations/${conversationId}/ai-toggle`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aiEnabled: false }) });
+        if (!response.ok) throw new Error("toggle failed");
+      } catch {
+        setAiEnabled(true);
+        setError("Could not pause the AI. Try again.");
+        return;
+      }
+      if (callTeam) {
+        await handleRequestReview();
+        setCommandStatus("The AI is paused and the team has been called. Turn the AI back on any time from the top bar.");
+      } else {
+        setCommandStatus("The AI is paused. Turn it back on any time from the top bar.");
+      }
+    },
+    [conversationId, handleRequestReview],
+  );
+  const resumeAi = useCallback(async () => {
+    if (!conversationId) return;
+    setAiEnabled(true);
+    try {
+      const response = await fetchAuthed(`/api/conversations/${conversationId}/ai-toggle`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aiEnabled: true }) });
+      if (!response.ok) throw new Error("toggle failed");
+      setCommandStatus("The AI is back on.");
+    } catch {
+      setAiEnabled(false);
+      setError("Could not turn the AI back on. Try again.");
+    }
+  }, [conversationId]);
+  useEffect(() => {
+    pauseAiRef.current = pauseAi;
+  }, [pauseAi]);
 
   const handleInvite = useCallback(async () => {
     if (!conversationId || !inviteEmail.trim()) return;
@@ -1985,7 +2046,7 @@ export function ChatWorkspace() {
   const selfRoleLabel = railMeta.isStaff
     ? railMeta.role === 'admin' || railMeta.role === 'founder'
       ? 'admin'
-      : 'staff'
+      : 'operator'
     : null;
 
   // Real roster -> role labels for message headers (lowercased-name lookup).
@@ -2086,31 +2147,7 @@ return (
             ) : null}
             {conversationId ? (
               <>
-            <button
-              type="button"
-              onClick={() => {
-                const next = !aiEnabled;
-                setAiEnabled(next);
-                if (conversationId) {
-                  void fetchAuthed(`/api/conversations/${conversationId}/ai-toggle`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ aiEnabled: next }),
-                  }).catch(() => {
-                    setAiEnabled(!next);
-                  });
-                }
-              }}
-              aria-pressed={aiEnabled}
-              aria-label={aiEnabled ? 'Disable AI participation' : 'Enable AI participation'}
-              data-tip={aiEnabled ? 'AI is on. Click to pause it.' : 'AI is paused. Click to turn it on.'}
-              data-tip-pos="below"
-              className="bf-composer-tool"
-            >
-              <svg viewBox="0 0 20 20" className="h-4 w-4" fill={aiEnabled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true">
-                <path d="M10 2.5l1.7 4.6 4.6 1.7-4.6 1.7L10 15.1l-1.7-4.6L3.7 8.8l4.6-1.7z" />
-              </svg>
-            </button>
+            <AiPill aiEnabled={aiEnabled} canControl={isChatOwner} onPause={() => void pauseAi(false)} onCallTeam={() => void pauseAi(true)} onResume={() => void resumeAi()} />
             {/* Project team: real participants plus BrandForge AI - never a fabricated roster. */}
             <div className="bf-menu-root relative">
               <button
@@ -2501,6 +2538,18 @@ return (
             setIsVideoOpen(true);
           }}
         />
+        {conversationId && railMeta.userId ? (
+          <AiNotices
+            aiEnabled={aiEnabled}
+            isOwner={isChatOwner}
+            access={aiAccess}
+            showHint={!isStreaming && messages.some((message) => message.sender === "ai" && !message.streaming)}
+            onResume={() => void resumeAi()}
+            onCallTeam={() => void pauseAi(true)}
+            onRequestAccess={() => void requestAiUse()}
+            onDecide={(userId, decision) => void decideAiUse(userId, decision)}
+          />
+        ) : null}
         <GuestSaveBar
           conversationId={conversationId}
           hasReply={!isStreaming && messages.some((message) => message.sender === "ai" && !message.streaming)}
@@ -2809,112 +2858,23 @@ return (
               />
               <div className="bf-composer-bar">
                 <div className="flex items-center gap-1.5">
-                  <div className="bf-menu-root relative">
-                    <button
-                      type="button"
-                      className="bf-composer-tool"
-                      aria-expanded={attachMenuOpen}
-                    aria-label="Attach a file"
-                      aria-haspopup="menu"
-                      disabled={!conversationId}
-                      data-tip={conversationId ? "Attach a file" : "Send a first message, then attach files"}
-                      onClick={() => setAttachMenuOpen((value) => !value)}
-                    >
-                      <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15.5 9.5l-5.6 5.6a3.4 3.4 0 01-4.8-4.8l6-6a2.3 2.3 0 013.2 3.2l-6 6a1.1 1.1 0 01-1.6-1.6l5.4-5.4" /></svg>
-                    </button>
-                    {attachMenuOpen ? (
-                      <div
-                        role="menu"
-                        className="bf-menu absolute bottom-full left-0 z-40 mb-2 w-64 p-1"
-                      >
-                        <button
-                          type="button"
-                          role="menuitem"
-                          className="bf-menu-item"
-                          onClick={() => {
-                            setAttachMenuOpen(false);
-                            fileInputRef.current?.click();
-                          }}
-                        >
-                          Upload a file…
-                          <span className="bf-menu-hint">
-                            PNG, PDF, TXT, CSV, JSON, ZIP, audio · up to 10 MB
-                          </span>
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="bf-menu-root relative">
-                    <button
-                      type="button"
-                      className="bf-composer-tool bf-composer-actions"
-                      aria-expanded={commandsOpen}
-                      aria-label="Actions"
-                      data-tip="Actions: images, ads, calendar, video, team"
-                      aria-haspopup="menu"
-                      onClick={() => setCommandsOpen((value) => !value)}
-                    >
-                      <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true"><path d="M10 4v12M4 10h12" /></svg>
-                      <span className="bf-actions-label" aria-hidden="true">Actions</span>
-                    </button>
-                    {commandsOpen ? (
-                      <div
-                        role="menu"
-                        className="bf-menu absolute bottom-full left-0 z-40 mb-2 w-64 p-1"
-                      >
-                        {NEXT_STEP_ACTIONS.map((item) => (
-                          <button
-                            key={item.key}
-                            type="button"
-                            role="menuitem"
-                            className="bf-menu-item"
-                            onClick={() => {
-                              setCommandsOpen(false);
-                              trackEvent("next_step_clicked", { source: item.key });
-                              setInput(item.text);
-                              // Cursor after the prefix so typing continues the sentence.
-                              requestAnimationFrame(() => {
-                                const box = composerRef.current;
-                                if (!box) return;
-                                box.focus();
-                                box.setSelectionRange(item.text.length, item.text.length);
-                              });
-                            }}
-                          >
-                            {item.label}
-                          </button>
-                        ))}
-                        {railMeta.userId ? (
-                          <button
-                            type="button"
-                            role="menuitem"
-                            className="bf-menu-item"
-                            onClick={() => {
-                              setCommandsOpen(false);
-                              trackEvent("next_step_clicked", { source: "invite" });
-                              setShowInviteForm(true);
-                            }}
-                          >
-                            Invite my team
-                          </button>
-                        ) : null}
-                        {railMeta.userId && conversationId ? (
-                          <button
-                            type="button"
-                            role="menuitem"
-                            className="bf-menu-item"
-                            onClick={() => {
-                              setCommandsOpen(false);
-                              trackEvent("next_step_clicked", { source: "contract" });
-                              setShowContractForm(true);
-                            }}
-                          >
-                            Create a contract
-                          </button>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </div>
+                  <ToolsMenu
+                    signedIn={Boolean(railMeta.userId)}
+                    hasChat={Boolean(conversationId)}
+                    onUpload={() => fileInputRef.current?.click()}
+                    onPrefill={(text) => {
+                      setInput(text);
+                      requestAnimationFrame(() => {
+                        const box = composerRef.current;
+                        if (!box) return;
+                        box.focus();
+                        box.setSelectionRange(text.length, text.length);
+                      });
+                    }}
+                    onInvite={() => setShowInviteForm(true)}
+                    onContract={() => setShowContractForm(true)}
+                    onCallTeam={isChatOwner && aiEnabled && conversationId ? () => void pauseAi(true) : null}
+                  />
                 </div>
                   <div className="flex items-center gap-3">
                   <button

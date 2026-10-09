@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { supabase } from "@/lib/supabase";
 import { fetchAuthed, getSessionUser } from "@/lib/browser-auth";
 import { useLogin } from "@/components/login-dialog";
-import { avatarTone, initialsFor } from "@/lib/identity-display";
+import { avatarTone, initialsFor, roleLine } from "@/lib/identity-display";
 
 export interface RecentConversation {
   id: string;
@@ -160,11 +160,13 @@ onMobileClose,
       // The signed-in member's own @handle, when they have picked one. Optional by design:
       // a missing username must never break the rail.
       let username: string | null = null;
+      let role = "user";
       try {
         const response = await fetchAuthed("/api/identity");
         if (response.ok) {
           const data = await response.json();
           username = data?.identity?.username ?? null;
+          role = typeof data?.identity?.role === "string" ? data.identity.role : "user";
         }
       } catch {
         // Profile nicety only.
@@ -175,7 +177,7 @@ onMobileClose,
       setAccount({
         name: fullName?.trim() || email.split("@")[0],
         email,
-        role: "user",
+        role,
         username,
       });
     }
@@ -491,14 +493,14 @@ onMobileClose,
               }}
               title={
                 account
-                  ? `${account.name}${account.username ? " · @" + account.username : ""} · ${account.role}`
+                  ? `${account.name} · ${roleLine(account.role, account.username)}`
                   : isVisitor
                     ? "Sign in"
                     : "Account settings"
               }
               aria-label={
                 account
-                  ? `${account.name}, ${account.role} — account settings`
+                  ? `${account.name}, ${roleLine(account.role, account.username)} — account settings`
                   : "Account settings"
               }
               className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${!account && !isVisitor && !isGuestBrowser ? "animate-pulse bg-overlay" : ""}`}
@@ -569,13 +571,8 @@ onMobileClose,
                     <span className="block truncate text-sm font-medium text-foreground">
                       {account?.name ?? "Guest"}
                     </span>
-                    {account?.username ? (
-                      <span className="block truncate text-[11px] text-muted">
-                        @{account.username}
-                      </span>
-                    ) : null}
-                    <span className="block truncate text-[10px] uppercase tracking-[0.15em] text-muted">
-                      {account ? account.role : "Not saved yet"}
+                    <span className="block truncate text-[11px] text-muted">
+                      {account ? roleLine(account.role, account.username) : "Not saved yet"}
                     </span>
                   </span>
                 </>

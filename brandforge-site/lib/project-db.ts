@@ -5580,3 +5580,67 @@ export async function releaseEmailSend(userId: string, kind: string): Promise<vo
   if (!admin) return;
   await admin.from('email_sends').delete().eq('user_id', userId).eq('kind', kind);
 }
+
+// ---- Who may make the AI generate in a shared chat (migration 0036: conversation_ai_access) ----
+export type AiAccessStatus = 'requested' | 'granted' | 'denied' | null;
+
+async function aiAccessFor(conversationId: string, userId: string): Promise<{ isOwner: boolean; isAdmin: boolean; status: AiAccessStatus; ownerId: string | null }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { isOwner: false, isAdmin: false, status: null, ownerId: null };
+  const [conversation, access, adminRole] = await Promise.all([
+    admin.from('conversations').select('user_id').eq('id', conversationId).maybeSingle(),
+    admin.from('conversation_ai_access').select('status').eq('conversation_id', conversationId).eq('user_id', userId).maybeSingle(),
+    isAdminAccount(userId).catch(() => false),
+  ]);
+  const ownerId = (conversation.data as { user_id: string | null } | null)?.user_id ?? null;
+  return { isOwner: ownerId === userId, isAdmin: adminRole, status: ((access.data as { status: AiAccessStatus } | null)?.status ?? null) as AiAccessStatus, ownerId };
+}
+
+export async function getAiAccess(conversationId: string, userId: string) {
+  return aiAccessFor(conversationId, userId);
+}
+
+// A participant asks the owner for AI access. Asking again is harmless; a granted request stays granted.
+export async function requestAiAccess(conversationId: string, userId: string): Promise<{ ok: boolean; status: AiAccessStatus }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, status: null };
+  const current = await aiAccessFor(conversationId, userId);
+  if (current.isOwner || current.isAdmin || current.status === 'granted') return { ok: true, status: 'granted' };
+  const { error } = await admin
+    .from('conversation_ai_access')
+    .upsert({ conversation_id: conversationId, user_id: userId, status: 'requested', requested_at: new Date().toISOString(), decided_at: null }, { onConflict: 'conversation_id,user_id' });
+  if (error) {
+    console.error('requestAiAccess error:', error.message);
+    return { ok: false, status: current.status };
+  }
+  if (current.status !== 'requested') {
+    const name = await getProfileDisplayName(userId);
+    await addMessage({ conversation_id: conversationId, sender_type: 'ai', sender_name: 'BrandForge', content: `${name.slice(0, 80)} asked to use the AI in this chat. The chat owner can allow it.`, content_type: 'system' }).catch(() => undefined);
+  }
+  return { ok: true, status: 'requested' };
+}
+
+export async function listPendingAiAccess(conversationId: string): Promise<{ userId: string; name: string; requestedAt: string }[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const { data } = await admin.from('conversation_ai_access').select('user_id, requested_at').eq('conversation_id', conversationId).eq('status', 'requested').order('requested_at', { ascending: true }).limit(20);
+  const rows = (data ?? []) as { user_id: string; requested_at: string }[];
+  return Promise.all(rows.map(async (row) => ({ userId: row.user_id, name: await getProfileDisplayName(row.user_id), requestedAt: row.requested_at })));
+}
+
+// Only the chat owner decides. 'revoke' turns a granted request back off.
+export async function decideAiAccess(conversationId: string, ownerId: string, userId: string, decision: 'grant' | 'deny' | 'revoke'): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const current = await aiAccessFor(conversationId, ownerId);
+  if (!current.isOwner) return false;
+  const status = decision === 'grant' ? 'granted' : 'denied';
+  const { error } = await admin
+    .from('conversation_ai_access')
+    .upsert({ conversation_id: conversationId, user_id: userId, status, decided_at: new Date().toISOString() }, { onConflict: 'conversation_id,user_id' });
+  if (error) {
+    console.error('decideAiAccess error:', error.message);
+    return false;
+  }
+  return true;
+}

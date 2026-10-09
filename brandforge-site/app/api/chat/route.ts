@@ -17,7 +17,9 @@ import {
   runAsGuestSession,
   updateConversationTitle,
   updateProjectContext,
+  getAiAccess,
 } from "@/lib/project-db";
+import { accessState, canGenerate } from "@/lib/ai-access.js";
 import { consumeChatQuota } from "@/lib/blueprint-session";
 import { deliverableDirective, tidySourcing } from "@/lib/deliverable-intent";
 import { extractOutline } from "@/lib/deliverable-outline";
@@ -243,6 +245,15 @@ export async function POST(request: NextRequest) {
 
     if (!hasAccess) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    // In a shared chat only the owner (and admins) can make the AI generate; everyone else asks first.
+    const who = await getAiAccess(conversationId, user.id);
+    if (!canGenerate(who)) {
+      return NextResponse.json(
+        { error: "Ask the chat owner to let you use the AI.", code: "ai_access_required", state: accessState(who) },
+        { status: 403 },
+      );
     }
   }
 
