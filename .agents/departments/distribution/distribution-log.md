@@ -801,3 +801,9 @@ we do not have.
 **Change:** The transcript used to be re-pinned on every token, fought the browser's own scroll anchoring, and treated the page growing as the reader scrolling up. Now tokens are applied once per frame, the view re-pins once per frame after layout (a ResizeObserver, so the thinking strip, images and the saved answer replacing the streamed one are covered), scroll anchoring is off on the transcript, and only the reader moving up lets go of the bottom.
 
 **Distribution move:** none; internal quality. This is the first thing every new user watches.
+
+## 2026-10-10 — "Is typing" no longer sticks
+
+**Change:** The typing signal other people see was switched off only when the box was edited by hand, so sending a message (which clears the box in code) left it on and the person looked like they were typing for ever. It now follows the box: on while there is text and keys are arriving, off when the box empties and after four quiet seconds.
+
+**Distribution move:** none; internal quality.

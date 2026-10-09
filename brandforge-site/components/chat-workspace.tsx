@@ -351,6 +351,19 @@ export function ChatWorkspace() {
     isTyping,
   );
   const typingLabel = formatTypingLabel(livePresence.typing);
+  // "Typing" follows the box itself: on while there is text and keys are still arriving, off the moment the
+  // box empties (a sent message clears it) and off again after a few quiet seconds, so nobody is shown as
+  // typing for ever.
+  useEffect(() => {
+    if (!input.trim()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- mirrors the composer into the presence flag
+      setIsTyping(false);
+      return;
+    }
+    setIsTyping(true);
+    const quiet = window.setTimeout(() => setIsTyping(false), 4000);
+    return () => window.clearTimeout(quiet);
+  }, [input]);
 
   // Transcript scroller + follow behaviour. Defined before the live-message handler so a row that
   // arrives over Realtime can follow the reader the same way a streamed answer does: only while
@@ -2854,7 +2867,6 @@ return (
                 aria-label="Chat message"
                 onChange={(event) => {
                   setInput(event.target.value);
-                  setIsTyping(Boolean(event.target.value.trim()));
                   setSlashIndex(0);
                   setSlashClosed(false);
                 }}
