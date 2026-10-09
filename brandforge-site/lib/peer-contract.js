@@ -267,6 +267,16 @@ function applyAction(contract, action, actor, payload = {}, now = new Date(), pe
         },
       };
     }
+    case 'respond_dispute': {
+      // The delivering side gets to say their side before staff decide.
+      if (side !== 'payee') return fail(403, 'The person delivering the work can answer a dispute.');
+      const index = Number(payload.index);
+      const m = contract.milestones[index];
+      if (!m || m.status !== 'disputed') return fail(409, 'There is no dispute on that milestone.');
+      const response = cleanText(payload.response, 500);
+      if (response.length < 5) return fail(400, 'Say your side in a sentence.');
+      return { ok: true, event: 'dispute_response', contract: replaceMilestone(contract, index, { response }) };
+    }
     case 'resolve_dispute': {
       const index = Number(payload.index);
       const m = contract.milestones[index];

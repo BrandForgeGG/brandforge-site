@@ -2060,3 +2060,19 @@ main[data-empty='true'] > .bf-chat-footer { position: absolute; inset: auto 0 0 
     font-size: max(16px, 1em);
   }
 }
+
+/* The Actions button is a plus on phones and a labelled pill where there is room. */
+.bf-actions-label {
+  display: none;
+}
+@media (min-width: 640px) {
+  .bf-composer-actions {
+    width: auto;
+    gap: 0.25rem;
+    padding: 0 0.5rem;
+  }
+  .bf-actions-label {
+    display: inline;
+    font-size: 12px;
+  }
+}

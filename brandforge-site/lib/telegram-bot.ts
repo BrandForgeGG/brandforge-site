@@ -84,8 +84,8 @@ export async function runBotTurn(options: {
   return { ok: true, text, conversationId, token };
 }
 
-export function continueUrl(conversationId: string, token: string): string {
-  return `${origin()}/api/blueprint/return?token=${encodeURIComponent(token)}&conversationId=${encodeURIComponent(conversationId)}`;
+export function continueUrl(conversationId: string, token: string, via: 'telegram' | 'discord' = 'telegram'): string {
+  return `${origin()}/api/blueprint/return?token=${encodeURIComponent(token)}&conversationId=${encodeURIComponent(conversationId)}&via=${via}`;
 }
 
 export const BOT_WELCOME = 'BrandForge: AI drafts, people finish.\n\nTap what you want to do, or just write it and I will answer here.';

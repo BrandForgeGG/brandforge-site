@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAIService, type Message as AIMessage } from "@/lib/ai-service";
+import { answerModel, getAIService, type Message as AIMessage } from "@/lib/ai-service";
+import { budgetLimits, decideBudget } from "@/lib/ai-budget.js";
 import { getActorName, getAuthenticatedUser } from "@/lib/supabase-server";
 import {
   addMessage,
@@ -7,8 +8,11 @@ import {
   db,
   downloadConversationAttachment,
   getConversationOwnerSession,
+  getAiUsageToday,
   getGuestChatQuota,
   getMessages,
+  isAdminAccount,
+  raiseAiBudgetAlert,
   persistGuestChatQuota,
   runAsGuestSession,
   updateConversationTitle,
@@ -281,6 +285,24 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Daily spend guard: a per-account cap, a once-a-day staff warning and a global ceiling.
+  // Guests are already capped per session above; the global ceiling covers them too.
+  {
+    const limits = budgetLimits(process.env);
+    const usage = await getAiUsageToday(user?.id ?? null).catch(() => ({ userToday: 0, aiToday: 0 }));
+    const isStaff = user ? await isAdminAccount(user.id).catch(() => false) : false;
+    const budget = decideBudget({ ...usage, isStaff }, limits);
+    if (budget.alert) {
+      void raiseAiBudgetAlert(budget.alert, usage.aiToday).catch(() => undefined);
+    }
+    if (!budget.allowed) {
+      return NextResponse.json(
+        { error: budget.message, retryAfterSeconds: 3600 },
+        { status: 429, headers: { "Retry-After": "3600" } },
+      );
+    }
+  }
+
   const aiService = getAIService();
 
   if (!aiService.isConfigured()) {
@@ -437,6 +459,7 @@ export async function POST(request: NextRequest) {
             // founder watch text that a reload would erase (stream ≠ saved).
             onDiscard: () => send({ type: "discard" }),
           },
+          { model: await answerModel() },
         );
 
         const content = tidySourcing(answer.content.trim()).trim();

@@ -18,6 +18,7 @@ import { safeDownloadName } from './message-actions.js';
 import { notifyDiscordDiscovery } from './discord';
 import { notifyUser } from './notify';
 import { postOpsEvent, postPublicActivity } from './ops-events';
+import { utcDayStart } from './ai-budget.js';
 import { publishPost } from './marketing-poster';
 import { headers } from 'next/headers';
 import type { PeerContract, PeerMilestone } from './peer-contract';
@@ -5089,4 +5090,61 @@ export async function ensureBlueprintSessionWithId(id: string, retentionDays = 9
     return false;
   }
   return true;
+}
+
+
+// ---- AI usage guard (lib/ai-budget.js) ----
+// Counts today's stored AI replies (all accounts) and one account's messages, from UTC midnight.
+export async function getAiUsageToday(userId: string | null): Promise<{ userToday: number; aiToday: number }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { userToday: 0, aiToday: 0 };
+  const since = utcDayStart();
+  const ai = await admin.from('messages').select('id', { count: 'exact', head: true }).eq('sender_type', 'ai').gte('created_at', since);
+  let userToday = 0;
+  if (userId) {
+    const mine = await admin.from('messages').select('id', { count: 'exact', head: true }).eq('sender_type', 'user').eq('sender_id', userId).gte('created_at', since);
+    userToday = mine.count ?? 0;
+  }
+  return { userToday, aiToday: ai.count ?? 0 };
+}
+
+// Tells staff once per UTC day per level. Returns true when this call sent the alert.
+export async function raiseAiBudgetAlert(level: 'warn' | 'cap', count: number): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const event = level === 'cap' ? 'ai_budget_cap' : 'ai_budget_warn';
+  const { count: already } = await admin.from('funnel_events').select('id', { count: 'exact', head: true }).eq('event', event).gte('created_at', utcDayStart());
+  if ((already ?? 0) > 0) return false;
+  await recordFunnelEvent(event, { source: 'test' });
+  await postOpsEvent('ai_budget', { level, count });
+  return true;
+}
+
+
+// Share of real members who came back: of everyone who signed up at least 7 days ago, how many
+// sent a message on a later UTC day within their first 7 days. Messages are the activity signal.
+export async function getReturnMetrics(): Promise<{ eligible: number; returned: number; rate: number | null }> {
+  const admin = createSupabaseAdminClient();
+  const none = { eligible: 0, returned: 0, rate: null };
+  if (!admin) return none;
+  const real = await loadRealProfiles(admin);
+  const now = Date.now();
+  const DAY = 24 * 60 * 60 * 1000;
+  const cohort = [...real.entries()].filter(([, p]) => now - new Date(p.createdAt).getTime() >= 7 * DAY).slice(0, 500);
+  if (cohort.length === 0) return none;
+  const ids = cohort.map(([id]) => id);
+  const { data } = await admin.from('messages').select('sender_id, created_at').eq('sender_type', 'user').in('sender_id', ids).limit(20000);
+  const byUser = new Map<string, number[]>();
+  for (const row of (data ?? []) as { sender_id: string; created_at: string }[]) {
+    const list = byUser.get(row.sender_id) ?? [];
+    list.push(new Date(row.created_at).getTime());
+    byUser.set(row.sender_id, list);
+  }
+  let returned = 0;
+  for (const [id, p] of cohort) {
+    const start = new Date(p.createdAt);
+    const day0 = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate());
+    if ((byUser.get(id) ?? []).some((t) => t >= day0 + DAY && t < day0 + 8 * DAY)) returned += 1;
+  }
+  return { eligible: cohort.length, returned, rate: cohort.length ? returned / cohort.length : null };
 }

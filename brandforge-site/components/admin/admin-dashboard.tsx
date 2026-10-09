@@ -6,6 +6,7 @@ import { fetchAuthed } from '@/lib/browser-auth';
 import { formatMoney } from '@/lib/peer-contract.js';
 import type { PeerView } from '@/lib/peer-contract-view';
 import type { AdminChatRow, AdminOverview } from '@/lib/project-db';
+import { AdminAi } from '@/components/admin/admin-ai';
 
 type Overview = AdminOverview & { funnel: { window: { since?: string }; events: { event: string; count: number }[] } | null };
 type MarketingPost = { id: string; channel: string; target: string; title: string | null; body: string; scheduled_at: string; status: string; error: string | null; permalink: string | null };
@@ -206,6 +207,8 @@ export function AdminDashboard() {
           </Section>
         </div>
       </div>
+
+      <AdminAi />
 
       <Section title="Happening now" note="The latest real activity">
         {overview.activity.length === 0 ? <p className="text-sm text-muted">Nothing yet.</p> : (

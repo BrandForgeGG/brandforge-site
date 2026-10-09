@@ -9,6 +9,7 @@ export type PeerMilestone = {
   paidAt: string | null;
   feeCents: number;
   note: string | null;
+  response?: string | null;
 };
 
 export type PeerContract = {

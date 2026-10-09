@@ -46,6 +46,8 @@ const KIND_BY_EVENT = {
   peer_released: 'contracts',
   // No #ops-disputes webhook exists yet; a dispute must never be silent, so it shares contracts.
   peer_dispute: 'contracts',
+  // Spend guard: staff-only, never public.
+  ai_budget: 'briefs',
 };
 
 // clip/money live in lib/format.js so every message builder renders identically.
@@ -190,6 +192,17 @@ If it is fine, tell the person in the chat.`,
         description: `${price || 'A milestone'} released${details.feeLabel ? ` (platform fee ${details.feeLabel})` : ''}. Pay out to the delivering member.`,
         color: GREEN,
         footer: footer('contracts'),
+      };
+
+    case 'ai_budget':
+      return {
+        title: details.level === 'cap' ? 'AI is at its daily ceiling' : 'AI usage is climbing today',
+        description:
+          details.level === 'cap'
+            ? `${Number(details.count) || 0} AI replies so far today. New visitor messages are paused until midnight UTC; staff can still chat. Raise AI_DAILY_HARD_CAP in Vercel to reopen.`
+            : `${Number(details.count) || 0} AI replies so far today, past the warning level. Check the admin dashboard before it reaches the ceiling.`,
+        color: details.level === 'cap' ? RED : BRAND,
+        footer: footer('briefs'),
       };
 
     case 'peer_dispute':

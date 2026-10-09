@@ -429,11 +429,14 @@ onMobileClose,
               <p className="bf-rail-section-label">Recents</p>
 
               {recents.length === 0 ? (
-                <p className="text-xs leading-relaxed text-muted">
-                  {isStaff
-                    ? 'New briefs appear here the moment a founder sends one for review. Link Telegram in Settings and the ping finds you first.'
-                    : 'Your first chat appears here the moment you send a message - just start typing in the message box.'}
-                </p>
+                <div className="rounded-xl border border-dashed border-line px-3 py-3">
+                  <p className="text-sm text-foreground">{isStaff ? 'No briefs yet' : 'No chats yet'}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted">
+                    {isStaff
+                      ? 'New briefs appear here the moment a founder sends one for review. Link Telegram in Settings and the ping finds you first.'
+                      : 'Describe an idea in the message box. Your chat shows up here, ready to pick up on any device.'}
+                  </p>
+                </div>
               ) : (
                 <div className="bf-recents">
                   {recents.map((conversation) => {

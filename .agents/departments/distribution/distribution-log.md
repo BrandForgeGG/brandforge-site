@@ -657,3 +657,9 @@ we do not have.
 **Change:** on phones the sidebar footer was cut off behind the browser toolbar (100vh); the sidebar, app shell and chat now size to the visible screen (dvh) and clear the iPhone home indicator. Signed-out visitors see a "Keep your work" card with one Sign in button, in the style of ChatGPT's login card.
 
 **Distribution move:** re-shoot the mobile sidebar screenshot for ads and the Telegram/Discord pins; no public announcement needed (fix plus conversion polish).
+
+## 2026-10-09 — Stronger AI answers, usage guard, dispute replies, admin AI panel
+
+**Change:** visitors now get answers from the best available premium model (Claude Sonnet class when OpenRouter lists it, with a safe fallback), written to a stated quality bar: specific to the idea, structured, with numbers as labelled assumptions, the biggest risk and the first three actions. A daily guard caps each account (150 messages), warns staff at 400 AI replies, and pauses new visitor messages at 1,500. The first message is open again (no forced sign-in); sign-in is asked for after the first answer. Contract disputes keep the money held and now let the delivering side answer before staff decide. The admin dashboard shows models by provider (available vs not yet), spend against the ceiling, the visitor journey and the 7-day return rate. The composer menu button is a labelled Actions button.
+
+**Distribution move:** headline for the channels: "Ask once, get a consultant-grade first draft, free." Re-test the first answer with three real briefs and post the best one (with the founder's consent) as the proof example. Changelog line: "Better answers, and your money stays held if a milestone is disputed."

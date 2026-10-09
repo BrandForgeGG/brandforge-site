@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { blueprintConfig } from '@/lib/blueprint-config';
 import { createSessionToken, verifySessionToken, sessionCookieOptions } from '@/lib/blueprint-session';
-import { getBlueprintSession, getConversationOwnerSession, getCurrentBlueprintForSession } from '@/lib/project-db';
+import { recordFunnelEvent, getBlueprintSession, getConversationOwnerSession, getCurrentBlueprintForSession } from '@/lib/project-db';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +34,9 @@ export async function GET(request: NextRequest) {
       // A chat bot hands people back to the exact chat they were in, only if their session owns it.
       const wanted = new URL(request.url).searchParams.get('conversationId');
       if (wanted && (await getConversationOwnerSession(wanted)) === sessionId) {
+        // Counts people who moved from a chat app to the web, by app (telegram | discord).
+        const via = new URL(request.url).searchParams.get('via');
+        await recordFunnelEvent('bot_continue_clicked', { source: 'organic', properties: { source: via === 'discord' ? 'discord' : 'telegram' } }).catch(() => undefined);
         const opened = NextResponse.redirect(new URL(`/chat?conversationId=${encodeURIComponent(wanted)}`, origin));
         opened.cookies.set(config.sessionCookieName, createSessionToken(sessionId, config.sessionSecret), sessionCookieOptions(config.sessionTtlDays));
         return opened;

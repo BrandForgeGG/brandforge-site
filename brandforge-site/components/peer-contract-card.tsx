@@ -174,6 +174,27 @@ export function PeerContractCard({ contractId }: { contractId: string }) {
                 </a>
               ) : null}
               {m.status === "disputed" && m.note ? <p className="mt-1 text-[11px] text-muted">Issue raised: {m.note}</p> : null}
+              {m.status === "disputed" && m.response ? <p className="mt-1 text-[11px] text-muted">Their answer: {m.response}</p> : null}
+              {m.status === "disputed" ? <p className="mt-1 text-[11px] text-muted">The money for this milestone is held until a person from BrandForge reviews both sides.</p> : null}
+              {side === "payee" && m.status === "disputed" && !m.response ? (
+                <div className="mt-2 flex gap-2">
+                  <input
+                    value={reason[index] ?? ""}
+                    onChange={(e) => setReason({ ...reason, [index]: e.target.value })}
+                    placeholder="Your side, in a sentence"
+                    aria-label={`Your answer on ${m.title}`}
+                    className="min-w-0 flex-1 rounded-lg border border-line bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-muted"
+                  />
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void act("respond_dispute", { index, response: reason[index] ?? "" })}
+                    className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground disabled:opacity-60"
+                  >
+                    Send answer
+                  </button>
+                </div>
+              ) : null}
 
               {side === "payee" && isNext && view.fundingStatus === "funded" ? (
                 <div className="mt-2 flex gap-2">

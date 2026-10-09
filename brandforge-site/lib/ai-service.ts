@@ -28,13 +28,45 @@ export interface Tool {
   };
 }
 
+import { pickModel } from '@/lib/model-catalog.js';
+
 export const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
+
+// OpenRouter's public model list, read at most once an hour. It tells us which models are really
+// routable today, so the answer model is chosen from fact and the admin view can show which
+// models are available and which are not yet. Null when the list cannot be read.
+let liveModels: { at: number; ids: Set<string> | null } | null = null;
+const LIVE_MODELS_TTL_MS = 60 * 60 * 1000;
+
+export async function getLiveModelIds(): Promise<Set<string> | null> {
+  if (liveModels && Date.now() - liveModels.at < LIVE_MODELS_TTL_MS) return liveModels.ids;
+  let ids: Set<string> | null = null;
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/models', { signal: AbortSignal.timeout(8000) });
+    if (response.ok) {
+      const data = (await response.json()) as { data?: { id?: string }[] };
+      ids = new Set((data.data ?? []).map((entry) => String(entry.id ?? '')).filter(Boolean));
+    }
+  } catch {
+    ids = null;
+  }
+  liveModels = { at: Date.now(), ids };
+  return ids;
+}
+
+// The model that writes the answer a visitor reads: the best routable quality model unless an
+// env pin says otherwise (OPENROUTER_MODEL_QUALITY). The cheap model remains the fallback.
+export async function answerModel(): Promise<string> {
+  return pickModel('quality', await getLiveModelIds(), process.env);
+}
 
 // System prompt for BrandForge AI
 export const SYSTEM_PROMPT = `You are BrandForge AI, the discovery partner inside a chat-first
 execution platform. One chat is one project: everything you learn belongs to this conversation.
 
 RULE 0 — DELIVER FIRST. If the founder asks for something you can produce now (ads, a launch plan, an audit, a content calendar, outreach, a brand kit, a competitor view, or a plan for an idea), your text reply MUST contain that deliverable itself: a concrete first version with real copy, steps or structure (for ads: 3 hooks, 3 headlines and 2 full primary texts per platform; for a plan: phased steps with owners and timing). Make assumptions explicit instead of asking first. Record facts with tools in the same turn, but NEVER recap the project state, list captured requirements, or say "here is what we have so far" in your reply; the side panel already shows that. Finish with at most ONE short question that would improve the next version. If a URL is given, call research_web first and cite it. Never invent offers, prices, discounts, shipping terms, statistics, awards or testimonials in copy: use bracketed placeholders like [your offer] or [free shipping, if true]. A reply that is only questions or a requirements recap is a failure of this rule.
+
+QUALITY BAR. Write as a senior consultant would for a paying client: specific to THIS idea (its audience, its market, its constraints), never generic advice that fits any business. Lead with the answer, not with praise or a restatement. Use clear structure (short headed sections, tight bullets, a table only when it compares things). Give concrete numbers as labelled assumptions or ranges, real examples of how competitors or similar products handle it when you know them, the single biggest risk, and the first three actions in order. Cut every sentence that would not change what the founder does next. Match the founder's language.
 
 THE FIRST MESSAGE IS THE MOST IMPORTANT MESSAGE. It sets the entire project direction. Never let a single message go by without extracting at least one requirement or project fact. Immediately start extracting concrete needs — do not wait for permission or a signal to begin.
 
@@ -323,17 +355,27 @@ export class BrandForgeAIService {
       throw new Error('OPENROUTER_API_KEY is not configured for this deployment');
     }
 
-    const response = await fetch(`${this.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-        'X-Title': 'BrandForge',
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(55000),
-    });
+    const send = (payload: Record<string, unknown>) =>
+      fetch(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+          'X-Title': 'BrandForge',
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(55000),
+      });
+
+    let response = await send(body);
+
+    // A premium model that is out of credit, not enabled or retired must never take the chat down:
+    // answer once with the standard model instead, and say so in the logs.
+    if (!response.ok && body.model !== this.model && [400, 402, 403, 404].includes(response.status)) {
+      console.warn(`Answer model ${String(body.model)} refused (${response.status}); falling back to ${this.model}`);
+      response = await send({ ...body, model: this.model });
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -370,15 +412,15 @@ export class BrandForgeAIService {
   async streamChat(
     messages: Message[],
     handlers: StreamHandlers = {},
-    options?: { tools?: Tool[] | null }
+    options?: { tools?: Tool[] | null; model?: string }
   ): Promise<StreamResult> {
     const tools = options?.tools === undefined ? TOOLS : options.tools;
 
     const response = await this.request({
-      model: this.model,
+      model: options?.model || this.model,
       messages: this.withSystemPrompt(messages),
       temperature: 0.6,
-      max_tokens: 2048,
+      max_tokens: 3072,
       stream: true,
       ...(tools && tools.length > 0 ? { tools: tools.map(toOpenRouterTool), tool_choice: 'auto' } : {}),
     });
@@ -467,20 +509,25 @@ export class BrandForgeAIService {
   async chatWithToolHandling(
     messages: Message[],
     toolHandler: (toolCall: ToolCall) => Promise<string>,
-    handlers: StreamHandlers = {}
+    handlers: StreamHandlers = {},
+    options: { model?: string } = {}
   ): Promise<Message> {
     const conversation: Message[] = [...messages];
     const maxIterations = 6;
 
     for (let iteration = 0; iteration < maxIterations; iteration++) {
       let roundText = '';
-      const result = await this.streamChat(conversation, {
-        ...handlers,
-        onDelta: (chunk: string) => {
-          roundText += chunk;
-          handlers.onDelta?.(chunk);
+      const result = await this.streamChat(
+        conversation,
+        {
+          ...handlers,
+          onDelta: (chunk: string) => {
+            roundText += chunk;
+            handlers.onDelta?.(chunk);
+          },
         },
-      });
+        { model: options.model },
+      );
 
       if (!result.tool_calls || result.tool_calls.length === 0) {
         return { role: 'assistant', content: result.content };

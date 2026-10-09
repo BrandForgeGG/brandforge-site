@@ -24,6 +24,7 @@ const ACTIONS = new Set([
   'submit_milestone',
   'approve_milestone',
   'dispute_milestone',
+  'respond_dispute',
   'resolve_dispute',
   'mark_paid',
 ]);
@@ -104,7 +105,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     }
 
     const actorName = await getProfileDisplayName(auth.user.id);
-    await announce(saved.row, result.event, { id: auth.user.id, name: actorName }, { reason: String(body.reason ?? ''), index: Number(body.index) });
+    await announce(saved.row, result.event, { id: auth.user.id, name: actorName }, { reason: String(body.reason ?? body.response ?? ''), index: Number(body.index) });
 
     return NextResponse.json({
       success: true,

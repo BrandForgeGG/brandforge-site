@@ -29,7 +29,6 @@ import { extractOutline } from "@/lib/deliverable-outline";
 import { ChatTranscript, type ChatMessage } from "@/components/chat-transcript";
 import {
   ConversationRail,
-  relativeTime,
   type RecentConversation,
 } from "@/components/conversation-rail";
 import { STATUS_LABELS, type AgreementSummary, type PaymentSummary, type ProposalSummary, type TaskParticipant } from "@/components/project-context-panel";
@@ -125,6 +124,10 @@ function toChatMessage(message: PersistedMessage): ChatMessage {
 }
 
 const MESSAGE_PAGE_SIZE = 300;
+
+// Visitors may send their first message without an account (decided 2026-10-09); the sign-in bar,
+// header button and sidebar card ask after the first answer. Flip to true to require sign-in first.
+const GATE_FIRST_MESSAGE = false;
 
 // The slash vocabulary, shared by the Actions menu and the composer autocomplete so the
 // two surfaces can never disagree about which commands exist.
@@ -277,6 +280,22 @@ export function ChatWorkspace() {
     } catch {
       /* storage blocked */
     }
+  }, []);
+  // Counts a signed-in person coming back on a later day (one event per browser per UTC day).
+  useEffect(() => {
+    void getSessionUser()
+      .then((user) => {
+        if (!user) return;
+        try {
+          const today = new Date().toISOString().slice(0, 10);
+          const last = localStorage.getItem("bf:last-visit");
+          if (last && last !== today) trackEvent("session_returned", { signed_in: true });
+          localStorage.setItem("bf:last-visit", today);
+        } catch {
+          /* storage blocked */
+        }
+      })
+      .catch(() => undefined);
   }, []);
   useEffect(() => {
     // A stale marker can outlive a sign-in, so a guest is a marked browser with no session.
@@ -1143,7 +1162,7 @@ export function ChatWorkspace() {
       }
       // Starting a new chat takes an account: the idea is kept and the sign-in pop-up opens. Chats a
       // guest already has stay open, and the bots keep their own guest path.
-      if (isGuestBrowser && !conversationId && text) {
+      if (GATE_FIRST_MESSAGE && isGuestBrowser && !conversationId && text) {
         try {
           localStorage.setItem("bf:pending-idea", text);
         } catch {
@@ -1948,12 +1967,12 @@ export function ChatWorkspace() {
   const activeConversation =
     recents.find((conversation) => conversation.id === conversationId) ?? null;
 
-  // Sync AI enabled state from the conversation data.
-  useEffect(() => {
-    if (activeConversation?.aiEnabled !== undefined) {
-      setAiEnabled(activeConversation.aiEnabled);
-    }
-  }, [activeConversation?.aiEnabled]);
+  // Sync AI enabled state from the conversation data (adjusted during render, not in an effect).
+  const [syncedAiEnabled, setSyncedAiEnabled] = useState<boolean | undefined>(undefined);
+  if (activeConversation?.aiEnabled !== undefined && activeConversation.aiEnabled !== syncedAiEnabled) {
+    setSyncedAiEnabled(activeConversation.aiEnabled);
+    setAiEnabled(activeConversation.aiEnabled);
+  }
 
   // Role labels: staff see "admin" or "staff"; regular users see no role badge.
   // The rail reports the profiles.role value ('admin'), with the legacy email hint
@@ -2818,14 +2837,15 @@ return (
                   <div className="bf-menu-root relative">
                     <button
                       type="button"
-                      className="bf-composer-tool"
+                      className="bf-composer-tool bf-composer-actions"
                       aria-expanded={commandsOpen}
-                    aria-label="Actions and commands"
-                    data-tip="Actions: images, ads, calendar, video, team"
+                      aria-label="Actions"
+                      data-tip="Actions: images, ads, calendar, video, team"
                       aria-haspopup="menu"
                       onClick={() => setCommandsOpen((value) => !value)}
                     >
-                      <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true"><path d="M12 3.5L8 16.5" /></svg>
+                      <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true"><path d="M10 4v12M4 10h12" /></svg>
+                      <span className="bf-actions-label" aria-hidden="true">Actions</span>
                     </button>
                     {commandsOpen ? (
                       <div

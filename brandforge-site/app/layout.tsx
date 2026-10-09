@@ -48,6 +48,9 @@ export const viewport: Viewport = {
   themeColor: "#0f0e0d",
   // Lets env(safe-area-inset-*) work, so footers clear the iPhone home indicator.
   viewportFit: "cover",
+  // The on-screen keyboard shrinks the page instead of covering the composer (Chrome/Android;
+  // iOS already resizes the visual viewport).
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({

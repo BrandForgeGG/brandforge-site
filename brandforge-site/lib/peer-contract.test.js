@@ -160,3 +160,15 @@ test('staff record each payout once; releases owe the payee net of fee, refunds 
   const open = run(run(run(base(), 'accept', payer), 'accept', payee), 'submit_funding', payer, { tx: '0xabc123' });
   assert.equal(pc.applyAction(open, 'mark_paid', staff, { index: 0 }, NOW).status, 409);
 });
+
+test('the delivering side can answer a dispute once, others cannot, and the money stays held', () => {
+  let c = funded();
+  c = run(c, 'submit_milestone', payee, { index: 0, proofUrl: 'https://x.co/script' });
+  c = run(c, 'dispute_milestone', payer, { index: 0, reason: 'The script ignores the brief.' });
+  assert.equal(pc.applyAction(c, 'respond_dispute', payer, { index: 0, response: 'I disagree with myself' }, NOW).status, 403);
+  assert.equal(pc.applyAction(c, 'respond_dispute', payee, { index: 0, response: 'no' }, NOW).status, 400);
+  c = run(c, 'respond_dispute', payee, { index: 0, response: 'The brief changed after I started.' });
+  assert.equal(c.milestones[0].response, 'The brief changed after I started.');
+  assert.equal(c.milestones[0].status, 'disputed');
+  assert.equal(pc.settleDue(c, new Date('2027-01-01T00:00:00Z'), 5), c);
+});

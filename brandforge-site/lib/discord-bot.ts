@@ -46,6 +46,6 @@ export async function handleDiscordCommand(interaction: DiscordInteraction) {
   const reply = toPlainChat(result.text, 1800) || 'Done. Open the chat to see it.';
   await followUp(interaction, {
     content: built.media ? `${reply}\n\nYour ${kind} is ready in the full chat.` : reply,
-    components: [{ type: 1, components: [{ type: 2, style: 5, label: 'Continue in BrandForge', url: continueUrl(result.conversationId, result.token) }] }],
+    components: [{ type: 1, components: [{ type: 2, style: 5, label: 'Continue in BrandForge', url: continueUrl(result.conversationId, result.token, 'discord') }] }],
   });
 }

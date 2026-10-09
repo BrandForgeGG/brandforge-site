@@ -23,7 +23,8 @@ const LINES: Record<string, (who: string, title: string) => string> = {
   funding_rejected: (_who, title) => `The deposit for "${title}" could not be confirmed. The payer can send the reference again.`,
   submitted: (who, title) => `${who} submitted work on "${title}". The payer has 48 hours to approve or raise an issue.`,
   released: (_who, title) => `A milestone on "${title}" was released.`,
-  disputed: (who, title) => `${who} raised an issue on "${title}". A person from BrandForge will review it.`,
+  disputed: (who, title) => `${who} raised an issue on "${title}". The money for that milestone stays held. The other person can answer, then a person from BrandForge reviews both sides.`,
+  dispute_response: (who, title) => `${who} answered the issue on "${title}". A person from BrandForge will review both sides.`,
   refunded: (_who, title) => `A milestone on "${title}" was refunded after review.`,
   paid: (_who, title) => `A payment for "${title}" was sent.`,
   auto_released: (_who, title) => `A milestone on "${title}" was released automatically after 48 hours with no objection.`,
@@ -78,7 +79,10 @@ export async function announce(
   } else if (event === 'funding_submitted') {
     await postOpsEvent('peer_funding_review', { ...common, totalAmount: contract.totalCents / 100 });
   } else if (event === 'disputed') {
+    await recordFunnelEvent('dispute_raised', { signedIn: true, properties: { stage: 'deliver' } });
     await postOpsEvent('peer_dispute', { ...common, reason: extra.reason ?? '' });
+  } else if (event === 'dispute_response') {
+    await postOpsEvent('peer_dispute', { ...common, reason: `Reply from the delivering side: ${extra.reason ?? ''}` });
   } else if ((event === 'released' || event === 'auto_released') && typeof extra.index === 'number') {
     const m = contract.milestones[extra.index];
     if (m) {

@@ -86,6 +86,14 @@ const FUNNEL_EVENTS = Object.freeze([
   'trade_listing_created',
   'trade_offer_sent',
   // Specialist funnel
+  // Gate, spend guard, returns and bot hand-offs (2026-10-09)
+  'guest_send_gated',
+  'ai_budget_warn',
+  'ai_budget_cap',
+  'session_returned',
+  'bot_continue_clicked',
+  'specialist_invited',
+  'dispute_raised',
   'apply_started',
   'apply_submitted',
   'application_approved',
