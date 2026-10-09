@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { trackEvent } from '@/lib/funnel-client';
 import { renderSlide, slideCount, type Draft, type Pictures } from '@/components/carousel/carousel-shared';
 import { ChannelPicker } from '@/components/integrations/channel-picker';
@@ -78,7 +77,7 @@ export function ChannelPoster({ draft, pictures, captions, ready }: { draft: Dra
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-serif text-xl text-foreground">Post it now</p>
-          <p className="mt-1 text-xs text-muted">Tick where it should go. Instagram, TikTok, LinkedIn and X need each platform to approve us first; <Link href="/settings#integrations" className="underline underline-offset-2 hover:text-foreground">see the list</Link>.</p>
+          <p className="mt-1 text-xs text-muted">Tick where it should go.</p>
         </div>
       </div>
 

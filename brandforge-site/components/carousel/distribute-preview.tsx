@@ -294,7 +294,7 @@ export function DistributePreview() {
                 <button type="button" className={btn} disabled={busy || !fontsReady} onClick={() => void downloadAll()}>Download slides (ZIP)</button>
                 <Link href="/create" className={btn}>Edit slides</Link>
               </div>
-              <p className="mt-3 text-xs leading-relaxed text-muted">Instagram, TikTok, LinkedIn and X: each platform has to approve an app before anyone can post for you, so for those, download the slides, copy the caption and post from the app. Telegram, Discord and Bluesky you can post to below.</p>
+              <p className="mt-3 text-xs leading-relaxed text-muted">For Instagram, TikTok, LinkedIn and X, download the slides, copy the caption and post from the app. Telegram, Discord and Bluesky you can post to below.</p>
             </>
           ) : (
             <>

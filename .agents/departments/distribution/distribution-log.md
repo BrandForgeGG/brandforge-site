@@ -747,3 +747,9 @@ we do not have.
 **Change:** Slack (paste an incoming-webhook address; updates, polls, quizzes and threads as Block Kit, a quiz answer follows as a second message) and Tumblr (OAuth, text posts and carousels as photo posts; dormant until TUMBLR_CLIENT_ID and TUMBLR_CLIENT_SECRET are set). Both appear as cards in Settings and as tiles in Distribute; Slack is left out of the carousel poster because webhooks cannot carry pictures.
 
 **Distribution move:** announce "post to Slack and Tumblr too"; a how-to for connecting a Slack webhook in under a minute; community outreach to Slack-based creator groups once a real test post is verified.
+
+## 2026-10-09 — Create and Distribute show only what is live; platform approvals kit
+
+**Change:** Create now shows only the carousel maker (no "soon" cards, no locked Videos tab). Distribute shows only the carousel flow; the update/poll/quiz/thread composer is built but hidden until wanted. Added /data-deletion (required by platform reviews) and `.agents/departments/distribution/platform-approvals.md` with the shared description, permission table, screen-recording script and apply order for Meta, TikTok, LinkedIn, Pinterest, YouTube and Google Business.
+
+**Distribution move:** none public yet. Once Meta or LinkedIn approve, announce "post straight to Instagram and LinkedIn" with the recording as the demo.

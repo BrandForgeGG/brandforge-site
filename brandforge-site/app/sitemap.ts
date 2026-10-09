@@ -23,6 +23,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '/careers', frequency: 'monthly', priority: 0.5 },
     { path: '/terms', frequency: 'monthly', priority: 0.3 },
     { path: '/privacy', frequency: 'monthly', priority: 0.3 },
+    { path: '/data-deletion', frequency: 'monthly', priority: 0.2 },
     { path: '/refunds', frequency: 'monthly', priority: 0.3 },
   ];
   return pages.map(({ path, frequency, priority }) => ({

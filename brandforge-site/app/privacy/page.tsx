@@ -47,7 +47,7 @@ const SECTIONS: LegalSection[] = [
     title: '5. Retention and deletion',
     body: [
       'Guest chats that nobody signs in to keep are deleted automatically after 90 days without activity, with their uploaded files. Chats tied to funds held in escrow are kept until the agreement is settled.',
-      'You can delete individual conversations from the app. To delete your account and remaining data, message the project manager on Telegram (@headstartup) or ask in Discord; we will remove your profile and projects within 30 days, except records we must keep for accounting or fraud-prevention reasons (for example, payment verification records tied to completed agreements).',
+      'You can delete individual conversations from the app. To disconnect a social account or delete your account and remaining data, see https://brandforge.gg/data-deletion or message the project manager on Telegram (@headstartup) or ask in Discord; we will remove your profile and projects within 30 days, except records we must keep for accounting or fraud-prevention reasons (for example, payment verification records tied to completed agreements).',
     ],
   },
   {
