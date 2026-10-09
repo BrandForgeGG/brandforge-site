@@ -67,7 +67,7 @@ Ask only for what is in this table. Reviewers reject apps that request more than
 1. Open brandforge.gg/create. Type one sentence. Press Make my carousel. Show the slides and the cover.
 2. Sign in. Open Settings, Integrations. Press Connect on the platform. Show the platform's own consent
    screen listing the permissions, and approve it. Show the connected card with the account name.
-3. Open Distribute. Show the preview and the caption. Tick the connected account. Press Post.
+3. Open the Publish step under the carousel. Show the caption. Choose the connected account. Press Publish (unlock it for the review account).
 4. Show the post appearing on the platform.
 5. Back in Settings press Disconnect and show the card go grey. Say or caption: "this deletes our token".
 

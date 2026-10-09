@@ -32,10 +32,10 @@ function plain(text: string): string {
 }
 
 const STARTERS: [string, string][] = [
-  ['Plan my idea', '/create'],
-  ['Audit a URL', '/create'],
-  ['Write ads', '/distribute'],
-  ['Launch plan', '/distribute'],
+  ['Plan my idea', '/'],
+  ['Audit a URL', '/'],
+  ['Write ads', '/'],
+  ['Launch plan', '/'],
 ];
 
 export default function ProjectsPage() {

@@ -89,7 +89,7 @@ export function OverviewFeatures() {
         <Feature title="Say it in a sentence. Get a swipeable post." line="A hook cover, numbered slides with three points each, and a closing slide, with a cover picture painted from your topic. Free to make. Sign in to edit every word and download.">
           <CarouselDiagram />
         </Feature>
-        <Feature flip title="Preview it everywhere. Post it in a tap." line="See your carousel as a post on each platform, with a caption written for it. Connect Telegram, Discord or Bluesky and post straight from the page. The rest follow as each platform approves us.">
+        <Feature flip title="Pick where it goes. Publish when it opens." line="Choose the platforms, get a caption written for each, and download or copy it today. One-tap publishing opens as each platform approves us, starting with the ones people ask for most.">
           <DistributeDiagram />
         </Feature>
         <Feature title="Sign a contract. Pay per milestone." line="Agree scope and price in the chat. The payer approves each milestone, or it releases on its own after 48 hours. A flat 5% when it pays out.">

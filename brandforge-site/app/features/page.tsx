@@ -18,8 +18,8 @@ const FEATURES = [
     body: 'Give it a sentence and get a hook cover with a cover picture painted from your topic, in five styles, numbered slides with three points each and a closing slide, in a look you pick. Writing and previewing are free; sign in to edit every word, add your pictures and download. Your brand and closing line are yours to set.',
   },
   {
-    title: 'See it on each platform, then post',
-    body: 'Distribute shows your carousel as a post on Instagram, TikTok, LinkedIn, X and Facebook, writes a caption for each, and posts straight to your Telegram channel, Discord channel or Bluesky. More platforms follow as each one approves us.',
+    title: 'Make it, download it, publish it',
+    body: 'One page for everything you make: a carousel, update, poll, quiz or thread. Edit it, download it and get a caption written for each platform. Publishing opens as each platform approves us.',
   },
   {
     title: 'In Telegram and Discord too',

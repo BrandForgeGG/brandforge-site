@@ -1,12 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
 import { zipStore } from '@/lib/zip-store.js';
 import { trackEvent } from '@/lib/funnel-client';
 import { getSessionUser } from '@/lib/browser-auth';
 import { STYLES as COVER_STYLES } from '@/lib/carousel-cover.js';
 import { useLogin } from '@/components/login-dialog';
+import { CAROUSEL_PLATFORMS, PublishPanel } from '@/components/studio/publish-panel';
+import { PLATFORMS, fallbackCaptions } from '@/lib/carousel-captions.js';
 import {
   DEFAULT_BRAND,
   DEFAULT_CTA,
@@ -52,6 +53,7 @@ export function CarouselMaker() {
   const [note, setNote] = useState<string | null>(null);
   const [fontsReady, setFontsReady] = useState(false);
   const [coverBusy, setCoverBusy] = useState(false);
+  const [captionsBusy, setCaptionsBusy] = useState(false);
   const variant = useRef(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -265,9 +267,26 @@ export function CarouselMaker() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return setNote(data.error || 'Could not save.');
       patch({ id: data.carousel.id });
-      setNote('Saved to your account. Open Distribute to preview it on each platform.');
+      setNote('Saved to your account. Find it on the Create page any time.');
     } finally {
       setBusy(false);
+    }
+  }
+
+  // Captions are written once per kind of platform; the ones without their own caption share the nearest.
+  const captionKey = (id: string): keyof typeof PLATFORMS => (id in PLATFORMS ? (id as keyof typeof PLATFORMS) : id === 'bluesky' ? 'x' : 'facebook');
+  const captionSet = plan ? ({ ...fallbackCaptions(plan, draft.cta), ...draft.captions } as Record<string, string>) : {};
+
+  async function writeCaptions() {
+    if (!plan) return;
+    setCaptionsBusy(true);
+    try {
+      const res = await fetch('/api/carousel/captions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan, topic: draft.topic, brand: draft.brand, cta: draft.cta }) });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.captions) patch({ captions: data.captions });
+      else setNote(data.error || 'Could not write captions.');
+    } finally {
+      setCaptionsBusy(false);
     }
   }
 
@@ -399,13 +418,11 @@ export function CarouselMaker() {
                   <button type="button" className={btn} disabled={busy || !fontsReady} onClick={() => void downloadOne()}>This slide (PNG)</button>
                   <button type="button" className={btn} disabled={coverBusy} onClick={() => newCover()}>{coverBusy ? 'Painting…' : 'New cover art'}</button>
                   <button type="button" className={btn} disabled={busy} onClick={() => void saveToAccount()}>Save</button>
-                  <Link href="/distribute" className={btn} onClick={markResume}>Preview and distribute</Link>
                 </div>
               ) : (
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button type="button" className={btnPrimary} onClick={askToSignIn}>Sign in to edit and download</button>
                   <button type="button" className={btn} disabled={coverBusy} onClick={() => newCover()}>{coverBusy ? 'Painting…' : 'New cover art'}</button>
-                  <Link href="/distribute" className={btn} onClick={markResume}>See it on social</Link>
                 </div>
               )}
               {note ? <p role="status" className="mt-3 text-xs text-muted">{note}</p> : null}
@@ -472,6 +489,20 @@ export function CarouselMaker() {
             </div>
           </div>
         )}
+        {plan ? (
+          <div className="mt-8">
+            <PublishPanel
+              platforms={CAROUSEL_PLATFORMS}
+              caption={{
+                value: (id) => captionSet[captionKey(id)] ?? '',
+                onChange: (id, value) => patch({ captions: { ...draft.captions, [captionKey(id)]: value.slice(0, PLATFORMS[captionKey(id)].limit) } }),
+                limit: (id) => PLATFORMS[captionKey(id)].limit,
+                onWrite: () => void writeCaptions(),
+                writing: captionsBusy,
+              }}
+            />
+          </div>
+        ) : null}
       </section>
     </div>
   );

@@ -765,3 +765,9 @@ we do not have.
 **Change:** Create now shows what you can make, with no platforms in it (Images, Text and engagement, Video, Documents and articles, Offers and events): carousel, update, poll, quiz and thread are live, the rest are votable. Live text creations open on Distribute (?make=poll etc.) with every connected channel to choose from. Distribute keeps the platform-specific format list. Votes on creations use numbers 100+ so they never mix with distribution formats.
 
 **Distribution move:** none public. Read the two sets of "I want this" votes separately: creations tell us what to build, formats tell us where to post.
+
+## 2026-10-10 — Create and Distribute are one page
+
+**Change:** One page, /create: five live cards (Carousel, Update, Poll, Quiz, Thread) with small live visuals, a "pick up where you left off" row of saved carousels, and a quiet "Coming next" row (votable). Opening a card shows the maker; once made there is one Publish step: choose platforms, edit the caption written for each (or write it with AI), copy or download, and a Publish button that is locked for now. Choosing a platform counts as interest (create_interest, publish-<platform>), so we open the ones people want first. /distribute redirects to /create; the nav lost one item. Posting APIs stay in the code behind the lock.
+
+**Distribution move:** the platform-interest counts are the order for platform approvals and launch posts. When Publish unlocks for a platform, announce it with the recorded demo.
