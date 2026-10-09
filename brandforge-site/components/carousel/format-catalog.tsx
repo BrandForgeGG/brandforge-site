@@ -27,7 +27,7 @@ const badge: Record<string, string> = {
 // "Show everything" adds the rest, each with the reason it is not usable yet and a way to ask for it
 // (counted, so the next one built is the one people want). Live formats open their tool.
 export function FormatCatalog({ onPick, groups, title = 'Formats' }: { onPick?: (format: Format) => void; groups?: string[]; title?: string }) {
-  const [all, setAll] = useState(false);
+  const [all, setAll] = useState(true);
   const [voted, setVoted] = useState<Record<number, boolean>>({});
   const shown = FORMATS.filter((f: Format) => (all || f.status === 'live') && (!groups || groups.includes(f.group)));
   const liveCount = FORMATS.filter((f: Format) => f.status === 'live').length;
@@ -43,10 +43,10 @@ export function FormatCatalog({ onPick, groups, title = 'Formats' }: { onPick?: 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-serif text-xl text-foreground">{title}</h2>
-          <p className="text-xs text-muted">{liveCount} live now{all ? `, ${FORMATS.length - liveCount} more on the way` : ''}.</p>
+          <p className="text-xs text-muted">{liveCount} live now{all ? `, ${FORMATS.length - liveCount} more coming. Tap "I want this" on the ones you need and they move up.` : ''}.</p>
         </div>
         <div role="group" aria-label="Which formats to show" className="flex gap-1">
-          {([[false, 'Live now'], [true, 'Show everything']] as const).map(([value, label]) => (
+          {([[true, 'Live and coming'], [false, 'Live only']] as const).map(([value, label]) => (
             <button key={label} type="button" aria-pressed={all === value} onClick={() => setAll(value)} className={`rounded-full border px-3 py-1 text-xs transition ${all === value ? 'border-ember bg-ember/15 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>
               {label}
             </button>
@@ -56,7 +56,7 @@ export function FormatCatalog({ onPick, groups, title = 'Formats' }: { onPick?: 
 
       <div className="mt-4 space-y-6">
         {GROUPS.map((group: { id: string; label: string }) => {
-          const items = shown.filter((f: Format) => f.group === group.id);
+          const items = shown.filter((f: Format) => f.group === group.id).sort((a: Format, b: Format) => Number(b.status === 'live') - Number(a.status === 'live'));
           if (items.length === 0) return null;
           return (
             <div key={group.id}>
