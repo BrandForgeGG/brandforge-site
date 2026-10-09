@@ -298,8 +298,13 @@ export function ChatWorkspace() {
       .catch(() => undefined);
   }, []);
   useEffect(() => {
-    // A stale marker can outlive a sign-in, so a guest is a marked browser with no session.
-    if (!document.cookie.split(";").some((part) => part.trim().startsWith("bf_guest="))) return;
+    // Signed out = no session. A brand-new visitor has no auth cookie at all, so they count from
+    // the first paint; a browser that does hold one is confirmed with the session check.
+    if (!/sb-[^=;]+-auth-token/.test(document.cookie)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- read a browser-only cookie once
+      setIsGuestBrowser(true);
+      return;
+    }
     let live = true;
     void getSessionUser()
       .then((user) => {
@@ -2311,6 +2316,7 @@ return (
               </h1>
               <p className="mt-3 max-w-md text-sm leading-relaxed text-muted">
                 AI drafts it in seconds. Your team and vetted specialists take it from there.
+                {isGuestBrowser ? <span className="mt-1 block text-xs">Free to start. No card, no sign-up to try it.</span> : null}
               </p>
               <AiPeopleFlow />
             </div>

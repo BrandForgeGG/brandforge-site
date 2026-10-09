@@ -30,7 +30,7 @@ export function OverviewHero() {
             See how it works
           </a>
         </div>
-        <p className="mt-3 text-xs text-muted">Free. No sign-up to try it.</p>
+        <p className="mt-3 text-xs text-muted">Free to start. No card, and no sign-up to try it.</p>
       </div>
       <div className="mx-auto mt-12 max-w-5xl">
         <Shot src="/overview/chat-forge-desktop.png" alt="A BrandForge chat with a researched two-week launch plan for a coffee roaster" width={2880} height={1800} priority />
@@ -176,7 +176,7 @@ export function OverviewFinal() {
           Start a chat
         </Link>
       </div>
-      <p className="mt-3 text-xs text-muted">Free. No sign-up to try it.</p>
+      <p className="mt-3 text-xs text-muted">Free to start. No card, and no sign-up to try it.</p>
     </section>
   );
 }
