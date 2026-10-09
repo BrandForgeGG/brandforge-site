@@ -370,8 +370,8 @@ export async function POST(request: NextRequest) {
   const aiEnabled = convData?.ai_enabled !== false;
   if (!aiEnabled) {
     return NextResponse.json(
-      { error: "AI participation is disabled for this conversation" },
-      { status: 403 },
+      { error: "The AI is paused in this chat. Your message was sent to the people in it.", code: "ai_paused" },
+      { status: 409 },
     );
   }
 

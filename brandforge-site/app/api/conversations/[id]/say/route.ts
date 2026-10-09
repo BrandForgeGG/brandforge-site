@@ -1,20 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
-import { addMessage, canAccessConversation, getProfileDisplayName } from '@/lib/project-db';
+import { addMessage, canAccessConversation, getConversationOwnerSession, getProfileDisplayName, runAsGuestSession } from '@/lib/project-db';
+import { resolveGuestSession } from '@/lib/guest-session';
 import { screenText } from '@/lib/content-policy.js';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
-// POST { message }: a person speaks to the others in a shared chat without asking the AI anything. Used by
-// teammates who have not been allowed to use the AI, so they are never locked out of the conversation.
+// POST { message }: a person speaks in the chat without asking the AI anything. Used when the AI is paused (the
+// owner can talk normally to the team and everyone else) and by teammates who have not been allowed to use the
+// AI. Works for signed-in people and for the guest session that owns the chat.
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getAuthenticatedUser(request).catch(() => null);
-  if (!user) return NextResponse.json({ error: 'Sign in first' }, { status: 401 });
+  const guest = user ? null : await resolveGuestSession(request).catch(() => null);
+  if (!user && !guest) return NextResponse.json({ error: 'Sign in first' }, { status: 401 });
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ error: 'Invalid chat' }, { status: 400 });
-  if (!(await canAccessConversation(user.id, id))) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-  const rate = checkRateLimit(`say:${user.id}`, { limit: 60, windowMs: 60 * 60 * 1000 });
+
+  if (user) {
+    if (!(await canAccessConversation(user.id, id))) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  } else if (guest) {
+    if ((await getConversationOwnerSession(id)) !== guest.sessionId) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  }
+
+  const rate = checkRateLimit(`say:${user?.id ?? guest?.sessionId}`, { limit: 60, windowMs: 60 * 60 * 1000 });
   if (!rate.allowed) return NextResponse.json({ error: 'Too many messages. Try again later.' }, { status: 429 });
 
   const body = (await request.json().catch(() => ({}))) as { message?: unknown };
@@ -23,7 +32,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const screened = screenText(message);
   if (!screened.ok) return NextResponse.json({ error: screened.message }, { status: 422 });
 
-  const messageId = await addMessage({ conversation_id: id, sender_type: 'user', sender_id: user.id, sender_name: await getProfileDisplayName(user.id), content: message, content_type: 'text' });
+  const write = async () =>
+    addMessage({
+      conversation_id: id,
+      sender_type: 'user',
+      sender_id: user?.id ?? null,
+      sender_name: user ? await getProfileDisplayName(user.id) : 'Guest',
+      content: message,
+      content_type: 'text',
+    });
+  const messageId = guest ? await runAsGuestSession(guest.sessionId, write) : await write();
   if (!messageId) return NextResponse.json({ error: 'Your message could not be sent.' }, { status: 500 });
   return NextResponse.json({ messageId });
 }

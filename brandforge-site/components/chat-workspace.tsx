@@ -937,6 +937,14 @@ export function ChatWorkspace() {
 
         if (!response.ok) {
           const payload = await response.json().catch(() => ({}));
+          if (payload.code === "ai_paused") {
+            // Paused in another tab or by the owner: the message is saved, nobody needs an error.
+            streamClosed = true;
+            setAiEnabled(false);
+            setMessages((prev) => prev.filter((entry) => entry.id !== assistantMessageId));
+            await refreshMessages(id).catch(() => undefined);
+            return;
+          }
           throw Object.assign(new Error(payload.error || "BrandForge AI could not answer"), {
             policy: typeof payload.policy === "string" ? payload.policy : null,
           });
@@ -1466,6 +1474,25 @@ export function ChatWorkspace() {
           setIsCreatingConversation(false);
         }
 
+        return;
+      }
+
+      // The AI is paused: say it to the people in the chat and do not ask the AI anything.
+      if (!aiEnabled) {
+        try {
+          const response = await (railMeta.userId ? fetchAuthed : fetch)(`/api/conversations/${conversationId}/say`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: text }),
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data.error || "The message could not be sent");
+          await refreshMessages(conversationId);
+          scrollToBottom(true);
+        } catch (cause) {
+          setError(cause instanceof Error ? cause.message : "The message could not be sent");
+          setInput(text);
+        }
         return;
       }
 
@@ -2911,7 +2938,9 @@ return (
                   isReplyingTo
                     ? "Type your reply…"
                     : conversationId
-                      ? "Ask anything…"
+                      ? aiEnabled
+                        ? "Ask anything…"
+                        : "Message the team…"
                       : "Describe your idea…"
                 }
                 rows={1}

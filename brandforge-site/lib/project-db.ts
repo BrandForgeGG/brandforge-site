@@ -5664,3 +5664,84 @@ export async function setConversationAiEnabled(conversationId: string, who: { us
   }
   return 'ok';
 }
+
+// ---- Admin: decide specialist applications and give members roles ----
+// These run with the service role after the route has confirmed the caller is an admin, so the decision no
+// longer depends on the caller's session cookie reaching the database (the cause of accept and decline
+// silently failing).
+
+export async function decideOperatorApplication(applicationId: string, adminId: string, decision: 'accept' | 'decline'): Promise<{ ok: true; email: string | null } | { ok: false; error: 'not_found' | 'already_reviewed' | 'failed' }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'failed' };
+  const { data: app } = await admin.from('operator_applications').select('id, user_id, email, status').eq('id', applicationId).maybeSingle();
+  const row = app as { id: string; user_id: string | null; email: string | null; status: string } | null;
+  if (!row) return { ok: false, error: 'not_found' };
+  if (row.status !== 'pending') return { ok: false, error: 'already_reviewed' };
+
+  let target = row.user_id;
+  if (decision === 'accept' && !target && row.email) {
+    const { data: profile } = await admin.from('profiles').select('id').ilike('email', row.email).limit(1).maybeSingle();
+    target = (profile as { id: string } | null)?.id ?? null;
+  }
+
+  const { error } = await admin
+    .from('operator_applications')
+    .update({ status: decision === 'accept' ? 'accepted' : 'declined', reviewed_by: adminId, reviewed_at: new Date().toISOString(), ...(decision === 'accept' && target ? { user_id: target } : {}) })
+    .eq('id', applicationId)
+    .eq('status', 'pending');
+  if (error) {
+    console.error('decideOperatorApplication error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+
+  // Accepting makes them an operator, unless they are already something higher.
+  if (decision === 'accept' && target) {
+    const { data: profile } = await admin.from('profiles').select('role').eq('id', target).maybeSingle();
+    if ((profile as { role: string | null } | null)?.role !== 'admin') {
+      const { error: roleError } = await admin.from('profiles').update({ role: 'operator', updated_at: new Date().toISOString() }).eq('id', target);
+      if (roleError) console.error('decideOperatorApplication role error:', roleError.message);
+    }
+  }
+  return { ok: true, email: row.email };
+}
+
+export type AdminMember = { id: string; name: string; email: string | null; username: string | null; role: string; createdAt: string | null; isTest: boolean };
+
+export async function listMembersForAdmin(query: string): Promise<AdminMember[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const q = query.trim().replace(/[%,()]/g, '').slice(0, 60);
+  let request = admin.from('profiles').select('id, display_name, email, username, role, created_at').order('created_at', { ascending: false }).limit(60);
+  if (q) request = request.or(`display_name.ilike.%${q}%,email.ilike.%${q}%,username.ilike.%${q}%`);
+  const { data } = await request;
+  return ((data ?? []) as { id: string; display_name: string | null; email: string | null; username: string | null; role: string | null; created_at: string | null }[]).map((row) => ({
+    id: row.id,
+    name: row.display_name || row.username || (row.email ? row.email.split('@')[0] : 'Member'),
+    email: row.email,
+    username: row.username,
+    role: row.role === 'admin' || row.role === 'operator' ? row.role : 'user',
+    createdAt: row.created_at,
+    isTest: isTestEmailAddress(row.email),
+  }));
+}
+
+// Gives a member a role: user, operator (a specialist) or admin. Admins cannot change their own role (so the
+// team can never lock itself out) and the last admin cannot be demoted.
+export async function setMemberRole(adminId: string, userId: string, role: 'user' | 'operator' | 'admin'): Promise<'ok' | 'self' | 'last_admin' | 'not_found' | 'failed'> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return 'failed';
+  if (adminId === userId) return 'self';
+  const { data } = await admin.from('profiles').select('role').eq('id', userId).maybeSingle();
+  const current = data as { role: string | null } | null;
+  if (!current) return 'not_found';
+  if (current.role === 'admin' && role !== 'admin') {
+    const { count } = await admin.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'admin');
+    if ((count ?? 0) <= 1) return 'last_admin';
+  }
+  const { error } = await admin.from('profiles').update({ role, updated_at: new Date().toISOString() }).eq('id', userId);
+  if (error) {
+    console.error('setMemberRole error:', error.message);
+    return 'failed';
+  }
+  return 'ok';
+}

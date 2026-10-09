@@ -831,3 +831,9 @@ we do not have.
 **Change:** The conversations.ai_enabled column from migration 0024 was missing in production (the notes said applied; a column probe proved otherwise), so every pause and resume failed with "Could not pause the AI". Applied it. Verified on production as a guest: pause 200, resume 200, value read back. Lesson: probe the column, do not trust the log.
 
 **Distribution move:** none; fix. The headline feature "tell the AI to stop and call the team" is now genuinely live.
+
+## 2026-10-10 — Specialists accept/decline work; roles; talk normally with the AI paused
+
+**Change:** (1) Accept and decline relied on the admin's session reaching the database and failed silently; they now run as server-checked admin actions, results show in a visible banner, and the exact steps were proven on a throwaway user and application. (2) Admins can give any member a role (Member, Specialist, Admin) from People, Members and roles; admin grants and removals ask first, you cannot change your own role, the last admin cannot be demoted. (3) With the AI paused, sending a message just sends it to the people in the chat, with the composer saying "Message the team", and a chat paused in another tab never shows an error. Works for guests too.
+
+**Distribution move:** none; internal. The admin can now promote specialists in two clicks, which unblocks onboarding the first real operators.

@@ -7,6 +7,7 @@ import { formatMoney } from '@/lib/peer-contract.js';
 import type { PeerView } from '@/lib/peer-contract-view';
 import type { AdminChatRow, AdminOverview } from '@/lib/project-db';
 import { AdminCalendar } from '@/components/admin/admin-calendar';
+import { AdminMembers } from '@/components/admin/admin-members';
 
 type FunnelEvent = { event: string; count: number; previous: number | null };
 type Range = '24h' | '7d' | '30d' | 'all';
@@ -199,6 +200,7 @@ export function AdminDashboard() {
   const [updated, setUpdated] = useState<Date | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [noteOk, setNoteOk] = useState(true);
 
   const [chatQuery, setChatQuery] = useState('');
   const [showTest, setShowTest] = useState(false);
@@ -239,6 +241,7 @@ export function AdminDashboard() {
       const res = await request();
       const data = await res.json().catch(() => ({}));
       setNote(res.ok ? label : data.error || 'That did not work.');
+      setNoteOk(res.ok);
       await load();
       return res.ok ? data : null;
     } finally {
@@ -288,6 +291,12 @@ export function AdminDashboard() {
         <Kpi value={contractTodo} label="Contract actions" hint={`${overview.totals.contractsSigned} signed all time`} />
         <Kpi value={overview.totals.milestonesReleased} label="Milestones released" />
       </div>
+
+      {note ? (
+        <p role={noteOk ? 'status' : 'alert'} className={`rounded-xl border px-4 py-2.5 text-sm ${noteOk ? 'border-success/40 bg-success/10 text-foreground' : 'border-danger/40 bg-danger/10 text-danger'}`}>
+          {note}
+        </p>
+      ) : null}
 
       <div role="tablist" aria-label="Dashboard sections" className="-mx-1 flex gap-1 overflow-x-auto border-b border-line px-1">
         {TABS.map(([id, label]) => {
@@ -344,6 +353,7 @@ export function AdminDashboard() {
       ) : null}
 
       {tab === 'people' ? (
+      <div className="space-y-8">
       <Section title="Specialist applications" note={`${pendingApps.length} waiting · ${realApps.length} total`}>
         {realApps.length === 0 ? <p className="text-sm text-muted">No applications yet.</p> : (
           <ul className="divide-y divide-line">
@@ -372,6 +382,8 @@ export function AdminDashboard() {
         )}
       </Section>
 
+      <AdminMembers />
+      </div>
       ) : null}
 
       {tab === 'money' ? (

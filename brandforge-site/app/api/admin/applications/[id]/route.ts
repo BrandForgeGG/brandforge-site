@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { addMessage, addParticipant, isAdminAccount, recordFunnelEvent } from '@/lib/project-db';
+import { addMessage, addParticipant, decideOperatorApplication, isAdminAccount, recordFunnelEvent } from '@/lib/project-db';
 import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
 import { sendEmail } from '@/lib/email';
 import { resolveSiteUrl } from '@/lib/auth-utils';
@@ -53,16 +53,11 @@ export async function POST(
     const action = String(body.action ?? '');
 
     if (action === 'accept') {
-      const supabase = await createSupabaseServerClient(request);
-      const { data, error: rpcError } = await supabase.rpc('accept_operator_application', {
-        application_id: applicationId,
-      });
-
-      if (rpcError) {
-        console.error('Accept application error:', rpcError.message);
+      const decided = await decideOperatorApplication(applicationId, user.id, 'accept');
+      if (!decided.ok) {
         return NextResponse.json(
-          { error: rpcError.message || 'Could not accept application' },
-          { status: 400 }
+          { error: decided.error === 'already_reviewed' ? 'That application was already reviewed.' : decided.error === 'not_found' ? 'Application not found.' : 'Could not accept the application. Try again.' },
+          { status: decided.error === 'failed' ? 500 : 409 }
         );
       }
 
@@ -71,17 +66,9 @@ export async function POST(
       // that rewards rejecting people.
       await recordFunnelEvent('application_approved', { signedIn: true });
 
-      // Acceptance was silent: nothing told the specialist they are in. Tell them now —
-      // email is best-effort and never fails the approval itself.
+      // Tell the specialist they are in. Email is best-effort and never fails the approval itself.
       try {
-        const { data: approved } = await supabase
-          .from('operator_applications')
-          .select('email')
-          .eq('id', applicationId)
-          .maybeSingle();
-        const to = String(
-          (approved as { email?: string | null } | null)?.email ?? ''
-        ).trim();
+        const to = String(decided.email ?? '').trim();
         if (to) {
           const site = resolveSiteUrl();
           const built = buildSpecialistEmail('accepted', {
@@ -95,36 +82,18 @@ export async function POST(
         // Best-effort: the approval stands regardless.
       }
 
-      return NextResponse.json({ success: true, application: data });
+      return NextResponse.json({ success: true });
     }
 
     if (action === 'decline') {
-      const supabase = await createSupabaseServerClient(request);
-      const { data, error: updateError } = await supabase
-        .from('operator_applications')
-        .update({
-          status: 'declined',
-          reviewed_by: user.id,
-          reviewed_at: new Date().toISOString(),
-        })
-        .eq('id', applicationId)
-        .eq('status', 'pending')
-        .select('id, status')
-        .maybeSingle();
-
-      if (updateError) {
-        console.error('Decline application error:', updateError.message);
-        return NextResponse.json({ error: 'Could not decline application' }, { status: 500 });
-      }
-
-      if (!data) {
+      const decided = await decideOperatorApplication(applicationId, user.id, 'decline');
+      if (!decided.ok) {
         return NextResponse.json(
-          { error: 'Application not found or already reviewed' },
-          { status: 409 }
+          { error: decided.error === 'already_reviewed' ? 'That application was already reviewed.' : decided.error === 'not_found' ? 'Application not found.' : 'Could not decline the application. Try again.' },
+          { status: decided.error === 'failed' ? 500 : 409 }
         );
       }
-
-      return NextResponse.json({ success: true, application: data });
+      return NextResponse.json({ success: true });
     }
 
     if (action === 'invite') {
