@@ -807,3 +807,9 @@ we do not have.
 **Change:** The typing signal other people see was switched off only when the box was edited by hand, so sending a message (which clears the box in code) left it on and the person looked like they were typing for ever. It now follows the box: on while there is text and keys are arriving, off when the box empties and after four quiet seconds.
 
 **Distribution move:** none; internal quality.
+
+## 2026-10-10 — No duplicate messages; other people arrive in real time
+
+**Change:** The message you send was shown twice (a temporary copy plus the saved row pushed back over Realtime); the saved row now takes the temporary one's place. Rows pushed to other people now carry who wrote them and any attachment or card (they arrived without a name and as plain text until a refresh). A quiet six-second check, only while the tab is in front and nothing is streaming, covers guests and dropped connections, leaves the screen untouched when nothing changed, and never wipes an answer being written.
+
+**Distribution move:** none; internal quality. Real-time teammates is a selling point for the "bring your team" story once confirmed with two real accounts.

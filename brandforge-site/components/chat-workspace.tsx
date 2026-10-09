@@ -127,6 +127,21 @@ function toChatMessage(message: PersistedMessage): ChatMessage {
 
 const MESSAGE_PAGE_SIZE = 300;
 
+// True when the screen already shows exactly these saved rows, so a background refresh can leave it alone
+// (no re-render, no scroll movement, and the Thoughts strip on the last answer survives).
+function sameMessages(shown: ChatMessage[], saved: ChatMessage[]): boolean {
+  if (shown.length !== saved.length) return false;
+  return shown.every((entry, index) => {
+    const other = saved[index];
+    return (
+      entry.id === other.id &&
+      entry.content === other.content &&
+      (entry.editedAt ?? null) === (other.editedAt ?? null) &&
+      JSON.stringify(entry.reactions ?? []) === JSON.stringify(other.reactions ?? [])
+    );
+  });
+}
+
 // Visitors may send their first message without an account (decided 2026-10-09); the sign-in bar,
 // header button and sidebar card ask after the first answer. Flip to true to require sign-in first.
 const GATE_FIRST_MESSAGE = false;
@@ -612,7 +627,7 @@ export function ChatWorkspace() {
   }, []);
 
   const refreshMessages = useCallback(
-    async (id: string): Promise<ChatMessage[]> => {
+    async (id: string, options: { keepStreaming?: boolean } = {}): Promise<ChatMessage[]> => {
       const response = await fetchAuthed(
         `/api/messages?conversationId=${id}&limit=${MESSAGE_PAGE_SIZE}`,
       );
@@ -626,7 +641,8 @@ export function ChatWorkspace() {
       const mapped: ChatMessage[] = (
         Array.isArray(data.messages) ? data.messages : []
       ).map(toChatMessage);
-      setMessages(mapped);
+      // A refresh that arrives while our own answer is still streaming must not wipe the answer being written.
+      setMessages((current) => (options.keepStreaming && current.some((entry) => entry.streaming) ? current : sameMessages(current, mapped) ? current : mapped));
       setHasOlder(data.hasMore === true);
 
       // Seed the realtime dedupe set from the authoritative fetch. Without this, a row delivered
@@ -759,6 +775,9 @@ export function ChatWorkspace() {
       content: string;
       content_type: string | null;
       created_at: string | null;
+      sender_id?: string | null;
+      sender_name?: string | null;
+      artifact_data?: Record<string, unknown> | null;
     }) => {
       if (seenMessageIdsRef.current.has(row.id)) {
         return;
@@ -771,6 +790,9 @@ export function ChatWorkspace() {
         content: row.content,
         content_type: row.content_type,
         created_at: row.created_at,
+        sender_id: row.sender_id ?? null,
+        sender_name: row.sender_name ?? null,
+        artifact_data: row.artifact_data ?? null,
       });
 
       // While our own turn is streaming, the assistant bubble is already on screen. The real
@@ -780,11 +802,14 @@ export function ChatWorkspace() {
         return;
       }
 
-      setMessages((current) =>
-        current.some((entry) => entry.id === incoming.id)
-          ? current
-          : [...current, incoming],
-      );
+      setMessages((current) => {
+        if (current.some((entry) => entry.id === incoming.id)) return current;
+        // The message we just sent is already on screen under a temporary id. When its stored row arrives,
+        // it takes that place instead of appearing a second time.
+        const placeholder = incoming.sender === "user" ? current.findIndex((entry) => entry.id.startsWith("local-user-") && entry.content === incoming.content) : -1;
+        if (placeholder >= 0) return current.map((entry, index) => (index === placeholder ? incoming : entry));
+        return [...current, incoming];
+      });
 
       // A colleague's new row follows the reader only when they were already at the end; the
       // call is a no-op scroll when the row turned out to be a duplicate the poll delivered.
@@ -797,7 +822,7 @@ export function ChatWorkspace() {
       if (row.content_type === "system") {
         void refreshState(conversationId);
         void refreshArtifacts(conversationId);
-        void refreshMessages(conversationId);
+        void refreshMessages(conversationId, { keepStreaming: true });
       }
     },
     [
@@ -809,6 +834,17 @@ export function ChatWorkspace() {
       scrollToBottom,
     ],
   );
+
+  // Realtime pushes new rows; this quiet check is the safety net when it cannot (guests, a dropped connection,
+  // a sleeping tab). It only runs while the tab is in front and no answer is streaming.
+  useEffect(() => {
+    if (!conversationId) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== "visible" || isStreaming) return;
+      void refreshMessages(conversationId);
+    }, 6000);
+    return () => window.clearInterval(timer);
+  }, [conversationId, isStreaming, refreshMessages]);
 
   useRealtimeMessages(conversationId, handleLiveMessage, (event, row) => {
     if (event === "deleted") {

@@ -16,6 +16,9 @@ export interface LiveMessageRow {
   content_type: string | null;
   created_at: string | null;
   edited_at?: string | null;
+  sender_id?: string | null;
+  sender_name?: string | null;
+  artifact_data?: Record<string, unknown> | null;
 }
 
 // Returns nothing: the caller passes an `onMessage` that decides whether an arriving row is new.
@@ -59,6 +62,9 @@ export function useRealtimeMessages(
             content: String(record.content ?? ''),
             content_type: record.content_type ? String(record.content_type) : null,
             created_at: record.created_at ? String(record.created_at) : null,
+            sender_id: record.sender_id ? String(record.sender_id) : null,
+            sender_name: record.sender_name ? String(record.sender_name) : null,
+            artifact_data: record.artifact_data && typeof record.artifact_data === 'object' ? (record.artifact_data as Record<string, unknown>) : null,
           });
         }
       )
