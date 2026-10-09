@@ -681,3 +681,9 @@ we do not have.
 **Change:** `/brandforge` now opens a menu of buttons in Discord (plan, audit, ads, calendar, launch, image, video, fresh chat). Each button opens a small popup form with one question; the answer comes back privately to the person who asked, with Shorter / Go deeper / Turn into ads / What next? / Menu buttons and a link that opens the same chat on the web. Generated images arrive as attachments. The admin dashboard has a Discord bot panel (what is done and missing, a Register button, the install link with the commands permission). A small presence script keeps the bot showing online.
 
 **Distribution move:** once installed, pin "Type /brandforge in any channel" in #welcome and the Telegram group; post the bot launch text from the launch kit. Replies are private, so ask early users to share the best answers themselves (with consent) in #showcase.
+
+## 2026-10-09 — "Idea to shipped. One chat." carousel and the carousel renderer
+
+**Change:** a nine-slide carousel in the numbered-list style that is getting traction on Instagram (hook cover, one screenshot slide per step with a big numbered title and three bullets, closing call to action), built from real screenshots of the product, with a ready caption. The drawing code (`lib/carousel-render.js`, Canvas 2D) is reusable: it will power an in-app tool where anyone can make the same kind of carousel from their own words, a URL or a file.
+
+**Distribution move:** post the nine slides as an Instagram carousel and TikTok photo post (caption in `marketing/carousels/idea-to-shipped-2026-10-09/caption.md`), and slide 7 alone as a story. Track profile visits and clicks to brandforge.gg against the ad test.
