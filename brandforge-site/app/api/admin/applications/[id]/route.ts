@@ -4,6 +4,7 @@ import { addMessage, addParticipant, isAdminAccount, recordFunnelEvent } from '@
 import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
 import { sendEmail } from '@/lib/email';
 import { resolveSiteUrl } from '@/lib/auth-utils';
+import { buildSpecialistEmail } from '@/lib/specialist-emails.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,13 +83,13 @@ export async function POST(
           (approved as { email?: string | null } | null)?.email ?? ''
         ).trim();
         if (to) {
-          const inboxUrl = `${resolveSiteUrl()}/chat`;
-          await sendEmail({
-            to,
-            subject: 'You are in — BrandForge specialist',
-             text: `Your application was accepted. Open your staff inbox and watch for new briefs — each one you open is yours to propose on.\n\n${inboxUrl}\n\nLink Telegram from Settings to get pinged the moment a brief lands.`,
-             html: `<p>Your application was accepted.</p><p>Open your <a href="${inboxUrl}">staff inbox</a> and watch for new briefs — each one you open is yours to propose on.</p><p>Link Telegram from Settings to get pinged the moment a brief lands.</p>`,
+          const site = resolveSiteUrl();
+          const built = buildSpecialistEmail('accepted', {
+            inboxUrl: `${site}/chat`,
+            vettingUrl: `${site}/specialists`,
+            profileUrl: `${site}/specialists/me`,
           });
+          if (built) await sendEmail({ to, subject: built.subject, text: built.text, html: built.html });
         }
       } catch {
         // Best-effort: the approval stands regardless.

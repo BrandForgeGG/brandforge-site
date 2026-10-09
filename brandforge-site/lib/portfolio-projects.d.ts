@@ -7,3 +7,4 @@ export type PortfolioProject = {
 };
 
 export declare const PORTFOLIO_PROJECTS: PortfolioProject[];
+export declare function projectSlug(name: string): string;

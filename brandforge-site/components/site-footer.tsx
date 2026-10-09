@@ -8,6 +8,8 @@ const PRODUCT: { label: string; href: string }[] = [
   { label: 'Features', href: '/features' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Trade', href: '/trade' },
+  { label: 'Work', href: '/work' },
+  { label: 'Specialists', href: '/specialists' },
   { label: 'Blog', href: '/blog' },
   { label: 'About', href: '/about' },
   { label: 'Careers', href: '/careers' },

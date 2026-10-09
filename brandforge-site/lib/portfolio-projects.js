@@ -4,6 +4,9 @@
 // landing proof section. Descriptions and links are verbatim — no invented
 // metrics, no fabricated outcomes. `screenshot` stays null until the founder
 // provides images; the UI falls back to the letter tile.
+// 2026-10-09: screenshots captured from the live sites (public/work). Lava.pw and Cloutscout.ai
+// were offline, Boostingfactory sits behind a bot check and Instagram is login-walled, so those
+// keep the letter tile. Fluorite.store pointed at brandforge.gg by mistake; fixed.
 
 const PORTFOLIO_PROJECTS = [
   {
@@ -11,35 +14,35 @@ const PORTFOLIO_PROJECTS = [
     category: 'SaaS',
     description: 'Hosting & VPS Company',
     url: 'https://whiteskyhosting.com',
-    screenshot: null,
+    screenshot: '/work/whiteskyhosting-com.jpg',
   },
   {
     name: 'Grindnode',
     category: 'SaaS',
     description: 'Hosting & VPS Provider',
     url: 'https://gracious-tables-391724.framer.app',
-    screenshot: null,
+    screenshot: '/work/grindnode.jpg',
   },
   {
     name: 'CarSpotApp iOS',
     category: 'SaaS',
     description: 'Real-time vehicle tracking system',
     url: 'https://apps.apple.com/us/app/carspot-live/id6739596635',
-    screenshot: null,
+    screenshot: '/work/carspotapp-ios.jpg',
   },
   {
     name: 'DirectFiber',
     category: 'SaaS',
     description: 'Enterprise ISP portal w/ custom billing',
     url: 'https://www.directfiber.nl',
-    screenshot: null,
+    screenshot: '/work/directfiber.jpg',
   },
   {
     name: 'Drain.cx',
     category: 'E-commerce',
     description: 'Scripts for Rust, R6 Siege & Apex Legends',
     url: 'https://drain.cx',
-    screenshot: null,
+    screenshot: '/work/drain-cx.jpg',
   },
   {
     name: 'Boostingfactory.com',
@@ -52,8 +55,8 @@ const PORTFOLIO_PROJECTS = [
     name: 'Fluorite.store',
     category: 'E-commerce',
     description: 'Competitive edge tools for MLBB/FF/CODM',
-    url: 'https://brandforge.gg',
-    screenshot: null,
+    url: 'https://fluorite.store',
+    screenshot: '/work/fluorite-store.jpg',
   },
   {
     name: 'Lava.pw',
@@ -78,4 +81,8 @@ const PORTFOLIO_PROJECTS = [
   },
 ];
 
-module.exports = { PORTFOLIO_PROJECTS };
+function projectSlug(name) {
+  return String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+module.exports = { PORTFOLIO_PROJECTS, projectSlug };

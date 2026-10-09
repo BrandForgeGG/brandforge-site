@@ -14,7 +14,9 @@ const SECTIONS: LegalSection[] = [
       'Account data: when you sign in with Google we receive your name, email address and profile picture from Google. We do not see or store your Google password.',
       'Project data: your chat messages, project briefs, proposals, agreements and uploaded context. This is the core of the service — the AI and the human team use it to scope and deliver your project.',
       'Payment data: the crypto transaction hash and network you submit when funding an agreement. Transaction hashes are public on-chain data; we store them to link your payment to your agreement.',
-      'Usage data: standard server logs (IP address, browser, pages visited) kept for security and debugging.',
+      'Guest chats: you can try BrandForge without an account. We keep a random session id in a cookie so the chat stays yours, and the messages you send.',
+      'Telegram and Discord: if you message our bots, we receive your Telegram or Discord user id and the text you send, and we keep it as a guest chat you can continue on the web.',
+      'Usage data: standard server logs (IP address, browser, pages visited) kept for security and debugging, plus anonymous product events (for example, which step of sign-up was reached) with no message content.',
     ],
   },
   {
@@ -29,7 +31,8 @@ const SECTIONS: LegalSection[] = [
     title: '3. Who processes it',
     body: [
       'Supabase hosts our database, authentication and file storage.',
-      'OpenRouter processes chat content through AI models to structure projects and assist the team. Do not paste secrets, passwords or highly sensitive personal data into the chat.',
+      'OpenRouter routes chat content to AI model providers (such as Anthropic, OpenAI or Google) to write answers and structure projects. Do not paste secrets, passwords or highly sensitive personal data into the chat.',
+      'Resend sends our emails. Telegram and Discord carry bot messages and notifications you ask for.',
       'Google provides sign-in. Vercel hosts the application and serves pages.',
       'BrandForge staff and the operators assigned to your project can read your project conversations — that is how the human-in-the-loop service works.',
     ],
@@ -37,12 +40,13 @@ const SECTIONS: LegalSection[] = [
   {
     title: '4. Cookies',
     body: [
-      'We use cookies only to keep you signed in (Supabase session cookies). There are no advertising or cross-site tracking cookies.',
+      'We use cookies to keep you signed in (Supabase session cookies) and, for visitors without an account, a session cookie that keeps a guest chat yours. There are no advertising or cross-site tracking cookies.',
     ],
   },
   {
     title: '5. Retention and deletion',
     body: [
+      'Guest chats that nobody signs in to keep are deleted automatically after 90 days without activity, with their uploaded files. Chats tied to funds held in escrow are kept until the agreement is settled.',
       'You can delete individual conversations from the app. To delete your account and remaining data, message the project manager on Telegram (@headstartup) or ask in Discord; we will remove your profile and projects within 30 days, except records we must keep for accounting or fraud-prevention reasons (for example, payment verification records tied to completed agreements).',
     ],
   },
@@ -64,7 +68,7 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacy Policy"
-      updated="September 23, 2026"
+      updated="October 9, 2026"
       intro="BrandForge is built around conversations, so this policy explains plainly what those conversations contain, who can see them, and how to make them go away."
       sections={SECTIONS}
     />

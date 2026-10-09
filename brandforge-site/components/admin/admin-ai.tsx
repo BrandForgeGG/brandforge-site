@@ -80,7 +80,7 @@ export function AdminAi() {
           ))}
         </div>
         {!info.liveListRead ? <p className="mt-3 text-xs text-muted">OpenRouter&apos;s model list could not be read just now, so availability shows as unknown.</p> : null}
-        <p className="mt-3 text-xs text-muted">A model shows as available only when OpenRouter lists it today. Pin one with OPENROUTER_MODEL_QUALITY in Vercel.</p>
+        <p className="mt-3 text-xs text-muted">A model shows as available only when OpenRouter lists it today. &ldquo;Watching&rdquo; rows are models we expect to arrive. Pin one with OPENROUTER_MODEL_QUALITY in Vercel.</p>
       </Block>
 
       <Block title="AI spend guard" note="Counts AI replies per UTC day">

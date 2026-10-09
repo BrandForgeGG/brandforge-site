@@ -1,6 +1,8 @@
 import Image from 'next/image';
 
-import { PORTFOLIO_PROJECTS } from '@/lib/portfolio-projects';
+import Link from 'next/link';
+
+import { PORTFOLIO_PROJECTS, projectSlug } from '@/lib/portfolio-projects';
 import { LANDING_TESTIMONIAL_IDS, TESTIMONIALS } from '@/lib/testimonials';
 
 const LANDING_QUOTES = LANDING_TESTIMONIAL_IDS.map((id) =>
@@ -16,16 +18,14 @@ export function LandingProof() {
             <h2 className="mt-2 font-serif text-3xl text-foreground sm:text-4xl">
               Projects built with BrandForge
             </h2>
-            <p className="mt-3 text-sm text-muted">Not AI-generated mockups. Click through and try them.</p>
+            <p className="mt-3 text-sm text-muted">Real, live projects. Open them and judge the work.</p>
           </div>
 
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {PORTFOLIO_PROJECTS.slice(0, 3).map((project) => (
-              <a
+              <Link
                 key={project.name}
-                href={project.url}
-                target="_blank"
-                rel="noreferrer"
+                href={`/work/${projectSlug(project.name)}`}
                 className="group rounded-2xl border border-line bg-panel p-5 transition hover:border-ember"
               >
                 <div className="relative flex h-24 items-center justify-center overflow-hidden rounded-xl bg-panel-2">
@@ -35,7 +35,7 @@ export function LandingProof() {
                       alt=""
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      className="object-cover"
+                      className="object-cover object-top"
                     />
                   ) : (
                     <span className="font-serif text-2xl text-muted">{project.name.charAt(0)}</span>
@@ -45,11 +45,14 @@ export function LandingProof() {
                 <p className="mt-1 text-xs uppercase tracking-[0.15em] text-muted">{project.category}</p>
                 <p className="mt-2 text-sm leading-relaxed text-muted">{project.description}</p>
                 <span className="mt-3 inline-block text-xs text-ember opacity-0 transition group-hover:opacity-100">
-                  Visit site →
+                  See the project →
                 </span>
-              </a>
+              </Link>
             ))}
           </div>
+          <p className="mt-6 text-center">
+            <Link href="/work" className="text-sm text-ember underline-offset-2 hover:underline">See all projects</Link>
+          </p>
         </div>
       </section>
 

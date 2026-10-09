@@ -14,6 +14,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '/trade', frequency: 'weekly', priority: 0.7 },
     { path: '/platform', frequency: 'weekly', priority: 0.8 },
     { path: '/apply', frequency: 'monthly', priority: 0.8 },
+    { path: '/work', frequency: 'weekly', priority: 0.7 },
+    { path: '/specialists', frequency: 'weekly', priority: 0.7 },
     { path: '/blog', frequency: 'weekly', priority: 0.7 },
     { path: '/about', frequency: 'monthly', priority: 0.6 },
     { path: '/careers', frequency: 'monthly', priority: 0.5 },

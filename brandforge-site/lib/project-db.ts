@@ -4987,6 +4987,7 @@ export async function adminDeleteChats(options: {
   let deleted = 0;
   for (let i = 0; i < targets.length; i += 100) {
     const batch = targets.slice(i, i + 100);
+    for (const id of batch) await removeConversationFiles(admin, id).catch(() => 0);
     const { error, count } = await admin.from('conversations').delete({ count: 'exact' }).in('id', batch);
     if (error) console.error('adminDeleteChats batch error:', error.message);
     else deleted += count ?? batch.length;
@@ -5147,4 +5148,153 @@ export async function getReturnMetrics(): Promise<{ eligible: number; returned: 
     if ((byUser.get(id) ?? []).some((t) => t >= day0 + DAY && t < day0 + 8 * DAY)) returned += 1;
   }
   return { eligible: cohort.length, returned, rate: cohort.length ? returned / cohort.length : null };
+}
+
+
+// ---- Data retention ----
+// Deletes a conversation's uploaded files (conversation-<id>/<user>/<file>). Rows cascade from the
+// conversation delete, files do not, so this runs before it.
+async function removeConversationFiles(admin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>, conversationId: string): Promise<number> {
+  const bucket = admin.storage.from('conversation-attachments');
+  const root = `conversation-${conversationId}`;
+  const { data: folders } = await bucket.list(root, { limit: 100 });
+  const paths: string[] = [];
+  for (const folder of folders ?? []) {
+    const { data: files } = await bucket.list(`${root}/${folder.name}`, { limit: 200 });
+    for (const file of files ?? []) paths.push(`${root}/${folder.name}/${file.name}`);
+  }
+  if (paths.length === 0) return 0;
+  const { error } = await bucket.remove(paths);
+  return error ? 0 : paths.length;
+}
+
+// Guest chats nobody signed in to keep are removed after `days` without activity (default 90),
+// together with their files. Chats tied to held money are never touched.
+export async function purgeStaleGuestData(days = 90): Promise<{ conversations: number; files: number }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { conversations: 0, files: 0 };
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await admin.from('conversations').select('id').is('user_id', null).lt('updated_at', cutoff).limit(500);
+  if (error) {
+    console.error('purgeStaleGuestData list error:', error.message);
+    return { conversations: 0, files: 0 };
+  }
+  const money = await conversationsWithMoney(admin);
+  const ids = ((data ?? []) as { id: string }[]).map((row) => row.id).filter((id) => !money.has(id));
+  let files = 0;
+  let conversations = 0;
+  for (const id of ids) {
+    files += await removeConversationFiles(admin, id).catch(() => 0);
+    const { error: deleteError } = await admin.from('conversations').delete().eq('id', id);
+    if (!deleteError) conversations += 1;
+  }
+  return { conversations, files };
+}
+
+
+// ---- Specialist profiles and invitations ----
+export type SpecialistProfileRow = {
+  user_id: string;
+  handle: string;
+  display_name: string;
+  headline: string;
+  bio: string;
+  skills: string[];
+  portfolio: { title: string; url: string }[];
+  is_public: boolean;
+};
+
+const PROFILE_COLUMNS = 'user_id, handle, display_name, headline, bio, skills, portfolio, is_public';
+
+export async function getSpecialistProfile(userId: string): Promise<SpecialistProfileRow | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data } = await admin.from('specialist_profiles').select(PROFILE_COLUMNS).eq('user_id', userId).maybeSingle();
+  return (data as SpecialistProfileRow | null) ?? null;
+}
+
+export async function saveSpecialistProfile(
+  userId: string,
+  value: { handle: string; displayName: string; headline: string; bio: string; skills: string[]; portfolio: { title: string; url: string }[]; isPublic: boolean }
+): Promise<{ ok: true; row: SpecialistProfileRow } | { ok: false; error: 'handle_taken' | 'failed' | 'not_configured' }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+  const { data, error } = await admin
+    .from('specialist_profiles')
+    .upsert(
+      {
+        user_id: userId,
+        handle: value.handle,
+        display_name: value.displayName,
+        headline: value.headline,
+        bio: value.bio,
+        skills: value.skills,
+        portfolio: value.portfolio,
+        is_public: value.isPublic,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id' }
+    )
+    .select(PROFILE_COLUMNS)
+    .single();
+  if (error) {
+    if (error.code === '23505') return { ok: false, error: 'handle_taken' };
+    console.error('saveSpecialistProfile error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+  return { ok: true, row: data as SpecialistProfileRow };
+}
+
+// Listed profiles only (the specialist ticked "show publicly"), and only while they still hold
+// specialist access, so removing someone's role removes their listing.
+export async function listPublicSpecialists(): Promise<SpecialistProfileRow[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const { data } = await admin.from('specialist_profiles').select(PROFILE_COLUMNS).eq('is_public', true).order('updated_at', { ascending: false }).limit(200);
+  const rows = (data ?? []) as SpecialistProfileRow[];
+  if (rows.length === 0) return [];
+  const { data: roles } = await admin.from('profiles').select('id, role').in('id', rows.map((r) => r.user_id));
+  const active = new Set(((roles ?? []) as { id: string; role: string | null }[]).filter((r) => r.role === 'operator' || r.role === 'admin').map((r) => r.id));
+  return rows.filter((r) => active.has(r.user_id));
+}
+
+export async function getPublicSpecialist(handle: string): Promise<SpecialistProfileRow | null> {
+  const list = await listPublicSpecialists();
+  return list.find((row) => row.handle === handle) ?? null;
+}
+
+// An admin invites a specialist by email. Someone who already has an account gets access now;
+// otherwise a pre-accepted application waits for them and claimApplicationsForUser switches access on
+// the first time they sign in with that address.
+export async function inviteSpecialistByEmail(input: {
+  email: string;
+  name: string;
+  specialty: string;
+  note: string;
+  invitedBy: string;
+}): Promise<{ ok: true; existingAccount: boolean } | { ok: false; error: 'not_configured' | 'failed' | 'is_admin' }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+  const email = input.email.trim().toLowerCase();
+  const now = new Date().toISOString();
+
+  const { data: profile } = await admin.from('profiles').select('id, role').ilike('email', email.replace(/[,()]/g, '')).maybeSingle();
+  const existing = profile as { id: string; role: string | null } | null;
+  if (existing?.role === 'admin') return { ok: false, error: 'is_admin' };
+
+  if (existing) {
+    const { error } = await admin.from('profiles').update({ role: 'operator', updated_at: now }).eq('id', existing.id);
+    if (error) return { ok: false, error: 'failed' };
+  }
+
+  const { data: found } = await admin.from('operator_applications').select('id').ilike('email', email.replace(/[,()]/g, '')).limit(1);
+  const row = { status: 'accepted', reviewed_by: input.invitedBy, reviewed_at: now, user_id: existing?.id ?? null, full_name: input.name || null, specialty: input.specialty || null };
+  const saved = (found ?? []).length
+    ? await admin.from('operator_applications').update(row).eq('id', (found as { id: string }[])[0].id)
+    : await admin.from('operator_applications').insert({ ...row, email, message: input.note ? `Invited by the team: ${input.note}` : 'Invited by the team.' });
+  if (saved.error) {
+    console.error('inviteSpecialistByEmail error:', saved.error.message);
+    return { ok: false, error: 'failed' };
+  }
+  return { ok: true, existingAccount: Boolean(existing) };
 }

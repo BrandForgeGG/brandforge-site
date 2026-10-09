@@ -96,6 +96,11 @@ export function AdminDashboard() {
   const [mTarget, setMTarget] = useState('');
   const [mBody, setMBody] = useState('');
 
+  const [invEmail, setInvEmail] = useState('');
+  const [invName, setInvName] = useState('');
+  const [invSpecialty, setInvSpecialty] = useState('');
+  const [invNote, setInvNote] = useState('');
+
   const load = useCallback(async () => {
     try {
       const res = await fetchAuthed('/api/admin/overview');
@@ -221,6 +226,24 @@ export function AdminDashboard() {
             ))}
           </ul>
         )}
+      </Section>
+
+      <Section title="Invite a specialist" note="They get an email with sign-in steps. Access switches on when they sign in.">
+        <form
+          className="grid max-w-2xl gap-2 sm:grid-cols-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void run('Invitation sent.', () => fetchAuthed('/api/admin/invitations', { method: 'POST', headers: json, body: JSON.stringify({ email: invEmail, name: invName, specialty: invSpecialty, note: invNote }) })).then((ok) => {
+              if (ok) { setInvEmail(''); setInvName(''); setInvSpecialty(''); setInvNote(''); }
+            });
+          }}
+        >
+          <input type="email" required value={invEmail} onChange={(e) => setInvEmail(e.target.value)} placeholder="Email address" aria-label="Specialist email" className="rounded-lg border border-line bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted" />
+          <input value={invName} onChange={(e) => setInvName(e.target.value)} placeholder="Name (optional)" aria-label="Specialist name" className="rounded-lg border border-line bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted" />
+          <input value={invSpecialty} onChange={(e) => setInvSpecialty(e.target.value)} placeholder="Specialty (optional)" aria-label="Specialty" className="rounded-lg border border-line bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted" />
+          <input value={invNote} onChange={(e) => setInvNote(e.target.value)} placeholder="Personal note in the email (optional)" aria-label="Note" maxLength={300} className="rounded-lg border border-line bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted" />
+          <div className="sm:col-span-2"><button type="submit" disabled={busy || !invEmail.trim()} className={btnPrimary}>Send invitation</button></div>
+        </form>
       </Section>
 
       <Section title="Specialist applications" note={`${pendingApps.length} waiting · ${realApps.length} total`}>

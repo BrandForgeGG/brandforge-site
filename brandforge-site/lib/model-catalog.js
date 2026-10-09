@@ -6,19 +6,26 @@
 // available" instead of failing a user's chat. Tiers: `fast` = cheap, used for planning and
 // background steps; `quality` = the answer a visitor reads first.
 const MODEL_CATALOG = [
-  { provider: 'Anthropic', name: 'Claude Sonnet 5.5', tier: 'quality', ids: ['anthropic/claude-sonnet-5.5', 'anthropic/claude-sonnet-5'] },
+  { provider: 'Anthropic', name: 'Claude Fable 5.1', tier: 'frontier', ids: ['anthropic/claude-fable-5.1', 'anthropic/claude-fable-5'] },
   { provider: 'Anthropic', name: 'Claude Opus 5.5', tier: 'frontier', ids: ['anthropic/claude-opus-5.5', 'anthropic/claude-opus-5'] },
-  { provider: 'Anthropic', name: 'Claude Haiku 5.5', tier: 'fast', ids: ['anthropic/claude-haiku-5.5', 'anthropic/claude-haiku-5'] },
+  { provider: 'Anthropic', name: 'Claude Sonnet 5.5', tier: 'quality', ids: ['anthropic/claude-sonnet-5.5', 'anthropic/claude-sonnet-5'] },
   { provider: 'Anthropic', name: 'Claude Sonnet 4.5', tier: 'quality', ids: ['anthropic/claude-sonnet-4.5', 'anthropic/claude-sonnet-4'] },
+  { provider: 'Anthropic', name: 'Claude Haiku 5.5', tier: 'fast', ids: ['anthropic/claude-haiku-5.5', 'anthropic/claude-haiku-5'] },
+  { provider: 'OpenAI', name: 'GPT-6.1 Sol', tier: 'frontier', ids: ['openai/gpt-6.1-sol'] },
   { provider: 'OpenAI', name: 'GPT-4.1', tier: 'quality', ids: ['openai/gpt-4.1'] },
   { provider: 'OpenAI', name: 'GPT-4o', tier: 'quality', ids: ['openai/gpt-4o'] },
   { provider: 'OpenAI', name: 'GPT-4o mini', tier: 'fast', ids: ['openai/gpt-4o-mini'] },
+  { provider: 'Google', name: 'Gemini 3.x Pro (watching)', tier: 'frontier', ids: ['google/gemini-3.5-pro', 'google/gemini-3.8-pro', 'google/gemini-3-pro'] },
   { provider: 'Google', name: 'Gemini 2.5 Pro', tier: 'quality', ids: ['google/gemini-2.5-pro'] },
-  { provider: 'Google', name: 'Gemini 2.5 Flash', tier: 'fast', ids: ['google/gemini-2.5-flash'] },
-  { provider: 'xAI', name: 'Grok 4', tier: 'frontier', ids: ['x-ai/grok-4'] },
-  { provider: 'DeepSeek', name: 'DeepSeek V3', tier: 'fast', ids: ['deepseek/deepseek-chat'] },
-  { provider: 'Mistral', name: 'Mistral Large', tier: 'quality', ids: ['mistralai/mistral-large'] },
+  { provider: 'Google', name: 'Gemini 3.8 Flash', tier: 'fast', ids: ['google/gemini-3.8-flash', 'google/gemini-2.5-flash'] },
+  { provider: 'xAI', name: 'Grok 4.7', tier: 'frontier', ids: ['x-ai/grok-4.7'] },
+  { provider: 'DeepSeek', name: 'DeepSeek V4 Pro', tier: 'quality', ids: ['deepseek/deepseek-v4-pro'] },
+  { provider: 'DeepSeek', name: 'DeepSeek V4 Flash', tier: 'fast', ids: ['deepseek/deepseek-v4-flash'] },
+  { provider: 'Mistral', name: 'Mistral Large 4', tier: 'quality', ids: ['mistralai/mistral-large-4-0', 'mistralai/mistral-large-2512'] },
   { provider: 'Meta', name: 'Llama 4 Maverick', tier: 'fast', ids: ['meta-llama/llama-4-maverick'] },
+  { provider: 'Meta', name: 'Llama 5 (watching)', tier: 'frontier', ids: ['meta-llama/llama-5', 'meta-llama/llama-5-maverick'] },
+  { provider: 'Alibaba', name: 'Qwen 3.8 Max', tier: 'quality', ids: ['qwen/qwen3.8-max-0902', 'qwen/qwen3.7-max'] },
+  { provider: 'Moonshot', name: 'Kimi K3', tier: 'quality', ids: ['moonshotai/kimi-k3'] },
 ];
 
 // Order in which the answer model is chosen when nothing is pinned by env: the first one that is
