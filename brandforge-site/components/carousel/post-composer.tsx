@@ -75,9 +75,9 @@ function LivePreview({ post }: { post: Post }) {
 
 // Makes an update, a poll, a quiz or a thread. One sentence gets a first draft; everything stays
 // editable; the preview updates as you type; then the same Publish step as every other format.
-export function PostComposer({ type, signedIn, onSignIn }: { type: PostType; signedIn: boolean | null; onSignIn: () => void }) {
+export function PostComposer({ type, signedIn, onSignIn, initialTopic = '' }: { type: PostType; signedIn: boolean | null; onSignIn: () => void; initialTopic?: string }) {
   const [fields, setFields] = useState<Fields>(EMPTY);
-  const [topic, setTopic] = useState('');
+  const [topic, setTopic] = useState(initialTopic);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

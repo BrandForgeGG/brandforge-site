@@ -60,6 +60,8 @@ function formatRole(role) {
   const value = String(role ?? '').trim();
   if (!value) return '';
   if (value.toLowerCase() === 'operator') return 'BrandForge team';
+  // Whoever started the chat owns the project, whether they are signed in or a guest.
+  if (value.toLowerCase() === 'owner' || value.toLowerCase() === 'founder') return 'Project owner';
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 

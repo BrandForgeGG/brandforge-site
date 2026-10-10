@@ -915,3 +915,9 @@ we do not have.
 **Change:** Team members listed in a chat now read "BrandForge team" instead of "Operator", and older messages without a stored name show "BrandForge team" instead of plain "BrandForge".
 
 **Distribution move:** none; copy consistency.
+
+## 2026-10-10 — Make, edit and download from the chat; whoever starts a chat is the Project owner
+
+**Change:** The chat can now open the same maker as the Create page in a sheet over the conversation: the + menu has "Make a carousel" and "Make a post, poll or quiz", and typing "make a carousel about…" shows an "Open the maker" prompt that starts from the typed topic. Edit and download without leaving the chat; Publish stays locked for now. Whoever starts a chat (signed in or guest) is labelled "Project owner" in the people lists and on their messages.
+
+**Distribution move:** demo clip: type "make a carousel about calm teams" in the chat, tap Open the maker, edit and download. Changelog line: "Make it right in the chat. No more leaving the conversation to create."

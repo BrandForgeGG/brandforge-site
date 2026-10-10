@@ -44,7 +44,8 @@ test('avatarLabel names the person only when a name exists', () => {
 });
 
 test('formatRole capitalizes without relabeling', () => {
-  assert.equal(formatRole('founder'), 'Founder');
+  assert.equal(formatRole('founder'), 'Project owner');
+  assert.equal(formatRole('owner'), 'Project owner');
   assert.equal(formatRole('operator'), 'BrandForge team');
   assert.equal(formatRole('COO · Product'), 'COO · Product');
   assert.equal(formatRole(''), '');

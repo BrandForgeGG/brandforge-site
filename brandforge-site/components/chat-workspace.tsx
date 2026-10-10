@@ -25,6 +25,9 @@ import { useLogin } from "@/components/login-dialog";
 import { GuestSaveBar } from "@/components/guest-save-bar";
 import { AiNotices, AiSwitch, useAiAccess } from "@/components/chat-ai-controls";
 import { ToolsMenu } from "@/components/chat-tools-menu";
+import { CreateSheet } from "@/components/chat/create-sheet";
+import { detectMakeIntent } from "@/lib/make-intent";
+import type { StudioKind } from "@/components/studio/studio-hub";
 import { VideoReadyBar } from "@/components/video-ready-bar";
 import { PeerContractForm } from "@/components/peer-contract-card";
 import { extractOutline } from "@/lib/deliverable-outline";
@@ -255,6 +258,9 @@ export function ChatWorkspace() {
     [],
   );
   const [input, setInput] = useState("");
+  // The maker, opened over the chat: which format (null = pick one) and the topic to start from.
+  const [makeOpen, setMakeOpen] = useState<{ kind: StudioKind | null; topic: string } | null>(null);
+  const makeHint = detectMakeIntent(input);
   const [isReplyingTo, setIsReplyingTo] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   // A chat opened from a link starts in the loading state, so the empty-chat screen never flashes first.
@@ -353,7 +359,7 @@ export function ChatWorkspace() {
   const selfPresence = railMeta.userId
     ? {
         userId: railMeta.userId,
-        name: railMeta.name || (railMeta.isStaff ? "BrandForge specialist" : "You"),
+        name: railMeta.name || (railMeta.isStaff ? "BrandForge team" : "You"),
         staff: railMeta.isStaff,
       }
     : null;
@@ -2201,15 +2207,28 @@ export function ChatWorkspace() {
       : 'operator'
     : null;
 
+  // The people in this chat. Whoever started it is the project owner, signed in or guest, even when no
+  // participant row was ever written for them.
+  const people = useMemo<TaskParticipant[]>(() => {
+    const roster = taskParticipants.map((person) => (person.role === 'founder' ? { ...person, role: 'owner' } : person));
+    if (!conversationId || roster.some((person) => person.role === 'owner')) return roster;
+    if (isChatOwner) {
+      const selfId = railMeta.userId ?? 'guest-owner';
+      if (roster.some((person) => person.userId === selfId)) return roster.map((person) => (person.userId === selfId ? { ...person, role: 'owner' } : person));
+      return [{ userId: selfId, displayName: railMeta.name || 'You', role: 'owner', avatarUrl: null }, ...roster];
+    }
+    return roster;
+  }, [taskParticipants, conversationId, isChatOwner, railMeta.userId, railMeta.name]);
+
   // Real roster -> role labels for message headers (lowercased-name lookup).
   const participantRoles = useMemo(() => {
     const map: Record<string, string> = {};
-    for (const person of taskParticipants) {
+    for (const person of people) {
       const name = person.displayName.trim().toLowerCase();
       if (name && person.role) map[name] = formatRole(person.role);
     }
     return map;
-  }, [taskParticipants]);
+  }, [people]);
 
   // Files in this chat, derived from persisted attachment messages - never a fabricated list.
   const conversationFiles = useMemo(() => {
@@ -2326,7 +2345,7 @@ return (
                     {/* eslint-disable-next-line @next/next/no-img-element -- bundled local asset at a fixed size */}
                     <img src="/discord-server-icon.png" alt="" className="h-full w-full object-cover" />
                   </span>
-                  {taskParticipants.slice(0, 3).map((person) => (
+                  {people.slice(0, 3).map((person) => (
                     <span
                       key={person.userId}
                       className="bf-stack-item"
@@ -2341,9 +2360,9 @@ return (
                     </span>
                   ))}
                 </span>
-                {taskParticipants.length > 3 ? (
+                {people.length > 3 ? (
                   <span className="bf-stack-more">
-                    +{taskParticipants.length - 3}
+                    +{people.length - 3}
                   </span>
                 ) : null}
               </button>
@@ -2372,7 +2391,7 @@ return (
                         </span>
                       </span>
                     </li>
-                    {taskParticipants.map((person) => (
+                    {people.map((person) => (
                       <li
                         key={person.userId}
                         className="flex items-center gap-2.5"
@@ -2751,6 +2770,7 @@ return (
           </div>
         </div>
 
+        {makeOpen ? <CreateSheet kind={makeOpen.kind} topic={makeOpen.topic} onClose={() => setMakeOpen(null)} /> : null}
         <div className="bf-composer-shell sticky bottom-0 shrink-0">
           <form
             onSubmit={(event) => {
@@ -2786,6 +2806,15 @@ return (
                     <span className="bf-menu-hint">{item.command}</span>
                   </button>
                 ))}
+              </div>
+            ) : null}
+            {makeHint ? (
+              <div className="bf-composer-chip" role="status">
+                <span aria-hidden="true">✨</span>
+                <span className="min-w-0 flex-1 truncate">Make it as a {makeHint.kind === "update" ? "post" : makeHint.kind}, with visuals</span>
+                <button type="button" onClick={() => setMakeOpen({ kind: makeHint.kind, topic: makeHint.topic })} className="rounded-md bg-ember px-2.5 py-1 text-xs font-semibold text-background">
+                  Open the maker
+                </button>
               </div>
             ) : null}
             {attachment ? (
@@ -3041,6 +3070,7 @@ return (
                     onInvite={() => setShowInviteForm(true)}
                     onContract={() => setShowContractForm(true)}
                     onCallTeam={isChatOwner && aiEnabled && conversationId ? () => void pauseAi(true) : null}
+                    onMake={(kind) => setMakeOpen({ kind, topic: "" })}
                   />
                 </div>
                   <div className="flex items-center gap-3">
@@ -3094,7 +3124,7 @@ return (
           payments={payments}
           busyAction={busyAction}
           isStaff={railMeta.isStaff && !isOwnConversation}
-          participants={taskParticipants}
+          participants={people}
           files={conversationFiles}
           onClose={() => setIsContextOpen(false)}
           onRequestReview={() => {

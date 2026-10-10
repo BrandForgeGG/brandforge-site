@@ -13,6 +13,7 @@ import type { Format } from '@/lib/format-catalog.js';
 import type { PostType } from '@/lib/post-types.js';
 
 type Kind = 'carousel' | PostType;
+export type StudioKind = Kind;
 
 // What a card that is not built yet looks like: the kind of thing it will make, shown blurred.
 const COMING_VISUAL: Record<string, React.ReactNode> = { images: <ImageVisual />, text: <UpdateVisual />, video: <VideoVisual />, documents: <DocumentVisual />, offers: <OfferVisual /> };
@@ -29,9 +30,9 @@ type Saved = { id: string; title: string; type: string; theme: string; plan: Dra
 
 // The one page for making things: pick a card, make it, download it, and publish when publishing opens.
 // The card you opened is in the address (?make=) so a link can open straight to a poll.
-export function StudioHub() {
+export function StudioHub({ embedded = false, initialKind = null, initialTopic = '' }: { embedded?: boolean; initialKind?: Kind | null; initialTopic?: string } = {}) {
   const { openLogin } = useLogin();
-  const [open, setOpen] = useState<Kind | null>(null);
+  const [open, setOpen] = useState<Kind | null>(embedded ? initialKind : null);
   const [ready, setReady] = useState(false);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [saved, setSaved] = useState<Saved[]>([]);
@@ -39,9 +40,17 @@ export function StudioHub() {
 
   useEffect(() => {
     let live = true;
-    const make = new URLSearchParams(window.location.search).get('make');
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- the address is only readable in the browser
-    if (make && CARDS.some((card) => card.id === make)) setOpen(make as Kind);
+    if (embedded) {
+      // Opened from the chat: start the carousel on the topic the person just typed.
+      if (initialKind === 'carousel' && initialTopic.trim()) {
+        writeDraft({ ...emptyDraft(), topic: initialTopic.trim().slice(0, 1500) });
+        markResume();
+      }
+    } else {
+      const make = new URLSearchParams(window.location.search).get('make');
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- the address is only readable in the browser
+      if (make && CARDS.some((card) => card.id === make)) setOpen(make as Kind);
+    }
     setReady(true);
     void getSessionUser()
       .then(async (user) => {
@@ -55,10 +64,12 @@ export function StudioHub() {
     return () => {
       live = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- this only reads where it was opened from, once
   }, []);
 
   function show(kind: Kind | null) {
     setOpen(kind);
+    if (embedded) return;
     try {
       const url = new URL(window.location.href);
       if (kind) url.searchParams.set('make', kind);
@@ -96,7 +107,7 @@ export function StudioHub() {
           <span className="text-muted" aria-hidden="true">/</span>
           <h2 className="font-serif text-xl text-foreground">{current.name}</h2>
         </div>
-        {current.id === 'carousel' ? <CarouselMaker /> : <PostComposer key={current.id} type={current.id} signedIn={signedIn} onSignIn={() => openLogin({ reason: 'signin', next: `/create?make=${current.id}` })} />}
+        {current.id === 'carousel' ? <CarouselMaker /> : <PostComposer key={current.id} type={current.id} signedIn={signedIn} initialTopic={embedded && current.id === initialKind ? initialTopic : ''} onSignIn={() => openLogin({ reason: 'signin', next: embedded ? window.location.pathname + window.location.search : `/create?make=${current.id}` })} />}
       </div>
     );
   }
