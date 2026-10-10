@@ -371,6 +371,19 @@ function toOpenRouterTool(tool: Tool) {
 
 import { configuredProviders, type ProviderTarget } from '@/lib/llm-providers';
 
+// Who just refused us, and until when. A provider that is out of credit or rate-limited is skipped for a short
+// while instead of being asked again by every request; if everyone is cooling down, everyone is asked anyway.
+const coolUntil = new Map<string, number>();
+
+function cool(key: string, status: number | 'network', hint?: string) {
+  let seconds = status === 402 ? 180 : status === 429 ? 30 : 20;
+  const wait = /try again in (\d+(?:\.\d+)?)\s*s/i.exec(hint ?? '')?.[1];
+  if (status === 429 && wait) seconds = Math.min(90, Math.ceil(Number(wait)) + 2);
+  coolUntil.set(key, Date.now() + seconds * 1000);
+}
+
+const isCooling = (key: string) => (coolUntil.get(key) ?? 0) > Date.now();
+
 export class BrandForgeAIService {
   private apiKey: string;
   private baseUrl: string;
@@ -462,30 +475,40 @@ export class BrandForgeAIService {
   // provider gets a turn in order, so one provider going down never takes the chat with it.
   private async request(body: Record<string, unknown>): Promise<Response> {
     const failures: string[] = [];
-    if (this.apiKey) {
+    const providers = configuredProviders();
+    const allCooling = (this.apiKey ? isCooling('openrouter') : true) && providers.every((target) => isCooling(target.id));
+    if (this.apiKey && (allCooling || !isCooling('openrouter'))) {
       try {
         const response = await this.requestOpenRouter(body);
         if (response.ok) return response;
         failures.push(`openrouter ${response.status}`);
-        console.error('OpenRouter API error:', response.status, (await response.text().catch(() => '')).slice(0, 300));
+        const detail = (await response.text().catch(() => '')).slice(0, 300);
+        console.error('OpenRouter API error:', response.status, detail);
+        cool('openrouter', response.status, detail);
       } catch (error) {
         failures.push('openrouter unreachable');
         console.error('OpenRouter request failed:', error instanceof Error ? error.message : error);
+        cool('openrouter', 'network');
       }
-    } else {
+    } else if (!this.apiKey) {
       failures.push('openrouter not configured');
     }
 
-    for (const target of configuredProviders()) {
+    for (const target of providers) {
+      if (!allCooling && isCooling(target.id)) continue;
       try {
         console.warn(`Answering with ${target.label} (${target.model})`);
-        const response = await this.requestProvider(target, body);
+        // Backup providers get a smaller answer budget: their free tiers count the requested size against a per-minute cap.
+        const response = await this.requestProvider(target, typeof body.max_tokens === 'number' ? { ...body, max_tokens: Math.min(body.max_tokens, 2000) } : body);
         if (response.ok) return response;
         failures.push(`${target.id} ${response.status}`);
-        console.error(`${target.label} API error:`, response.status, (await response.text().catch(() => '')).slice(0, 300));
+        const detail = (await response.text().catch(() => '')).slice(0, 300);
+        console.error(`${target.label} API error:`, response.status, detail);
+        cool(target.id, response.status, detail);
       } catch (error) {
         failures.push(`${target.id} unreachable`);
         console.error(`${target.label} request failed:`, error instanceof Error ? error.message : error);
+        cool(target.id, 'network');
       }
     }
 
@@ -635,6 +658,9 @@ export class BrandForgeAIService {
 
     for (let iteration = 0; iteration < maxIterations; iteration++) {
       let roundText = '';
+      // After a few rounds of tools the model must write its answer: tools are taken away for the last two
+      // rounds, so a weaker backup model that keeps calling them still ends with a reply.
+      const mustAnswer = iteration >= maxIterations - 2;
       const result = await this.streamChat(
         conversation,
         {
@@ -644,7 +670,7 @@ export class BrandForgeAIService {
             handlers.onDelta?.(chunk);
           },
         },
-        { model: options.model },
+        { model: options.model, ...(mustAnswer ? { tools: null } : {}) },
       );
 
       if (!result.tool_calls || result.tool_calls.length === 0) {

@@ -999,3 +999,9 @@ we do not have.
 **Change:** The carousel is no longer a card stuck at the bottom. You ask for it, the AI card helps you choose look and cover and makes it, and when you press Send to chat it joins the thread as a message with its own date ("Made 2 min ago"). Everything said afterwards continues underneath it. The message keeps the slides, the look and the cover picture, can be reopened any time, switched to another look, downloaded, or edited in place. What you typed becomes a normal message first. In a brand-new chat, sending the carousel starts the chat.
 
 **Distribution move:** demo clip: ask for a carousel, pick a look, Send to chat, then keep chatting underneath it. Changelog: "Carousels now live in the conversation like any other message."
+
+## 2026-10-10 — The AI always ends with an answer, and failing providers are skipped for a moment
+
+**Change:** Found in live logs: with OpenRouter out of credit, Groq's free tier capped at 8,000 tokens a minute and Gemini's free quota spent, a backup model kept calling tools and the chat gave up. Now the last rounds of a turn take tools away so the model must write its answer; a provider that just refused is skipped for a short while (30 seconds for a rate limit, 3 minutes for no credit) instead of being asked again by every request; backup providers get a smaller answer budget so the free per-minute caps last longer; and Gemini's backup uses the lite model, which has the larger free quota.
+
+**Distribution move:** none; reliability. Founder action still open: top up OpenRouter credit, which removes the root cause.

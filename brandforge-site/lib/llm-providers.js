@@ -24,7 +24,7 @@ const PROVIDERS = {
     ready: (env) => Boolean(env.GEMINI_API_KEY),
     key: (env) => env.GEMINI_API_KEY,
     baseUrl: () => 'https://generativelanguage.googleapis.com/v1beta/openai',
-    model: (env) => env.GEMINI_MODEL || 'gemini-flash-latest',
+    model: (env) => env.GEMINI_MODEL || 'gemini-2.5-flash-lite',
   },
   cf: {
     label: 'Cloudflare',
