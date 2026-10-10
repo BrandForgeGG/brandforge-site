@@ -939,3 +939,9 @@ we do not have.
 **Change:** One provider running out of credit or going down no longer stops the product. The chat (including streaming and tools) and the carousel, post and Optimize writers try OpenRouter first, then each backup provider that has a key (Groq, Gemini, Cloudflare, Mistral, DeepSeek, Together), then OpenRouter's free models. Providers without a key are skipped. Cloudflare is live now; the others switch on when a key is added in Vercel.
 
 **Distribution move:** none; reliability. Proven with simulated outages (OpenRouter refused, then Groq down, answer still arrived).
+
+## 2026-10-10 — Backup AI providers verified live
+
+**Change:** Keys added; each backup was tested against the real provider from production. Groq (gpt-oss-120b, 0.3s), Gemini (flash-latest) and Cloudflare (Llama 3.3 70B, 0.4s) answer. Mistral is rate-limited on its free tier and DeepSeek has no balance, so they are skipped until they work. Model names corrected after the first test found two retired or unavailable ones.
+
+**Distribution move:** none; reliability.

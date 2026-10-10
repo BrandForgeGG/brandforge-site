@@ -17,14 +17,14 @@ const PROVIDERS = {
     ready: (env) => Boolean(env.GROQ_API_KEY),
     key: (env) => env.GROQ_API_KEY,
     baseUrl: () => 'https://api.groq.com/openai/v1',
-    model: (env) => env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+    model: (env) => env.GROQ_MODEL || 'openai/gpt-oss-120b',
   },
   gemini: {
     label: 'Gemini',
     ready: (env) => Boolean(env.GEMINI_API_KEY),
     key: (env) => env.GEMINI_API_KEY,
     baseUrl: () => 'https://generativelanguage.googleapis.com/v1beta/openai',
-    model: (env) => env.GEMINI_MODEL || 'gemini-2.0-flash',
+    model: (env) => env.GEMINI_MODEL || 'gemini-flash-latest',
   },
   cf: {
     label: 'Cloudflare',
@@ -45,7 +45,7 @@ const PROVIDERS = {
     ready: (env) => Boolean(env.DEEPSEEK_API_KEY),
     key: (env) => env.DEEPSEEK_API_KEY,
     baseUrl: () => 'https://api.deepseek.com/v1',
-    model: (env) => env.DEEPSEEK_MODEL || 'deepseek-chat',
+    model: (env) => env.DEEPSEEK_MODEL || 'deepseek-flash',
   },
   together: {
     label: 'Together',

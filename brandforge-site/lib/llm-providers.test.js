@@ -12,7 +12,7 @@ test('a provider model name resolves to a target, or says it is missing', () => 
   const env = { GROQ_API_KEY: 'g' };
   const ok = parseProviderModel('groq:', env);
   assert.equal(ok.baseUrl, 'https://api.groq.com/openai/v1');
-  assert.equal(ok.model, 'llama-3.3-70b-versatile');
+  assert.equal(ok.model, 'openai/gpt-oss-120b');
   assert.equal(parseProviderModel('groq:other-model', env).model, 'other-model');
   assert.equal(parseProviderModel('gemini:', env).missing, true);
   assert.equal(parseProviderModel('openai/gpt-4o-mini', env), null);
