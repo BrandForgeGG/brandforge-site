@@ -945,3 +945,9 @@ we do not have.
 **Change:** Keys added; each backup was tested against the real provider from production. Groq (gpt-oss-120b, 0.3s), Gemini (flash-latest) and Cloudflare (Llama 3.3 70B, 0.4s) answer. Mistral is rate-limited on its free tier and DeepSeek has no balance, so they are skipped until they work. Model names corrected after the first test found two retired or unavailable ones.
 
 **Distribution move:** none; reliability.
+
+## 2026-10-10 — Removed the "images ready for a video" pop-up
+
+**Change:** The bar that appeared in chat after images were made ("4 images ready for a video / Make video") is gone.
+
+**Distribution move:** none; less noise.

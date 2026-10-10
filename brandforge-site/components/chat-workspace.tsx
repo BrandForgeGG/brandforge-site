@@ -28,7 +28,6 @@ import { ToolsMenu } from "@/components/chat-tools-menu";
 import { CreateSheet } from "@/components/chat/create-sheet";
 import { detectMakeIntent } from "@/lib/make-intent";
 import type { StudioKind } from "@/components/studio/studio-hub";
-import { VideoReadyBar } from "@/components/video-ready-bar";
 import { PeerContractForm } from "@/components/peer-contract-card";
 import { extractOutline } from "@/lib/deliverable-outline";
 import { ChatTranscript, type ChatMessage } from "@/components/chat-transcript";
@@ -2722,14 +2721,6 @@ return (
           </div>
         ) : null}
 
-        <VideoReadyBar
-          count={videoImages.length}
-          busy={isStreaming}
-          onOpen={() => {
-            trackEvent("next_step_clicked", { source: "video_ready" });
-            setIsVideoOpen(true);
-          }}
-        />
         {conversationId && railMeta.userId ? (
           <AiNotices
             isOwner={isChatOwner}
