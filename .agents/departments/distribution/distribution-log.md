@@ -951,3 +951,9 @@ we do not have.
 **Change:** The bar that appeared in chat after images were made ("4 images ready for a video / Make video") is gone.
 
 **Distribution move:** none; less noise.
+
+## 2026-10-10 — Removed the "Sign in to keep this chat" bar
+
+**Change:** The bar under guest chats ("Sign in to keep this chat and add your team. Free, takes 10 seconds.") is gone. Guests still have Log in and Sign up for free in the header and the sidebar.
+
+**Distribution move:** none; less noise.

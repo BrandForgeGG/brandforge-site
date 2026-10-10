@@ -22,7 +22,6 @@ import { isNearBottom } from "@/lib/chat-scroll";
 import { fetchAuthed, getSessionUser } from "@/lib/browser-auth";
 import { trackEvent } from "@/lib/funnel-client";
 import { useLogin } from "@/components/login-dialog";
-import { GuestSaveBar } from "@/components/guest-save-bar";
 import { AiNotices, AiSwitch, useAiAccess } from "@/components/chat-ai-controls";
 import { ToolsMenu } from "@/components/chat-tools-menu";
 import { CreateSheet } from "@/components/chat/create-sheet";
@@ -2729,11 +2728,6 @@ return (
             onDecide={(userId, decision) => void decideAiUse(userId, decision)}
           />
         ) : null}
-        <GuestSaveBar
-          conversationId={conversationId}
-          hasReply={!isStreaming && messages.some((message) => message.sender === "ai" && !message.streaming)}
-        />
-
         {/* Typing + who-else-is-here. One polite live region so a screen reader announces the
             change without interrupting; the animated dot is decorative. */}
         <div className="px-4 sm:px-6">
