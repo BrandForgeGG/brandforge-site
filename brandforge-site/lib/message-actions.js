@@ -122,6 +122,11 @@ function parseChatEmbed(artifactData) {
     const fields = require('./creation-embed').sanitizeCarousel(artifactData);
     return fields ? { type, id, ...fields } : null;
   }
+  if (type === 'image' && id) {
+    // A single image (ad, quote, tip, announcement, poll) posted as a message, re-checked on every read.
+    const fields = require('./image-kinds').sanitizeImage(artifactData);
+    return fields ? { type, id, ...fields } : null;
+  }
   if (type === 'agreement' && id) return { type, agreementId: id, status };
   if (type === 'peer_contract' && id) return { type, contractId: id, status };
   if (type === 'funding' && id) {

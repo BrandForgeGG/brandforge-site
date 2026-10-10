@@ -17,3 +17,18 @@ test('needs both a verb and a format', () => {
   assert.equal(detectMakeIntent('hi'), null);
   assert.equal(detectMakeIntent(''), null);
 });
+
+test('the image makers: ads, announcements, and quote, tip or poll images', () => {
+  assert.deepEqual(detectMakeIntent('make an ad for my bakery'), { kind: 'ad', topic: 'my bakery' });
+  assert.equal(detectMakeIntent('Create an announcement about our launch').kind, 'announcement');
+  assert.equal(detectMakeIntent('design a quote card about consistency').kind, 'quote');
+  assert.equal(detectMakeIntent('make a poll image about coffee or tea').kind, 'question');
+  assert.equal(detectMakeIntent('make a tip graphic on writing hooks').kind, 'tip');
+  // A carousel word wins when both appear.
+  assert.equal(detectMakeIntent('make a carousel ad about shoes').kind, 'carousel');
+  // Everyday uses of the same words never open a maker.
+  assert.equal(detectMakeIntent('write a quote for the website project'), null);
+  assert.equal(detectMakeIntent('create a poll for my newsletter readers'), null);
+  assert.equal(detectMakeIntent('write a tip to my team about the deadline'), null);
+  assert.equal(detectMakeIntent('please add the new page'), null);
+});

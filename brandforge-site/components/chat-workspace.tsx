@@ -25,6 +25,8 @@ import { useLogin } from "@/components/login-dialog";
 import { AiNotices, AiSwitch, useAiAccess } from "@/components/chat-ai-controls";
 import { ToolsMenu } from "@/components/chat-tools-menu";
 import { CarouselChatCard, SavedCardOrFallback, cardKey, clearSavedCard, seedCarouselCard, type CarouselSend } from "@/components/chat/carousel-chat-card";
+import { ImageChatCard, SavedImageCard, clearSavedImage, imageKey, seedImageCard, type ImageSend } from "@/components/chat/image-chat-card";
+import type { ImageKind } from "@/lib/image-kinds.js";
 import { detectMakeIntent } from "@/lib/make-intent";
 import { getRetainer } from "@/lib/plans.js";
 import { PeerContractForm } from "@/components/peer-contract-card";
@@ -151,6 +153,7 @@ const GATE_FIRST_MESSAGE = false;
 // two surfaces can never disagree about which commands exist.
 const SLASH_COMMANDS = [
   { command: "/carousel", label: "Make a carousel" },
+  { command: "/image", label: "Make an ad or image" },
   { command: "/plan", label: "Plan my idea" },
   { command: "/trade", label: "Hire or get hired" },
     { command: "/progress", label: "Progress report" },
@@ -164,9 +167,10 @@ const SLASH_COMMANDS = [
 // Starting points under the composer: one tap fills it, the tooltip says what comes back.
 // What BrandForge does, as commands: pick one and it sits in the message box as a highlighted tag, the way
 // the big assistants show a tool. Only what the platform really has.
-export type ChatCommand = 'carousel' | 'plan' | 'trade';
+export type ChatCommand = 'carousel' | 'image' | 'plan' | 'trade';
 export const COMMANDS: { id: ChatCommand; label: string; hint: string; placeholder: string; icon: string }[] = [
   { id: 'carousel', label: 'Make a carousel', hint: 'Swipeable slides from one sentence', placeholder: 'What is the carousel about?', icon: 'M5 5h8v10H5zM7 3.5h8V13M3.5 7v8' },
+  { id: 'image', label: 'Make an ad or image', hint: 'Ads, quotes, tips, announcements and polls', placeholder: 'What is the image for?', icon: 'M3.5 4.5h13v11h-13zM3.5 13l4-4 3 3 2-2 4 4M13 7.5h.01' },
   { id: 'plan', label: 'Plan my idea', hint: 'Scope, roadmap and estimate', placeholder: 'Describe your idea…', icon: 'M4 4.5h4v4H4zM12 4.5h4v4h-4zM8 6.5h4M6 8.5v4h6M12 12.5h4v3h-4z' },
   { id: 'trade', label: 'Hire or get hired', hint: 'List what you offer or need', placeholder: 'What do you offer, or what do you need?', icon: 'M4 7h11l-3-3M16 13H5l3 3' },
 ];
@@ -279,6 +283,8 @@ export function ChatWorkspace() {
   // What this chat is the main assistant for (a listing, something made here), if anything.
   const [goalLink, setGoalLink] = useState<{ conversationId: string; kind: string; title: string } | null>(null);
   const [carouselChat, setCarouselChat] = useState<{ topic: string; userText: string | null; key: number } | null>(null);
+  // The same for ads, quotes, tips, announcements and polls: one card in the thread, set when one is asked for.
+  const [imageChat, setImageChat] = useState<{ kind: ImageKind; topic: string; userText: string | null; key: number } | null>(null);
   const [isReplyingTo, setIsReplyingTo] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   // A chat opened from a link starts in the loading state, so the empty-chat screen never flashes first.
@@ -525,7 +531,7 @@ export function ChatWorkspace() {
     return () => {
       live = false;
     };
-  }, [conversationId, carouselChat]);
+  }, [conversationId, carouselChat, imageChat]);
   const goal = goalLink && goalLink.conversationId === conversationId ? goalLink : null;
 
   // Notices and the pause control wait until the chat's real AI state is known, so a refresh never flashes
@@ -1323,14 +1329,14 @@ export function ChatWorkspace() {
 
   // The carousel is sent: it joins the chat as a message with its own date. A brand-new chat is started with it.
   // Returns an error message for the card to show, or null when it went through.
-  const sendCarousel = useCallback(async (payload: CarouselSend): Promise<string | null> => {
+  const sendCarousel = useCallback(async (payload: CarouselSend | ImageSend): Promise<string | null> => {
     try {
       const request = railMeta.userId ? fetchAuthed : fetch;
       const startChat = async (): Promise<{ id: string | null; error: string | null }> => {
         const started = await request("/api/conversations", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ initialMessage: carouselChat?.userText ?? "", ...(railMeta.userId ? {} : { guest: true }) }),
+          body: JSON.stringify({ initialMessage: (carouselChat ?? imageChat)?.userText ?? "", ...(railMeta.userId ? {} : { guest: true }) }),
         });
         const startedData = await started.json().catch(() => ({}));
         if (!started.ok || !startedData.conversationId) return { id: null, error: startedData.error || "Could not start the chat. Try again." };
@@ -1342,25 +1348,32 @@ export function ChatWorkspace() {
       const response = await request(`/api/conversations/${target}/creation`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) return data.error || "Could not add it to the chat. Try again.";
-      clearSavedCard(cardKey(conversationId));
-      clearSavedCard(cardKey(null));
-      setCarouselChat(null);
+      if ("creation" in payload) {
+        clearSavedImage(imageKey(conversationId));
+        clearSavedImage(imageKey(null));
+        setImageChat(null);
+      } else {
+        clearSavedCard(cardKey(conversationId));
+        clearSavedCard(cardKey(null));
+        setCarouselChat(null);
+      }
       if (!conversationId) {
         router.push(`/chat?conversationId=${target}`);
       } else {
         await refreshMessages(target);
         scrollToBottom(true);
       }
-      trackEvent("next_step_clicked", { source: "carousel_sent" });
+      trackEvent("next_step_clicked", { source: "creation" in payload ? "image_sent" : "carousel_sent" });
       return null;
     } catch {
       return "Connection problem. Try again.";
     }
-  }, [conversationId, carouselChat, railMeta.userId, refreshMessages, router, scrollToBottom]);
+  }, [conversationId, carouselChat, imageChat, railMeta.userId, refreshMessages, router, scrollToBottom]);
 
   // Opens the carousel card. Whatever was typed becomes a real message in the chat first (no AI reply), so the
   // thread reads: what you asked, then the carousel. In a brand-new chat the words wait and start the chat when sent.
-  const openCarouselCard = useCallback(async (words: string, topicHint?: string) => {
+  // With `imageKind` it opens the image maker instead (an ad, quote, tip, announcement or poll): same path.
+  const openCarouselCard = useCallback(async (words: string, topicHint?: string, imageKind?: ImageKind) => {
     const typed = words.trim();
     // The first action from the landing page starts a real chat, so everything that follows happens inside it.
     // What was typed is the chat's first message; the carousel card is waiting in it. The AI does not answer it:
@@ -1380,7 +1393,8 @@ export function ChatWorkspace() {
           } catch {
             /* storage blocked: the AI may answer the first message as well */
           }
-          seedCarouselCard(startedData.conversationId as string, hint.length >= 8 ? hint : "");
+          if (imageKind) seedImageCard(startedData.conversationId as string, hint.length >= 8 ? hint : "", imageKind);
+          else seedCarouselCard(startedData.conversationId as string, hint.length >= 8 ? hint : "");
           router.push(`/chat?conversationId=${startedData.conversationId}`);
           return;
         }
@@ -1406,7 +1420,8 @@ export function ChatWorkspace() {
       }
     }
     const topic = topicHint ?? typed;
-    setCarouselChat({ topic: topic.length >= 8 ? topic : "", userText: shownText, key: ++carouselKey.current });
+    if (imageKind) setImageChat({ kind: imageKind, topic: topic.length >= 8 ? topic : "", userText: shownText, key: ++carouselKey.current });
+    else setCarouselChat({ topic: topic.length >= 8 ? topic : "", userText: shownText, key: ++carouselKey.current });
   }, [conversationId, railMeta.userId, refreshMessages, router, scrollToBottom]);
 
 
@@ -1431,7 +1446,7 @@ export function ChatWorkspace() {
         return;
       }
       // A command tag (or a typed /carousel, /plan, /trade, /image) decides what this message does.
-      const typed = suggestion === undefined ? /^\/(carousel|plan|trade)\b\s*([\s\S]*)$/i.exec(text) : null;
+      const typed = suggestion === undefined ? /^\/(carousel|image|plan|trade)\b\s*([\s\S]*)$/i.exec(text) : null;
       const command: ChatCommand | null = typed ? (typed[1].toLowerCase() as ChatCommand) : suggestion === undefined ? activeCommand : null;
       if (command && !attachment) {
         const body = (typed ? typed[2] : text).trim();
@@ -1440,6 +1455,10 @@ export function ChatWorkspace() {
         trackEvent("next_step_clicked", { source: `command_${command}` });
         if (command === "carousel") {
           await openCarouselCard(body);
+          return;
+        }
+        if (command === "image") {
+          await openCarouselCard(body, undefined, "ad");
           return;
         }
         if (command === "trade") {
@@ -1463,8 +1482,8 @@ export function ChatWorkspace() {
       const wantsCarousel = !attachment && suggestion === undefined ? detectMakeIntent(text) : null;
       if (wantsCarousel) {
         setInput("");
-        await openCarouselCard(text, wantsCarousel.topic);
-        trackEvent("next_step_clicked", { source: "carousel_chat_intent" });
+        await openCarouselCard(text, wantsCarousel.topic, wantsCarousel.kind === "carousel" ? undefined : wantsCarousel.kind);
+        trackEvent("next_step_clicked", { source: wantsCarousel.kind === "carousel" ? "carousel_chat_intent" : "image_chat_intent" });
         return;
       }
       const slash = parseSlashCommand(text);
@@ -2740,7 +2759,7 @@ return (
           ) : !conversationId ? (
             <SavedCardOrFallback
               storageKey={cardKey(null)}
-              hide={Boolean(carouselChat)}
+              hide={Boolean(carouselChat) || Boolean(imageChat)}
               onSend={sendCarousel}
               fallback={(
             <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col items-center justify-center text-center">
@@ -2873,6 +2892,11 @@ return (
             <CarouselChatCard key={carouselChat.key} topic={carouselChat.topic} userText={carouselChat.userText} storageKey={cardKey(conversationId)} restore={false} onSend={sendCarousel} onClose={() => setCarouselChat(null)} />
           ) : conversationId ? (
             <SavedCardOrFallback storageKey={cardKey(conversationId)} hide={false} fallback={null} onSend={sendCarousel} />
+          ) : null}
+          {imageChat ? (
+            <ImageChatCard key={imageChat.key} kind={imageChat.kind} topic={imageChat.topic} userText={imageChat.userText} storageKey={imageKey(conversationId)} restore={false} onSend={sendCarousel} onClose={() => setImageChat(null)} />
+          ) : conversationId ? (
+            <SavedImageCard storageKey={imageKey(conversationId)} hide={false} onSend={sendCarousel} />
           ) : null}
         </div>
 

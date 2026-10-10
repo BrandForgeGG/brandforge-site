@@ -10,7 +10,7 @@ import type { CarouselPlan } from '@/lib/carousel-plan.js';
 // public/fonts (open-licence Anton and Inter), registered once per process.
 let fontsRegistered = false;
 
-function ensureFonts(): void {
+export function ensureFonts(): void {
   if (fontsRegistered) return;
   const dir = path.join(process.cwd(), 'public', 'fonts');
   GlobalFonts.registerFromPath(path.join(dir, 'anton-latin-400-normal.woff2'), 'BFAnton');

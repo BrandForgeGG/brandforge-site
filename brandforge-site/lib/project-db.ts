@@ -5395,6 +5395,8 @@ export type CalendarPost = {
   slot: number;
   scheduled_at: string;
   type: string;
+  /** What the post is made as: carousel, quote, tip, ad, announcement or question (a poll). */
+  format: string;
   topic: string;
   theme: string;
   status: 'planned' | 'ready' | 'approved' | 'posting' | 'posted' | 'failed' | 'skipped';
@@ -5405,7 +5407,7 @@ export type CalendarPost = {
   error: string | null;
 };
 
-const CALENDAR_COLUMNS = 'id, post_date, slot, scheduled_at, type, topic, theme, status, plan, caption, results, attempts, error';
+const CALENDAR_COLUMNS = 'id, post_date, slot, scheduled_at, type, format, topic, theme, status, plan, caption, results, attempts, error';
 
 export async function listCalendarPosts(fromDate: string, toDate: string): Promise<CalendarPost[]> {
   const admin = createSupabaseAdminClient();
@@ -5421,15 +5423,23 @@ export async function getCalendarPost(id: string): Promise<CalendarPost | null> 
   return (data as CalendarPost | null) ?? null;
 }
 
+// Removes the rows of a date range that have not gone out (posted and posting rows are never touched).
+export async function deleteUnpostedCalendarRows(fromDate: string, toDate: string): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return;
+  const { error } = await admin.from('content_calendar_posts').delete().gte('post_date', fromDate).lte('post_date', toDate).in('status', ['planned', 'ready', 'approved', 'failed', 'skipped']);
+  if (error) console.error('deleteUnpostedCalendarRows error:', error.message);
+}
+
 // Adds the rows for days that have none yet; existing rows are never overwritten.
-export async function insertCalendarRows(rows: { post_date: string; slot: number; scheduled_at: string; type: string; topic: string; theme: string }[]): Promise<void> {
+export async function insertCalendarRows(rows: { post_date: string; slot: number; scheduled_at: string; type: string; format: string; topic: string; theme: string }[]): Promise<void> {
   const admin = createSupabaseAdminClient();
   if (!admin || rows.length === 0) return;
   const { error } = await admin.from('content_calendar_posts').upsert(rows, { onConflict: 'post_date,slot', ignoreDuplicates: true });
   if (error) console.error('insertCalendarRows error:', error.message);
 }
 
-export async function updateCalendarPost(id: string, patch: Partial<Pick<CalendarPost, 'status' | 'plan' | 'caption' | 'results' | 'attempts' | 'error' | 'type' | 'topic' | 'theme' | 'scheduled_at'>>): Promise<CalendarPost | null> {
+export async function updateCalendarPost(id: string, patch: Partial<Pick<CalendarPost, 'status' | 'plan' | 'caption' | 'results' | 'attempts' | 'error' | 'type' | 'format' | 'topic' | 'theme' | 'scheduled_at'>>): Promise<CalendarPost | null> {
   const admin = createSupabaseAdminClient();
   if (!admin) return null;
   const { data } = await admin.from('content_calendar_posts').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', id).select(CALENDAR_COLUMNS).maybeSingle();
@@ -5469,14 +5479,14 @@ export async function recentCalendarTopics(days = 45): Promise<string[]> {
   return ((data ?? []) as { topic: string }[]).map((row) => row.topic);
 }
 
-export async function getCalendarPrefs(): Promise<{ weekday: number; slots: { time?: string; type?: string }[] }[]> {
+export async function getCalendarPrefs(): Promise<{ weekday: number; slots: { time?: string; type?: string; format?: string }[] }[]> {
   const admin = createSupabaseAdminClient();
   if (!admin) return [];
   const { data } = await admin.from('content_calendar_prefs').select('weekday, slots').order('weekday');
-  return (data ?? []) as { weekday: number; slots: { time?: string; type?: string }[] }[];
+  return (data ?? []) as { weekday: number; slots: { time?: string; type?: string; format?: string }[] }[];
 }
 
-export async function saveCalendarPrefs(weekday: number, slots: { time?: string; type?: string }[]): Promise<boolean> {
+export async function saveCalendarPrefs(weekday: number, slots: { time?: string; type?: string; format?: string }[]): Promise<boolean> {
   const admin = createSupabaseAdminClient();
   if (!admin) return false;
   const { error } = await admin.from('content_calendar_prefs').upsert({ weekday, slots, updated_at: new Date().toISOString() }, { onConflict: 'weekday' });
@@ -5939,10 +5949,11 @@ export async function deleteTradeListing(id: string, ownerId: string): Promise<{
   return { ok: true };
 }
 
-// ---- A carousel posted into the chat as a message (bucket "creations", migration 0040) ----
-// Stores the cover picture (if any), writes the message with the carousel inside it, and makes it the chat's goal
-// when the chat has none. Returns the message id.
-export async function postCarouselMessage(conversationId: string, fields: Record<string, unknown>, cover: { bytes: Buffer; contentType: 'image/jpeg' | 'image/png' | 'image/webp' } | null, ownerName: string | null): Promise<string | null> {
+// ---- A creation (carousel or single image) posted into the chat as a message (bucket "creations", migration 0040) ----
+// Stores the cover picture (if any), writes the message with the creation inside it, and returns the message id.
+type CreationCover = { bytes: Buffer; contentType: 'image/jpeg' | 'image/png' | 'image/webp' };
+
+async function postCreationMessage(conversationId: string, type: 'carousel' | 'image', content: string, fields: Record<string, unknown>, cover: CreationCover | null): Promise<string | null> {
   const admin = createSupabaseAdminClient();
   if (!admin) return null;
   let coverUrl: string | undefined;
@@ -5951,9 +5962,8 @@ export async function postCarouselMessage(conversationId: string, fields: Record
     const path = `${conversationId}/${Date.now()}.${ext}`;
     const uploaded = await admin.storage.from('creations').upload(path, cover.bytes, { contentType: cover.contentType, upsert: false });
     if (!uploaded.error) coverUrl = admin.storage.from('creations').getPublicUrl(path).data.publicUrl;
-    else console.error('postCarouselMessage cover upload error:', uploaded.error.message);
+    else console.error('postCreationMessage cover upload error:', uploaded.error.message);
   }
-  const plan = fields.plan as { cover: { headline: string } };
   const id = crypto.randomUUID();
   const { data, error } = await admin
     .from('messages')
@@ -5962,17 +5972,30 @@ export async function postCarouselMessage(conversationId: string, fields: Record
       sender_type: 'ai',
       sender_name: 'BrandForge AI',
       content_type: 'system',
-      content: `Made a carousel: ${plan.cover.headline.replace(/\*/g, '')}`,
-      artifact_data: { type: 'carousel', id, ...fields, ...(coverUrl ? { coverUrl } : {}) },
+      content,
+      artifact_data: { type, id, ...fields, ...(coverUrl ? { coverUrl } : {}) },
     })
     .select('id')
     .maybeSingle();
   if (error) {
-    console.error('postCarouselMessage insert error:', error.message);
+    console.error('postCreationMessage insert error:', error.message);
     return null;
   }
-  void ownerName;
   return (data as { id: string } | null)?.id ?? null;
+}
+
+// A carousel as a message. Makes it the chat's goal when the chat has none (the route does that).
+export async function postCarouselMessage(conversationId: string, fields: Record<string, unknown>, cover: CreationCover | null, ownerName: string | null): Promise<string | null> {
+  void ownerName;
+  const plan = fields.plan as { cover: { headline: string } };
+  return postCreationMessage(conversationId, 'carousel', `Made a carousel: ${plan.cover.headline.replace(/\*/g, '')}`, fields, cover);
+}
+
+// A single image (ad, quote, tip, announcement, poll) as a message.
+export async function postImageMessage(conversationId: string, fields: Record<string, unknown>, cover: CreationCover | null): Promise<string | null> {
+  const copy = fields.copy as { headline: string };
+  const label = ({ ad: 'an ad', quote: 'a quote', tip: 'a tip', announcement: 'an announcement', question: 'a poll' } as Record<string, string>)[String(fields.kind)] ?? 'an image';
+  return postCreationMessage(conversationId, 'image', `Made ${label}: ${copy.headline.replace(/\*/g, '')}`, fields, cover);
 }
 
 // ---- Monthly plans paid by card (migration 0041: subscriptions) ----

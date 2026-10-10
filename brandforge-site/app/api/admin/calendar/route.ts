@@ -5,6 +5,7 @@ import {
   getCalendarPost,
   getCalendarPrefs,
   isAdminAccount,
+  deleteUnpostedCalendarRows,
   listCalendarPosts,
   saveCalendarPrefs,
   setCalendarAutoPost,
@@ -12,7 +13,7 @@ import {
 } from '@/lib/project-db';
 import { ensureWeek, publishPost, writeDay, writePost } from '@/lib/calendar-service';
 import { ownChannels } from '@/lib/carousel-publish';
-import { DAY_NAMES, DEFAULT_DAYS, POST_TYPES, SLOT_TIMES, addDays, mondayOf, scheduledAt } from '@/lib/content-calendar.js';
+import { DAY_NAMES, DEFAULT_DAYS, POST_FORMATS, POST_TYPES, SLOT_TIMES, addDays, checkSlotGaps, mondayOf, scheduledAt } from '@/lib/content-calendar.js';
 import { THEME_LIST } from '@/lib/carousel-render.js';
 
 export const runtime = 'nodejs';
@@ -42,8 +43,9 @@ export async function GET(request: NextRequest) {
     monday,
     posts: posts.map((p) => ({ ...p, plan: undefined, hasPlan: Boolean(p.plan) })),
     prefs: await getCalendarPrefs(),
-    defaults: DEFAULT_DAYS.map((day, i) => ({ weekday: i, name: DAY_NAMES[i], focus: day.focus, types: day.types, times: SLOT_TIMES })),
+    defaults: DEFAULT_DAYS.map((day, i) => ({ weekday: i, name: DAY_NAMES[i], focus: day.focus, types: day.types, formats: day.formats, times: SLOT_TIMES })),
     postTypes: POST_TYPES,
+    postFormats: POST_FORMATS,
     looks: THEME_LIST.map((l: { id: string; label: string }) => ({ id: l.id, label: l.label })),
     autoPost: await getCalendarAutoPost(),
     channels: { telegram: Boolean(channels.telegramChatId), discord: Boolean(channels.discordWebhook) },
@@ -51,7 +53,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST { action, ... }: generate_day, generate_post, approve, approve_ready, skip, unskip, post_now, edit,
-// save_prefs, auto_post.
+// save_prefs, auto_post, rebuild_week.
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if ('error' in auth) return auth.error;
@@ -79,6 +81,14 @@ export async function POST(request: NextRequest) {
       }
       return NextResponse.json({ success: true, approved: count });
     }
+    if (action === 'rebuild_week') {
+      // For a week made under an older schedule: drop what has not gone out and lay the week out again.
+      const monday = String(body.week ?? '');
+      if (!DATE.test(monday)) return NextResponse.json({ error: 'A week is needed.' }, { status: 400 });
+      await deleteUnpostedCalendarRows(monday, addDays(monday, 6));
+      await ensureWeek(monday);
+      return NextResponse.json({ success: true });
+    }
     if (action === 'auto_post') {
       await setCalendarAutoPost(Boolean(body.on));
       return NextResponse.json({ success: true });
@@ -88,8 +98,15 @@ export async function POST(request: NextRequest) {
       if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) return NextResponse.json({ error: 'Unknown day.' }, { status: 400 });
       const slots = (Array.isArray(body.slots) ? body.slots : []).slice(0, 5).map((s) => {
         const slot = (s ?? {}) as Record<string, unknown>;
-        return { time: TIME.test(String(slot.time ?? '')) ? String(slot.time) : undefined, type: POST_TYPES.includes(String(slot.type ?? '')) ? String(slot.type) : undefined };
+        return {
+          time: TIME.test(String(slot.time ?? '')) ? String(slot.time) : undefined,
+          type: POST_TYPES.includes(String(slot.type ?? '')) ? String(slot.type) : undefined,
+          format: POST_FORMATS.includes(String(slot.format ?? '')) ? String(slot.format) : undefined,
+        };
       });
+      // Five posts a day, at least 2.5 hours apart and in order.
+      const gaps = checkSlotGaps(SLOT_TIMES.map((time, i) => slots[i]?.time ?? time));
+      if (!gaps.ok) return NextResponse.json({ error: gaps.error }, { status: 400 });
       await saveCalendarPrefs(weekday, slots);
       // Apply to this and later days of that weekday that have not been posted.
       const monday = String(body.week ?? '');
@@ -99,8 +116,9 @@ export async function POST(request: NextRequest) {
           if (!['planned', 'ready', 'approved', 'failed'].includes(post.status)) continue;
           const slot = slots[post.slot] ?? {};
           const type = slot.type ?? post.type;
+          const format = slot.format ?? post.format;
           const time = slot.time ?? SLOT_TIMES[post.slot];
-          await updateCalendarPost(post.id, { type, scheduled_at: scheduledAt(date, time), ...(type !== post.type ? { status: 'planned', plan: null, caption: '' } : {}) });
+          await updateCalendarPost(post.id, { type, format, scheduled_at: scheduledAt(date, time), ...(type !== post.type || format !== post.format ? { status: 'planned', plan: null, caption: '' } : {}) });
         }
       }
       return NextResponse.json({ success: true });
@@ -125,10 +143,11 @@ export async function POST(request: NextRequest) {
     }
     if (action === 'edit') {
       const type = POST_TYPES.includes(String(body.type ?? '')) ? String(body.type) : post.type;
+      const format = POST_FORMATS.includes(String(body.format ?? '')) ? String(body.format) : post.format;
       const topic = String(body.topic ?? post.topic).trim().slice(0, 300) || post.topic;
       const theme = THEME_LIST.some((l: { id: string }) => l.id === body.theme) ? String(body.theme) : post.theme;
-      const changed = type !== post.type || topic !== post.topic;
-      await updateCalendarPost(id, { type, topic, theme, ...(changed ? { plan: null, caption: '', status: 'planned' } : {}) });
+      const changed = type !== post.type || topic !== post.topic || format !== post.format;
+      await updateCalendarPost(id, { type, format, topic, theme, ...(changed ? { plan: null, caption: '', status: 'planned' } : {}) });
       return NextResponse.json({ success: true });
     }
     if (action === 'post_now') {

@@ -16,6 +16,16 @@ export const metadata = {
 const POSTS: { date: string; title: string; body: Block[] }[] = [
   {
     date: '2026-10-11',
+    title: 'Ads, quotes, tips, announcements and polls, made inside the chat',
+    body: [
+      'The chat now makes more than carousels. Type /image, or tap Make an ad or image, and say what it is for. The AI asks what it is about, you pick the kind (an ad, a quote, a tip, an announcement or a poll), the size (square, portrait, story or wide), the look and the background, and it writes the words and paints a picture in front of you.',
+      'Every word is drawn by us, not by an image model, so it is always spelled right. Edit the headline, the line under it and the button before you save. Put stars around words you want highlighted. Saved to the chat, it becomes a message with its own date, and you can change the size or the look later, copy a caption written for it, or download it.',
+      'Our own calendar uses the same makers. Every day now has five posts at five set times, never closer than two and a half hours apart, and no two neighbours in the same format: a quote to start the morning, a tip, a carousel after lunch, an ad or an announcement in the evening, and a poll at night. Topics rotate through founders, small businesses and creators, so a week never reads like one idea repeated.',
+      'Try it free at brandforge.gg/chat.',
+    ],
+  },
+  {
+    date: '2026-10-11',
     title: 'Your own BrandForge team, by the month, and everything new this week',
     body: [
       'You can now hire the BrandForge team by the month. Starter is €490 (eight carousels or posts, captions for every platform and a content calendar). Growth is €990 (twenty pieces, ad copy, a weekly report and replies within a working day). Build is €2,490 (a website or app that keeps moving, up to two new pages or features a month). Bigger projects start at €5,000 and run as milestone contracts held in escrow. Every plan starts in a chat with a person, and you only pay once you agree what you get.',

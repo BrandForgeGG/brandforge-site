@@ -15,7 +15,7 @@ const FEATURES = [
   },
   {
     title: 'Make any kind of message',
-    body: 'Carousels today; updates, polls, quizzes, threads, video and more are coming. Say it in a sentence, edit every word, download it, and get a caption written for each platform.',
+    body: 'Carousels, ads, quotes, tips, announcements and polls, in square, portrait, story and wide sizes. Say it in a sentence, edit every word, download it, and get a caption written for each platform. Threads and video are next.',
   },
   {
     title: 'Publish where people are',

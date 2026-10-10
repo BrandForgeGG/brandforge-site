@@ -44,3 +44,28 @@ test('saved preferences override the default type and time for a day, and used t
   const first = pickTopic('educational', '2026-10-05', 0, []);
   assert.notEqual(pickTopic('educational', '2026-10-05', 0, [first]), first);
 });
+
+test('five posts a day at the five set times, each a different format, 2.5 hours apart', () => {
+  const { checkSlotGaps, POST_FORMATS } = require('./content-calendar');
+  assert.deepEqual(SLOT_TIMES, ['07:30', '11:00', '14:00', '18:30', '21:30']);
+  assert.equal(checkSlotGaps(SLOT_TIMES).ok, true);
+  assert.equal(checkSlotGaps(['07:30', '09:00', '14:00', '18:30', '21:30']).ok, false);
+  assert.equal(checkSlotGaps(['11:00', '07:30', '14:00', '18:30', '21:30']).ok, false);
+  assert.equal(checkSlotGaps(['07:30', '', '14:00', '18:30', '21:30']).ok, false);
+  for (const day of DEFAULT_DAYS) {
+    assert.equal(day.formats.length, 5);
+    for (const format of day.formats) assert.ok(POST_FORMATS.includes(format), format);
+    for (let i = 1; i < 5; i++) assert.notEqual(day.formats[i], day.formats[i - 1], 'neighbouring posts differ');
+    assert.ok(new Set(day.formats).size >= 4, 'a day mixes formats');
+    day.formats.forEach((format, i) => { if (day.types[i] === 'news') assert.equal(format, 'carousel'); });
+  }
+  const rows = buildWeekRows('2026-10-05');
+  assert.ok(rows.every((row) => POST_FORMATS.includes(row.format)));
+  assert.ok(new Set(rows.map((row) => row.topic)).size >= 28, 'a week reads as many different topics');
+});
+
+test('news only ever goes with a carousel, even when a day is edited', () => {
+  const rows = buildWeekRows('2026-10-05', [{ weekday: 0, slots: [{ type: 'news', format: 'quote' }] }]);
+  assert.equal(rows[0].format, 'quote');
+  assert.notEqual(rows[0].type, 'news');
+});

@@ -2,6 +2,9 @@ import { addDays, buildWeekRows, mondayOf } from '@/lib/content-calendar.js';
 import { fallbackCaptions } from '@/lib/carousel-captions.js';
 import { makeCarouselPlan } from '@/lib/carousel-service';
 import { renderCarouselWithCover } from '@/lib/carousel-server';
+import { renderImageWithPicture } from '@/lib/image-server';
+import { makeImageCopy } from '@/lib/image-service';
+import { imageCaption, type ImageCopy, type ImageFormat, type ImageKind } from '@/lib/image-kinds.js';
 import { postToOwnChannels } from '@/lib/carousel-publish';
 import { BRAND, CLOSING_LINE } from '@/lib/carousel-bots';
 import type { CarouselPlan } from '@/lib/carousel-plan.js';
@@ -28,8 +31,19 @@ export async function ensureWeek(mondayIso: string): Promise<CalendarPost[]> {
   return listCalendarPosts(mondayIso, addDays(mondayIso, 6));
 }
 
-// Writes the carousel and its caption for one post. News posts search the web first (inside the planner).
+// How each single-image format is drawn: the kind and the size it is posted at.
+const IMAGE_SIZE: Record<string, ImageFormat> = { ad: 'portrait', quote: 'square', tip: 'square', announcement: 'square', question: 'square' };
+type ImagePlan = { kind: ImageKind; format: ImageFormat; copy: ImageCopy };
+
+// Writes the post and its caption. A carousel is written by the carousel planner (news posts search the web first);
+// every other format is one image whose words come from the image writer.
 export async function writePost(post: CalendarPost): Promise<CalendarPost | null> {
+  if (post.format && post.format !== 'carousel') {
+    const result = await makeImageCopy({ kind: post.format, topic: post.topic, button: 'Try it free' });
+    if (!result.ok) return updateCalendarPost(post.id, { error: result.error, attempts: post.attempts + 1 });
+    const plan: ImagePlan = { kind: result.kind, format: IMAGE_SIZE[post.format] ?? 'square', copy: result.copy };
+    return updateCalendarPost(post.id, { plan, caption: imageCaption(plan, CLOSING_LINE), status: post.status === 'planned' ? 'ready' : post.status, error: null });
+  }
   const result = await makeCarouselPlan({ mode: 'words', type: post.type, topic: post.topic, cta: CLOSING_LINE, count: 7 });
   if (!result.ok) return updateCalendarPost(post.id, { error: result.error, attempts: post.attempts + 1 });
   const caption = fallbackCaptions(result.plan, CLOSING_LINE).facebook;
@@ -44,6 +58,10 @@ export async function writeDay(dateIso: string): Promise<CalendarPost[]> {
 
 export async function renderPost(post: CalendarPost): Promise<Buffer[] | null> {
   if (!post.plan) return null;
+  if (post.format && post.format !== 'carousel') {
+    const plan = post.plan as ImagePlan;
+    return [await renderImageWithPicture({ ...plan, theme: post.theme, seed: post.id, brand: BRAND }, { style: 'photo', cacheKey: post.id })];
+  }
   return renderCarouselWithCover({ plan: post.plan as CarouselPlan, theme: post.theme, seed: post.id, brand: BRAND }, { style: 'photo', cacheKey: post.id });
 }
 
@@ -57,7 +75,7 @@ export async function publishPost(id: string): Promise<CalendarPost | null> {
   if (!current.plan) {
     const written = await writePost(current);
     if (!written || !written.plan) {
-      await updateCalendarPost(id, { status: 'failed', attempts: post.attempts + 1, error: written?.error ?? 'The carousel could not be written.' });
+      await updateCalendarPost(id, { status: 'failed', attempts: post.attempts + 1, error: written?.error ?? 'The post could not be written.' });
       return getCalendarPost(id);
     }
     current = { ...written, status: 'posting' };

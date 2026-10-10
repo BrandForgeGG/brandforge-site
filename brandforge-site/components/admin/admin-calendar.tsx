@@ -9,6 +9,7 @@ type Post = {
   slot: number;
   scheduled_at: string;
   type: string;
+  format: string;
   topic: string;
   theme: string;
   status: 'planned' | 'ready' | 'approved' | 'posting' | 'posted' | 'failed' | 'skipped';
@@ -20,9 +21,10 @@ type Post = {
 type Data = {
   monday: string;
   posts: Post[];
-  prefs: { weekday: number; slots: { time?: string; type?: string }[] }[];
-  defaults: { weekday: number; name: string; focus: string; types: string[]; times: string[] }[];
+  prefs: { weekday: number; slots: { time?: string; type?: string; format?: string }[] }[];
+  defaults: { weekday: number; name: string; focus: string; types: string[]; formats: string[]; times: string[] }[];
   postTypes: string[];
+  postFormats: string[];
   looks: { id: string; label: string }[];
   autoPost: boolean;
   channels: { telegram: boolean; discord: boolean };
@@ -31,7 +33,8 @@ type Data = {
 const btn = 'rounded-lg border border-line px-2.5 py-1 text-xs text-foreground transition hover:border-ember disabled:opacity-50';
 const btnPrimary = 'rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background transition hover:opacity-90 disabled:opacity-50';
 const input = 'w-full rounded-md border border-line bg-background px-2 py-1 text-xs text-foreground';
-const TYPE_LABEL: Record<string, string> = { educational: 'Educational', news: 'News', promo: 'Promotional', list: 'List', funny: 'Funny', story: 'Story', explainer: 'Explainer' };
+const TYPE_LABEL: Record<string, string> = { educational: 'Educational', news: 'News', promo: 'Promotional', list: 'List', funny: 'Funny', story: 'Story', explainer: 'Explainer', inspire: 'Inspiring', engage: 'Question' };
+const FORMAT_LABEL: Record<string, string> = { carousel: 'Carousel', quote: 'Quote', tip: 'Tip', ad: 'Ad', announcement: 'Announcement', question: 'Poll' };
 const STATUS_LABEL: Record<Post['status'], string> = { planned: 'Planned', ready: 'Ready to review', approved: 'Approved', posting: 'Posting…', posted: 'Posted', failed: 'Failed', skipped: 'Skipped' };
 const STATUS_TONE: Record<Post['status'], string> = { planned: 'text-muted', ready: 'text-foreground', approved: 'text-ember', posting: 'text-muted', posted: 'text-success', failed: 'text-danger', skipped: 'text-muted' };
 
@@ -41,7 +44,7 @@ function shiftWeek(iso: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-// BrandForge's own weekly content calendar: five carousels a day, each weekday with its own mix, written
+// BrandForge's own weekly content calendar: five posts a day in five formats, each weekday with its own mix, written
 // ahead, reviewed here, and posted to the channels that are really connected. Nothing goes out until
 // it is approved, unless automatic posting is switched on.
 export function AdminCalendar() {
@@ -51,9 +54,9 @@ export function AdminCalendar() {
   const [note, setNote] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
-  const [draft, setDraft] = useState<{ topic: string; type: string; theme: string }>({ topic: '', type: 'list', theme: 'forge' });
+  const [draft, setDraft] = useState<{ topic: string; type: string; format: string; theme: string }>({ topic: '', type: 'list', format: 'carousel', theme: 'forge' });
   const [dayOpen, setDayOpen] = useState<number | null>(null);
-  const [dayDraft, setDayDraft] = useState<{ time: string; type: string }[]>([]);
+  const [dayDraft, setDayDraft] = useState<{ time: string; type: string; format: string }[]>([]);
   const [slide, setSlide] = useState(0);
 
   const load = useCallback(async (target: string | null) => {
@@ -106,7 +109,7 @@ export function AdminCalendar() {
     <section className="border-t border-line pt-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-serif text-xl tracking-[-0.01em] text-foreground">Weekly posts calendar</h2>
-        <p className="text-xs text-muted">5 carousels a day · {posted} posted · {ready} waiting for review · times are UTC</p>
+        <p className="text-xs text-muted">5 posts a day: quote, tip, carousel, ad, poll · {posted} posted · {ready} waiting for review · times are UTC</p>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -115,6 +118,7 @@ export function AdminCalendar() {
         <button type="button" className={btn} onClick={() => void load(shiftWeek(week, 7))} aria-label="Next week">›</button>
         <button type="button" className={btnPrimary} disabled={busy !== null} onClick={() => void writeWeek()}>Write the week</button>
         <button type="button" className={btn} disabled={busy !== null || ready === 0} onClick={() => void act('Approved.', { action: 'approve_ready', week }, 'approve-all')}>Approve all ready</button>
+        <button type="button" className={btn} disabled={busy !== null} title="Lays the week out again with the current times and formats. Posts already sent are kept." onClick={() => { if (window.confirm('Lay this week out again? Anything not yet posted is replaced.')) void act('Week laid out again.', { action: 'rebuild_week', week }, 'rebuild'); }}>Rebuild week</button>
         <label className="ml-auto flex items-center gap-2 text-xs text-foreground">
           <input type="checkbox" checked={data.autoPost} onChange={(e) => void act(e.target.checked ? 'Automatic posting is on.' : 'Automatic posting is off.', { action: 'auto_post', on: e.target.checked }, 'auto')} />
           Post automatically at the times
@@ -142,7 +146,7 @@ export function AdminCalendar() {
                     onClick={() => {
                       setDayOpen(dayOpen === index ? null : index);
                       const saved = data.prefs.find((p) => p.weekday === index);
-                      setDayDraft(Array.from({ length: 5 }, (_, s) => ({ time: saved?.slots?.[s]?.time ?? def.times[s], type: saved?.slots?.[s]?.type ?? def.types[s] })));
+                      setDayDraft(Array.from({ length: 5 }, (_, s) => ({ time: saved?.slots?.[s]?.time ?? def.times[s], type: saved?.slots?.[s]?.type ?? def.types[s], format: saved?.slots?.[s]?.format ?? def.formats[s] })));
                     }}
                   >
                     Day settings
@@ -153,10 +157,13 @@ export function AdminCalendar() {
 
               {dayOpen === index ? (
                 <div className="mt-2 space-y-1.5 rounded-xl border border-line p-2">
-                  <p className="text-xs text-muted">Every {def.name} uses these times and post types.</p>
+                  <p className="text-xs text-muted">Every {def.name} uses these times, formats and topic types. Keep posts at least 2.5 hours apart.</p>
                   {dayDraft.map((slot, s) => (
-                    <div key={s} className="grid grid-cols-[5rem_1fr] gap-2">
+                    <div key={s} className="grid grid-cols-[5rem_1fr_1fr] gap-2">
                       <input type="time" aria-label={`Time for post ${s + 1}`} className={input} value={slot.time} onChange={(e) => setDayDraft(dayDraft.map((d, k) => (k === s ? { ...d, time: e.target.value } : d)))} />
+                      <select aria-label={`Format for post ${s + 1}`} className={input} value={slot.format} onChange={(e) => setDayDraft(dayDraft.map((d, k) => (k === s ? { ...d, format: e.target.value } : d)))}>
+                        {data.postFormats.map((t) => <option key={t} value={t}>{FORMAT_LABEL[t] ?? t}</option>)}
+                      </select>
                       <select aria-label={`Type for post ${s + 1}`} className={input} value={slot.type} onChange={(e) => setDayDraft(dayDraft.map((d, k) => (k === s ? { ...d, type: e.target.value } : d)))}>
                         {data.postTypes.map((t) => <option key={t} value={t}>{TYPE_LABEL[t] ?? t}</option>)}
                       </select>
@@ -171,13 +178,14 @@ export function AdminCalendar() {
                   <li key={p.id} className="rounded-xl border border-line bg-panel/40 p-2.5">
                     <div className="flex items-baseline justify-between gap-2 text-xs">
                       <span className="tabular-nums text-muted">{new Date(p.scheduled_at).toISOString().slice(11, 16)}</span>
-                      <span className="rounded-full border border-line px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted">{TYPE_LABEL[p.type] ?? p.type}</span>
+                      <span className="rounded-full border border-line px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted">{FORMAT_LABEL[p.format] ?? p.format} · {TYPE_LABEL[p.type] ?? p.type}</span>
                       <span className={`ml-auto ${STATUS_TONE[p.status]}`}>{STATUS_LABEL[p.status]}</span>
                     </div>
                     {editing === p.id ? (
                       <div className="mt-1.5 space-y-1.5">
                         <input aria-label="Topic" className={input} value={draft.topic} maxLength={300} onChange={(e) => setDraft({ ...draft, topic: e.target.value })} />
-                        <div className="grid grid-cols-2 gap-1.5">
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <select aria-label="Format" className={input} value={draft.format} onChange={(e) => setDraft({ ...draft, format: e.target.value })}>{data.postFormats.map((t) => <option key={t} value={t}>{FORMAT_LABEL[t] ?? t}</option>)}</select>
                           <select aria-label="Type" className={input} value={draft.type} onChange={(e) => setDraft({ ...draft, type: e.target.value })}>{data.postTypes.map((t) => <option key={t} value={t}>{TYPE_LABEL[t] ?? t}</option>)}</select>
                           <select aria-label="Look" className={input} value={draft.theme} onChange={(e) => setDraft({ ...draft, theme: e.target.value })}>{data.looks.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}</select>
                         </div>
@@ -196,7 +204,7 @@ export function AdminCalendar() {
                       <div className="mt-2">
                         {/* eslint-disable-next-line @next/next/no-img-element -- an admin-only generated preview */}
                         <img src={`/api/admin/calendar/preview?id=${p.id}&slide=${slide}`} alt={`Slide ${slide + 1}`} className="w-full rounded-lg border border-line" loading="lazy" />
-                        <span className="mt-1.5 flex items-center gap-2 text-xs text-muted">
+                        <span className={`mt-1.5 flex items-center gap-2 text-xs text-muted ${p.format !== 'carousel' ? 'hidden' : ''}`}>
                           <button type="button" className={btn} disabled={slide === 0} onClick={() => setSlide(slide - 1)}>‹</button>
                           Slide {slide + 1}
                           <button type="button" className={btn} disabled={slide >= 8} onClick={() => setSlide(slide + 1)}>›</button>
@@ -210,7 +218,7 @@ export function AdminCalendar() {
                       {p.hasPlan ? <button type="button" className={btn} onClick={() => { setOpen(open === p.id ? null : p.id); setSlide(0); }}>{open === p.id ? 'Hide' : 'Review'}</button> : null}
                       {p.status === 'ready' || p.status === 'failed' ? <button type="button" className={btnPrimary} disabled={busy !== null} onClick={() => void act('Approved.', { action: 'approve', id: p.id }, p.id)}>Approve</button> : null}
                       {p.status !== 'posted' && p.status !== 'skipped' && p.status !== 'posting' ? <button type="button" className={btn} disabled={busy !== null} onClick={() => void act('Posted.', { action: 'post_now', id: p.id }, p.id)}>{busy === p.id ? 'Posting…' : 'Post now'}</button> : null}
-                      {p.status !== 'posted' && p.status !== 'posting' ? <button type="button" className={btn} onClick={() => { setEditing(p.id); setDraft({ topic: p.topic, type: p.type, theme: p.theme }); }}>Edit</button> : null}
+                      {p.status !== 'posted' && p.status !== 'posting' ? <button type="button" className={btn} onClick={() => { setEditing(p.id); setDraft({ topic: p.topic, type: p.type, format: p.format, theme: p.theme }); }}>Edit</button> : null}
                       {p.status === 'skipped' ? <button type="button" className={btn} disabled={busy !== null} onClick={() => void act('Restored.', { action: 'unskip', id: p.id }, p.id)}>Restore</button> : p.status !== 'posted' && p.status !== 'posting' ? <button type="button" className={btn} disabled={busy !== null} onClick={() => void act('Skipped.', { action: 'skip', id: p.id }, p.id)}>Skip</button> : null}
                     </div>
                   </li>

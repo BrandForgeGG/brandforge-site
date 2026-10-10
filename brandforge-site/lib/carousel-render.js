@@ -333,5 +333,5 @@
   // For pickers: id, label, accent and whether the look is light.
   const THEME_LIST = Object.keys(THEMES).map((id) => ({ id, label: THEMES[id].label, accent: THEMES[id].accent, bg: THEMES[id].bg, light: THEMES[id].light, art: THEMES[id].art }));
 
-  return { W, H, THEMES, THEME_LIST, parseAccent, cleanText, drawCover, drawItem, drawCta };
+  return { W, H, HEAD, BODY, THEMES, THEME_LIST, parseAccent, cleanText, drawCover, drawItem, drawCta, hexToRgb, inkOn, wrapWords, drawLine, fitHeadline, coverFit, themeFor, brandMark };
 });
