@@ -981,3 +981,9 @@ we do not have.
 **Change:** Anyone can now publish a profile, gig, request, product, tool or startup launch by describing it in their own words: Trade writes the listing, they check it and publish. The page is quieter: one box, an All / Offers / Requests switch, search and a category list; cards show only the title, two lines, the price and who posted. From the chat, "Hire or get hired" carries what was typed straight into Trade. BrandForge itself now offers 17 pre-made services in the most in-demand categories (logos, brand identity, landing pages, websites, app and SaaS MVPs, AI automation, dashboards, short-form video, voice-over, SEO articles, copy, ads, social media, product photos, pitch decks, UI/UX), shown first under "From BrandForge".
 
 **Distribution move:** announce "List anything on Trade by describing it" and the pre-made services; post three of them with their "from" prices. Prices are starting points set by us and can be edited.
+
+## 2026-10-10 — Trade: BrandForge's own listings are marked as BrandForge
+
+**Change:** The 17 pre-made services now show under "From BrandForge" with the BrandForge name and mark, instead of an admin username.
+
+**Distribution move:** none; fix.

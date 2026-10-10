@@ -2,6 +2,7 @@ import { after, NextRequest, NextResponse } from 'next/server';
 import { sendFirstTimeEmail } from '@/lib/first-time-email';
 import {
   createTradeListing,
+  getAdminIds,
   getAvatarUrls,
   getProfileDisplayName,
   getProfileRole,
@@ -54,10 +55,7 @@ export async function GET(request: NextRequest) {
     }
     const faces = await getAvatarUrls([...names.keys()]);
     // Listings owned by a BrandForge admin account are BrandForge's own pre-made services.
-    const officialIds = new Set<string>();
-    for (const ownerId of names.keys()) {
-      if ((await getProfileRole(ownerId)) === 'admin') officialIds.add(ownerId);
-    }
+    const officialIds = await getAdminIds([...names.keys()]);
     const viewerRole = viewer ? await getProfileRole(viewer.id) : null;
     return NextResponse.json({
       listings: rows.map((row) => toListingView(row, officialIds.has(row.owner_id) ? 'BrandForge' : (names.get(row.owner_id) ?? 'Member'), viewer?.id ?? null, officialIds.has(row.owner_id) ? null : (faces.get(row.owner_id) ?? null), officialIds.has(row.owner_id))),

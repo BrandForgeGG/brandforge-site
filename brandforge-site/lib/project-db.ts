@@ -5862,3 +5862,15 @@ export async function deleteGuestMessage(sessionId: string, conversationId: stri
   const { error } = await admin.from('messages').update({ deleted_at: new Date().toISOString() }).eq('id', messageId);
   return error ? 'not_found' : 'deleted';
 }
+
+// Which of these people are BrandForge admin accounts (their listings are BrandForge's own).
+export async function getAdminIds(userIds: string[]): Promise<Set<string>> {
+  const out = new Set<string>();
+  const ids = [...new Set(userIds.filter(Boolean))].slice(0, 200);
+  if (ids.length === 0) return out;
+  const admin = createSupabaseAdminClient();
+  if (!admin) return out;
+  const { data } = await admin.from('profiles').select('id, role').in('id', ids).eq('role', 'admin');
+  for (const row of (data ?? []) as { id: string }[]) out.add(row.id);
+  return out;
+}
