@@ -20,7 +20,7 @@ const POSTS: { date: string; title: string; body: Block[] }[] = [
     body: [
       'ChatGPT is AI. BrandForge is AI and people. You say what you want, AI drafts it in seconds, and then you, your team or the BrandForge team finish it on the same page.',
       { visual: 'idea' },
-      'That one idea covers more than a single tool. You can make many kinds of messages and publish them: carousels, updates, polls, quizzes and threads today, with video, reels, newsletters and more on the way. And you can trade. Post a product, a service or a request, talk it through in a private chat, and sign a milestone contract so money moves as each piece lands.',
+      'That one idea covers more than a single tool. You can make many kinds of messages and publish them: carousels today, with updates, polls, quizzes, threads, video and more on the way. And you can trade. Post a product, a service or a request, talk it through in a private chat, and sign a milestone contract so money moves as each piece lands.',
       { visual: 'trade' },
       'Why build it this way? Using the internet without AI is becoming a disadvantage. The tools exist, but nobody has time to learn ten of them. BrandForge puts the newest internet technology behind one chat, and keeps people in the loop so what comes out is something you would put your name on.',
       { visual: 'pace' },

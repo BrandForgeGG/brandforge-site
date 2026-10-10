@@ -957,3 +957,9 @@ we do not have.
 **Change:** The bar under guest chats ("Sign in to keep this chat and add your team. Free, takes 10 seconds.") is gone. Guests still have Log in and Sign up for free in the header and the sidebar.
 
 **Distribution move:** none; less noise.
+
+## 2026-10-10 — Create shows only what is live: Update, Poll, Quiz and Thread cards removed
+
+**Change:** The Create page and the chat maker now show the Carousel card only. Update, Poll, Quiz and Thread are gone from the cards, the chat + menu and the chat hint. Pages and the overview diagram now say those formats are coming rather than live.
+
+**Distribution move:** none; copy follows what is live. Do not announce polls, quizzes or threads until they return.

@@ -2796,7 +2796,7 @@ return (
             {makeHint ? (
               <div className="bf-composer-chip" role="status">
                 <span aria-hidden="true">✨</span>
-                <span className="min-w-0 flex-1 truncate">Make it as a {makeHint.kind === "update" ? "post" : makeHint.kind}, with visuals</span>
+                <span className="min-w-0 flex-1 truncate">Make it as a {makeHint.kind}, with visuals</span>
                 <button type="button" onClick={() => setMakeOpen({ kind: makeHint.kind, topic: makeHint.topic })} className="rounded-md bg-ember px-2.5 py-1 text-xs font-semibold text-background">
                   Open the maker
                 </button>

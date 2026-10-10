@@ -6,7 +6,7 @@ import { getSessionUser } from '@/lib/browser-auth';
 import { useLogin } from '@/components/login-dialog';
 import { CarouselMaker } from '@/components/carousel/carousel-maker';
 import { PostComposer } from '@/components/carousel/post-composer';
-import { CarouselVisual, DocumentVisual, ImageVisual, OfferVisual, PollVisual, QuizVisual, ThreadVisual, UpdateVisual, VideoVisual } from '@/components/studio/card-visuals';
+import { CarouselVisual, DocumentVisual, ImageVisual, OfferVisual, UpdateVisual, VideoVisual } from '@/components/studio/card-visuals';
 import { emptyDraft, markResume, writeDraft, type Draft } from '@/components/carousel/carousel-shared';
 import { CREATIONS } from '@/lib/creation-catalog.js';
 import type { Format } from '@/lib/format-catalog.js';
@@ -20,10 +20,6 @@ const COMING_VISUAL: Record<string, React.ReactNode> = { images: <ImageVisual />
 
 const CARDS: { id: Kind; name: string; line: string; visual: React.ReactNode }[] = [
   { id: 'carousel', name: 'Carousel', line: 'Swipeable slides from one sentence', visual: <CarouselVisual /> },
-  { id: 'update', name: 'Update', line: 'A short post with bold and links', visual: <UpdateVisual /> },
-  { id: 'poll', name: 'Poll', line: 'Ask a question, get votes', visual: <PollVisual /> },
-  { id: 'quiz', name: 'Quiz', line: 'One right answer, one reason', visual: <QuizVisual /> },
-  { id: 'thread', name: 'Thread', line: 'A story over linked posts', visual: <ThreadVisual /> },
 ];
 
 type Saved = { id: string; title: string; type: string; theme: string; plan: Draft['plan']; brand: Draft['brand']; captions: Record<string, string> };

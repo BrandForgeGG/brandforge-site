@@ -85,7 +85,7 @@ export function OverviewFeatures() {
   return (
     <section className="border-t border-line px-6 py-16" aria-label="What it does">
       <div className="mx-auto max-w-5xl space-y-20">
-        <Feature title="Make any kind of message." line="Carousels, updates, polls, quizzes and threads today, with video, reels, newsletters and more on the way. Say it in a sentence; AI writes the first draft, you shape it.">
+        <Feature title="Make any kind of message." line="Carousels today, with updates, polls, quizzes, threads, video and more on the way. Say it in a sentence; AI writes the first draft, you shape it.">
           <FormatsDiagram />
         </Feature>
         <Feature flip title="Publish it where people are." line="Pick the platforms and get a caption written for each. Download or copy it today; one-tap publishing opens as each platform approves us.">

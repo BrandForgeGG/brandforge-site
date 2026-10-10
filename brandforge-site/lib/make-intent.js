@@ -3,10 +3,6 @@
 
 const KINDS = [
   ['carousel', /\b(carousels?|slides?|slideshow)\b/i],
-  ['poll', /\bpolls?\b/i],
-  ['quiz', /\bquiz(?:zes)?\b/i],
-  ['thread', /\bthreads?\b/i],
-  ['update', /\b(post|posts|update|tweet|caption)\b/i],
 ];
 
 const VERB = /\b(make|create|write|build|design|draft|generate|turn)\b/i;

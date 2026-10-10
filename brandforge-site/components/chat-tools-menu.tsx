@@ -73,7 +73,6 @@ export function ToolsMenu({
       items: [
         { key: 'image', label: 'Create an image', hint: 'A visual, a logo idea or a mockup', icon: 'M4 5h12v10H4zM4 13l3.5-3.5 3 3 2-2L16 14M13 8.2h.01', run: go('image', 'Create an image: ') },
         { key: 'carousel', label: 'Make a carousel', hint: 'Swipeable slides from one sentence', icon: 'M5 5h8v10H5zM7 3.5h8V13M3.5 7v8', run: () => onMake('carousel') },
-        { key: 'post', label: 'Make a post, poll or quiz', hint: 'Pick a format, edit it here, download it', icon: 'M4 5h12M4 10h12M4 15h7', run: () => onMake(null) },
         { key: 'ads', label: 'Write ads', hint: 'Hooks and copy for each platform', icon: 'M3.5 9.5v-3l9-3v9zM12.5 6.5h3a1.5 1.5 0 010 3h-3M6 12.5l1 3.5h2l-.8-3', run: go('ads', 'Create ads: ') },
         { key: 'calendar', label: '30-day content calendar', hint: 'A month of posts, ready to copy', icon: 'M4 5.5h12v10H4zM4 8.5h12M7 3.5v3M13 3.5v3', run: go('calendar', 'Create a 30-day content calendar: ') },
         { key: 'video', label: 'Create a video', hint: 'Short scenes from your idea', icon: 'M3.5 6h9v8h-9zM12.5 9l4-2.5v7L12.5 11', run: go('video', 'Create a video: ') },
