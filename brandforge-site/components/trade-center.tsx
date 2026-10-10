@@ -15,6 +15,27 @@ import { avatarTone, initialsFor } from "@/lib/identity-display";
 const field =
   "w-full rounded-lg border border-line bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted";
 
+// What people can publish here, and the first words of each so nobody starts from a blank box.
+const STARTERS: [string, string][] = [
+  ["My profile", "I am a freelance "],
+  ["A gig", "I offer "],
+  ["A product", "I am selling "],
+  ["A tool", "I built a tool that "],
+  ["A startup launch", "We are launching "],
+  ["A request", "I need "],
+];
+
+type Draft = { kind: string; category: string; title: string; description: string; currency: string; budgetMin: string; budgetMax: string };
+
+function posted(iso: string | undefined) {
+  if (!iso) return "";
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (mins < 60) return "just now";
+  if (mins < 1440) return `${Math.round(mins / 60)}h ago`;
+  if (mins < 43200) return `${Math.round(mins / 1440)}d ago`;
+  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
 function Modal({ label, onClose, children }: { label: string; onClose: () => void; children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -38,31 +59,31 @@ function Modal({ label, onClose, children }: { label: string; onClose: () => voi
   );
 }
 
-function posted(iso: string | undefined) {
-  if (!iso) return "";
-  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
-  if (mins < 60) return "just now";
-  if (mins < 1440) return `${Math.round(mins / 60)}h ago`;
-  if (mins < 43200) return `${Math.round(mins / 1440)}d ago`;
-  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
+// Trade: say what you offer or need in your own words, check the listing it makes, publish. Below, a calm list of
+// what others and BrandForge itself have put up.
 export function TradeCenter() {
+  const { openLogin } = useLogin();
   const [listings, setListings] = useState<ListingView[] | null>(null);
   const [pending, setPending] = useState(false);
   const [isSpecialist, setIsSpecialist] = useState(false);
   const [kind, setKind] = useState<"" | "offer" | "request">("");
   const [category, setCategory] = useState("");
   const [q, setQ] = useState("");
-  const [sort, setSort] = useState<"new" | "low" | "high">("new");
-  const [posting, setPosting] = useState(false);
   const [editing, setEditing] = useState<ListingView | null>(null);
   const [contacting, setContacting] = useState<ListingView | null>(null);
   const [mine, setMine] = useState<ListingView[]>([]);
 
+  // Describe-it flow
+  const [text, setText] = useState("");
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [making, setMaking] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [published, setPublished] = useState(false);
+
   const loadMine = useCallback(async () => {
     try {
-      const response = await fetchAuthed('/api/trade?mine=1');
+      const response = await fetchAuthed("/api/trade?mine=1");
       const data = await response.json().catch(() => ({}));
       setMine(response.ok ? (data.listings ?? []) : []);
     } catch {
@@ -92,148 +113,215 @@ export function TradeCenter() {
     return () => window.clearTimeout(timer);
   }, [load, q]);
 
-  const shown = [...(listings ?? [])].sort((a, b) => {
-    if (sort === "new") return String(b.createdAt).localeCompare(String(a.createdAt));
-    const price = (l: ListingView) => l.budgetMinCents ?? l.budgetMaxCents ?? Number.MAX_SAFE_INTEGER;
-    return sort === "low" ? price(a) - price(b) : (b.budgetMaxCents ?? b.budgetMinCents ?? 0) - (a.budgetMaxCents ?? a.budgetMinCents ?? 0);
-  });
-  const steps: [string, string, string][] = [
-    ['List', 'Say what you offer or need', 'M4 5h12M4 10h12M4 15h7'],
-    ['Chat', 'Agree the details in private', 'M4 5.5h12v7.5H9.5L6 16v-3H4z'],
-    ['Sign', 'A milestone contract, in the chat', 'M5 15l2-.5 7-7-1.5-1.5-7 7zM12 5.5l1.5 1.5'],
-    ['Get paid', 'Money moves as each milestone lands', 'M4 7h11l-3-3M16 13H5l3 3'],
-  ];
+  async function makeDraft(words: string) {
+    if (words.trim().length < 12) {
+      setError("Say a little more, one or two sentences.");
+      return;
+    }
+    setMaking(true);
+    setError(null);
+    setPublished(false);
+    try {
+      const response = await fetch("/api/trade/draft", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: words }) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(data.error || "Could not make a listing from that. Try again.");
+        return;
+      }
+      setDraft(data.draft as Draft);
+    } catch {
+      setError("Connection problem. Try again.");
+    } finally {
+      setMaking(false);
+    }
+  }
+
+  // Coming from the chat's "Hire or get hired": the words typed there arrive here and turn into a listing.
+  useEffect(() => {
+    try {
+      const carried = window.localStorage.getItem("bf:trade-describe");
+      if (carried === null) return;
+      window.localStorage.removeItem("bf:trade-describe");
+      if (carried.trim().length >= 12) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- the carried words are only readable in the browser
+        setText(carried);
+        void makeDraft(carried);
+      }
+    } catch {
+      /* storage blocked: the box simply starts empty */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- this runs once, when the page opens
+  }, []);
+
+  async function publish() {
+    if (!draft) return;
+    setPublishing(true);
+    setError(null);
+    try {
+      const response = await fetchAuthed("/api/trade", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(draft) });
+      const data = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        try {
+          window.localStorage.setItem("bf:trade-describe", text || draft.description);
+        } catch {
+          /* ignore */
+        }
+        openLogin({ reason: "signin", next: "/trade" });
+        return;
+      }
+      if (!response.ok) {
+        setError(data.error || "Could not publish. Check the details and try again.");
+        return;
+      }
+      setDraft(null);
+      setText("");
+      setPublished(true);
+      void load();
+    } catch {
+      setError("Connection problem. Try again.");
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  const shown = listings ?? [];
+  const official = shown.filter((l) => l.official);
+  const community = shown.filter((l) => !l.official);
 
   return (
     <div className="max-w-5xl">
-      <div className="flex flex-wrap items-center gap-3">
-        <div role="group" aria-label="What are you here for" className="inline-flex rounded-xl border border-line bg-panel p-1">
-          {([["", "Everything"], ["offer", "Hire someone"], ["request", "Find work"]] as const).map(([value, label]) => (
-            <button
-              key={value || "all"}
-              type="button"
-              aria-pressed={kind === value}
-              onClick={() => setKind(value)}
-              className={`rounded-lg px-3.5 py-1.5 text-sm transition ${kind === value ? "bg-ember text-background font-semibold" : "text-muted hover:text-foreground"}`}
-            >
+      {/* Describe it */}
+      <section aria-label="Publish a listing" className="rounded-2xl border border-line bg-panel p-4 sm:p-5">
+        {draft ? (
+          <div>
+            <p className="font-serif text-lg text-foreground">Here is your listing. Check it, then publish.</p>
+            <div className="mt-3 flex gap-2">
+              {(["offer", "request"] as const).map((k) => (
+                <button key={k} type="button" aria-pressed={draft.kind === k} onClick={() => setDraft({ ...draft, kind: k })} className={`flex-1 rounded-lg border px-3 py-1.5 text-xs ${draft.kind === k ? "border-ember bg-ember/10 text-foreground" : "border-line text-muted"}`}>
+                  {k === "offer" ? "I offer this" : "I need this"}
+                </button>
+              ))}
+            </div>
+            <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} maxLength={100} aria-label="Title" className={`${field} mt-3 font-serif text-base`} />
+            <textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} rows={4} maxLength={1200} aria-label="Details" className={`${field} mt-2`} />
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} aria-label="Category" className={`${field} col-span-2`}>
+                {CATEGORIES.map((c: string) => (
+                  <option key={c}>{c}</option>
+                ))}
+              </select>
+              <input value={draft.budgetMin} onChange={(e) => setDraft({ ...draft, budgetMin: e.target.value })} inputMode="decimal" placeholder={`From (${draft.currency})`} aria-label="Price from" className={field} />
+              <input value={draft.budgetMax} onChange={(e) => setDraft({ ...draft, budgetMax: e.target.value })} inputMode="decimal" placeholder="To" aria-label="Price to" className={field} />
+            </div>
+            {error ? <p role="alert" className="mt-2 text-xs text-danger">{error}</p> : null}
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <button type="button" onClick={() => void publish()} disabled={publishing} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
+                {publishing ? "Publishing…" : "Publish"}
+              </button>
+              <button type="button" onClick={() => setDraft(null)} className="text-sm text-muted transition hover:text-foreground">
+                Change my words
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <label htmlFor="trade-describe" className="font-serif text-lg text-foreground">
+              What do you offer or need?
+            </label>
+            <textarea
+              id="trade-describe"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={3}
+              maxLength={1200}
+              placeholder="Say it in your own words. A profile, a gig, a product, a tool, a startup launch or a request."
+              className={`${field} mt-2 text-base`}
+            />
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {STARTERS.map(([label, start]) => (
+                <button key={label} type="button" onClick={() => setText((current) => (current.trim() ? current : start))} className="rounded-full border border-line px-3 py-1 text-xs text-muted transition hover:border-ember hover:text-foreground">
+                  {label}
+                </button>
+              ))}
+            </div>
+            {error ? <p role="alert" className="mt-2 text-xs text-danger">{error}</p> : null}
+            {published ? <p role="status" className="mt-2 text-sm text-foreground">Published. It is in the list below.</p> : null}
+            <div className="mt-3">
+              <button type="button" onClick={() => void makeDraft(text)} disabled={making || text.trim().length < 12} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
+                {making ? "Writing your listing…" : "Make my listing"}
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Browse */}
+      <div className="mt-8 flex flex-wrap items-center gap-3">
+        <div role="group" aria-label="Show" className="inline-flex rounded-xl border border-line bg-panel p-1">
+          {([["", "All"], ["offer", "Offers"], ["request", "Requests"]] as const).map(([value, label]) => (
+            <button key={value || "all"} type="button" aria-pressed={kind === value} onClick={() => setKind(value)} className={`rounded-lg px-3.5 py-1.5 text-sm transition ${kind === value ? "bg-ember font-semibold text-background" : "text-muted hover:text-foreground"}`}>
               {label}
             </button>
           ))}
         </div>
-        <p className="min-w-0 flex-1 text-xs leading-relaxed text-muted">
-          {kind === "offer" ? "People who offer a service. Message one, agree the work, sign a contract." : kind === "request" ? "What people need done. The BrandForge team can offer to help." : "Services on offer and work wanted, in one place."}
-        </p>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label="Search listings" className={`${field} w-40`} />
+        <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Category" className={`${field} w-auto`}>
+          <option value="">Everything</option>
+          {CATEGORIES.map((c: string) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center gap-2">
-        <div className="-mx-1 flex max-w-full gap-1.5 overflow-x-auto px-1 pb-1" role="group" aria-label="Category">
-          {["", ...CATEGORIES].map((c: string) => (
-            <button
-              key={c || "all"}
-              type="button"
-              aria-pressed={category === c}
-              onClick={() => setCategory(c)}
-              className={`shrink-0 rounded-full border px-3 py-1 text-xs transition ${category === c ? "border-ember bg-ember/10 text-foreground" : "border-line text-muted hover:text-foreground"}`}
-            >
-              {c || "Everything"}
-            </button>
+      {listings === null ? (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bf-card h-32 animate-pulse" />
           ))}
         </div>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label="Search listings" className={`${field} w-40`} />
-        <select value={sort} onChange={(e) => setSort(e.target.value as "new" | "low" | "high")} aria-label="Sort listings" className={`${field} w-auto`}>
-          <option value="new">Newest</option>
-          <option value="low">Budget: low to high</option>
-          <option value="high">Budget: high to low</option>
-        </select>
-        <button type="button" onClick={() => setPosting(true)} className="ml-auto rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background">
-          Post a listing
-        </button>
-      </div>
-      {listings ? <p className="mt-2 text-xs text-muted" aria-live="polite">{shown.length} {shown.length === 1 ? "listing" : "listings"}</p> : null}
+      ) : null}
 
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        {listings === null
-          ? Array.from({ length: 4 }).map((_, i) => <div key={i} className="bf-card h-40 animate-pulse" />)
-          : shown.map((l) => (
-              <article key={l.id} className="bf-card flex flex-col p-4">
-                <div className="flex items-center gap-2 text-[11px]">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px] font-semibold" style={avatarTone(l.ownerName || l.id)} aria-hidden="true">
-                    {l.ownerAvatar ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- a small user picture from our own storage
-                      <img src={l.ownerAvatar} alt="" decoding="async" className="h-full w-full object-cover" />
-                    ) : (
-                      initialsFor(l.ownerName || "?")
-                    )}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] text-foreground">{l.ownerName}</span>
-                    <span className="block text-[10px] text-muted">{posted(l.createdAt)}</span>
-                  </span>
-                  {l.mine ? <span className="rounded-full bg-overlay px-2 py-0.5 text-muted">Yours</span> : null}
-                  <span className={`rounded-full border px-2 py-0.5 ${l.kind === "offer" ? "border-trust/30 bg-trust/10 text-trust-light" : "border-ember/40 bg-ember/10 text-ember-light"}`}>
-                    {l.kind === "offer" ? "Offers" : "Wants"}
-                  </span>
-                </div>
-                <p className="mt-3 text-[11px] uppercase tracking-[0.12em] text-muted">{l.category}</p>
-                <h3 className="mt-0.5 font-serif text-base text-foreground">{l.title}</h3>
-                <p className="mt-1 line-clamp-3 flex-1 text-xs leading-relaxed text-muted">{l.description}</p>
-                <div className="mt-3 flex items-center justify-between gap-2 border-t border-line pt-3">
-                  <p className="min-w-0 truncate text-sm font-semibold tabular-nums text-foreground">{budgetLabel(l, formatMoney)}</p>
-                  {l.mine ? (
-                    <div className="flex gap-2">
-                      <button type="button" onClick={() => setEditing(l)} className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted hover:text-foreground">
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          if (!window.confirm("Close this listing? It stops showing to others. You can reopen it from Your listings.")) return;
-                          await fetchAuthed(`/api/trade/${l.id}`, { method: "DELETE" });
-                          void load();
-                        }}
-                        className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted hover:text-foreground"
-                      >
-                        Close
-                      </button>
-                    </div>
-                  ) : l.kind === "request" && !isSpecialist ? (
-                    <Link href="/apply" data-tip="Only the BrandForge team can answer requests" className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">
-                      Apply to help
-                    </Link>
-                  ) : (
-                    <button type="button" onClick={() => setContacting(l)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background">
-                      {l.kind === "offer" ? "Hire" : "Offer to help"}
-                    </button>
-                  )}
-                </div>
-              </article>
+      {official.length > 0 ? (
+        <section aria-label="From BrandForge" className="mt-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">From BrandForge</p>
+          <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {official.map((l) => (
+              <Card key={l.id} listing={l} isSpecialist={isSpecialist} onContact={setContacting} onEdit={setEditing} onChanged={() => void load()} />
             ))}
-      </div>
+          </div>
+        </section>
+      ) : null}
+
+      {community.length > 0 ? (
+        <section aria-label="From the community" className="mt-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{official.length > 0 ? "From the community" : "Listings"}</p>
+          <div className="mt-2 grid gap-3 sm:grid-cols-2">
+            {community.map((l) => (
+              <Card key={l.id} listing={l} isSpecialist={isSpecialist} onContact={setContacting} onEdit={setEditing} onChanged={() => void load()} />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {listings && listings.length === 0 ? (
-        <div className="bf-card mt-2 p-6 text-center">
-          <p className="font-serif text-lg text-foreground">{pending ? "The Trade Center opens shortly." : q || category ? "Nothing matches that." : kind === "offer" ? "No one is offering yet." : kind === "request" ? "No one is asking for work yet." : "Nothing here yet."}</p>
-          {!pending ? (
-            <>
-              <p className="mt-1 text-xs text-muted">Be the first. A listing takes a minute and stays until you close it.</p>
-              <button type="button" onClick={() => setPosting(true)} className="mt-3 rounded-lg bg-ember px-4 py-2 text-xs font-semibold text-background">
-                Post what you offer or need
-              </button>
-            </>
-          ) : null}
+        <div className="bf-card mt-6 p-6 text-center">
+          <p className="font-serif text-lg text-foreground">{pending ? "Trade opens shortly." : q || category ? "Nothing matches that." : "Nothing here yet."}</p>
+          {!pending ? <p className="mt-1 text-xs text-muted">Describe what you offer or need above. It takes a minute.</p> : null}
         </div>
       ) : null}
 
       {mine.length > 0 ? (
         <section aria-label="Your listings" className="mt-8">
-          <p className="font-serif text-lg text-foreground">Your listings</p>
-          <ul className="mt-3 divide-y divide-line rounded-2xl border border-line bg-panel">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Yours</p>
+          <ul className="mt-2 divide-y divide-line rounded-2xl border border-line bg-panel">
             {mine.map((l) => (
               <li key={l.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-foreground">{l.title}</p>
                   <p className="text-xs text-muted">
-                    {l.kind === "offer" ? "Offers" : "Wants"} · {l.category} · <span className={l.status === "open" ? "text-success" : ""}>{l.status === "open" ? "Open" : "Closed"}</span>
+                    {l.kind === "offer" ? "Offer" : "Request"} · <span className={l.status === "open" ? "text-success" : ""}>{l.status === "open" ? "Open" : "Closed"}</span>
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -259,41 +347,79 @@ export function TradeCenter() {
         </section>
       ) : null}
 
-      <section aria-label="How trading works" className="mt-8 rounded-2xl border border-line bg-panel p-5">
-        <p className="font-serif text-lg text-foreground">How a deal goes</p>
-        <ol className="mt-4 grid gap-4 sm:grid-cols-4">
-          {steps.map(([name, line, path], index) => (
-            <li key={name} className="relative flex gap-3 sm:flex-col">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ember/15 text-ember" aria-hidden="true">
-                <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d={path} /></svg>
-              </span>
-              {index < steps.length - 1 ? <span aria-hidden="true" className="absolute right-0 top-3 hidden text-muted sm:block" style={{ right: "-0.9rem" }}>→</span> : null}
-              <span>
-                <span className="block text-sm font-semibold text-foreground">{name}</span>
-                <span className="block text-xs leading-relaxed text-muted">{line}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
-        <p className="mt-4 text-[11px] text-muted">A flat 5% is taken when each milestone is released. Nothing is charged to list or to chat.</p>
-      </section>
+      <p className="mt-8 text-xs text-muted">Agree the details in a private chat and sign a milestone contract. A flat 5% is taken when a milestone is paid. Listing and chatting are free.</p>
 
-      {posting ? <PostForm canOffer={isSpecialist} onClose={() => setPosting(false)} onPosted={() => void load()} /> : null}
-      {editing ? <PostForm canOffer={isSpecialist} listing={editing} onClose={() => setEditing(null)} onPosted={() => void load()} /> : null}
+      {editing ? <PostForm listing={editing} onClose={() => setEditing(null)} onPosted={() => void load()} /> : null}
       {contacting ? <ContactForm listing={contacting} onClose={() => setContacting(null)} /> : null}
     </div>
   );
 }
 
-function PostForm({ onClose, onPosted, listing, canOffer }: { onClose: () => void; onPosted: () => void; listing?: ListingView; canOffer: boolean }) {
+function Card({ listing: l, isSpecialist, onContact, onEdit, onChanged }: { listing: ListingView; isSpecialist: boolean; onContact: (l: ListingView) => void; onEdit: (l: ListingView) => void; onChanged: () => void }) {
+  return (
+    <article className="bf-card flex flex-col p-4">
+      <div className="flex items-center gap-2">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px] font-semibold" style={avatarTone(l.ownerName || l.id)} aria-hidden="true">
+          {l.official ? (
+            // eslint-disable-next-line @next/next/no-img-element -- bundled local asset at a fixed size
+            <img src="/discord-server-icon.png" alt="" className="h-full w-full object-cover" />
+          ) : l.ownerAvatar ? (
+            // eslint-disable-next-line @next/next/no-img-element -- a small user picture from our own storage
+            <img src={l.ownerAvatar} alt="" decoding="async" className="h-full w-full object-cover" />
+          ) : (
+            initialsFor(l.ownerName || "?")
+          )}
+        </span>
+        <span className="min-w-0 flex-1 truncate text-xs text-muted">
+          {l.ownerName}
+          {!l.official && l.createdAt ? ` · ${posted(l.createdAt)}` : ""}
+        </span>
+        <span className={`shrink-0 text-[11px] ${l.kind === "request" ? "text-ember" : "text-muted"}`}>{l.kind === "request" ? "Wants" : l.category}</span>
+      </div>
+      <h3 className="mt-2.5 font-serif text-base leading-snug text-foreground">{l.title}</h3>
+      <p className="mt-1 line-clamp-2 flex-1 text-xs leading-relaxed text-muted">{l.description}</p>
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <p className="min-w-0 truncate text-sm font-semibold tabular-nums text-foreground">{budgetLabel(l, formatMoney)}</p>
+        {l.mine ? (
+          <div className="flex gap-2">
+            <button type="button" onClick={() => onEdit(l)} className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted hover:text-foreground">
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!window.confirm("Close this listing? It stops showing to others. You can reopen it from Yours.")) return;
+                await fetchAuthed(`/api/trade/${l.id}`, { method: "DELETE" });
+                onChanged();
+              }}
+              className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted hover:text-foreground"
+            >
+              Close
+            </button>
+          </div>
+        ) : l.kind === "request" && !isSpecialist ? (
+          <Link href="/apply" data-tip="Only the BrandForge team can answer requests" className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">
+            Apply to help
+          </Link>
+        ) : (
+          <button type="button" onClick={() => onContact(l)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background">
+            {l.kind === "offer" ? "Hire" : "Offer to help"}
+          </button>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function PostForm({ onClose, onPosted, listing }: { onClose: () => void; onPosted: () => void; listing: ListingView }) {
   const { openLogin } = useLogin();
-  const [kind, setKind] = useState<"offer" | "request">((listing?.kind as "offer" | "request") ?? "offer");
-  const [category, setCategory] = useState(listing?.category ?? "");
-  const [title, setTitle] = useState(listing?.title ?? "");
-  const [description, setDescription] = useState(listing?.description ?? "");
-  const [currency, setCurrency] = useState(listing?.currency ?? "EUR");
-  const [budgetMin, setBudgetMin] = useState(listing?.budgetMinCents != null ? String(listing.budgetMinCents / 100) : "");
-  const [budgetMax, setBudgetMax] = useState(listing?.budgetMaxCents != null ? String(listing.budgetMaxCents / 100) : "");
+  const [kind, setKind] = useState<"offer" | "request">((listing.kind as "offer" | "request") ?? "offer");
+  const [category, setCategory] = useState(listing.category ?? "");
+  const [title, setTitle] = useState(listing.title ?? "");
+  const [description, setDescription] = useState(listing.description ?? "");
+  const [currency, setCurrency] = useState(listing.currency ?? "EUR");
+  const [budgetMin, setBudgetMin] = useState(listing.budgetMinCents != null ? String(listing.budgetMinCents / 100) : "");
+  const [budgetMax, setBudgetMax] = useState(listing.budgetMaxCents != null ? String(listing.budgetMaxCents / 100) : "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -301,8 +427,8 @@ function PostForm({ onClose, onPosted, listing, canOffer }: { onClose: () => voi
     setBusy(true);
     setError(null);
     try {
-      const response = await fetchAuthed(listing ? `/api/trade/${listing.id}` : "/api/trade", {
-        method: listing ? "PATCH" : "POST",
+      const response = await fetchAuthed(`/api/trade/${listing.id}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ kind, category, title, description, currency, budgetMin, budgetMax }),
       });
@@ -312,7 +438,7 @@ function PostForm({ onClose, onPosted, listing, canOffer }: { onClose: () => voi
         return;
       }
       if (!response.ok) {
-        setError(data.error || "Could not post the listing.");
+        setError(data.error || "Could not save the listing.");
         return;
       }
       onPosted();
@@ -325,29 +451,17 @@ function PostForm({ onClose, onPosted, listing, canOffer }: { onClose: () => voi
   }
 
   return (
-    <Modal label={listing ? "Edit listing" : "Post a listing"} onClose={onClose}>
+    <Modal label="Edit listing" onClose={onClose}>
       <div className="mt-3 flex gap-2">
         {(["offer", "request"] as const).map((k) => (
           <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)} className={`flex-1 rounded-lg border px-3 py-1.5 text-xs ${kind === k ? "border-ember bg-ember/10 text-foreground" : "border-line text-muted"}`}>
-            {k === "offer" ? "I offer a service" : "I need work done"}
+            {k === "offer" ? "I offer this" : "I need this"}
           </button>
         ))}
       </div>
-      {kind === "offer" && !canOffer ? (
-        <p className="mt-3 rounded-lg border border-ember/30 bg-ember/10 px-3 py-2 text-xs leading-relaxed text-foreground">
-          Offering services is for the BrandForge team.{" "}
-          <Link href="/apply" className="text-ember underline-offset-2 hover:underline">
-            Apply in two minutes
-          </Link>{" "}
-          , or switch to &quot;I need work done&quot;.
-        </p>
-      ) : null}
       <label className="mt-3 block text-[11px] text-muted">
         Category
         <select value={category} onChange={(e) => setCategory(e.target.value)} className={`${field} mt-1`}>
-          <option value="" disabled>
-            Choose a category
-          </option>
           {CATEGORIES.map((c: string) => (
             <option key={c}>{c}</option>
           ))}
@@ -355,11 +469,11 @@ function PostForm({ onClose, onPosted, listing, canOffer }: { onClose: () => voi
       </label>
       <label className="mt-3 block text-[11px] text-muted">
         Title
-        <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} placeholder="Short-form video editing for small brands" className={`${field} mt-1`} />
+        <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} className={`${field} mt-1`} />
       </label>
       <label className="mt-3 block text-[11px] text-muted">
         Details
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} maxLength={1200} placeholder="What you do or need, turnaround, what is included." className={`${field} mt-1`} />
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} maxLength={1200} className={`${field} mt-1`} />
       </label>
       <div className="mt-3 grid grid-cols-3 gap-2">
         <label className="text-[11px] text-muted">
@@ -372,15 +486,15 @@ function PostForm({ onClose, onPosted, listing, canOffer }: { onClose: () => voi
         </label>
         <label className="text-[11px] text-muted">
           From
-          <input value={budgetMin} onChange={(e) => setBudgetMin(e.target.value)} inputMode="decimal" placeholder="200" className={`${field} mt-1`} />
+          <input value={budgetMin} onChange={(e) => setBudgetMin(e.target.value)} inputMode="decimal" className={`${field} mt-1`} />
         </label>
         <label className="text-[11px] text-muted">
           To
-          <input value={budgetMax} onChange={(e) => setBudgetMax(e.target.value)} inputMode="decimal" placeholder="600" className={`${field} mt-1`} />
+          <input value={budgetMax} onChange={(e) => setBudgetMax(e.target.value)} inputMode="decimal" className={`${field} mt-1`} />
         </label>
       </div>
       {error ? (
-        <p className="mt-2 text-xs text-ember" role="alert">
+        <p className="mt-2 text-xs text-danger" role="alert">
           {error}
         </p>
       ) : null}
@@ -388,8 +502,8 @@ function PostForm({ onClose, onPosted, listing, canOffer }: { onClose: () => voi
         <button type="button" onClick={onClose} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground">
           Cancel
         </button>
-        <button type="button" disabled={busy || !category || (kind === "offer" && !canOffer)} onClick={() => void submit()} className="rounded-lg bg-ember px-4 py-1.5 text-xs font-semibold text-background disabled:opacity-60">
-          {listing ? "Save changes" : "Post listing"}
+        <button type="button" disabled={busy || !category} onClick={() => void submit()} className="rounded-lg bg-ember px-4 py-1.5 text-xs font-semibold text-background disabled:opacity-60">
+          Save changes
         </button>
       </div>
     </Modal>
@@ -434,7 +548,7 @@ function ContactForm({ listing, onClose }: { listing: ListingView; onClose: () =
       <p className="mt-2 text-xs text-muted">About: {listing.title}</p>
       <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={4} maxLength={1000} placeholder="Say what you need or what you can do, and when." aria-label="Your message" className={`${field} mt-3`} />
       {error ? (
-        <p className="mt-2 text-xs text-ember" role="alert">
+        <p className="mt-2 text-xs text-danger" role="alert">
           {error}
         </p>
       ) : null}

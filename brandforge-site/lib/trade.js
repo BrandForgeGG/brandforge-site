@@ -12,6 +12,9 @@ const CATEGORIES = [
   'Web and software',
   'Photography',
   'Strategy and research',
+  'Products and tools',
+  'Startup and launch',
+  'Profile',
 ];
 const CURRENCIES = ['EUR', 'USD', 'GBP'];
 
@@ -53,6 +56,8 @@ function validateListing(input) {
 function budgetLabel(listing, formatMoney) {
   const { budgetMinCents: lo, budgetMaxCents: hi, currency } = listing;
   if (lo == null && hi == null) return 'Open to offers';
+  if (hi == null) return `From ${formatMoney(lo, currency)}`;
+  if (lo == null) return `Up to ${formatMoney(hi, currency)}`;
   if (lo != null && hi != null && lo !== hi) return `${formatMoney(lo, currency)} to ${formatMoney(hi, currency)}`;
   return formatMoney(hi ?? lo, currency);
 }
@@ -71,4 +76,36 @@ function matches(listing, { kind, category, q }) {
   return true;
 }
 
-module.exports = { KINDS, CATEGORIES, CURRENCIES, validateListing, budgetLabel, matches };
+// A plain first draft from what someone typed, with no AI: used when the writer is unavailable so describing
+// something never dead-ends. It guesses the kind, the category and a price only when the text says one.
+const CATEGORY_WORDS = [
+  ['Startup and launch', /\b(startup|launch|launching|founder|investor|pitch|beta|waitlist)\b/i],
+  ['Products and tools', /\b(product|tool|app|software|plugin|template|ebook|course|kit|saas|extension)\b/i],
+  ['Profile', /\b(i am a|i'm a|my profile|about me|freelancer|available for)\b/i],
+  ['Video and motion', /\b(video|reel|animation|motion|editing|voice-?over|podcast)\b/i],
+  ['Design and brand', /\b(logo|brand|design|designer|figma|ui|ux|illustration)\b/i],
+  ['Copy and content', /\b(copy|writer|writing|blog|article|content|translation|newsletter)\b/i],
+  ['Ads and growth', /\b(ads?|marketing|seo|growth|campaign|leads)\b/i],
+  ['Social and community', /\b(social|instagram|tiktok|community|linkedin|manager)\b/i],
+  ['Photography', /\b(photo|photos|photography|photographer)\b/i],
+  ['Web and software', /\b(website|web|developer|code|react|backend|automation|chatbot|dashboard|api)\b/i],
+];
+
+function guessListing(text) {
+  const value = clean(text, 1200);
+  const kind = /\b(i need|we need|looking for|i want|we want|hire|wanted|searching for|need a|need an|need someone)\b/i.test(value) ? 'request' : 'offer';
+  const category = (CATEGORY_WORDS.find(([, pattern]) => pattern.test(value)) || ['Strategy and research'])[0];
+  const firstSentence = value.split(/(?<=[.!?])\s/)[0] || value;
+  const title = clean(firstSentence, 80);
+  const money = /([€$£])\s?(\d[\d.,]*)|(\d[\d.,]*)\s?(eur|usd|gbp|euro|dollars?)/i.exec(value);
+  let currency = 'EUR';
+  let amount = null;
+  if (money) {
+    const sign = money[1];
+    currency = sign === '$' ? 'USD' : sign === '£' ? 'GBP' : /usd|dollar/i.test(money[4] || '') ? 'USD' : /gbp/i.test(money[4] || '') ? 'GBP' : 'EUR';
+    amount = (money[2] || money[3] || '').replace(',', '.').replace(/[.,]+$/, '');
+  }
+  return { kind, category, title, description: value, currency, budgetMin: kind === 'offer' ? amount : null, budgetMax: kind === 'request' ? amount : null };
+}
+
+module.exports = { KINDS, CATEGORIES, CURRENCIES, validateListing, budgetLabel, matches, guessListing };

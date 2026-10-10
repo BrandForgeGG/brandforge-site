@@ -53,9 +53,14 @@ export async function GET(request: NextRequest) {
       names.set(ownerId, await getProfileDisplayName(ownerId));
     }
     const faces = await getAvatarUrls([...names.keys()]);
+    // Listings owned by a BrandForge admin account are BrandForge's own pre-made services.
+    const officialIds = new Set<string>();
+    for (const ownerId of names.keys()) {
+      if ((await getProfileRole(ownerId)) === 'admin') officialIds.add(ownerId);
+    }
     const viewerRole = viewer ? await getProfileRole(viewer.id) : null;
     return NextResponse.json({
-      listings: rows.map((row) => toListingView(row, names.get(row.owner_id) ?? 'Member', viewer?.id ?? null, faces.get(row.owner_id) ?? null)),
+      listings: rows.map((row) => toListingView(row, officialIds.has(row.owner_id) ? 'BrandForge' : (names.get(row.owner_id) ?? 'Member'), viewer?.id ?? null, officialIds.has(row.owner_id) ? null : (faces.get(row.owner_id) ?? null), officialIds.has(row.owner_id))),
       viewer: { signedIn: Boolean(viewer), isSpecialist: viewerRole === 'operator' || viewerRole === 'admin' },
     });
   } catch (error) {
@@ -83,14 +88,6 @@ export async function POST(request: NextRequest) {
 
     const screened = screenText(`${draft.value.title}\n${draft.value.description}`);
     if (!screened.ok) return NextResponse.json({ error: screened.message, policy: screened.category }, { status: 422 });
-
-    // Anyone can ask for work; offering services is for specialists who applied and were accepted.
-    if (draft.value.kind === 'offer') {
-      const role = await getProfileRole(user.id);
-      if (role !== 'operator' && role !== 'admin') {
-        return NextResponse.json({ error: 'Offering services is for the BrandForge team. Apply first, it takes two minutes.', apply: true }, { status: 403 });
-      }
-    }
 
     const created = await createTradeListing(user.id, draft.value);
     if (!created.ok) {

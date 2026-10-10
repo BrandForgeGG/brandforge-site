@@ -975,3 +975,9 @@ we do not have.
 **Change:** The chat shows only what BrandForge does, as commands: Make a carousel, Plan my idea, Hire or get hired, Make an image. Picking one puts a highlighted tag in the message box (like a tool in ChatGPT or Gemini); typing /carousel, /plan, /trade or /image does the same. The + menu shrank to the same list plus upload and team tools. The carousel card is saved per chat and comes back after a refresh (and is saved to the account when signed in). Every message you send shows "Sent 2 min ago" and a Delete link, guests included.
 
 **Distribution move:** screenshot the highlighted command tag and the "Sent … ago · Delete" line for the changelog: "Cleaner chat: pick a command, make it, and delete what you sent."
+
+## 2026-10-10 — Trade: describe it, publish it; 17 pre-made BrandForge services
+
+**Change:** Anyone can now publish a profile, gig, request, product, tool or startup launch by describing it in their own words: Trade writes the listing, they check it and publish. The page is quieter: one box, an All / Offers / Requests switch, search and a category list; cards show only the title, two lines, the price and who posted. From the chat, "Hire or get hired" carries what was typed straight into Trade. BrandForge itself now offers 17 pre-made services in the most in-demand categories (logos, brand identity, landing pages, websites, app and SaaS MVPs, AI automation, dashboards, short-form video, voice-over, SEO articles, copy, ads, social media, product photos, pitch decks, UI/UX), shown first under "From BrandForge".
+
+**Distribution move:** announce "List anything on Trade by describing it" and the pre-made services; post three of them with their "from" prices. Prices are starting points set by us and can be edited.
