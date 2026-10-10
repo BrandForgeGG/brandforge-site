@@ -12,6 +12,7 @@ export interface TaskParticipant {
   userId: string;
   displayName: string;
   role: string;
+  avatarUrl?: string | null;
 }
 
 export interface ProposalSummary {
@@ -424,7 +425,12 @@ export function ProjectContextPanel({
               {participants.map((person) => (
                 <li key={person.userId} className="flex items-center gap-2">
                   <span className="bf-stack-item" style={avatarTone(person.userId)} aria-hidden="true">
-                    {initialsFor(person.displayName)}
+                    {person.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- a small user picture from our own storage
+                      <img src={person.avatarUrl} alt="" decoding="async" className="h-full w-full rounded-full object-cover" />
+                    ) : (
+                      initialsFor(person.displayName)
+                    )}
                   </span>
                   <span className="min-w-0">
                     <span className="block truncate text-xs text-foreground">{person.displayName}</span>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   canAccessConversation,
   getParticipants,
+  getAvatarUrls,
   isStaffAccount,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
@@ -39,7 +40,10 @@ export async function GET(request: NextRequest) {
 
     const participants = await getParticipants(conversationId, isStaff);
 
-    return NextResponse.json({ participants });
+    const faces = await getAvatarUrls(participants.map((p) => String(p.user_id ?? '')));
+    return NextResponse.json({
+      participants: participants.map((p) => ({ ...p, avatar_url: faces.get(String(p.user_id ?? '')) ?? null })),
+    });
   } catch (error) {
     console.error('Get participants API error:', error);
     return NextResponse.json(

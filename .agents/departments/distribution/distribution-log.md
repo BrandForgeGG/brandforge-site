@@ -873,3 +873,9 @@ we do not have.
 **Change:** Settings now has a friendly picture editor: tap the picture, choose a photo (or drop one), drag and zoom inside a round preview, save. Pictures are shrunk on the device first, stored in a real public bucket, and appear in the sidebar. Remove returns to initials.
 
 **Distribution move:** changelog line for founders: "You can now put your face on your account: tap your picture in Settings, crop it, done." Demo note: show crop dialog on mobile, then the sidebar picture.
+
+## 2026-10-10 — Email activity for admins, specialist welcome on role change, calmer sidebar, faces, better Trade
+
+**Change:** Admin People tab gains "Email activity" (recipient, subject, sent or failed, searchable) and a "Send welcome email" button for specialists. Giving someone the Specialist role now emails them (before, only accepting an application did). Sidebar: Dashboard sits with the other pages for admins only, the account menu is three to four lines, guests no longer see Sign out. Profile pictures now show in the team lists and Trade cards. Trade: Everything / Hire someone / Find work switch, sort, poster picture and posted time.
+
+**Distribution move:** changelog line: "Trade is easier to scan: switch between hiring and finding work, sort by budget, and see who posted." Demo note: show a Trade card with a real face, then the admin email activity list.

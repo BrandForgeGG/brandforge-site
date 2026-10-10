@@ -2,6 +2,7 @@ import { after, NextRequest, NextResponse } from 'next/server';
 import { sendFirstTimeEmail } from '@/lib/first-time-email';
 import {
   createTradeListing,
+  getAvatarUrls,
   getProfileDisplayName,
   getProfileRole,
   listMyTradeListings,
@@ -36,7 +37,8 @@ export async function GET(request: NextRequest) {
       const mine = await listMyTradeListings(viewer.id);
       if (!mine.ok) return NextResponse.json({ listings: [] });
       const name = await getProfileDisplayName(viewer.id);
-      return NextResponse.json({ listings: mine.rows.map((row) => toListingView(row, name, viewer.id)) });
+      const mineFaces = await getAvatarUrls([viewer.id]);
+      return NextResponse.json({ listings: mine.rows.map((row) => toListingView(row, name, viewer.id, mineFaces.get(viewer.id) ?? null)) });
     }
 
     const result = await listOpenTradeListings();
@@ -50,9 +52,10 @@ export async function GET(request: NextRequest) {
     for (const ownerId of new Set(rows.map((r) => r.owner_id))) {
       names.set(ownerId, await getProfileDisplayName(ownerId));
     }
+    const faces = await getAvatarUrls([...names.keys()]);
     const viewerRole = viewer ? await getProfileRole(viewer.id) : null;
     return NextResponse.json({
-      listings: rows.map((row) => toListingView(row, names.get(row.owner_id) ?? 'Member', viewer?.id ?? null)),
+      listings: rows.map((row) => toListingView(row, names.get(row.owner_id) ?? 'Member', viewer?.id ?? null, faces.get(row.owner_id) ?? null)),
       viewer: { signedIn: Boolean(viewer), isSpecialist: viewerRole === 'operator' || viewerRole === 'admin' },
     });
   } catch (error) {

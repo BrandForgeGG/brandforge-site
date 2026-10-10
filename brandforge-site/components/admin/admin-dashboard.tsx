@@ -8,6 +8,7 @@ import type { PeerView } from '@/lib/peer-contract-view';
 import type { AdminChatRow, AdminOverview } from '@/lib/project-db';
 import { AdminCalendar } from '@/components/admin/admin-calendar';
 import { AdminMembers } from '@/components/admin/admin-members';
+import { AdminEmails } from '@/components/admin/admin-emails';
 
 type FunnelEvent = { event: string; count: number; previous: number | null };
 type Range = '24h' | '7d' | '30d' | 'all';
@@ -383,6 +384,7 @@ export function AdminDashboard() {
       </Section>
 
       <AdminMembers />
+      <AdminEmails />
       </div>
       ) : null}
 

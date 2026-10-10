@@ -128,8 +128,8 @@ describe('shapeTaskRoster', () => {
     ]);
 
     assert.deepEqual(roster, [
-      { userId: 'u1', displayName: 'Ada', role: 'operator' },
-      { userId: 'u2', displayName: 'Founder', role: 'founder' },
+      { userId: 'u1', displayName: 'Ada', role: 'operator', avatarUrl: null },
+      { userId: 'u2', displayName: 'Founder', role: 'founder', avatarUrl: null },
     ]);
   });
 

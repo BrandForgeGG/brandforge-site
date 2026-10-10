@@ -38,6 +38,15 @@ function Modal({ label, onClose, children }: { label: string; onClose: () => voi
   );
 }
 
+function posted(iso: string | undefined) {
+  if (!iso) return "";
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (mins < 60) return "just now";
+  if (mins < 1440) return `${Math.round(mins / 60)}h ago`;
+  if (mins < 43200) return `${Math.round(mins / 1440)}d ago`;
+  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
 export function TradeCenter() {
   const [listings, setListings] = useState<ListingView[] | null>(null);
   const [pending, setPending] = useState(false);
@@ -45,6 +54,7 @@ export function TradeCenter() {
   const [kind, setKind] = useState<"" | "offer" | "request">("");
   const [category, setCategory] = useState("");
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState<"new" | "low" | "high">("new");
   const [posting, setPosting] = useState(false);
   const [editing, setEditing] = useState<ListingView | null>(null);
   const [contacting, setContacting] = useState<ListingView | null>(null);
@@ -82,7 +92,11 @@ export function TradeCenter() {
     return () => window.clearTimeout(timer);
   }, [load, q]);
 
-  const shown = listings ?? [];
+  const shown = [...(listings ?? [])].sort((a, b) => {
+    if (sort === "new") return String(b.createdAt).localeCompare(String(a.createdAt));
+    const price = (l: ListingView) => l.budgetMinCents ?? l.budgetMaxCents ?? Number.MAX_SAFE_INTEGER;
+    return sort === "low" ? price(a) - price(b) : (b.budgetMaxCents ?? b.budgetMinCents ?? 0) - (a.budgetMaxCents ?? a.budgetMinCents ?? 0);
+  });
   const steps: [string, string, string][] = [
     ['List', 'Say what you offer or need', 'M4 5h12M4 10h12M4 15h7'],
     ['Chat', 'Agree the details in private', 'M4 5.5h12v7.5H9.5L6 16v-3H4z'],
@@ -92,25 +106,23 @@ export function TradeCenter() {
 
   return (
     <div className="max-w-5xl">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <button
-          type="button"
-          onClick={() => setKind("offer")}
-          aria-pressed={kind === "offer"}
-          className={`group rounded-2xl border p-4 text-left transition ${kind === "offer" ? "border-ember bg-ember/10" : "border-line bg-panel hover:border-ember"}`}
-        >
-          <p className="font-serif text-lg text-foreground">I want to hire</p>
-          <p className="mt-1 text-xs leading-relaxed text-muted">Browse people who offer a service. Message one, agree the work, sign a contract.</p>
-        </button>
-        <button
-          type="button"
-          onClick={() => setKind("request")}
-          aria-pressed={kind === "request"}
-          className={`group rounded-2xl border p-4 text-left transition ${kind === "request" ? "border-ember bg-ember/10" : "border-line bg-panel hover:border-ember"}`}
-        >
-          <p className="font-serif text-lg text-foreground">I want work</p>
-          <p className="mt-1 text-xs leading-relaxed text-muted">See what people need done. Approved specialists can offer to help.</p>
-        </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <div role="group" aria-label="What are you here for" className="inline-flex rounded-xl border border-line bg-panel p-1">
+          {([["", "Everything"], ["offer", "Hire someone"], ["request", "Find work"]] as const).map(([value, label]) => (
+            <button
+              key={value || "all"}
+              type="button"
+              aria-pressed={kind === value}
+              onClick={() => setKind(value)}
+              className={`rounded-lg px-3.5 py-1.5 text-sm transition ${kind === value ? "bg-ember text-background font-semibold" : "text-muted hover:text-foreground"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="min-w-0 flex-1 text-xs leading-relaxed text-muted">
+          {kind === "offer" ? "People who offer a service. Message one, agree the work, sign a contract." : kind === "request" ? "What people need done. Approved specialists can offer to help." : "Services on offer and work wanted, in one place."}
+        </p>
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-2">
@@ -128,11 +140,11 @@ export function TradeCenter() {
           ))}
         </div>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label="Search listings" className={`${field} w-40`} />
-        {kind ? (
-          <button type="button" className="text-xs text-muted underline-offset-2 hover:text-foreground hover:underline" onClick={() => setKind("")}>
-            Show both
-          </button>
-        ) : null}
+        <select value={sort} onChange={(e) => setSort(e.target.value as "new" | "low" | "high")} aria-label="Sort listings" className={`${field} w-auto`}>
+          <option value="new">Newest</option>
+          <option value="low">Budget: low to high</option>
+          <option value="high">Budget: high to low</option>
+        </select>
         <button type="button" onClick={() => setPosting(true)} className="ml-auto rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background">
           Post a listing
         </button>
@@ -145,10 +157,18 @@ export function TradeCenter() {
           : shown.map((l) => (
               <article key={l.id} className="bf-card flex flex-col p-4">
                 <div className="flex items-center gap-2 text-[11px]">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold" style={avatarTone(l.ownerName || l.id)} aria-hidden="true">
-                    {initialsFor(l.ownerName || "?")}
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px] font-semibold" style={avatarTone(l.ownerName || l.id)} aria-hidden="true">
+                    {l.ownerAvatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- a small user picture from our own storage
+                      <img src={l.ownerAvatar} alt="" decoding="async" className="h-full w-full object-cover" />
+                    ) : (
+                      initialsFor(l.ownerName || "?")
+                    )}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-foreground">{l.ownerName}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13px] text-foreground">{l.ownerName}</span>
+                    <span className="block text-[10px] text-muted">{posted(l.createdAt)}</span>
+                  </span>
                   {l.mine ? <span className="rounded-full bg-overlay px-2 py-0.5 text-muted">Yours</span> : null}
                   <span className={`rounded-full border px-2 py-0.5 ${l.kind === "offer" ? "border-trust/30 bg-trust/10 text-trust-light" : "border-ember/40 bg-ember/10 text-ember-light"}`}>
                     {l.kind === "offer" ? "Offers" : "Wants"}
@@ -192,7 +212,7 @@ export function TradeCenter() {
 
       {listings && listings.length === 0 ? (
         <div className="bf-card mt-2 p-6 text-center">
-          <p className="font-serif text-lg text-foreground">{pending ? "The Trade Center opens shortly." : "Nothing here yet."}</p>
+          <p className="font-serif text-lg text-foreground">{pending ? "The Trade Center opens shortly." : q || category ? "Nothing matches that." : kind === "offer" ? "No one is offering yet." : kind === "request" ? "No one is asking for work yet." : "Nothing here yet."}</p>
           {!pending ? (
             <>
               <p className="mt-1 text-xs text-muted">Be the first. A listing takes a minute and stays until you close it.</p>

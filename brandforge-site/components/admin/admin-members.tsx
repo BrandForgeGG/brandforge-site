@@ -46,8 +46,20 @@ export function AdminMembers() {
       const res = await fetchAuthed('/api/admin/members', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: member.id, role }) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return setNote({ tone: 'error', text: data.error || 'Could not change the role.' });
-      setNote({ tone: 'ok', text: `${member.name} is now ${label}.` });
+      setNote({ tone: 'ok', text: `${member.name} is now ${label}.${data.emailed === true ? ' We emailed them.' : data.emailed === false ? ' The email could not be sent.' : ''}` });
       await load();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function resendWelcome(member: Member) {
+    setBusyId(member.id);
+    setNote(null);
+    try {
+      const res = await fetchAuthed('/api/admin/members', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: member.id, role: 'operator', resend: true }) });
+      const data = await res.json().catch(() => ({}));
+      setNote(res.ok && data.emailed === true ? { tone: 'ok', text: `Welcome email sent to ${member.email}.` } : { tone: 'error', text: data.error || 'The email could not be sent.' });
     } finally {
       setBusyId(null);
     }
@@ -85,6 +97,11 @@ export function AdminMembers() {
                   </p>
                   <p className="truncate text-xs text-muted">{member.email ?? 'no email'}</p>
                 </div>
+                {member.role === 'operator' ? (
+                  <button type="button" disabled={busyId === member.id || !member.email} onClick={() => void resendWelcome(member)} className="ml-auto text-xs text-muted underline-offset-2 hover:text-foreground hover:underline disabled:opacity-50">
+                    Send welcome email
+                  </button>
+                ) : null}
                 <select
                   value={member.role}
                   disabled={busyId === member.id}

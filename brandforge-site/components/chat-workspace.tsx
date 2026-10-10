@@ -2322,7 +2322,12 @@ return (
                       className="bf-stack-item"
                       style={avatarTone(person.userId)}
                     >
-                      {initialsFor(person.displayName)}
+                      {person.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- a small user picture from our own storage
+                        <img src={person.avatarUrl} alt="" decoding="async" className="h-full w-full rounded-full object-cover" />
+                      ) : (
+                        initialsFor(person.displayName)
+                      )}
                     </span>
                   ))}
                 </span>
@@ -2367,7 +2372,12 @@ return (
                           style={avatarTone(person.userId)}
                           aria-hidden="true"
                         >
-                          {initialsFor(person.displayName)}
+                          {person.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- a small user picture from our own storage
+                        <img src={person.avatarUrl} alt="" decoding="async" className="h-full w-full rounded-full object-cover" />
+                      ) : (
+                        initialsFor(person.displayName)
+                      )}
                         </span>
                         <span className="min-w-0">
                           <span className="block truncate text-sm text-foreground">

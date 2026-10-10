@@ -5788,3 +5788,62 @@ export async function clearProfileAvatar(userId: string): Promise<boolean> {
   const { error } = await admin.from('profiles').update({ avatar_url: null, updated_at: new Date().toISOString() }).eq('id', userId);
   return !error;
 }
+
+// ---- Email log (migration 0038: email_log) ----
+// One row per send attempt: recipient, subject and whether the provider took it. Best-effort, never throws.
+export async function logEmailAttempt(entry: { to: string; subject: string; ok: boolean; error?: string | null; providerId?: string | null }): Promise<void> {
+  try {
+    const admin = createSupabaseAdminClient();
+    if (!admin) return;
+    await admin.from('email_log').insert({
+      to_email: entry.to.slice(0, 200),
+      subject: entry.subject.slice(0, 200),
+      ok: entry.ok,
+      error: entry.error ? entry.error.slice(0, 300) : null,
+      provider_id: entry.providerId ?? null,
+    });
+  } catch {
+    // The log must never break a send.
+  }
+}
+
+export type EmailLogRow = { id: string; to: string; subject: string; ok: boolean; error: string | null; at: string };
+
+export async function listRecentEmails(query: string, limit = 40): Promise<EmailLogRow[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const q = query.trim().replace(/[%,()]/g, '').slice(0, 80);
+  let request = admin.from('email_log').select('id, to_email, subject, ok, error, created_at').order('created_at', { ascending: false }).limit(Math.min(limit, 100));
+  if (q) request = request.or(`to_email.ilike.%${q}%,subject.ilike.%${q}%`);
+  const { data } = await request;
+  return ((data ?? []) as { id: string; to_email: string; subject: string; ok: boolean; error: string | null; created_at: string }[]).map((row) => ({
+    id: row.id,
+    to: row.to_email,
+    subject: row.subject,
+    ok: row.ok,
+    error: row.error,
+    at: row.created_at,
+  }));
+}
+
+export async function getMemberEmail(userId: string): Promise<{ email: string | null; name: string | null }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { email: null, name: null };
+  const { data } = await admin.from('profiles').select('email, display_name, username').eq('id', userId).maybeSingle();
+  const row = data as { email: string | null; display_name: string | null; username: string | null } | null;
+  return { email: row?.email ?? null, name: row?.display_name || row?.username || null };
+}
+
+// Profile pictures for a set of people (public URLs only), so lists can show faces instead of initials.
+export async function getAvatarUrls(userIds: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const ids = [...new Set(userIds.filter(Boolean))].slice(0, 200);
+  if (ids.length === 0) return out;
+  const admin = createSupabaseAdminClient();
+  if (!admin) return out;
+  const { data } = await admin.from('profiles').select('id, avatar_url').in('id', ids);
+  for (const row of (data ?? []) as { id: string; avatar_url: string | null }[]) {
+    if (row.avatar_url) out.set(row.id, row.avatar_url);
+  }
+  return out;
+}

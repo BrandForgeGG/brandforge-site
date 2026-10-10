@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { buildStageEmail } from './stage-emails';
+import { logEmailAttempt } from './project-db';
 
 // Transactional email via Resend. The API key lives only in env
 // (`.env.local` locally, Vercel project env in production) — never in source.
@@ -32,7 +33,18 @@ function fromAddress(): string {
   );
 }
 
+// Sends, then writes one line to the email log (recipient, subject, delivered or not) so an admin can see it.
 export async function sendEmail(
+  input: SendEmailInput
+): Promise<SendEmailResult> {
+  const result = await deliver(input);
+  if (!('skipped' in result && result.skipped)) {
+    await logEmailAttempt({ to: input.to, subject: input.subject, ok: result.ok, error: result.ok ? null : result.error, providerId: result.ok ? result.id : null });
+  }
+  return result;
+}
+
+async function deliver(
   input: SendEmailInput
 ): Promise<SendEmailResult> {
   const resend = getClient();

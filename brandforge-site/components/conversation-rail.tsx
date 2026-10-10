@@ -46,6 +46,8 @@ const NAV_ITEMS = [
   { href: "/overview", label: "Overview", hint: "What BrandForge is and how it works", path: "M10 3.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM10 9v4.5M10 6.6h.01" },
 ];
 
+const DASHBOARD_ITEM = { href: "/admin", label: "Dashboard", hint: "Admin: people, money, chats", path: "M4 4h5v5H4zM11 4h5v5h-5zM4 11h5v5H4zM11 11h5v5h-5z" };
+
 function RailIcon({ path, className = "h-4 w-4" }: { path: string; className?: string }) {
   return (
     <svg viewBox="0 0 20 20" className={className} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -362,7 +364,7 @@ onMobileClose,
 
         <div className={isCollapsed ? "shrink-0 px-2 pb-2" : "shrink-0 px-4 pb-2"}>
           <nav aria-label="Workspace" className={isCollapsed ? "flex flex-col items-center gap-1" : "flex flex-col gap-0.5"}>
-            {NAV_ITEMS.map((item) => (
+            {(isAdmin ? [...NAV_ITEMS, DASHBOARD_ITEM] : NAV_ITEMS).map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -422,35 +424,6 @@ onMobileClose,
 
         {isCollapsed ? null : (
           <div className="bf-rail-scroll flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overflow-x-hidden px-4 pb-4">
-            {isAdmin ? (
-              <section>
-                <p className="bf-rail-section-label">Admin</p>
-                <div className="flex flex-col gap-1">
-                  <Link
-                    href="/admin"
-                    onClick={onMobileClose}
-                    className="rounded-lg px-3 py-2 text-sm text-foreground transition hover:bg-overlay"
-                  >
-                    Dashboard
-                  </Link>
-                  <Link
-                    href="/admin/applications"
-                    onClick={onMobileClose}
-                    className="rounded-lg px-3 py-2 text-sm text-muted transition hover:bg-overlay hover:text-foreground"
-                  >
-                    Applications
-                  </Link>
-                  <Link
-                    href="/admin/funnel"
-                    onClick={onMobileClose}
-                    className="rounded-lg px-3 py-2 text-sm text-muted transition hover:bg-overlay hover:text-foreground"
-                  >
-                    Funnel
-                  </Link>
-                </div>
-              </section>
-            ) : null}
-
             <section className="min-h-0 flex-1">
               <p className="bf-rail-section-label">Recents</p>
 
@@ -551,8 +524,15 @@ onMobileClose,
                   className="absolute right-0 top-0 h-2 w-2 rounded-full bg-ember"
                 />
               ) : null}
-              <span aria-hidden="true">
-                {account || isVisitor || isGuestBrowser ? initialsFor(account?.name ?? "?") : ""}
+              <span aria-hidden="true" className="flex h-full w-full items-center justify-center overflow-hidden rounded-full">
+                {account?.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- a small user picture from our own storage
+                  <img src={account.avatarUrl} alt="" decoding="async" className="h-full w-full object-cover" />
+                ) : account || isVisitor || isGuestBrowser ? (
+                  initialsFor(account?.name ?? "?")
+                ) : (
+                  ""
+                )}
               </span>
             </Link>
           </div>
@@ -636,48 +616,40 @@ onMobileClose,
                     Save my chats
                   </button>
                 ) : null}
-                <Link
-                  href="/settings"
-                  onClick={() => setDropdownOpen(false)}
-                  className="block rounded-lg px-3 py-2 text-sm text-muted transition hover:bg-overlay hover:text-foreground"
-                >
-                  Settings
-                </Link>
-<div className="border-t border-line pt-2">
-                   <p className="px-3 py-1 text-[10px] uppercase tracking-[0.15em] text-muted">
-                     Learn more
-                   </p>
-                  {[
-                    { label: 'About BrandForge', href: '/about' },
-                    { label: 'Features', href: '/features' },
-                    { label: 'Platform', href: '/platform' },
-                    { label: 'Blog', href: '/blog' },
-                    { label: 'Privacy Policy', href: '/privacy' },
-                    { label: 'Terms of Service', href: '/terms' },
-                    { label: 'Payments & refunds', href: '/refunds' },
-                  ].map((item) => (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      onClick={() => setDropdownOpen(false)}
-                      className="block rounded-lg px-3 py-2 text-sm text-muted transition hover:bg-overlay hover:text-foreground"
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                </div>
-                <div className="border-t border-line pt-2">
+                {account ? (
+                  <Link
+                    href="/settings"
+                    onClick={() => setDropdownOpen(false)}
+                    className="block rounded-lg px-3 py-2 text-sm text-muted transition hover:bg-overlay hover:text-foreground"
+                  >
+                    Settings
+                  </Link>
+                ) : null}
+                {[
+                  { label: 'About BrandForge', href: '/about' },
+                  { label: 'Privacy & terms', href: '/privacy' },
+                ].map((item) => (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    onClick={() => setDropdownOpen(false)}
+                    className="block rounded-lg px-3 py-2 text-sm text-muted transition hover:bg-overlay hover:text-foreground"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+                {account ? (
                   <button
                     type="button"
                     onClick={() => {
                       setDropdownOpen(false);
                       void handleSignOut();
                     }}
-                    className="bf-action bf-action-danger bf-action-compact w-full text-left"
+                    className="mt-1 block w-full rounded-lg border-t border-line px-3 py-2 text-left text-sm text-danger transition hover:bg-overlay"
                   >
                     Sign out
                   </button>
-                </div>
+                ) : null}
               </div>
             ) : null}
           </div>

@@ -35,6 +35,7 @@ export function shapeTaskRoster(rows) {
         String(participant?.display_name ?? '').trim() ||
         (participant?.role === 'founder' ? 'Founder' : String(participant?.user_id ?? '').slice(0, 8) || 'Specialist'),
       role: String(participant?.role ?? ''),
+      avatarUrl: typeof participant?.avatar_url === 'string' && participant.avatar_url ? participant.avatar_url : null,
     }))
     .filter((participant) => participant.userId);
 }

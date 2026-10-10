@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
-import { isAdminAccount, listMembersForAdmin, setMemberRole } from '@/lib/project-db';
+import { getMemberEmail, isAdminAccount, listMembersForAdmin, setMemberRole } from '@/lib/project-db';
+import { sendEmail } from '@/lib/email';
+import { buildSpecialistEmail } from '@/lib/specialist-emails';
+import { resolveSiteUrl } from '@/lib/auth-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,10 +29,25 @@ export async function PATCH(request: NextRequest) {
   const userId = typeof body.userId === 'string' && /^[0-9a-f-]{36}$/i.test(body.userId) ? body.userId : null;
   const role = body.role === 'user' || body.role === 'operator' || body.role === 'admin' ? body.role : null;
   if (!userId || !role) return NextResponse.json({ error: 'Pick a member and a role.' }, { status: 400 });
-  const result = await setMemberRole(checked.user.id, userId, role);
+  const resend = (body as { resend?: unknown }).resend === true && role === 'operator';
+  const result = resend ? 'ok' : await setMemberRole(checked.user.id, userId, role);
   if (result === 'self') return NextResponse.json({ error: 'You cannot change your own role.' }, { status: 409 });
   if (result === 'last_admin') return NextResponse.json({ error: 'There must always be one admin.' }, { status: 409 });
   if (result === 'not_found') return NextResponse.json({ error: 'Member not found.' }, { status: 404 });
   if (result === 'failed') return NextResponse.json({ error: 'Could not change the role. Try again.' }, { status: 500 });
-  return NextResponse.json({ ok: true, role });
+  // Making someone a specialist is the moment they should hear about it. Best-effort: the role stands either way.
+  let emailed: boolean | null = null;
+  if (role === 'operator') {
+    try {
+      const person = await getMemberEmail(userId);
+      if (person.email) {
+        const site = resolveSiteUrl();
+        const built = buildSpecialistEmail('accepted', { name: person.name ?? undefined, inboxUrl: `${site}/chat`, vettingUrl: `${site}/specialists`, profileUrl: `${site}/specialists/me` });
+        if (built) emailed = (await sendEmail({ to: person.email, subject: built.subject, text: built.text, html: built.html })).ok;
+      }
+    } catch {
+      emailed = false;
+    }
+  }
+  return NextResponse.json({ ok: true, role, emailed });
 }
