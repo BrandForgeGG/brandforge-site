@@ -117,6 +117,11 @@ function parseChatEmbed(artifactData) {
       ...(counterRound !== undefined ? { counterRound } : {}),
     };
   }
+  if (type === 'carousel' && id) {
+    // A carousel posted as a message: the plan, look and cover link, re-checked on every read.
+    const fields = require('./creation-embed').sanitizeCarousel(artifactData);
+    return fields ? { type, id, ...fields } : null;
+  }
   if (type === 'agreement' && id) return { type, agreementId: id, status };
   if (type === 'peer_contract' && id) return { type, contractId: id, status };
   if (type === 'funding' && id) {

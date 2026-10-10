@@ -5938,3 +5938,39 @@ export async function deleteTradeListing(id: string, ownerId: string): Promise<{
   await admin.from('conversation_links').delete().eq('kind', 'listing').eq('ref_id', id);
   return { ok: true };
 }
+
+// ---- A carousel posted into the chat as a message (bucket "creations", migration 0040) ----
+// Stores the cover picture (if any), writes the message with the carousel inside it, and makes it the chat's goal
+// when the chat has none. Returns the message id.
+export async function postCarouselMessage(conversationId: string, fields: Record<string, unknown>, cover: { bytes: Buffer; contentType: 'image/jpeg' | 'image/png' | 'image/webp' } | null, ownerName: string | null): Promise<string | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  let coverUrl: string | undefined;
+  if (cover) {
+    const ext = cover.contentType === 'image/png' ? 'png' : cover.contentType === 'image/webp' ? 'webp' : 'jpg';
+    const path = `${conversationId}/${Date.now()}.${ext}`;
+    const uploaded = await admin.storage.from('creations').upload(path, cover.bytes, { contentType: cover.contentType, upsert: false });
+    if (!uploaded.error) coverUrl = admin.storage.from('creations').getPublicUrl(path).data.publicUrl;
+    else console.error('postCarouselMessage cover upload error:', uploaded.error.message);
+  }
+  const plan = fields.plan as { cover: { headline: string } };
+  const id = crypto.randomUUID();
+  const { data, error } = await admin
+    .from('messages')
+    .insert({
+      conversation_id: conversationId,
+      sender_type: 'ai',
+      sender_name: 'BrandForge AI',
+      content_type: 'system',
+      content: `Made a carousel: ${plan.cover.headline.replace(/\*/g, '')}`,
+      artifact_data: { type: 'carousel', id, ...fields, ...(coverUrl ? { coverUrl } : {}) },
+    })
+    .select('id')
+    .maybeSingle();
+  if (error) {
+    console.error('postCarouselMessage insert error:', error.message);
+    return null;
+  }
+  void ownerName;
+  return (data as { id: string } | null)?.id ?? null;
+}

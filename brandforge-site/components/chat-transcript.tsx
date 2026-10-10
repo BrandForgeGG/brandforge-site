@@ -9,6 +9,7 @@ import { RichContent } from "@/components/rich-content";
 import { detectDeliverable, KINDS } from "@/lib/deliverable-intent";
 import { BlueprintEmbedCard } from "@/components/blueprint/blueprint-embed-card";
 import { PeerContractCard } from "@/components/peer-contract-card";
+import { CarouselMessageCard, type CarouselEmbed } from "@/components/chat/carousel-message-card";
 
 export type ChatEmbedAction =
   | "accept"
@@ -38,6 +39,7 @@ export type ChatEmbed =
       counterRound?: number;
       counterNote?: string | null;
     }
+  | CarouselEmbed
   | { type: "agreement"; agreementId: string; status: string }
   | { type: "peer_contract"; contractId: string; status: string }
   | { type: "review_request"; conversationId: string; percent?: number; complete?: boolean }
@@ -190,6 +192,11 @@ function SystemEmbedCard({
 
    const embed = message.embed;
    if (!embed) return null;
+
+   // A carousel made in this chat: a message of its own, with its own date.
+   if (embed.type === "carousel") {
+     return <CarouselMessageCard embed={embed} createdAt={message.createdAt} />;
+   }
 
    // Peer contracts load and act on themselves.
    if (embed.type === "peer_contract") {

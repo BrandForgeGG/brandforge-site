@@ -993,3 +993,9 @@ we do not have.
 **Change:** A chat is now tied to what it is for. Publishing a Trade listing creates its own chat, the listing's main assistant, with a first line saying so; "Assistant" on your listing reopens it. A carousel made in a chat becomes that chat's goal. The chat header shows the goal ("Listing: …" or "Made here: …") and the AI is told the goal so it keeps working on it. Your listings can now be closed (reopen any time) or deleted for good; editing your own offers works for everyone again.
 
 **Distribution move:** headline for the changelog: "Every listing and creation now has its own assistant that remembers the goal." Demo note: publish a listing, tap Assistant, show the goal chip in the chat header.
+
+## 2026-10-10 — A carousel is a message in the chat, with its own date
+
+**Change:** The carousel is no longer a card stuck at the bottom. You ask for it, the AI card helps you choose look and cover and makes it, and when you press Send to chat it joins the thread as a message with its own date ("Made 2 min ago"). Everything said afterwards continues underneath it. The message keeps the slides, the look and the cover picture, can be reopened any time, switched to another look, downloaded, or edited in place. What you typed becomes a normal message first. In a brand-new chat, sending the carousel starts the chat.
+
+**Distribution move:** demo clip: ask for a carousel, pick a look, Send to chat, then keep chatting underneath it. Changelog: "Carousels now live in the conversation like any other message."

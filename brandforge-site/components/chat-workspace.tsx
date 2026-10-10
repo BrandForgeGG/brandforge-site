@@ -24,7 +24,7 @@ import { trackEvent } from "@/lib/funnel-client";
 import { useLogin } from "@/components/login-dialog";
 import { AiNotices, AiSwitch, useAiAccess } from "@/components/chat-ai-controls";
 import { ToolsMenu } from "@/components/chat-tools-menu";
-import { CarouselChatCard, SavedCardOrFallback, cardKey } from "@/components/chat/carousel-chat-card";
+import { CarouselChatCard, SavedCardOrFallback, cardKey, clearSavedCard, type CarouselSend } from "@/components/chat/carousel-chat-card";
 import { detectMakeIntent } from "@/lib/make-intent";
 import { PeerContractForm } from "@/components/peer-contract-card";
 import { extractOutline } from "@/lib/deliverable-outline";
@@ -1298,6 +1298,69 @@ export function ChatWorkspace() {
   const isChatOwner = aiAccess ? aiAccess.isOwner : isOwnConversation;
   const pauseAiRef = useRef<((callTeam: boolean) => Promise<void>) | null>(null);
 
+  // The carousel is sent: it joins the chat as a message with its own date. A brand-new chat is started with it.
+  // Returns an error message for the card to show, or null when it went through.
+  const sendCarousel = useCallback(async (payload: CarouselSend): Promise<string | null> => {
+    try {
+      const request = railMeta.userId ? fetchAuthed : fetch;
+      const startChat = async (): Promise<{ id: string | null; error: string | null }> => {
+        const started = await request("/api/conversations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ initialMessage: carouselChat?.userText ?? "", ...(railMeta.userId ? {} : { guest: true }) }),
+        });
+        const startedData = await started.json().catch(() => ({}));
+        if (!started.ok || !startedData.conversationId) return { id: null, error: startedData.error || "Could not start the chat. Try again." };
+        return { id: startedData.conversationId as string, error: null };
+      };
+      const begun = conversationId ? { id: conversationId, error: null } : await startChat();
+      if (!begun.id) return begun.error;
+      const target = begun.id;
+      const response = await request(`/api/conversations/${target}/creation`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) return data.error || "Could not add it to the chat. Try again.";
+      clearSavedCard(cardKey(conversationId));
+      clearSavedCard(cardKey(null));
+      setCarouselChat(null);
+      if (!conversationId) {
+        router.push(`/chat?conversationId=${target}`);
+      } else {
+        await refreshMessages(target);
+        scrollToBottom(true);
+      }
+      trackEvent("next_step_clicked", { source: "carousel_sent" });
+      return null;
+    } catch {
+      return "Connection problem. Try again.";
+    }
+  }, [conversationId, carouselChat, railMeta.userId, refreshMessages, router, scrollToBottom]);
+
+  // Opens the carousel card. Whatever was typed becomes a real message in the chat first (no AI reply), so the
+  // thread reads: what you asked, then the carousel. In a brand-new chat the words wait and start the chat when sent.
+  const openCarouselCard = useCallback(async (words: string, topicHint?: string) => {
+    const typed = words.trim();
+    let shownText: string | null = typed || null;
+    if (conversationId && typed) {
+      try {
+        const response = await (railMeta.userId ? fetchAuthed : fetch)(`/api/conversations/${conversationId}/say`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: typed }),
+        });
+        if (response.ok) {
+          shownText = null;
+          await refreshMessages(conversationId);
+          scrollToBottom(true);
+        }
+      } catch {
+        /* the card still shows the words */
+      }
+    }
+    const topic = topicHint ?? typed;
+    setCarouselChat({ topic: topic.length >= 8 ? topic : "", userText: shownText, key: ++carouselKey.current });
+  }, [conversationId, railMeta.userId, refreshMessages, scrollToBottom]);
+
+
   const handleSend = useCallback(
     async (suggestion?: string) => {
       const checkedText = validateMessageInput((suggestion ?? input).trim());
@@ -1327,7 +1390,7 @@ export function ChatWorkspace() {
         setInput("");
         trackEvent("next_step_clicked", { source: `command_${command}` });
         if (command === "carousel") {
-          setCarouselChat({ topic: body.length >= 8 ? body : "", userText: body || null, key: ++carouselKey.current });
+          await openCarouselCard(body);
           return;
         }
         if (command === "trade") {
@@ -1351,7 +1414,7 @@ export function ChatWorkspace() {
       const wantsCarousel = !attachment && suggestion === undefined ? detectMakeIntent(text) : null;
       if (wantsCarousel) {
         setInput("");
-        setCarouselChat({ topic: wantsCarousel.topic, userText: text, key: ++carouselKey.current });
+        await openCarouselCard(text, wantsCarousel.topic);
         trackEvent("next_step_clicked", { source: "carousel_chat_intent" });
         return;
       }
@@ -1574,6 +1637,7 @@ export function ChatWorkspace() {
     },
     [
       activeCommand,
+      openCarouselCard,
       aiAccess,
       aiEnabled,
       isChatOwner,
@@ -2613,6 +2677,7 @@ return (
             <SavedCardOrFallback
               storageKey={cardKey(null)}
               hide={Boolean(carouselChat)}
+              onSend={sendCarousel}
               fallback={(
             <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col items-center justify-center text-center">
               <div
@@ -2741,9 +2806,9 @@ return (
             </>
           )}
           {carouselChat ? (
-            <CarouselChatCard key={carouselChat.key} conversationId={conversationId} topic={carouselChat.topic} userText={carouselChat.userText} storageKey={cardKey(conversationId)} restore={false} onClose={() => setCarouselChat(null)} />
+            <CarouselChatCard key={carouselChat.key} topic={carouselChat.topic} userText={carouselChat.userText} storageKey={cardKey(conversationId)} restore={false} onSend={sendCarousel} onClose={() => setCarouselChat(null)} />
           ) : conversationId ? (
-            <SavedCardOrFallback storageKey={cardKey(conversationId)} hide={false} fallback={null} />
+            <SavedCardOrFallback storageKey={cardKey(conversationId)} hide={false} fallback={null} onSend={sendCarousel} />
           ) : null}
         </div>
 

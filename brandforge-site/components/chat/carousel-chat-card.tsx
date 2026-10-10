@@ -1,35 +1,37 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { zipStore } from '@/lib/zip-store.js';
 import { trackEvent } from '@/lib/funnel-client';
 import { getSessionUser } from '@/lib/browser-auth';
 import { STYLES as COVER_STYLES } from '@/lib/carousel-cover.js';
-import { useLogin } from '@/components/login-dialog';
-import { CarouselMaker } from '@/components/carousel/carousel-maker';
 import {
   THEME_LIST,
   downscale,
   emptyDraft,
   loadFonts,
   loadImage,
-  markResume,
   picturesFromDraft,
   readDraft,
   renderSlide,
   slideCount,
-  slideFileName,
   writeDraft,
   type Draft,
   type Pictures,
   type Theme,
 } from '@/components/carousel/carousel-shared';
 
-type Stage = 'ask' | 'working' | 'done' | 'edit';
+type Stage = 'ask' | 'working' | 'done';
+
+// What goes into the chat when the carousel is sent: the plan, the look and the cover picture.
+export type CarouselSend = { plan: NonNullable<Draft['plan']>; theme: string; coverStyle: string; brand: Draft['brand']; cta: string; topic: string; coverDataUrl: string | null };
 
 // The card is kept: the words, the look and the cover picture are stored in this browser per chat, so a
 // refresh or a later visit finds it where it was. Signed-in people also get it saved to their account.
 type SavedCard = { v: 1; userText: string | null; stage: 'ask' | 'done'; draft: Draft };
+
+export function clearSavedCard(key: string) {
+  writeSaved(key, null);
+}
 const SAVED_EVENT = 'bf:chat-carousel';
 export const cardKey = (conversationId: string | null) => `bf:chat-carousel:${conversationId ?? 'new'}`;
 
@@ -85,18 +87,17 @@ const COUNTS = [5, 7, 9];
 const chip = 'rounded-full border px-3 py-1.5 text-xs transition';
 
 // Shows this chat's saved card if there is one; otherwise whatever `fallback` is. Hidden while a new card is open.
-export function SavedCardOrFallback({ storageKey, hide, fallback }: { storageKey: string; hide: boolean; fallback: React.ReactNode }) {
+export function SavedCardOrFallback({ storageKey, hide, fallback, onSend }: { storageKey: string; hide: boolean; fallback: React.ReactNode; onSend: (payload: CarouselSend) => Promise<string | null> }) {
   const saved = useSavedCard(storageKey);
   if (hide) return null;
-  return saved ? <CarouselChatCard key={storageKey} topic="" userText={null} storageKey={storageKey} restore onClose={() => undefined} /> : <>{fallback}</>;
+  return saved ? <CarouselChatCard key={storageKey} topic="" userText={null} storageKey={storageKey} restore onSend={onSend} onClose={() => undefined} /> : <>{fallback}</>;
 }
 
 // The carousel maker as a conversation. The AI asks what it is about, you tap a look and a cover style,
 // it works in front of you (brainstorming, writing, drawing), and the finished slides land in the chat with
 // the buttons to change the look, get new cover art, edit every word or download. Nothing opens beside the
 // chat: the whole thing is one card in the thread.
-export function CarouselChatCard({ conversationId = null, topic, userText, storageKey, restore, onClose }: { conversationId?: string | null; topic: string; userText: string | null; storageKey: string; restore: boolean; onClose: () => void }) {
-  const { openLogin } = useLogin();
+export function CarouselChatCard({ topic, userText, storageKey, restore, onSend, onClose }: { topic: string; userText: string | null; storageKey: string; restore: boolean; onSend: (payload: CarouselSend) => Promise<string | null>; onClose: () => void }) {
   const [restored] = useState<SavedCard | null>(() => (restore ? readSaved(storageKey) : null));
   const [draft, setDraft] = useState<Draft>(() => {
     if (restored) return restored.draft;
@@ -111,8 +112,7 @@ export function CarouselChatCard({ conversationId = null, topic, userText, stora
   const [note, setNote] = useState<string | null>(null);
   const [fontsReady, setFontsReady] = useState(false);
   const [coverBusy, setCoverBusy] = useState(false);
-  const [signedIn, setSignedIn] = useState<boolean | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [sending, setSending] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const variant = useRef(0);
@@ -125,7 +125,6 @@ export function CarouselChatCard({ conversationId = null, topic, userText, stora
     let live = true;
     void loadFonts().then(() => live && setFontsReady(true));
     void picturesFromDraft(draft).then((loaded) => live && setPictures(loaded));
-    void getSessionUser().then((user) => live && setSignedIn(Boolean(user))).catch(() => live && setSignedIn(false));
     rootRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     return () => {
       live = false;
@@ -218,7 +217,6 @@ export function CarouselChatCard({ conversationId = null, topic, userText, stora
       setPhase(3);
       setStage('done');
       void saveToAccount(data.plan);
-      void linkToChat(data.plan);
     } catch {
       setError('Could not reach the writer. Check your connection and try again.');
       setStage('ask');
@@ -245,20 +243,6 @@ export function CarouselChatCard({ conversationId = null, topic, userText, stora
     }
   }
 
-  // The carousel becomes what this chat is the assistant for (if the chat has no goal yet).
-  async function linkToChat(forPlan: NonNullable<Draft['plan']>) {
-    if (!conversationId) return;
-    try {
-      await fetch(`/api/conversations/${conversationId}/link`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: forPlan.cover.headline, summary: `A ${forPlan.items.length + 2}-slide carousel about: ${draft.topic}` }),
-      });
-    } catch {
-      /* the link is a bonus; the card works without it */
-    }
-  }
-
   function close() {
     writeSaved(storageKey, null);
     onClose();
@@ -271,48 +255,16 @@ export function CarouselChatCard({ conversationId = null, topic, userText, stora
     void paintCover(plan, style);
   }
 
-  function toPng(index: number): Promise<Blob | null> {
-    const canvas = document.createElement('canvas');
-    renderSlide(canvas, index, draft, pictures);
-    return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/png'));
-  }
-
-  function saveFile(blob: Blob, name: string) {
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = name;
-    link.click();
-    window.setTimeout(() => URL.revokeObjectURL(link.href), 4000);
-  }
-
-  function askToSignIn() {
-    markResume();
-    writeDraft(draft);
-    trackEvent('guest_save_clicked', { source: 'carousel_chat' });
-    openLogin({ reason: 'carousel', next: window.location.pathname + window.location.search });
-  }
-
-  async function downloadAll() {
-    if (!signedIn) return askToSignIn();
-    setBusy(true);
-    try {
-      const files: { name: string; bytes: Uint8Array }[] = [];
-      for (let i = 0; i < total; i++) {
-        const blob = await toPng(i);
-        if (blob) files.push({ name: slideFileName(i, total), bytes: new Uint8Array(await blob.arrayBuffer()) });
-      }
-      saveFile(new Blob([zipStore(files) as BlobPart], { type: 'application/zip' }), 'carousel.zip');
-      trackEvent('carousel_downloaded', { source: 'chat_zip' });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function openEditor() {
-    // The full editor opens inside this card, starting from exactly what is on screen.
-    writeDraft(draft);
-    markResume();
-    setStage('edit');
+  // Sending puts the carousel into the chat as a message with its own date. The chat's own page does the work
+  // (it may need to start the chat first) and answers with an error message, or nothing when it went through.
+  async function sendToChat() {
+    if (!plan || sending) return;
+    setSending(true);
+    setError(null);
+    const cover = draft.coverStyle !== 'drawn' ? (draft.pictures[-1] ?? null) : null;
+    const problem = await onSend({ plan, theme: draft.theme, coverStyle: draft.coverStyle, brand: draft.brand, cta: draft.cta, topic: draft.topic, coverDataUrl: cover });
+    if (problem) setError(problem);
+    setSending(false);
   }
 
   function startOver() {
@@ -431,7 +383,7 @@ export function CarouselChatCard({ conversationId = null, topic, userText, stora
 
           {stage === 'done' && plan ? (
             <div>
-              <p className="font-serif text-lg text-foreground">Here it is. Change anything you like.</p>
+              <p className="font-serif text-lg text-foreground">Here it is. Pick the look, then send it to the chat.</p>
               <div className="mt-4 grid gap-4 sm:grid-cols-[minmax(0,17rem)_1fr]">
                 <div>
                   <div className="relative overflow-hidden rounded-xl border border-line bg-background">
@@ -473,31 +425,20 @@ export function CarouselChatCard({ conversationId = null, topic, userText, stora
                   </button>
 
                   <div className="mt-5 flex flex-wrap gap-2">
-                    <button type="button" onClick={() => void downloadAll()} disabled={busy} className="rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
-                      {signedIn === false ? 'Sign in to download' : busy ? 'Preparing…' : 'Download all'}
-                    </button>
-                    <button type="button" onClick={openEditor} className="rounded-xl border border-line px-4 py-2.5 text-sm text-foreground transition hover:border-ember">
-                      Edit words and pictures
+                    <button type="button" onClick={() => void sendToChat()} disabled={sending || coverBusy} className="rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
+                      {sending ? 'Sending…' : 'Send to chat'}
                     </button>
                     <button type="button" onClick={startOver} className="rounded-xl px-3 py-2.5 text-sm text-muted transition hover:text-foreground">
                       Start over
                     </button>
                   </div>
                   {note ? <p role="status" className="mt-3 text-xs text-muted">{note}</p> : null}
+                  {error ? <p role="alert" className="mt-3 text-sm text-danger">{error}</p> : null}
                 </div>
               </div>
             </div>
           ) : null}
 
-          {stage === 'edit' ? (
-            <div>
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <p className="font-serif text-lg text-foreground">Edit your carousel</p>
-                <button type="button" onClick={() => setStage('done')} className="rounded-lg border border-line px-3 py-1.5 text-sm text-foreground transition hover:border-ember">Done</button>
-              </div>
-              <CarouselMaker />
-            </div>
-          ) : null}
         </div>
       </div>
     </div>
