@@ -891,3 +891,9 @@ we do not have.
 **Change:** The small top-right "Sign in" is now two larger buttons for guests: Log in and Sign up for free.
 
 **Distribution move:** none beyond the sign-up funnel.
+
+## 2026-10-10 — Shorter empty-sidebar copy
+
+**Change:** "No chats yet" now has one short line under it.
+
+**Distribution move:** none; copy trim.

@@ -433,7 +433,7 @@ onMobileClose,
                   <p className="mt-1 text-xs leading-relaxed text-muted">
                     {isStaff
                       ? 'New briefs appear here the moment a founder sends one for review. Link Telegram in Settings and the ping finds you first.'
-                      : 'Describe an idea in the message box. Your chat shows up here, ready to pick up on any device.'}
+                      : 'Start one and it shows up here.'}
                   </p>
                 </div>
               ) : (
