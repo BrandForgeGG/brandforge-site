@@ -1023,3 +1023,9 @@ we do not have.
 **Change:** With the phone keyboard up, the Terms line used to lie on top of the "Hire or get hired" chip and the logo slid under the Log in button. Now a short screen keeps only the title, the box and the chips; the footer joins the flow on small screens and hides with the keyboard; "Terms · Privacy" never splits across lines; the landing prompt is short enough to fit a phone ("Make, plan or trade anything…"). A chosen command tag takes its own row on phones so the words get the full width. In an open chat on a phone, the status dot no longer lands on Log in (a guest's header drops the team stack on tiny screens). For keyboard users: a "Skip to the message box" link is the first stop, Escape in the + menu returns focus to the +, and Tab order now matches what is on screen (+, tag, words, send).
 
 **Distribution move:** none; polish.
+
+## 2026-10-10 — Five new client reviews, and reviews and projects you swipe
+
+**Change:** The overview now shows five newer client reviews (frontend site, motion graphics, a team that stepped in after a developer left, an understanding support team, two projects at 9/10), replacing the earlier nine on that page (all earlier ones stay on file). Discord's own codes (@mentions, one custom emoji, and a closing thank-you line that was only mentions) were taken out; the rest of each review is word for word, with no names because none were given. Projects and reviews are now swipeable rows: snap-to-card, arrows, a 1 / N counter, arrow keys, every project instead of the first three, and a row always opens on its first card.
+
+**Distribution move:** share the first two reviews as quote posts (credit "a BrandForge client"); ask these clients if they will let us name them.

@@ -1,5 +1,9 @@
 'use strict';
 
+// 2026-10-10: five newer reviews were added at the top (pasted by the founder). Discord's own codes were taken out
+// so they read as people wrote them: user mentions and a custom emoji, and one closing line that was only a
+// thank-you to two mentioned users. The words that remain are exactly as written.
+//
 // Verbatim client feedback copied from BrandForge's Discord and Telegram by
 // the founder (2026-10-03). Nothing here may be paraphrased, corrected or
 // invented — typos, emoji and all. Three entries with empty bodies and one
@@ -7,6 +11,37 @@
 // this file.
 
 const TESTIMONIALS = [
+  {
+    id: "frontend-clean-functional",
+    author: 'BrandForge client',
+    date: '',
+    text: "I can vouch for their work. His team built a clean and functional frontend site for my upcoming project. They are very generous and understanding people. I’ll definitely be coming back for future projects. Overall, amazing service!",
+  },
+  {
+    id: "motion-graphics-designer",
+    author: 'BrandForge client',
+    date: '',
+    text: "Working with the Brandforge team has been extremely sensational. I feel as though I’m brought to tears by how amazing this team has been, I was given more than enough with what I already had. I am truly amazed at the motion graphics given to me by their designer and the detail put into this work. Thank you so much:)",
+  },
+  {
+    id: "full-team-stepped-in",
+    author: 'BrandForge client',
+    date: '',
+    text: "Working with BrandForge has been a positive experience overall. The project began with an initial developer who, after a series of delays, ultimately stepped away. In response, BrandForge brought in a full team to keep things moving — showing a clear commitment to delivering results. While we're not yet at the finish line, they've consistently gone above and beyond to ensure we're satisfied and supported throughout the process. Their responsiveness, professionalism, and willingness to adapt have made a meaningful difference. I'm confident in their dedication to seeing this project through successfully.",
+  },
+  {
+    id: "support-understands-project",
+    author: 'BrandForge client',
+    date: '',
+    text: "Awesome support team, they try to understand your project to make something special for you",
+  },
+  {
+    id: "two-projects-9-10",
+    author: 'BrandForge client',
+    date: '',
+    text: "Very professional team, worked on 2 projects with me and had no issues besides slight delays, but were compensated accordingly. Backend work was very professional and overall 9/10 experience.",
+  },
+  // ---- Earlier entries ----
   {
     id: 'brandforge-group-zyllls',
     author: 'BrandForge Group',
@@ -228,15 +263,11 @@ const TESTIMONIALS = [
 // Curated subset shown on the landing page — order matters. The rest stays
 // available for the founder to place later (all 36 remain in TESTIMONIALS).
 const LANDING_TESTIMONIAL_IDS = [
-  'day-zizo-3k',
-  'vizzy-900-bot',
-  'k20-valaccs',
-  'headstartup-milestone-350',
-  'psycho-team',
-  'omballa-motion',
-  'zzz-frontend',
-  'vizzy-2k',
-  'crum-9-10',
+  "frontend-clean-functional",
+  "motion-graphics-designer",
+  "full-team-stepped-in",
+  "support-understands-project",
+  "two-projects-9-10",
 ];
 
 module.exports = { TESTIMONIALS, LANDING_TESTIMONIAL_IDS };

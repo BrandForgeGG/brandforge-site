@@ -4,6 +4,7 @@ import Link from 'next/link';
 
 import { PORTFOLIO_PROJECTS, projectSlug } from '@/lib/portfolio-projects';
 import { LANDING_TESTIMONIAL_IDS, TESTIMONIALS } from '@/lib/testimonials';
+import { SwipeRow } from '@/components/landing/swipe-row';
 
 const LANDING_QUOTES = LANDING_TESTIMONIAL_IDS.map((id) =>
   TESTIMONIALS.find((quote) => quote.id === id)
@@ -21,12 +22,13 @@ export function LandingProof() {
             <p className="mt-3 text-sm text-muted">Real, live projects. Open them and judge the work.</p>
           </div>
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {PORTFOLIO_PROJECTS.slice(0, 3).map((project) => (
+          <div className="mt-10">
+            <SwipeRow label="projects">
+            {PORTFOLIO_PROJECTS.map((project) => (
               <Link
                 key={project.name}
                 href={`/work/${projectSlug(project.name)}`}
-                className="group rounded-2xl border border-line bg-panel p-5 transition hover:border-ember"
+                className="group flex w-full flex-col rounded-2xl border border-line bg-panel p-5 transition hover:border-ember"
               >
                 <div className="relative flex h-24 items-center justify-center overflow-hidden rounded-xl bg-panel-2">
                   {project.screenshot ? (
@@ -49,6 +51,7 @@ export function LandingProof() {
                 </span>
               </Link>
             ))}
+            </SwipeRow>
           </div>
           <p className="mt-6 text-center">
             <Link href="/work" className="text-sm text-ember underline-offset-2 hover:underline">See all projects</Link>
@@ -63,22 +66,24 @@ export function LandingProof() {
               In their words
             </h2>
             <p className="mt-3 text-sm text-muted">
-              Copied straight from our Discord and Telegram — nothing edited.
+              From our Discord and Telegram. The words are theirs; only chat codes like @mentions are removed.
             </p>
           </div>
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {LANDING_QUOTES.slice(0, 3).map((quote) => (
-              <figure key={quote.id} className="flex flex-col rounded-2xl border border-line bg-panel p-5">
+          <div className="mt-10">
+            <SwipeRow label="reviews">
+            {LANDING_QUOTES.map((quote) => (
+              <figure key={quote.id} className="flex w-full flex-col rounded-2xl border border-line bg-panel p-5">
                 <blockquote className="flex-1 whitespace-pre-line text-sm leading-relaxed text-foreground">
                   {quote.text}
                 </blockquote>
                 <figcaption className="mt-4 flex items-center justify-between text-xs text-muted">
                   <span className="font-medium text-foreground">{quote.author}</span>
-                  <span>{quote.date}</span>
+                  {quote.date ? <span>{quote.date}</span> : null}
                 </figcaption>
               </figure>
             ))}
+            </SwipeRow>
           </div>
         </div>
       </section>
