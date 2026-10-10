@@ -5,7 +5,7 @@ import { HeroDiagram } from '@/components/overview/diagrams';
 export const metadata = {
   title: 'Features — BrandForge',
   description:
-    "A carousel maker, plans, ads and audits in one chat. Teams, a Trade Center for specialists, and milestone contracts between members. Free to start.",
+    "Make and publish every kind of message, trade products, services and requests, and get a person to finish the job. AI and people on the same page. Free to start.",
 };
 
 const FEATURES = [
@@ -14,44 +14,40 @@ const FEATURES = [
     body: 'Describe an idea, paste a URL or drop a file. The first answer is a researched plan, a fix list or a draft, not a question. Anything it cites, it read.',
   },
   {
-    title: 'Make a carousel in a minute',
-    body: 'Give it a sentence and get a hook cover with a cover picture painted from your topic, in five styles, numbered slides with three points each and a closing slide, in a look you pick. Writing and previewing are free; sign in to edit every word, add your pictures and download. Your brand and closing line are yours to set.',
+    title: 'Make any kind of message',
+    body: 'Carousels, updates, polls, quizzes and threads today; video, reels, newsletters and more are coming. Say it in a sentence, edit every word, download it, and get a caption written for each platform.',
   },
   {
-    title: 'Make it, download it, publish it',
-    body: 'One page for everything you make: a carousel, update, poll, quiz or thread. Edit it, download it and get a caption written for each platform. Publishing opens as each platform approves us.',
+    title: 'Publish where people are',
+    body: 'Pick the platforms for a post. Telegram, Discord and Bluesky are connected; Instagram, LinkedIn, TikTok and others open as each platform approves us.',
   },
   {
-    title: 'In Telegram and Discord too',
-    body: 'Open @brandforge_bot or type /brandforge, tap Make a carousel, say what it is about, and the slides arrive in the chat.',
-  },
-  {
-    title: 'Ads, calendars and launch plans in chat',
-    body: 'Ask in the chat for ad copy per platform, a 30-day content calendar, a launch plan or an outreach sequence, from your URL or a sentence. Keep refining it in the same chat.',
-  },
-  {
-    title: 'Bring your team',
-    body: 'Invite anyone into a chat with a link. Everyone sees the same plan, the same files and the same history, with the AI on your side or paused.',
+    title: 'Trade products, services and requests',
+    body: 'Post what you offer or need. Message each other in a private chat, agree the details and sign. Offering services is for specialists who applied and were accepted; anyone can post a request.',
   },
   {
     title: 'Contracts between members',
     body: 'Two people in a chat can sign a milestone contract. The payer funds it, the other person submits each milestone with a link to the work, and the payer has 48 hours to approve or raise an issue. A flat 5% when a milestone is paid.',
   },
   {
-    title: 'A Trade Center for specialists',
-    body: 'Anyone can post a request for work. Offering services is for specialists who applied and were accepted, so the people you hire have been looked at. Applying needs no account.',
+    title: 'Bring your team',
+    body: 'Invite anyone into a chat with a link. Everyone sees the same plan, the same files and the same history, with the AI on your side or paused.',
   },
   {
-    title: 'Projects built by specialists',
-    body: 'For bigger builds, a vetted specialist joins your chat with a priced proposal. Both sides sign, funding is verified on-chain, and money releases milestone by milestone as you approve the work.',
+    title: 'Specialists for bigger jobs',
+    body: 'A vetted specialist joins your chat with a priced proposal. Both sides sign, funding is verified on-chain, and money releases milestone by milestone as you approve the work.',
+  },
+  {
+    title: 'Ads, calendars and launch plans',
+    body: 'Ask in the chat for ad copy per platform, a 30-day content calendar, a launch plan or an outreach sequence, from your URL or a sentence. Keep refining it in the same chat.',
+  },
+  {
+    title: 'In Telegram and Discord too',
+    body: 'Open @brandforge_bot or type /brandforge, say what you want, and the result arrives in the chat. One tap opens the same conversation on the web.',
   },
   {
     title: 'Updates where you already are',
     body: 'Link Telegram in Settings and get a ping when something needs you. Email covers every contract step, and the public feed in Discord and Telegram shows only real activity.',
-  },
-  {
-    title: 'Three looks for the app, eight for your slides',
-    body: 'The app comes in Forge (fire orange), Crystal (blue) and black and white; switch any time in Settings. Carousels have eight looks, from Forge and Crystal to Violet, Emerald, Rose, Sunrise and a light Paper look, each in your own accent colour if you like.',
   },
 ];
 
@@ -61,10 +57,10 @@ export default function FeaturesPage() {
       <LandingNav />
       <main className="mx-auto max-w-5xl px-6 py-16">
         <h1 className="font-serif text-4xl tracking-[-0.02em] text-foreground sm:text-5xl" style={{ textWrap: 'balance' }}>
-          One chat, from idea to done
+          AI and people, on the same page
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted">
-          AI drafts it in seconds. Your team and vetted specialists take it from there, on the same page.
+          Make it, publish it, trade it. AI drafts in seconds; you, your team and vetted specialists finish the job.
         </p>
 
         <div className="mt-10">

@@ -5,7 +5,7 @@ import { SiteFooter } from '@/components/site-footer';
 export const metadata = {
   title: 'About — BrandForge',
   description:
-    "BrandForge is where AI and people work on the same page: plans, ads and swipeable carousels in one chat, with your team and vetted specialists to finish the job.",
+    "BrandForge is where AI and people work on the same page: make and publish every kind of message, and trade products, services and requests.",
 };
 
 export default function AboutPage() {
@@ -14,15 +14,24 @@ export default function AboutPage() {
       <LandingNav />
       <main className="mx-auto max-w-3xl px-6 py-16">
         <h1 className="mt-2 font-serif text-4xl text-foreground sm:text-5xl">
-          AI drafts. People finish.
+          AI and people, on the same page.
         </h1>
         <p className="mt-6 text-lg leading-relaxed text-muted">
-          BrandForge turns one conversation into finished work. You describe what you want in plain
-          language, AI researches and drafts it, and then your team, or a vetted specialist, joins
-          the same chat to take it the rest of the way.
+          ChatGPT is AI. BrandForge is AI and people. You say what you want in plain language, AI
+          drafts it in seconds, and then you, your team or a vetted specialist take it the rest of
+          the way. Make every kind of message and publish it. Trade products, services and requests.
         </p>
 
         <div className="mt-12 space-y-8">
+          <section>
+            <h2 className="font-serif text-2xl text-foreground">Why now</h2>
+            <p className="mt-3 leading-relaxed text-muted">
+              Using the internet without AI is becoming a disadvantage. We use the newest internet
+              technology to speed up whatever you are into, and keep people in the loop so the
+              result is something you would put your name on.
+            </p>
+          </section>
+
           <section>
             <h2 className="font-serif text-2xl text-foreground">How it works</h2>
             <p className="mt-3 leading-relaxed text-muted">

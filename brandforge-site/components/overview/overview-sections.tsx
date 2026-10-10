@@ -1,6 +1,5 @@
 import Link from 'next/link';
-import { CarouselDiagram, ContractDiagram, DistributeDiagram, HeroDiagram } from '@/components/overview/diagrams';
-import { LookPlayground } from '@/components/overview/look-playground';
+import { ContractDiagram, DistributeDiagram, FormatsDiagram, HeroDiagram, PaceDiagram, TradeDiagram } from '@/components/overview/diagrams';
 
 // The overview is the long answer to "what is this?": one promise, one diagram, real screenshots
 // of the product, a plain price line. Everything it shows is the app itself.
@@ -10,10 +9,10 @@ export function OverviewHero() {
     <section className="px-6 pb-10 pt-14 text-center sm:pt-20" aria-labelledby="overview-title">
       <div className="mx-auto max-w-3xl">
         <h1 id="overview-title" className="font-serif text-4xl leading-[1.08] tracking-[-0.02em] text-foreground sm:text-6xl" style={{ textWrap: 'balance' }}>
-          Describe it. AI drafts it. <span className="text-ember">People ship it.</span>
+          AI and people, <span className="text-ember">on the same page.</span>
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-muted sm:text-lg">
-          Plans, ads and swipeable carousels in one chat. Bring your team, or hire a specialist when you want a person to finish the job.
+          Make every kind of message and publish it. Trade products, services and requests. AI does the first draft in seconds; people finish the job.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link href="/" className="rounded-xl bg-ember px-6 py-3 text-sm font-semibold text-background transition hover:opacity-90">
@@ -34,8 +33,8 @@ export function OverviewHero() {
 
 const STEPS = [
   { title: 'You describe', line: 'Type an idea, paste a URL or drop a file.' },
-  { title: 'AI drafts', line: 'A researched plan, ad copy or a swipeable carousel, in seconds.' },
-  { title: 'People finish', line: 'Invite your team or bring in a vetted specialist. Agree milestones in a contract.' },
+  { title: 'AI drafts', line: 'A plan, a post, a listing or an ad, in seconds.' },
+  { title: 'People finish', line: 'Your team or a vetted specialist takes it the rest of the way.' },
 ];
 
 export function OverviewHow() {
@@ -86,13 +85,16 @@ export function OverviewFeatures() {
   return (
     <section className="border-t border-line px-6 py-16" aria-label="What it does">
       <div className="mx-auto max-w-5xl space-y-20">
-        <Feature title="Say it in a sentence. Get a swipeable post." line="A hook cover, numbered slides with three points each, and a closing slide, with a cover picture painted from your topic. Free to make. Sign in to edit every word and download.">
-          <CarouselDiagram />
+        <Feature title="Make any kind of message." line="Carousels, updates, polls, quizzes and threads today, with video, reels, newsletters and more on the way. Say it in a sentence; AI writes the first draft, you shape it.">
+          <FormatsDiagram />
         </Feature>
-        <Feature flip title="Pick where it goes. Publish when it opens." line="Choose the platforms, get a caption written for each, and download or copy it today. One-tap publishing opens as each platform approves us, starting with the ones people ask for most.">
+        <Feature flip title="Publish it where people are." line="Pick the platforms and get a caption written for each. Download or copy it today; one-tap publishing opens as each platform approves us.">
           <DistributeDiagram />
         </Feature>
-        <Feature title="Sign a contract. Pay per milestone." line="Agree scope and price in the chat. The payer approves each milestone, or it releases on its own after 48 hours. A flat 5% when it pays out.">
+        <Feature title="Trade products, services and requests." line="Post what you offer or what you need. Message each other in a private chat and agree the details, with AI beside you and a specialist when you want one.">
+          <TradeDiagram />
+        </Feature>
+        <Feature flip title="Sign a contract. Pay per milestone." line="Agree scope and price in the chat. The payer approves each milestone, or it releases on its own after 48 hours. A flat 5% when it pays out.">
           <ContractDiagram />
         </Feature>
       </div>
@@ -100,15 +102,21 @@ export function OverviewFeatures() {
   );
 }
 
-export function OverviewThemes() {
+export function OverviewIdea() {
   return (
-    <section className="border-t border-line px-6 py-16" aria-labelledby="themes-title">
-      <div className="mx-auto max-w-5xl">
-        <h2 id="themes-title" className="text-center font-serif text-3xl tracking-[-0.02em] text-foreground sm:text-4xl">
-          Make it yours
-        </h2>
-        <p className="mx-auto mt-3 max-w-md text-center text-sm text-muted">Tap a look and watch the slide change.</p>
-        <LookPlayground />
+    <section className="border-t border-line px-6 py-16" aria-labelledby="idea-title">
+      <div className="mx-auto grid max-w-5xl items-center gap-8 lg:grid-cols-5 lg:gap-12">
+        <div className="lg:col-span-2">
+          <h2 id="idea-title" className="font-serif text-3xl tracking-[-0.02em] text-foreground sm:text-4xl" style={{ textWrap: 'balance' }}>
+            The internet is faster with AI.
+          </h2>
+          <p className="mt-3 text-base leading-relaxed text-muted">
+            Using it without AI is becoming a disadvantage. BrandForge puts the newest internet tech to work, with people beside you, so you move faster at whatever you are into.
+          </p>
+        </div>
+        <div className="lg:col-span-3">
+          <PaceDiagram />
+        </div>
       </div>
     </section>
   );
@@ -116,8 +124,9 @@ export function OverviewThemes() {
 
 export function OverviewPrice() {
   const rows = [
-    ['Carousels and plans', 'Free to make. Sign in to edit and download.'],
+    ['Making and publishing', 'Free to make. Sign in to edit and download.'],
     ['Teams', 'Invite anyone into a chat. Work on the same page.'],
+    ['Listing in Trade', 'Free to post. Nothing is charged to list or to chat.'],
     ['Contracts between members', 'A flat 5% when a milestone is paid. Nothing else.'],
   ];
   return (

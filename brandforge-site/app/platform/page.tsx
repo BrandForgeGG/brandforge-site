@@ -44,9 +44,9 @@ export default function PlatformPage() {
           One pipeline, from idea to released payment
         </h1>
         <p className="mt-6 text-lg leading-relaxed text-muted">
-          For bigger builds, BrandForge keeps both sides of the table honest: the person who needs
-          something made, and the specialist who makes it. Members can also contract each other
-          directly; see the Trade Center.
+          For bigger jobs, BrandForge keeps both sides of the table honest: the person who needs
+          something made, and the person who makes it. Members can also trade and contract each
+          other directly; see the Trade Center.
         </p>
 
         <div className="mt-12">

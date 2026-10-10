@@ -897,3 +897,9 @@ we do not have.
 **Change:** "No chats yet" now has one short line under it.
 
 **Distribution move:** none; copy trim.
+
+## 2026-10-10 — Copy pass: BrandForge is AI and People, not a carousel maker; new blog post and diagrams
+
+**Change:** Rewrote the overview, features, about, platform and pricing copy, the FAQ, site metadata and the empty-chat line around the core rules: AI and People; make and publish every kind of message; trade products, services and requests; using the internet without AI is a disadvantage. Carousels are now one format among many. New overview diagrams (AI + People hero, formats, Trade, pace) replace the carousel-first ones, and the carousel-only "Make it yours" block left the overview. New blog post "AI and people, one workspace" with three diagrams.
+
+**Distribution move:** blog post is the announcement; post its link in Discord and Telegram with the line "ChatGPT is AI. BrandForge is AI and People." Demo note: show the overview hero diagram, then the Trade diagram.

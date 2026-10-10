@@ -6,7 +6,7 @@ import { ChatWorkspace } from '@/components/chat-workspace';
 export const metadata = {
   title: 'BrandForge: AI and people, one workspace',
   description:
-    'Describe an idea, paste a URL or drop a file. AI researches, plans and creates; your team and vetted specialists join the same chat.',
+    'Make every kind of message and publish it. Trade products, services and requests. AI drafts in seconds; people finish the job. Free to start.',
   alternates: { canonical: '/' },
 };
 

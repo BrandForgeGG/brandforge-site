@@ -1,5 +1,10 @@
 const FAQS = [
   {
+    question: 'What is BrandForge?',
+    answer:
+      'A workspace where AI and people work on the same page. Make and publish many kinds of messages, trade products, services and requests, and get a person to finish the job when you want one. AI drafts in seconds; people make it good.',
+  },
+  {
     question: 'How much does it cost?',
     answer:
       'Every proposal carries a fixed price and timeline that you accept before anything is funded. Nothing is charged until you approve the proposal, and you can counter the offer in the chat.',
@@ -32,7 +37,7 @@ const FAQS = [
   {
     question: 'Why use BrandForge instead of AI alone?',
     answer:
-      'AI helps structure your idea, but a human specialist reviews, negotiates, builds, and delivers it. Funding is protected through milestone-based escrow — you only pay after you approve the delivered work. Your brief stays open if you decline twice; the specialist is out, not you.',
+      'AI is fast, but it does not stand behind the result. On BrandForge the AI drafts and a person finishes: you, your team or a vetted specialist. For paid work, funding is protected through milestone-based escrow, and you only pay after you approve what was delivered.',
   },
 ];
 

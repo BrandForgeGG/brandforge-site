@@ -1,5 +1,10 @@
 import { LandingNav } from '@/components/landing/landing-nav';
 import { SiteFooter } from '@/components/site-footer';
+import { HeroDiagram, PaceDiagram, TradeDiagram } from '@/components/overview/diagrams';
+
+type Block = string | { visual: 'idea' | 'trade' | 'pace' };
+
+const VISUALS = { idea: HeroDiagram, trade: TradeDiagram, pace: PaceDiagram } as const;
 
 export const metadata = {
   title: 'Blog — BrandForge',
@@ -8,7 +13,20 @@ export const metadata = {
 };
 
 // Real shipping entries, dated to when they actually went live. New posts go on top.
-const POSTS = [
+const POSTS: { date: string; title: string; body: Block[] }[] = [
+  {
+    date: '2026-10-10',
+    title: 'AI and people, one workspace',
+    body: [
+      'ChatGPT is AI. BrandForge is AI and people. You say what you want, AI drafts it in seconds, and then you, your team or a vetted specialist finish it on the same page.',
+      { visual: 'idea' },
+      'That one idea covers more than a single tool. You can make many kinds of messages and publish them: carousels, updates, polls, quizzes and threads today, with video, reels, newsletters and more on the way. And you can trade. Post a product, a service or a request, talk it through in a private chat, and sign a milestone contract so money moves as each piece lands.',
+      { visual: 'trade' },
+      'Why build it this way? Using the internet without AI is becoming a disadvantage. The tools exist, but nobody has time to learn ten of them. BrandForge puts the newest internet technology behind one chat, and keeps people in the loop so what comes out is something you would put your name on.',
+      { visual: 'pace' },
+      'BrandForge is not a carousel maker. Carousels are one format among many, next to Trade, contracts and specialists. We rewrote the overview, features, about page, FAQ and every diagram to say that plainly. If a page still sounds smaller than this, tell us in Discord or Telegram.',
+    ],
+  },
   {
     date: '2026-10-09',
     title: 'Covers painted from your topic, and connections that look connected',
@@ -112,11 +130,21 @@ export default function BlogPage() {
               <h2 className="mt-2 font-serif text-2xl text-foreground sm:text-3xl">
                 {post.title}
               </h2>
-              {post.body.map((paragraph) => (
-                <p key={paragraph.slice(0, 40)} className="mt-4 leading-relaxed text-muted">
-                  {paragraph}
-                </p>
-              ))}
+              {post.body.map((block, index) => {
+                if (typeof block !== 'string') {
+                  const Visual = VISUALS[block.visual];
+                  return (
+                    <div key={`visual-${index}`} className="mt-6">
+                      <Visual />
+                    </div>
+                  );
+                }
+                return (
+                  <p key={block.slice(0, 40)} className="mt-4 leading-relaxed text-muted">
+                    {block}
+                  </p>
+                );
+              })}
             </article>
           ))}
         </div>

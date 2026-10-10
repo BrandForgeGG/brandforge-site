@@ -9,7 +9,7 @@ export const metadata = {
   alternates: { canonical: '/pricing' },
   title: 'Pricing — BrandForge',
   description:
-    'Fixed-price proposals, milestone escrow and no charge until you accept. Packages, how the process works, and answers to common questions.',
+    'Free to start. Fixed-price proposals for bigger jobs, milestone escrow and no charge until you accept. How it works, and answers to common questions.',
 };
 
 export default function PricingPage() {

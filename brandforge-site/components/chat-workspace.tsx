@@ -2529,7 +2529,7 @@ return (
                 What are we building today?
               </h1>
               <p className="mt-3 max-w-md text-sm leading-relaxed text-muted">
-                AI drafts it in seconds. Your team and vetted specialists take it from there.
+                AI drafts in seconds. People make it good. Create, publish and trade, all in one place.
                 {isGuestBrowser ? <span className="mt-1 block text-xs">Free to start. No card, no sign-up to try it.</span> : null}
               </p>
               <AiPeopleFlow />

@@ -57,8 +57,8 @@ function Arrow({ className = '' }: { className?: string }) {
   );
 }
 
-/** Idea in, carousel out, posted. The overview hero. */
-export function HeroDiagram() {
+/** One idea turned into a post and sent out. One example of what AI and people make. */
+export function PostFlowDiagram() {
   const channels: ServiceId[] = ['telegram', 'discord', 'bluesky'];
   return (
     <Frame label="An idea typed in a chat becomes a fan of carousel slides, which are posted to Telegram, Discord and Bluesky" className="px-4 py-8 sm:px-8 sm:py-10">
@@ -118,7 +118,7 @@ export function CarouselDiagram() {
   );
 }
 
-/** One carousel, many places. Connected ones are lit, the rest wait for approval. */
+/** One post, many places. Connected ones are lit, the rest wait for approval. */
 export function DistributeDiagram() {
   const spokes: { id: ServiceId; on: boolean; x: string; y: string }[] = [
     { id: 'telegram', on: true, x: '14%', y: '22%' },
@@ -129,7 +129,7 @@ export function DistributeDiagram() {
     { id: 'tiktok', on: false, x: '50%', y: '16%' },
   ];
   return (
-    <Frame label="One carousel in the middle with lines to Telegram, Discord and Bluesky, which are connected, and Instagram, LinkedIn and TikTok, which are waiting for approval" className="h-80 sm:h-[22rem]">
+    <Frame label="One post in the middle with lines to Telegram, Discord and Bluesky, which are connected, and Instagram, LinkedIn and TikTok, which are waiting for approval" className="h-80 sm:h-[22rem]">
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full" aria-hidden="true">
         {spokes.map((s) => (
           <line key={s.id} x1="50" y1="50" x2={parseFloat(s.x)} y2={parseFloat(s.y)} stroke={s.on ? 'var(--ember)' : 'var(--line)'} strokeWidth="1.2" strokeDasharray={s.on ? undefined : '4 4'} vectorEffect="non-scaling-stroke" />
@@ -179,6 +179,139 @@ export function ContractDiagram() {
         <span className="bf-coin inline-block" aria-hidden="true">🪙</span>
         Approve a milestone and the money moves. Do nothing for 48 hours and it releases on its own.
       </div>
+    </Frame>
+  );
+}
+
+/** The whole idea: you ask, AI drafts, people finish, and it becomes something real. */
+export function HeroDiagram() {
+  const outs: { label: string; path: string }[] = [
+    { label: 'A post', path: 'M4 5h12M4 10h12M4 15h7' },
+    { label: 'A listing', path: 'M4 7h11l-3-3M16 13H5l3 3' },
+    { label: 'A deal', path: 'M5 15l2-.5 7-7-1.5-1.5-7 7zM12 5.5l1.5 1.5' },
+  ];
+  return (
+    <Frame label="You describe an idea. AI drafts it. People refine and finish it with you. It becomes a post, a listing or a signed deal" className="px-4 py-8 sm:px-8 sm:py-10">
+      <div className="flex flex-col items-center justify-center gap-6 md:flex-row md:gap-5">
+        <div className="w-full max-w-[14rem] rounded-2xl rounded-bl-sm border border-line bg-background p-3.5 text-left shadow-md">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-muted">You</p>
+          <p className="mt-1 text-sm text-foreground">I need a launch for my bakery</p>
+          <div className="mt-2 flex gap-1" aria-hidden="true">
+            {[0, 1, 2].map((i) => (
+              <span key={i} className="bf-dot h-1.5 w-1.5 rounded-full bg-ember" style={{ animationDelay: `${i * 0.18}s` }} />
+            ))}
+          </div>
+        </div>
+        <Arrow className="rotate-90 md:rotate-0" />
+        <div className="flex items-center gap-3">
+          <div className="text-center">
+            <span className="bf-float flex h-16 w-16 items-center justify-center rounded-2xl border border-ember bg-ember/15 text-ember" aria-hidden="true">
+              <svg viewBox="0 0 20 20" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3.5l1.6 4.4 4.4 1.6-4.4 1.6L10 15.5l-1.6-4.4L4 9.5l4.4-1.6zM15.5 3v3M14 4.5h3" /></svg>
+            </span>
+            <p className="mt-1.5 text-xs font-medium text-foreground">AI drafts</p>
+            <p className="text-[10px] text-muted">in seconds</p>
+          </div>
+          <svg viewBox="0 0 48 40" className="h-10 w-12 text-muted" fill="none" aria-hidden="true">
+            <path className="bf-flow" d="M4 14h38" stroke="var(--ember)" strokeWidth="2" strokeLinecap="round" pathLength={1} />
+            <path d="M38 9l6 5-6 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M44 28H10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeDasharray="3 4" />
+            <path d="M14 23l-6 5 6 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <div className="text-center">
+            <span className="bf-float flex h-16 w-16 items-center justify-center rounded-2xl border border-line bg-background text-foreground" style={{ animationDelay: '0.5s' }} aria-hidden="true">
+              <svg viewBox="0 0 20 20" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="7" cy="7.5" r="2.6" /><circle cx="14" cy="8.5" r="2.1" /><path d="M2.5 16c.4-2.6 2.2-4 4.5-4s4.1 1.4 4.5 4M12 12.6c1.9-.3 3.8.6 4.5 3.4" /></svg>
+            </span>
+            <p className="mt-1.5 text-xs font-medium text-foreground">People finish</p>
+            <p className="text-[10px] text-muted">you, your team, specialists</p>
+          </div>
+        </div>
+        <Arrow className="rotate-90 md:rotate-0" />
+        <div className="flex gap-2.5 md:flex-col">
+          {outs.map((o, i) => (
+            <div key={o.label} className="bf-pop flex items-center gap-2 rounded-xl border border-line bg-background px-3 py-2" style={{ animationDelay: `${0.6 + i * 0.25}s` }}>
+              <svg viewBox="0 0 20 20" className="h-4 w-4 text-ember" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={o.path} /></svg>
+              <span className="text-xs text-foreground">{o.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Frame>
+  );
+}
+
+/** Many forms of communication, not one. What is live is lit; what is coming waits. */
+export function FormatsDiagram() {
+  const live = ['Carousel', 'Update', 'Poll', 'Quiz', 'Thread'];
+  const soon = ['Video', 'Reel', 'Newsletter', 'Podcast', 'Ad'];
+  return (
+    <Frame label="Carousel, update, poll, quiz and thread are available to make today. Video, reel, newsletter, podcast and ad are coming" className="p-5 sm:p-7">
+      <div className="flex flex-wrap justify-center gap-2.5">
+        {live.map((name, i) => (
+          <span key={name} className="bf-pop rounded-xl border border-ember/50 bg-ember/10 px-3.5 py-2 text-sm text-foreground" style={{ animationDelay: `${i * 0.15}s` }}>{name}</span>
+        ))}
+      </div>
+      <div className="mt-3 flex flex-wrap justify-center gap-2.5">
+        {soon.map((name) => (
+          <span key={name} className="rounded-xl border border-dashed border-line px-3.5 py-2 text-sm text-muted blur-[0.6px]">{name}</span>
+        ))}
+      </div>
+      <p className="mt-4 text-center text-[11px] text-muted">Live now, and what is coming next.</p>
+    </Frame>
+  );
+}
+
+/** Offers and requests meet in a private chat and end as a contract. */
+export function TradeDiagram() {
+  return (
+    <Frame label="An offer and a request meet in a private chat and become a signed contract" className="p-5 sm:p-7">
+      <div className="grid items-center gap-3 sm:grid-cols-[1fr_auto_1fr_auto_1fr]">
+        <div className="rounded-xl border border-line bg-background p-3">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-success">Offers</p>
+          <p className="mt-1 text-sm text-foreground">Logo and brand pack</p>
+          <p className="text-xs text-muted">from €200</p>
+        </div>
+        <Arrow className="mx-auto rotate-90 sm:rotate-0" />
+        <div className="rounded-xl border border-ember/50 bg-ember/10 p-3">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-ember">Private chat</p>
+          <p className="mt-1 text-sm text-foreground">Agree the details</p>
+          <div className="mt-1.5 flex gap-1" aria-hidden="true">
+            {[0, 1, 2].map((i) => (
+              <span key={i} className="bf-dot h-1.5 w-1.5 rounded-full bg-ember" style={{ animationDelay: `${i * 0.18}s` }} />
+            ))}
+          </div>
+        </div>
+        <Arrow className="mx-auto rotate-90 sm:rotate-0" />
+        <div className="rounded-xl border border-line bg-background p-3">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-ember">Wants</p>
+          <p className="mt-1 text-sm text-foreground">A site for my bakery</p>
+          <p className="text-xs text-muted">up to €600</p>
+        </div>
+      </div>
+      <p className="mt-5 text-center text-xs text-muted">Products, services and requests. Sign a milestone contract, get paid as each one lands.</p>
+    </Frame>
+  );
+}
+
+/** Going alone against going with AI and people: the same road, a different pace. */
+export function PaceDiagram() {
+  const rows = [
+    { name: 'Alone', fill: 'w-[34%] bg-muted/50', dot: 'bg-muted', left: '32%' },
+    { name: 'With AI and people', fill: 'bf-grow w-[96%] bg-ember', dot: 'bg-ember', left: '94%' },
+  ];
+  return (
+    <Frame label="Two runners on the same road. The one using AI and people reaches the finish far ahead of the one working alone" className="p-5 sm:p-7">
+      <div className="space-y-5">
+        {rows.map((row, i) => (
+          <div key={row.name}>
+            <p className={`text-xs ${i ? 'font-medium text-foreground' : 'text-muted'}`}>{row.name}</p>
+            <div className="relative mt-2 h-2 rounded-full bg-line">
+              <div className={`h-2 rounded-full ${row.fill}`} />
+              <span className={`absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border-2 border-background ${row.dot}`} style={{ left: row.left }} />
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="mt-5 text-center text-xs text-muted">Same idea, same day.</p>
     </Frame>
   );
 }
