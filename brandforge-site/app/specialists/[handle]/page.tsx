@@ -54,7 +54,7 @@ export default async function SpecialistPage({ params }: Props) {
         <div className="mt-12 rounded-2xl border border-line bg-panel p-6">
           <p className="font-serif text-xl text-foreground">Want help like this?</p>
           <p className="mt-2 text-sm text-muted">Describe your project in one message. If it needs the BrandForge team, you will see priced proposals and pay only when you approve the work.</p>
-          <Link href="/" className="mt-4 inline-block rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">Start your project</Link>
+          <Link href="/chat" className="mt-4 inline-block rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">Start your project</Link>
         </div>
       </main>
       <SiteFooter />

@@ -18,7 +18,7 @@ export function OverviewHero({ compact = false }: { compact?: boolean } = {}) {
         {compact ? null : (
           <>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Link href="/" className="rounded-xl bg-ember px-6 py-3 text-sm font-semibold text-background transition hover:opacity-90">
+              <Link href="/chat" className="rounded-xl bg-ember px-6 py-3 text-sm font-semibold text-background transition hover:opacity-90">
                 Start a chat
               </Link>
               <a href="#how" className="rounded-xl border border-line px-6 py-3 text-sm text-foreground transition hover:border-ember">
@@ -165,9 +165,9 @@ export function OverviewFinal() {
         Your first draft is one message away.
       </h2>
       <div className="mt-8">
-        <a href="#" className="rounded-xl bg-ember px-7 py-3 text-sm font-semibold text-background transition hover:opacity-90">
+        <Link href="/chat" className="rounded-xl bg-ember px-7 py-3 text-sm font-semibold text-background transition hover:opacity-90">
           Start a chat
-        </a>
+        </Link>
       </div>
       <p className="mt-3 text-xs text-muted">Free to start. No card, and no sign-up to try it.</p>
     </section>

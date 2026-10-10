@@ -1415,7 +1415,7 @@ export function ChatWorkspace() {
           /* storage blocked: the text stays in the composer anyway */
         }
         trackEvent("guest_send_gated", { source: "composer" });
-        openGuestLogin({ reason: "start", next: "/" });
+        openGuestLogin({ reason: "start", next: "/chat" });
         return;
       }
       // A command tag (or a typed /carousel, /plan, /trade, /image) decides what this message does.
@@ -3303,7 +3303,7 @@ return (
             {!conversationId ? (
               <>
                 <span aria-hidden="true">·</span>
-                <a href="#how">How it works ↓</a>
+                <Link href="/#how">How it works</Link>
               </>
             ) : null}
           </span>

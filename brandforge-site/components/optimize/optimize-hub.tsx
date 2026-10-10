@@ -40,7 +40,7 @@ export function OptimizeHub() {
       /* the chat still opens; the person pastes the address */
     }
     trackEvent('next_step_clicked', { source: 'optimize_audit' });
-    router.push('/');
+    router.push('/chat');
   }
 
   async function sharpen() {

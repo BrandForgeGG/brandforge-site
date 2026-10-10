@@ -1,14 +1,11 @@
-import { Suspense } from 'react';
-import { ChatWorkspace } from '@/components/chat-workspace';
+import { LandingNav } from '@/components/landing/landing-nav';
 import { LandingCommunity } from '@/components/landing/landing-community';
-import { LandingFaq } from '@/components/landing/landing-faq';
 import { LandingProof } from '@/components/landing/landing-proof';
+import { LandingFaq } from '@/components/landing/landing-faq';
 import { OverviewFeatures, OverviewFinal, OverviewHero, OverviewHow, OverviewIdea, OverviewPrice } from '@/components/overview/overview-sections';
 import { SiteFooter } from '@/components/site-footer';
 
-// The front door is the product: brandforge.gg opens straight into a chat. Signed-out visitors
-// start a guest chat with their first message. Under the chat, the page carries the long-form
-// pitch (what it is, how it works, the work, the reviews, the community, the questions).
+// brandforge.gg is the landing page: what BrandForge is, with one way in. The app itself, a new chat, is at /chat.
 export const metadata = {
   title: 'BrandForge: AI and people, one workspace',
   description:
@@ -16,31 +13,22 @@ export const metadata = {
   alternates: { canonical: '/' },
 };
 
-const organization = {
-  '@context': 'https://schema.org',
-  '@type': 'Organization',
-  name: 'BrandForge',
-  url: 'https://brandforge.gg',
-  description:
-    'Workspace where AI and people work together: create and publish every kind of message, and trade products, services and requests, with teams, specialists and milestone contracts.',
-  sameAs: ['https://discord.gg/GSKHXkUY85', 'https://t.me/BrandForge_gg', 'https://github.com/BrandForgeGG'],
-};
-
 export default function HomePage() {
+  const organization = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'BrandForge',
+    url: 'https://brandforge.gg',
+    description:
+      'Workspace where AI and people work together: create and publish every kind of message, and trade products, services and requests, with teams, specialists and milestone contracts.',
+    sameAs: ['https://discord.gg/GSKHXkUY85', 'https://t.me/BrandForge_gg', 'https://github.com/BrandForgeGG'],
+  };
   return (
-    <>
+    <div className="bf-page">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }} />
-      <Suspense
-        fallback={
-          <main className="flex min-h-dvh items-center justify-center bg-background px-6 text-foreground">
-            <p className="text-sm text-muted">Loading…</p>
-          </main>
-        }
-      >
-        <ChatWorkspace />
-      </Suspense>
-      <div className="bf-page">
-        <OverviewHero compact />
+      <LandingNav />
+      <main>
+        <OverviewHero />
         <OverviewHow />
         <OverviewIdea />
         <OverviewFeatures />
@@ -49,8 +37,8 @@ export default function HomePage() {
         <LandingCommunity />
         <LandingFaq />
         <OverviewFinal />
-        <SiteFooter />
-      </div>
-    </>
+      </main>
+      <SiteFooter />
+    </div>
   );
 }

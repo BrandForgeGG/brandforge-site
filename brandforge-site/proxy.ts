@@ -29,6 +29,9 @@ const protectedRoutes = [
 // other protected route keeps requiring a signed-in user.
 function hasGuestChatAccess(request: NextRequest, pathname: string): boolean {
   if (pathname !== '/chat' && !pathname.startsWith('/chat/')) return false;
+  // /chat with no chat open is the app's front door: anyone may arrive, and their first message starts the guest chat.
+  // A chat that already exists still needs its owner's session.
+  if (pathname === '/chat' && !request.nextUrl.searchParams.get('conversationId')) return true;
   const config = blueprintConfig();
   if (!config.enabled || !config.sessionSecret) return false;
   const token = request.cookies.get(config.sessionCookieName)?.value ?? null;

@@ -1041,3 +1041,9 @@ we do not have.
 **Change:** The separate /overview page is gone (the old address redirects to the front page). Everything on it now sits under the chat on brandforge.gg: the AI-and-people story, how it works, what it makes, pricing, the work, reviews, community and questions. The chat is still the first screen and exactly one screen tall; "How it works ↓" under the box jumps down. The Overview item left the sidebar, and chats themselves (/chat) have nothing below them. The front page now carries the real content for search engines too.
 
 **Distribution move:** point every link at brandforge.gg itself; the page now explains the product without leaving the front door.
+
+## 2026-10-10 — brandforge.gg is the landing page, /chat is the app
+
+**Change:** Reversed the last move. brandforge.gg is the landing page again (what BrandForge is, the work, the reviews, the community, the questions), with Start a chat leading to brandforge.gg/chat, the app's front door. /chat opens for anyone with no sign-up; a chat that already exists still needs its owner. The sidebar logo and every "start" button (work pages, Optimize, the apply page, sign-in return) now lead to /chat. /overview still redirects to the landing page.
+
+**Distribution move:** use brandforge.gg for sharing and ads (it explains the product); use brandforge.gg/chat as the direct "try it now" link.

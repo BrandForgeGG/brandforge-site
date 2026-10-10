@@ -47,7 +47,7 @@ export default async function CaseStudyPage({ params }: Props) {
 
         <div className="mt-8 flex flex-wrap items-center gap-3">
           <a href={project.url} target="_blank" rel="noreferrer" className="rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">{linkLabel}</a>
-          <Link href="/" className="rounded-xl border border-line px-4 py-2.5 text-sm text-foreground transition hover:border-ember">Start something like this</Link>
+          <Link href="/chat" className="rounded-xl border border-line px-4 py-2.5 text-sm text-foreground transition hover:border-ember">Start something like this</Link>
         </div>
 
         <section className="mt-12 grid gap-6 border-t border-line pt-8 sm:grid-cols-3">

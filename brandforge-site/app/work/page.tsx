@@ -39,7 +39,7 @@ export default function WorkPage() {
         <div className="mt-12 rounded-2xl border border-line bg-panel p-6">
           <p className="font-serif text-2xl text-foreground">Have something like this in mind?</p>
           <p className="mt-2 text-sm text-muted">Describe it in one message. AI drafts the plan in seconds, then a specialist can take it the rest of the way.</p>
-          <Link href="/" className="mt-4 inline-block rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">Start your project</Link>
+          <Link href="/chat" className="mt-4 inline-block rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">Start your project</Link>
         </div>
       </main>
       <SiteFooter />

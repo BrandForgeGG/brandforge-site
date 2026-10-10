@@ -295,9 +295,9 @@ onMobileClose,
       >
         <div className="bf-rail-header flex shrink-0 items-center justify-between">
           <Link
-            href="/"
+            href="/chat"
             onClick={onMobileClose}
-            aria-label="BrandForge home"
+            aria-label="New chat"
             className="font-serif text-lg tracking-tight text-foreground"
           >
             {isCollapsed ? (

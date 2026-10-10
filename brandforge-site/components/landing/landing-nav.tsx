@@ -72,7 +72,7 @@ export function LandingNav() {
               </a>
               <button
                 type="button"
-                onClick={() => openLogin({ reason: 'signin', next: '/' })}
+                onClick={() => openLogin({ reason: 'signin', next: '/chat' })}
                 className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-95"
               >
                 Sign in

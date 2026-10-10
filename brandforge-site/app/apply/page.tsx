@@ -142,7 +142,7 @@ export default function ApplyPage() {
           ) : null}
 
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/" className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember">
+            <Link href="/chat" className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember">
               Back to chat
             </Link>
             {application.status === 'accepted' ? (
