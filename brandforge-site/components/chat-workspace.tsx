@@ -24,7 +24,7 @@ import { trackEvent } from "@/lib/funnel-client";
 import { useLogin } from "@/components/login-dialog";
 import { AiNotices, AiSwitch, useAiAccess } from "@/components/chat-ai-controls";
 import { ToolsMenu } from "@/components/chat-tools-menu";
-import { CarouselChatCard, SavedCardOrFallback, cardKey, clearSavedCard, type CarouselSend } from "@/components/chat/carousel-chat-card";
+import { CarouselChatCard, SavedCardOrFallback, cardKey, clearSavedCard, seedCarouselCard, type CarouselSend } from "@/components/chat/carousel-chat-card";
 import { detectMakeIntent } from "@/lib/make-intent";
 import { PeerContractForm } from "@/components/peer-contract-card";
 import { extractOutline } from "@/lib/deliverable-outline";
@@ -1212,6 +1212,17 @@ export function ChatWorkspace() {
         ),
       );
 
+      // A chat started by an action (Make a carousel) is not a question: its first message is not answered by the AI.
+      try {
+        const flag = `bf:no-auto-answer:${conversationId}`;
+        if (window.sessionStorage.getItem(flag) === "1") {
+          window.sessionStorage.removeItem(flag);
+          autoAnsweredRef.current.add(conversationId);
+        }
+      } catch {
+        /* storage blocked: nothing to skip */
+      }
+
       if (
         (!meta.isStaff || isOwn) &&
         lastMessage &&
@@ -1339,6 +1350,32 @@ export function ChatWorkspace() {
   // thread reads: what you asked, then the carousel. In a brand-new chat the words wait and start the chat when sent.
   const openCarouselCard = useCallback(async (words: string, topicHint?: string) => {
     const typed = words.trim();
+    // The first action from the landing page starts a real chat, so everything that follows happens inside it.
+    // What was typed is the chat's first message; the carousel card is waiting in it. The AI does not answer it:
+    // asking for a carousel is not a question.
+    if (!conversationId) {
+      try {
+        const started = await (railMeta.userId ? fetchAuthed : fetch)("/api/conversations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ initialMessage: typed, ...(railMeta.userId ? {} : { guest: true }) }),
+        });
+        const startedData = await started.json().catch(() => ({}));
+        if (started.ok && startedData.conversationId) {
+          const hint = topicHint ?? typed;
+          try {
+            window.sessionStorage.setItem(`bf:no-auto-answer:${startedData.conversationId}`, "1");
+          } catch {
+            /* storage blocked: the AI may answer the first message as well */
+          }
+          seedCarouselCard(startedData.conversationId as string, hint.length >= 8 ? hint : "");
+          router.push(`/chat?conversationId=${startedData.conversationId}`);
+          return;
+        }
+      } catch {
+        /* fall back to the card on this screen */
+      }
+    }
     let shownText: string | null = typed || null;
     if (conversationId && typed) {
       try {
@@ -1358,7 +1395,7 @@ export function ChatWorkspace() {
     }
     const topic = topicHint ?? typed;
     setCarouselChat({ topic: topic.length >= 8 ? topic : "", userText: shownText, key: ++carouselKey.current });
-  }, [conversationId, railMeta.userId, refreshMessages, scrollToBottom]);
+  }, [conversationId, railMeta.userId, refreshMessages, router, scrollToBottom]);
 
 
   const handleSend = useCallback(
@@ -3161,7 +3198,7 @@ return (
                       ? aiEnabled && (!aiAccess || aiAccess.state === "allowed")
                         ? "Ask anything…"
                         : "Message the team…"
-                      : "Describe your idea…"
+                      : "What do you want to make, plan or trade?"
                 }
                 rows={1}
                 disabled={isBusy}

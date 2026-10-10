@@ -65,7 +65,6 @@ export function TradeCenter() {
   const { openLogin } = useLogin();
   const [listings, setListings] = useState<ListingView[] | null>(null);
   const [pending, setPending] = useState(false);
-  const [isSpecialist, setIsSpecialist] = useState(false);
   const [kind, setKind] = useState<"" | "offer" | "request">("");
   const [category, setCategory] = useState("");
   const [q, setQ] = useState("");
@@ -103,7 +102,6 @@ export function TradeCenter() {
       const data = await response.json().catch(() => ({}));
       setListings(response.ok ? (data.listings ?? []) : []);
       setPending(Boolean(data.pending));
-      setIsSpecialist(Boolean(data.viewer?.isSpecialist));
     } catch {
       setListings([]);
     }
@@ -323,7 +321,7 @@ export function TradeCenter() {
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">From BrandForge</p>
           <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {official.map((l) => (
-              <Card key={l.id} listing={l} isSpecialist={isSpecialist} onContact={setContacting} onEdit={setEditing} onAssistant={openAssistant} />
+              <Card key={l.id} listing={l} onContact={setContacting} onEdit={setEditing} onAssistant={openAssistant} />
             ))}
           </div>
         </section>
@@ -334,7 +332,7 @@ export function TradeCenter() {
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{official.length > 0 ? "From the community" : "Listings"}</p>
           <div className="mt-2 grid gap-3 sm:grid-cols-2">
             {community.map((l) => (
-              <Card key={l.id} listing={l} isSpecialist={isSpecialist} onContact={setContacting} onEdit={setEditing} onAssistant={openAssistant} />
+              <Card key={l.id} listing={l} onContact={setContacting} onEdit={setEditing} onAssistant={openAssistant} />
             ))}
           </div>
         </section>
@@ -401,7 +399,7 @@ export function TradeCenter() {
   );
 }
 
-function Card({ listing: l, isSpecialist, onContact, onEdit, onAssistant }: { listing: ListingView; isSpecialist: boolean; onContact: (l: ListingView) => void; onEdit: (l: ListingView) => void; onAssistant: (l: ListingView) => void }) {
+function Card({ listing: l, onContact, onEdit, onAssistant }: { listing: ListingView; onContact: (l: ListingView) => void; onEdit: (l: ListingView) => void; onAssistant: (l: ListingView) => void }) {
   return (
     <article className="bf-card flex flex-col p-4">
       <div className="flex items-center gap-2">
@@ -435,10 +433,6 @@ function Card({ listing: l, isSpecialist, onContact, onEdit, onAssistant }: { li
               Assistant
             </button>
           </div>
-        ) : l.kind === "request" && !isSpecialist ? (
-          <Link href="/apply" data-tip="Only the BrandForge team can answer requests" className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">
-            Apply to help
-          </Link>
         ) : (
           <button type="button" onClick={() => onContact(l)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background">
             {l.kind === "offer" ? "Hire" : "Offer to help"}

@@ -1011,3 +1011,9 @@ we do not have.
 **Change:** Make an image is gone from the chips and the + menu, leaving Make a carousel, Plan my idea and Hire or get hired. A chosen command now sits right after the + and Backspace on an empty box removes it. A live browser pass (as a guest, second by second) found and fixed: a ghost "Working…" row flashing after an answer; your own messages flipping from "You" to "Guest" once saved; no AI switch for guests (the check for who owns the chat only worked for signed-in people); failed answers vanishing after five seconds with no way to retry (now they stay with Try again); an empty answer from a backup provider ending the turn (the next provider is now tried); and the carousel's working label stepping backwards. GitHub and Binance links are read and summarised correctly.
 
 **Distribution move:** none; polish and reliability.
+
+## 2026-10-10 — Save to chat, first actions start a real chat, Trade open to all, a better prompt
+
+**Change:** The carousel button now says Save to chat (it is already in the chat). From the landing page, the first action (Make a carousel) starts a real chat straight away: the typed line is its first message, the carousel card is waiting inside it, and the AI does not answer an action as if it were a question. Trade is open to everyone: the 17 pre-made BrandForge services are removed, and anyone can answer a request, not only the team. The landing prompt now reads "What do you want to make, plan or trade?".
+
+**Distribution move:** copy: "Trade is open to everyone: say what you offer or need, and answer anyone's request."

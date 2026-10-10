@@ -32,6 +32,14 @@ type SavedCard = { v: 1; userText: string | null; stage: 'ask' | 'done'; draft: 
 export function clearSavedCard(key: string) {
   writeSaved(key, null);
 }
+
+// A brand-new chat is started with its first action. The card is waiting in it, at the question step, so when
+// the chat opens it is already where the work happens.
+export function seedCarouselCard(conversationId: string, topic: string) {
+  const saved = readDraft();
+  const draft: Draft = { ...emptyDraft(), brand: saved.brand, cta: saved.cta, theme: saved.theme, coverStyle: saved.coverStyle, logo: saved.logo, count: saved.count, topic: topic.slice(0, 1500) };
+  writeSaved(cardKey(conversationId), { v: 1, userText: null, stage: 'ask', draft });
+}
 const SAVED_EVENT = 'bf:chat-carousel';
 export const cardKey = (conversationId: string | null) => `bf:chat-carousel:${conversationId ?? 'new'}`;
 
@@ -255,7 +263,7 @@ export function CarouselChatCard({ topic, userText, storageKey, restore, onSend,
     void paintCover(plan, style);
   }
 
-  // Sending puts the carousel into the chat as a message with its own date. The chat's own page does the work
+  // Saving puts the carousel into the chat as a message with its own date. The chat's own page does the work
   // (it may need to start the chat first) and answers with an error message, or nothing when it went through.
   async function sendToChat() {
     if (!plan || sending) return;
@@ -383,7 +391,7 @@ export function CarouselChatCard({ topic, userText, storageKey, restore, onSend,
 
           {stage === 'done' && plan ? (
             <div>
-              <p className="font-serif text-lg text-foreground">Here it is. Pick the look, then send it to the chat.</p>
+              <p className="font-serif text-lg text-foreground">Here it is. Pick the look, then save it to the chat.</p>
               <div className="mt-4 grid gap-4 sm:grid-cols-[minmax(0,17rem)_1fr]">
                 <div>
                   <div className="relative overflow-hidden rounded-xl border border-line bg-background">
@@ -426,7 +434,7 @@ export function CarouselChatCard({ topic, userText, storageKey, restore, onSend,
 
                   <div className="mt-5 flex flex-wrap gap-2">
                     <button type="button" onClick={() => void sendToChat()} disabled={sending || coverBusy} className="rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
-                      {sending ? 'Sending…' : 'Send to chat'}
+                      {sending ? 'Saving…' : 'Save to chat'}
                     </button>
                     <button type="button" onClick={startOver} className="rounded-xl px-3 py-2.5 text-sm text-muted transition hover:text-foreground">
                       Start over

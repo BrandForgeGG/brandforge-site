@@ -23,7 +23,7 @@ const FEATURES = [
   },
   {
     title: 'Trade products, services and requests',
-    body: 'Post what you offer or need. Message each other in a private chat, agree the details and sign. Offering services is for BrandForge team members who applied and were accepted; anyone can post a request.',
+    body: 'Post what you offer or need, in your own words. Message each other in a private chat, agree the details and sign. Trade is open to everyone.',
   },
   {
     title: 'Contracts between members',
