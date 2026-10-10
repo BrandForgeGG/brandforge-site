@@ -3,6 +3,7 @@ import {
   getMessages,
   canAccessConversation,
   getConversationOwnerSession,
+  deleteGuestMessage,
   mutateOwnedMessage,
   runAsGuestSession,
   toggleMessageReaction,
@@ -98,10 +99,22 @@ async function mutationError(result: 'not_found' | 'forbidden') {
 
 export async function PATCH(request: NextRequest) {
   const user = await getAuthenticatedUser(request);
-  if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
   const body = await request.json().catch(() => ({}));
   const messageId = String(body.messageId ?? '').trim();
+
+  // A guest can delete their own messages in the chat they started. Nothing else is open to guests here.
+  if (!user) {
+    const guest = await resolveGuestSession(request);
+    const conversationId = String(body.conversationId ?? '').trim();
+    if (!guest || String(body.action ?? '') !== 'delete' || !messageId || !conversationId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    const result = await deleteGuestMessage(guest.sessionId, conversationId, messageId);
+    if (result !== 'deleted') return mutationError(result);
+    return NextResponse.json({ success: true });
+  }
+
   const action = String(body.action ?? '');
   if (!messageId || !['edit', 'delete', 'react'].includes(action)) {
     return NextResponse.json({ error: 'messageId and a valid action are required' }, { status: 400 });

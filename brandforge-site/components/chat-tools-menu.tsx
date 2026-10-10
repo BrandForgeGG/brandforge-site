@@ -21,20 +21,18 @@ export function ToolsMenu({
   signedIn,
   hasChat,
   onUpload,
-  onPrefill,
   onInvite,
   onContract,
   onCallTeam,
-  onMake,
+  onCommand,
 }: {
   signedIn: boolean;
   hasChat: boolean;
   onUpload: () => void;
-  onPrefill: (text: string, key: string) => void;
   onInvite: () => void;
   onContract: () => void;
   onCallTeam: (() => void) | null;
-  onMake: (kind: 'carousel' | null) => void;
+  onCommand: (id: 'carousel' | 'plan' | 'trade' | 'image') => void;
 }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -62,7 +60,6 @@ export function ToolsMenu({
     };
   }, [open]);
 
-  const go = (key: string, text: string) => () => onPrefill(text, key);
   const groups: Group[] = [
     {
       title: 'Add',
@@ -71,12 +68,10 @@ export function ToolsMenu({
     {
       title: 'Make',
       items: [
-        { key: 'image', label: 'Create an image', hint: 'A visual, a logo idea or a mockup', icon: 'M4 5h12v10H4zM4 13l3.5-3.5 3 3 2-2L16 14M13 8.2h.01', run: go('image', 'Create an image: ') },
-        { key: 'carousel', label: 'Make a carousel', hint: 'Swipeable slides from one sentence', icon: 'M5 5h8v10H5zM7 3.5h8V13M3.5 7v8', run: () => onMake('carousel') },
-        { key: 'ads', label: 'Write ads', hint: 'Hooks and copy for each platform', icon: 'M3.5 9.5v-3l9-3v9zM12.5 6.5h3a1.5 1.5 0 010 3h-3M6 12.5l1 3.5h2l-.8-3', run: go('ads', 'Create ads: ') },
-        { key: 'calendar', label: '30-day content calendar', hint: 'A month of posts, ready to copy', icon: 'M4 5.5h12v10H4zM4 8.5h12M7 3.5v3M13 3.5v3', run: go('calendar', 'Create a 30-day content calendar: ') },
-        { key: 'video', label: 'Create a video', hint: 'Short scenes from your idea', icon: 'M3.5 6h9v8h-9zM12.5 9l4-2.5v7L12.5 11', run: go('video', 'Create a video: ') },
-        { key: 'audit', label: 'Audit a URL', hint: 'A ranked fix list from your page', icon: 'M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM13 13l3.5 3.5', run: go('audit', 'Audit this URL: https://') },
+        { key: 'carousel', label: 'Make a carousel', hint: 'Swipeable slides from one sentence', icon: 'M5 5h8v10H5zM7 3.5h8V13M3.5 7v8', run: () => onCommand('carousel') },
+        { key: 'plan', label: 'Plan my idea', hint: 'Scope, roadmap and estimate', icon: 'M4 4.5h4v4H4zM12 4.5h4v4h-4zM8 6.5h4M6 8.5v4h6M12 12.5h4v3h-4z', run: () => onCommand('plan') },
+        { key: 'image', label: 'Make an image', hint: 'Free, right in the chat', icon: 'M4 5h12v10H4zM4 13l3.5-3.5 3 3 2-2L16 14M13 8.2h.01', run: () => onCommand('image') },
+        { key: 'trade', label: 'Hire or get hired', hint: 'List what you offer or need', icon: 'M4 7h11l-3-3M16 13H5l3 3', run: () => onCommand('trade') },
       ],
     },
     {

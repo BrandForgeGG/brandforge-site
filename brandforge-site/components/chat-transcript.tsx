@@ -844,18 +844,47 @@ function Thoughts({ steps }: { steps: string[] }) {
 
 const REACTION_EMOJI = ["👍", "❤️", "🎉", "👀"] as const;
 
+// "Sent 2 min ago": how long ago a message went out, kept current while the chat is open. Hover for the exact time.
+function sentAgo(iso: string | null, now: number) {
+  if (!iso) return '';
+  const then = new Date(iso).getTime();
+  if (!Number.isFinite(then)) return '';
+  const seconds = Math.max(0, Math.round((now - then) / 1000));
+  if (seconds < 45) return 'just now';
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} h ago`;
+  const days = Math.round(hours / 24);
+  if (days < 7) return days === 1 ? 'yesterday' : `${days} days ago`;
+  return new Date(then).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function MessageTime({ iso }: { iso: string | null }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
+  if (!iso) return null;
+  const exact = new Date(iso);
+  return (
+    <time dateTime={iso} title={exact.toLocaleString()} className="tabular-nums">
+      Sent {sentAgo(iso, now)}
+    </time>
+  );
+}
+
 function MessageActions({
   message,
   canManage,
   onEdit,
-  onDelete,
   onReact,
   onReply,
 }: {
   message: ChatMessage;
   canManage: boolean;
   onEdit: (content: string) => Promise<void>;
-  onDelete: () => Promise<void>;
   onReact: (emoji: string) => Promise<void>;
   onReply?: (messageId: string) => void;
 }) {
@@ -975,14 +1004,6 @@ function MessageActions({
                 className="rounded px-1.5 py-0.5 text-xs text-muted hover:bg-overlay"
               >
                 Edit
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void run(onDelete)}
-                className="rounded px-1.5 py-0.5 text-xs text-muted hover:bg-overlay"
-              >
-                Delete
               </button>
             </>
           ) : null}
@@ -1401,13 +1422,25 @@ export function ChatTranscript({
               {isAI && message.thoughts && message.thoughts.length > 0 ? (
                 <Thoughts steps={message.thoughts} />
               ) : null}
+              {!isAI && !message.streaming ? (
+                <div className={`mt-1 flex items-center gap-2 text-[11px] text-muted ${isUser ? "justify-end" : ""}`}>
+                  <MessageTime iso={message.createdAt} />
+                  {(currentUserId ? message.senderId === currentUserId : message.sender === "user" && !message.senderId) ? (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <button type="button" onClick={() => void onDeleteMessage(message.id)} className="underline-offset-2 transition hover:text-foreground hover:underline">
+                        Delete
+                      </button>
+                    </>
+                  ) : null}
+                </div>
+              ) : null}
               <MessageActions
                 message={message}
                 canManage={Boolean(
                   currentUserId && message.senderId === currentUserId,
                 )}
                 onEdit={(content) => onEditMessage(message.id, content)}
-                onDelete={() => onDeleteMessage(message.id)}
                 onReact={(emoji) => onReact(message.id, emoji)}
                 onReply={onReply}
               />

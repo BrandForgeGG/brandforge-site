@@ -5847,3 +5847,18 @@ export async function getAvatarUrls(userIds: string[]): Promise<Map<string, stri
   }
   return out;
 }
+
+// A guest deleting their own message: the chat must belong to their session and the message must be one
+// they wrote (a guest's messages carry no user id).
+export async function deleteGuestMessage(sessionId: string, conversationId: string, messageId: string): Promise<'deleted' | 'not_found' | 'forbidden'> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return 'not_found';
+  const { data: conversation } = await admin.from('conversations').select('owner_session_id').eq('id', conversationId).maybeSingle();
+  if (!conversation || (conversation as { owner_session_id: string | null }).owner_session_id !== sessionId) return 'forbidden';
+  const { data: message } = await admin.from('messages').select('id, conversation_id, sender_id, sender_type, content_type, deleted_at').eq('id', messageId).maybeSingle();
+  const row = message as { conversation_id: string; sender_id: string | null; sender_type: string; content_type: string | null; deleted_at: string | null } | null;
+  if (!row || row.conversation_id !== conversationId) return 'not_found';
+  if (row.sender_id || row.sender_type === 'ai' || row.content_type === 'system' || row.deleted_at) return 'forbidden';
+  const { error } = await admin.from('messages').update({ deleted_at: new Date().toISOString() }).eq('id', messageId);
+  return error ? 'not_found' : 'deleted';
+}

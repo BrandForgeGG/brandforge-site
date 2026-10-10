@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { zipStore } from '@/lib/zip-store.js';
 import { trackEvent } from '@/lib/funnel-client';
 import { getSessionUser } from '@/lib/browser-auth';
@@ -27,6 +27,53 @@ import {
 
 type Stage = 'ask' | 'working' | 'done' | 'edit';
 
+// The card is kept: the words, the look and the cover picture are stored in this browser per chat, so a
+// refresh or a later visit finds it where it was. Signed-in people also get it saved to their account.
+type SavedCard = { v: 1; userText: string | null; stage: 'ask' | 'done'; draft: Draft };
+const SAVED_EVENT = 'bf:chat-carousel';
+export const cardKey = (conversationId: string | null) => `bf:chat-carousel:${conversationId ?? 'new'}`;
+
+function readSaved(key: string): SavedCard | null {
+  try {
+    const raw = window.localStorage.getItem(key);
+    const parsed = raw ? (JSON.parse(raw) as SavedCard) : null;
+    return parsed && parsed.v === 1 && parsed.draft ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeSaved(key: string, value: SavedCard | null) {
+  try {
+    if (value) window.localStorage.setItem(key, JSON.stringify(value));
+    else window.localStorage.removeItem(key);
+  } catch {
+    // Storage full (cover pictures are large): keep the words and look without the picture.
+    try {
+      if (value) window.localStorage.setItem(key, JSON.stringify({ ...value, draft: { ...value.draft, pictures: {} } }));
+    } catch {
+      /* storage blocked: the card still works, it just will not come back */
+    }
+  }
+  window.dispatchEvent(new Event(SAVED_EVENT));
+}
+
+// True when this chat has a saved card. Safe on the server (always false there).
+function useSavedCard(key: string): boolean {
+  return useSyncExternalStore(
+    (notify) => {
+      window.addEventListener(SAVED_EVENT, notify);
+      window.addEventListener('storage', notify);
+      return () => {
+        window.removeEventListener(SAVED_EVENT, notify);
+        window.removeEventListener('storage', notify);
+      };
+    },
+    () => readSaved(key) !== null,
+    () => false,
+  );
+}
+
 const PHASES = [
   { label: 'Brainstorming the angle', hint: 'Finding the hook that makes people swipe' },
   { label: 'Writing the slides', hint: 'Three sharp points on every slide' },
@@ -37,18 +84,27 @@ const PHASES = [
 const COUNTS = [5, 7, 9];
 const chip = 'rounded-full border px-3 py-1.5 text-xs transition';
 
+// Shows this chat's saved card if there is one; otherwise whatever `fallback` is. Hidden while a new card is open.
+export function SavedCardOrFallback({ storageKey, hide, fallback }: { storageKey: string; hide: boolean; fallback: React.ReactNode }) {
+  const saved = useSavedCard(storageKey);
+  if (hide) return null;
+  return saved ? <CarouselChatCard key={storageKey} topic="" userText={null} storageKey={storageKey} restore onClose={() => undefined} /> : <>{fallback}</>;
+}
+
 // The carousel maker as a conversation. The AI asks what it is about, you tap a look and a cover style,
 // it works in front of you (brainstorming, writing, drawing), and the finished slides land in the chat with
 // the buttons to change the look, get new cover art, edit every word or download. Nothing opens beside the
 // chat: the whole thing is one card in the thread.
-export function CarouselChatCard({ topic, userText, onClose }: { topic: string; userText: string | null; onClose: () => void }) {
+export function CarouselChatCard({ topic, userText, storageKey, restore, onClose }: { topic: string; userText: string | null; storageKey: string; restore: boolean; onClose: () => void }) {
   const { openLogin } = useLogin();
+  const [restored] = useState<SavedCard | null>(() => (restore ? readSaved(storageKey) : null));
   const [draft, setDraft] = useState<Draft>(() => {
+    if (restored) return restored.draft;
     const saved = readDraft();
     return { ...emptyDraft(), brand: saved.brand, cta: saved.cta, theme: saved.theme, coverStyle: saved.coverStyle, logo: saved.logo, count: saved.count, topic: topic.slice(0, 1500) };
   });
   const [pictures, setPictures] = useState<Pictures>({ items: {}, logo: null });
-  const [stage, setStage] = useState<Stage>('ask');
+  const [stage, setStage] = useState<Stage>(restored ? restored.stage : 'ask');
   const [phase, setPhase] = useState(0);
   const [selected, setSelected] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +124,7 @@ export function CarouselChatCard({ topic, userText, onClose }: { topic: string; 
   useEffect(() => {
     let live = true;
     void loadFonts().then(() => live && setFontsReady(true));
-    void picturesFromDraft(draft).then((restored) => live && setPictures((current) => ({ ...current, logo: restored.logo })));
+    void picturesFromDraft(draft).then((loaded) => live && setPictures(loaded));
     void getSessionUser().then((user) => live && setSignedIn(Boolean(user))).catch(() => live && setSignedIn(false));
     rootRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     return () => {
@@ -83,6 +139,12 @@ export function CarouselChatCard({ topic, userText, onClose }: { topic: string; 
     const timer = window.setInterval(() => setPhase((current) => Math.min(current + 1, 1)), 2600);
     return () => window.clearInterval(timer);
   }, [stage]);
+
+  // Keep the card as it is, so it is still here after a refresh. Not while it is working.
+  useEffect(() => {
+    if (stage === 'working' || (stage === 'ask' && !draft.plan && draft.topic.trim().length < 8)) return;
+    writeSaved(storageKey, { v: 1, userText: userText ?? restored?.userText ?? null, stage: stage === 'ask' ? 'ask' : 'done', draft });
+  }, [stage, draft, storageKey, userText, restored]);
 
   useEffect(() => {
     if (stage !== 'done' || !canvasRef.current || !plan || !fontsReady) return;
@@ -155,10 +217,36 @@ export function CarouselChatCard({ topic, userText, onClose }: { topic: string; 
       await paintCover(data.plan, draft.coverStyle);
       setPhase(3);
       setStage('done');
+      void saveToAccount(data.plan);
     } catch {
       setError('Could not reach the writer. Check your connection and try again.');
       setStage('ask');
     }
+  }
+
+  // Signed-in people keep the words and look in their account too (pictures stay on this device).
+  async function saveToAccount(forPlan: NonNullable<Draft['plan']>) {
+    try {
+      const user = await getSessionUser();
+      if (!user) return;
+      const res = await fetch('/api/carousel/drafts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: null, plan: forPlan, type: draft.type, theme: draft.theme, brand: draft.brand, captions: {} }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.carousel?.id) {
+        setDraft((current) => ({ ...current, id: data.carousel.id }));
+        setNote('Saved to your account. Find it on the Create page any time.');
+      }
+    } catch {
+      /* saving to the account is a bonus; the card is kept on this device either way */
+    }
+  }
+
+  function close() {
+    writeSaved(storageKey, null);
+    onClose();
   }
 
   function newCover(style = draft.coverStyle) {
@@ -225,9 +313,9 @@ export function CarouselChatCard({ topic, userText, onClose }: { topic: string; 
 
   return (
     <div ref={rootRef} className="mx-auto mt-6 w-full max-w-3xl space-y-3" aria-live="polite">
-      {userText ? (
+      {(userText ?? restored?.userText) ? (
         <div className="flex justify-end">
-          <p className="max-w-[85%] rounded-2xl rounded-br-sm bg-overlay px-4 py-2.5 text-sm text-foreground">{userText}</p>
+          <p className="max-w-[85%] rounded-2xl rounded-br-sm bg-overlay px-4 py-2.5 text-sm text-foreground">{userText ?? restored?.userText}</p>
         </div>
       ) : null}
 
@@ -291,7 +379,7 @@ export function CarouselChatCard({ topic, userText, onClose }: { topic: string; 
                 <button type="button" onClick={() => void make()} disabled={draft.topic.trim().length < 8} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
                   Make my carousel
                 </button>
-                <button type="button" onClick={onClose} className="text-sm text-muted transition hover:text-foreground">Not now</button>
+                <button type="button" onClick={close} className="text-sm text-muted transition hover:text-foreground">Not now</button>
               </div>
             </div>
           ) : null}
@@ -390,7 +478,7 @@ export function CarouselChatCard({ topic, userText, onClose }: { topic: string; 
             <div>
               <div className="mb-4 flex items-center justify-between gap-3">
                 <p className="font-serif text-lg text-foreground">Edit your carousel</p>
-                <button type="button" onClick={onClose} className="rounded-lg border border-line px-3 py-1.5 text-sm text-foreground transition hover:border-ember">Done</button>
+                <button type="button" onClick={() => setStage('done')} className="rounded-lg border border-line px-3 py-1.5 text-sm text-foreground transition hover:border-ember">Done</button>
               </div>
               <CarouselMaker />
             </div>

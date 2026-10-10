@@ -969,3 +969,9 @@ we do not have.
 **Change:** No side panel any more. Ask for a carousel in the chat (or tap Make a carousel in the + menu) and the AI answers with a card: what is it about, then buttons for the look (eight colours), the cover style and the number of points. It then works in front of you (brainstorming, writing, drawing the cover, laying it out) and the finished slides appear in the chat with buttons to change the look, get new cover art, edit every word and picture, or download all.
 
 **Distribution move:** this is the demo clip: type "make a carousel about…" in the chat and watch the card build it. Changelog line: "Make a carousel without leaving the chat."
+
+## 2026-10-10 — Chat commands, a saved carousel card, message times and delete for everyone
+
+**Change:** The chat shows only what BrandForge does, as commands: Make a carousel, Plan my idea, Hire or get hired, Make an image. Picking one puts a highlighted tag in the message box (like a tool in ChatGPT or Gemini); typing /carousel, /plan, /trade or /image does the same. The + menu shrank to the same list plus upload and team tools. The carousel card is saved per chat and comes back after a refresh (and is saved to the account when signed in). Every message you send shows "Sent 2 min ago" and a Delete link, guests included.
+
+**Distribution move:** screenshot the highlighted command tag and the "Sent … ago · Delete" line for the changelog: "Cleaner chat: pick a command, make it, and delete what you sent."

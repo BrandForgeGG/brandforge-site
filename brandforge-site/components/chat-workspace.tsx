@@ -24,7 +24,7 @@ import { trackEvent } from "@/lib/funnel-client";
 import { useLogin } from "@/components/login-dialog";
 import { AiNotices, AiSwitch, useAiAccess } from "@/components/chat-ai-controls";
 import { ToolsMenu } from "@/components/chat-tools-menu";
-import { CarouselChatCard } from "@/components/chat/carousel-chat-card";
+import { CarouselChatCard, SavedCardOrFallback, cardKey } from "@/components/chat/carousel-chat-card";
 import { detectMakeIntent } from "@/lib/make-intent";
 import { PeerContractForm } from "@/components/peer-contract-card";
 import { extractOutline } from "@/lib/deliverable-outline";
@@ -149,6 +149,10 @@ const GATE_FIRST_MESSAGE = false;
 // The slash vocabulary, shared by the Actions menu and the composer autocomplete so the
 // two surfaces can never disagree about which commands exist.
 const SLASH_COMMANDS = [
+  { command: "/carousel", label: "Make a carousel" },
+  { command: "/plan", label: "Plan my idea" },
+  { command: "/trade", label: "Hire or get hired" },
+  { command: "/image", label: "Make an image" },
   { command: "/progress", label: "Progress report" },
   { command: "/review", label: "Send to BrandForge review" },
   { command: "/contract", label: "Agreement steps" },
@@ -158,20 +162,22 @@ const SLASH_COMMANDS = [
 
 
 // Starting points under the composer: one tap fills it, the tooltip says what comes back.
-const START_PROMPTS = [
-  { label: 'Make a carousel', hint: 'Swipeable slides from one sentence', text: '', href: '/create?make=carousel', icon: 'M5 5h8v10H5zM7 3.5h8V13M3.5 7v8' },
-  { label: 'Plan my idea', hint: 'Scope, roadmap and estimate', text: 'I have an idea: ', icon: 'M4 4.5h4v4H4zM12 4.5h4v4h-4zM8 6.5h4M6 8.5v4h6M12 12.5h4v3h-4z' },
-  { label: 'Audit a URL', hint: 'A ranked fix list from your page', text: 'Audit this site and tell me what to fix first: https://', icon: 'M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM13 13l3.5 3.5' },
-  { label: 'Write ads', hint: 'Hooks and copy for each platform', text: 'Write ads for ', icon: 'M3.5 9.5v-3l9-3v9zM12.5 6.5h3a1.5 1.5 0 010 3h-3M6 12.5l1 3.5h2l-.8-3' },
-  { label: 'Make an image', hint: 'Free, right in the chat', text: 'Create an image: ', icon: 'M4 5h12v10H4zM4 13l3.5-3.5 3 3 2-2L16 14M13 8.2h.01' },
-] as const;
+// What BrandForge does, as commands: pick one and it sits in the message box as a highlighted tag, the way
+// the big assistants show a tool. Only what the platform really has.
+export type ChatCommand = 'carousel' | 'plan' | 'trade' | 'image';
+export const COMMANDS: { id: ChatCommand; label: string; hint: string; placeholder: string; icon: string }[] = [
+  { id: 'carousel', label: 'Make a carousel', hint: 'Swipeable slides from one sentence', placeholder: 'What is the carousel about?', icon: 'M5 5h8v10H5zM7 3.5h8V13M3.5 7v8' },
+  { id: 'plan', label: 'Plan my idea', hint: 'Scope, roadmap and estimate', placeholder: 'Describe your idea…', icon: 'M4 4.5h4v4H4zM12 4.5h4v4h-4zM8 6.5h4M6 8.5v4h6M12 12.5h4v3h-4z' },
+  { id: 'trade', label: 'Hire or get hired', hint: 'List what you offer or need', placeholder: 'What do you offer, or what do you need?', icon: 'M4 7h11l-3-3M16 13H5l3 3' },
+  { id: 'image', label: 'Make an image', hint: 'Free, right in the chat', placeholder: 'Describe the image…', icon: 'M4 5h12v10H4zM4 13l3.5-3.5 3 3 2-2L16 14M13 8.2h.01' },
+];
 
-function StartPrompts({ onPick }: { onPick: (text: string) => void }) {
+function StartPrompts({ onPick }: { onPick: (command: ChatCommand) => void }) {
   return (
     <div className="bf-start-prompts mx-auto w-full max-w-3xl px-4 sm:px-6">
       <div className="flex flex-wrap justify-center gap-2" role="group" aria-label="Starting points">
-        {START_PROMPTS.map((item) => (
-          <button key={item.label} type="button" data-tip={item.hint} onClick={() => ('href' in item && item.href ? window.location.assign(item.href) : onPick(item.text))} className="bf-start-chip">
+        {COMMANDS.map((item) => (
+          <button key={item.id} type="button" data-tip={item.hint} onClick={() => onPick(item.id)} className="bf-start-chip bf-start-chip-command">
             <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d={item.icon} />
             </svg>
@@ -257,6 +263,9 @@ export function ChatWorkspace() {
   const [input, setInput] = useState("");
   // The maker, opened over the chat: which format (null = pick one) and the topic to start from.
   // The carousel maker as a card in the thread: set when someone asks for a carousel or taps Make a carousel.
+  // The command tag in the message box (Make a carousel, Plan my idea, ...), or none.
+  const [activeCommand, setActiveCommand] = useState<ChatCommand | null>(null);
+  const carouselKey = useRef(0);
   const [carouselChat, setCarouselChat] = useState<{ topic: string; userText: string | null; key: number } | null>(null);
   const [isReplyingTo, setIsReplyingTo] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -494,6 +503,12 @@ export function ChatWorkspace() {
   const [aiEnabled, setAiEnabled] = useState(true);
   // Notices and the pause control wait until the chat's real AI state is known, so a refresh never flashes
   // "pause the AI" at someone who already paused it.
+
+  // Choosing a command (chip or + menu): it becomes the tag in the message box and the box takes focus.
+  function pickCommand(id: ChatCommand) {
+    setActiveCommand(id);
+    requestAnimationFrame(() => composerRef.current?.focus());
+  }
 
   // Matches only when the composer starts with a slash word: typing "/" anywhere else
   // is just prose and must never summon the popup.
@@ -1269,7 +1284,7 @@ export function ChatWorkspace() {
   const handleSend = useCallback(
     async (suggestion?: string) => {
       const checkedText = validateMessageInput((suggestion ?? input).trim());
-      const text = checkedText.value ?? "";
+      let text = checkedText.value ?? "";
       if (checkedText.error && !attachment) {
         setError(checkedText.error);
         return;
@@ -1286,11 +1301,40 @@ export function ChatWorkspace() {
         openGuestLogin({ reason: "start", next: "/" });
         return;
       }
-      // Asking for a carousel opens the maker as a card in the chat instead of sending it to the AI.
-      const wantsCarousel = !attachment && !suggestion?.startsWith("/") ? detectMakeIntent(text) : null;
+      // A command tag (or a typed /carousel, /plan, /trade, /image) decides what this message does.
+      const typed = suggestion === undefined ? /^\/(carousel|plan|trade|image)\b\s*([\s\S]*)$/i.exec(text) : null;
+      const command: ChatCommand | null = typed ? (typed[1].toLowerCase() as ChatCommand) : suggestion === undefined ? activeCommand : null;
+      if (command && !attachment) {
+        const body = (typed ? typed[2] : text).trim();
+        setActiveCommand(null);
+        setInput("");
+        trackEvent("next_step_clicked", { source: `command_${command}` });
+        if (command === "carousel") {
+          setCarouselChat({ topic: body.length >= 8 ? body : "", userText: body || null, key: ++carouselKey.current });
+          return;
+        }
+        if (command === "trade") {
+          try {
+            localStorage.setItem("bf:trade-describe", body);
+          } catch {
+            /* storage blocked: Trade opens empty */
+          }
+          router.push("/trade");
+          return;
+        }
+        if (!body) {
+          setActiveCommand(command);
+          requestAnimationFrame(() => composerRef.current?.focus());
+          return;
+        }
+        // Plan and image go to the AI as an ordinary message, with the command put in words.
+        text = command === "plan" ? `I have an idea: ${body}` : `Create an image: ${body}`;
+      }
+      // Asking for a carousel in plain words opens the maker as a card too, instead of sending it to the AI.
+      const wantsCarousel = !attachment && suggestion === undefined ? detectMakeIntent(text) : null;
       if (wantsCarousel) {
         setInput("");
-        setCarouselChat({ topic: wantsCarousel.topic, userText: text, key: Date.now() });
+        setCarouselChat({ topic: wantsCarousel.topic, userText: text, key: ++carouselKey.current });
         trackEvent("next_step_clicked", { source: "carousel_chat_intent" });
         return;
       }
@@ -1512,6 +1556,7 @@ export function ChatWorkspace() {
       await runTurn(conversationId, text);
     },
     [
+      activeCommand,
       aiAccess,
       aiEnabled,
       isChatOwner,
@@ -1571,7 +1616,9 @@ export function ChatWorkspace() {
       value?: string,
     ) => {
       if (!conversationId) return;
-      const response = await fetchAuthed("/api/messages", {
+      // A guest has no account session, so the plain request carries their guest cookie.
+      const request = railMeta.userId ? fetchAuthed : fetch;
+      const response = await request("/api/messages", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1586,7 +1633,7 @@ export function ChatWorkspace() {
       if (!response.ok) throw new Error(data.error || "Message action failed");
       await refreshMessages(conversationId);
     },
-    [conversationId, refreshMessages],
+    [conversationId, refreshMessages, railMeta.userId],
   );
 
   function handleReply(messageId: string) {
@@ -2540,7 +2587,11 @@ return (
                 Loading your conversation…
               </p>
             </div>
-          ) : !conversationId ? (carouselChat ? null : (
+          ) : !conversationId ? (
+            <SavedCardOrFallback
+              storageKey={cardKey(null)}
+              hide={Boolean(carouselChat)}
+              fallback={(
             <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col items-center justify-center text-center">
               <div
                 className="bf-ai-mark flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl"
@@ -2558,7 +2609,9 @@ return (
               </p>
               <AiPeopleFlow />
             </div>
-          )) : (
+          )}
+            />
+          ) : (
             <>
               {hasOlder ? (
                 <div className="mb-4 flex justify-center">
@@ -2665,7 +2718,11 @@ return (
             />
             </>
           )}
-          {carouselChat ? <CarouselChatCard key={carouselChat.key} topic={carouselChat.topic} userText={carouselChat.userText} onClose={() => setCarouselChat(null)} /> : null}
+          {carouselChat ? (
+            <CarouselChatCard key={carouselChat.key} topic={carouselChat.topic} userText={carouselChat.userText} storageKey={cardKey(conversationId)} restore={false} onClose={() => setCarouselChat(null)} />
+          ) : conversationId ? (
+            <SavedCardOrFallback storageKey={cardKey(conversationId)} hide={false} fallback={null} />
+          ) : null}
         </div>
 
         {showJumpToLatest && messages.length > 0 ? (
@@ -2975,6 +3032,17 @@ return (
               aria-label="Choose a file to attach"
             />
             <div className="bf-composer">
+              {activeCommand ? (
+                <span className="bf-command-pill">
+                  <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-ember" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d={COMMANDS.find((item) => item.id === activeCommand)?.icon ?? ""} />
+                  </svg>
+                  {COMMANDS.find((item) => item.id === activeCommand)?.label}
+                  <button type="button" onClick={() => setActiveCommand(null)} aria-label="Remove the command" className="flex h-5 w-5 items-center justify-center rounded-full text-muted transition hover:bg-overlay hover:text-foreground">
+                    ×
+                  </button>
+                </span>
+              ) : null}
               <textarea
                 ref={composerRef}
                 value={input}
@@ -2985,7 +3053,9 @@ return (
                   setSlashClosed(false);
                 }}
                 placeholder={
-                  isReplyingTo
+                  activeCommand
+                    ? COMMANDS.find((item) => item.id === activeCommand)?.placeholder
+                    : isReplyingTo
                     ? "Type your reply…"
                     : conversationId
                       ? aiEnabled && (!aiAccess || aiAccess.state === "allowed")
@@ -3041,19 +3111,10 @@ return (
                     signedIn={Boolean(railMeta.userId)}
                     hasChat={Boolean(conversationId)}
                     onUpload={() => fileInputRef.current?.click()}
-                    onPrefill={(text) => {
-                      setInput(text);
-                      requestAnimationFrame(() => {
-                        const box = composerRef.current;
-                        if (!box) return;
-                        box.focus();
-                        box.setSelectionRange(text.length, text.length);
-                      });
-                    }}
                     onInvite={() => setShowInviteForm(true)}
                     onContract={() => setShowContractForm(true)}
                     onCallTeam={isChatOwner && aiEnabled && conversationId ? () => void pauseAi(true) : null}
-                    onMake={() => setCarouselChat({ topic: "", userText: null, key: Date.now() })}
+                    onCommand={pickCommand}
                   />
                 </div>
                   <div className="flex items-center gap-3">
@@ -3075,17 +3136,7 @@ return (
           <ActionsHint show={showActionsHint} onDismiss={dismissActionsHint} />
         </div>
         {!conversationId && !isBooting ? (
-          <StartPrompts
-            onPick={(text) => {
-              setInput(text);
-              requestAnimationFrame(() => {
-                const box = composerRef.current;
-                if (!box) return;
-                box.focus();
-                box.setSelectionRange(text.length, text.length);
-              });
-            }}
-          />
+          <StartPrompts onPick={pickCommand} />
         ) : null}
         <p className="bf-chat-footer">
           AI can make mistakes. People check what matters.

@@ -1974,6 +1974,27 @@ main[data-empty='true'] .bf-composer-shell { position: static; }
   font-size: 0.8rem;
   transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease;
 }
+/* A command: the few things BrandForge does, picked like a tool in other assistants. */
+.bf-start-chip-command {
+  border-color: color-mix(in srgb, var(--ember) 45%, var(--line));
+  background: color-mix(in srgb, var(--ember) 9%, transparent);
+  color: var(--foreground);
+}
+.bf-command-pill {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 0.4rem;
+  margin: 0 0.15rem 0 0.4rem;
+  padding: 0.3rem 0.35rem 0.3rem 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--ember) 55%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ember) 14%, transparent);
+  color: var(--foreground);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
 .bf-start-chip:hover { border-color: var(--ember); color: var(--foreground); background: var(--overlay); }
 .bf-start-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .bf-start-prompts { margin-top: 1.1rem; }
