@@ -13,6 +13,8 @@
 //   cost number only if the provider actually reported one. No invented costs —
 //   the document's cost block is honest or it is zero.
 
+const { parseProviderModel } = require('./llm-providers.js');
+
 const DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1';
 
 async function completeJson({
@@ -26,23 +28,12 @@ async function completeJson({
   timeoutMs = 60000,
   fetchImpl = fetch,
 }) {
-  // A model named "cf:<id>" runs on Cloudflare Workers AI (OpenAI-compatible), with its own account and token.
-  // It is a second provider, so writing keeps working when the first one has no credit.
-  if (typeof model === 'string' && model.startsWith('cf:')) {
-    const account = process.env.CF_ACCOUNT_ID;
-    const token = process.env.CF_API_TOKEN;
-    if (!account || !token) throw new Error('llm_not_configured');
-    return completeJson({
-      baseUrl: `https://api.cloudflare.com/client/v4/accounts/${account}/ai/v1`,
-      apiKey: token,
-      model: model.slice(3),
-      system,
-      user,
-      temperature,
-      maxTokens,
-      timeoutMs,
-      fetchImpl,
-    });
+  // A model named "groq:", "gemini:", "cf:" ... runs on that provider (OpenAI-compatible) with its own key, so
+  // writing keeps working when the first provider has no credit. A provider with no key is simply unavailable.
+  const target = parseProviderModel(model);
+  if (target) {
+    if (target.missing) throw new Error('llm_not_configured');
+    return completeJson({ baseUrl: target.baseUrl, apiKey: target.apiKey, model: target.model, system, user, temperature, maxTokens, timeoutMs, fetchImpl });
   }
   if (!apiKey) {
     throw new Error('llm_not_configured');

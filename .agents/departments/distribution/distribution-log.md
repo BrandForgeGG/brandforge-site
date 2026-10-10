@@ -933,3 +933,9 @@ we do not have.
 **Change:** The carousel, post and Optimize writers now fall back to Cloudflare Workers AI (Llama 3.3 70B) when OpenRouter cannot answer, using the Cloudflare account that already makes cover art. No new signup or key.
 
 **Distribution move:** none; reliability. Not yet proven live: the first provider currently still answers, so the fallback has not been triggered.
+
+## 2026-10-10 — The chat and every writer fall back across many AI providers
+
+**Change:** One provider running out of credit or going down no longer stops the product. The chat (including streaming and tools) and the carousel, post and Optimize writers try OpenRouter first, then each backup provider that has a key (Groq, Gemini, Cloudflare, Mistral, DeepSeek, Together), then OpenRouter's free models. Providers without a key are skipped. Cloudflare is live now; the others switch on when a key is added in Vercel.
+
+**Distribution move:** none; reliability. Proven with simulated outages (OpenRouter refused, then Groq down, answer still arrived).

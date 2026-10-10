@@ -1,4 +1,5 @@
 import { completeJson } from '@/lib/blueprint-llm';
+import { writerChain } from '@/lib/llm-providers';
 import { extractJson } from '@/lib/carousel-plan.js';
 import { normalizePost, type Post, type PostType } from '@/lib/post-types.js';
 import { screenText } from '@/lib/content-policy.js';
@@ -8,7 +9,7 @@ import { getAiUsageToday } from '@/lib/project-db';
 // Writes the first draft of an update, poll, quiz or thread from one sentence. The person edits it before
 // anything is posted. Same rules as the carousel writer: facts only from what they gave, a token-capped
 // call to the standard model, a free model as the second try, and the daily AI ceiling.
-const MODELS = [process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini', 'cf:@cf/meta/llama-3.3-70b-instruct-fp8-fast', 'nvidia/nemotron-3-super-120b-a12b:free'];
+const MODELS = writerChain();
 
 const SHAPES: Record<PostType, string> = {
   update:

@@ -369,6 +369,8 @@ function toOpenRouterTool(tool: Tool) {
   };
 }
 
+import { configuredProviders, type ProviderTarget } from '@/lib/llm-providers';
+
 export class BrandForgeAIService {
   private apiKey: string;
   private baseUrl: string;
@@ -388,11 +390,8 @@ export class BrandForgeAIService {
     return [{ role: 'system', content: SYSTEM_PROMPT }, ...messages];
   }
 
-  private async request(body: Record<string, unknown>): Promise<Response> {
-    if (!this.apiKey) {
-      throw new Error('OPENROUTER_API_KEY is not configured for this deployment');
-    }
-
+  // mode 'free' skips the paid model and tries only the free ones: the last resort after every provider failed.
+  private async requestOpenRouter(body: Record<string, unknown>, mode: 'paid' | 'free' = 'paid'): Promise<Response> {
     const send = (payload: Record<string, unknown>) =>
       fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
@@ -405,6 +404,17 @@ export class BrandForgeAIService {
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(55000),
       });
+
+    if (mode === 'free') {
+      const free = (process.env.OPENROUTER_FREE_MODELS || 'nvidia/nemotron-3-super-120b-a12b:free').split(',').map((id) => id.trim()).filter(Boolean);
+      let last: Response | null = null;
+      for (const id of free) {
+        console.warn(`Answering with the free model ${id}`);
+        last = await send({ ...body, model: id });
+        if (last.ok) return last;
+      }
+      return last ?? (await send(body));
+    }
 
     let response = await send(body);
 
@@ -424,23 +434,74 @@ export class BrandForgeAIService {
         console.warn(`Credit is low: asking for ${affordable - 20} tokens instead of ${String(body.max_tokens)}`);
         response = await send({ ...body, max_tokens: affordable - 20 });
       }
-      if (!response.ok) {
-        const free = (process.env.OPENROUTER_FREE_MODELS || 'nvidia/nemotron-3-super-120b-a12b:free').split(',').map((id) => id.trim()).filter(Boolean);
-        for (const id of free) {
-          console.warn(`Credit is out: answering with the free model ${id}`);
-          response = await send({ ...body, model: id });
-          if (response.ok) break;
-        }
-      }
-    }
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenRouter API error:', response.status, errorText.slice(0, 400));
-      throw new Error(`OpenRouter request failed (${response.status})`);
     }
 
     return response;
+  }
+
+  // One attempt against another provider. The same request body works (same chat-completions format); only the
+  // address, key and model change. A hung provider is cut off after 20 seconds of silence so the next one gets a turn.
+  private async requestProvider(target: ProviderTarget, body: Record<string, unknown>): Promise<Response> {
+    const controller = new AbortController();
+    const wait = setTimeout(() => controller.abort(), 20000);
+    try {
+      const response = await fetch(`${target.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${target.apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...body, model: target.model }),
+        // 20s of silence, or 55s in all (this timeout signal never keeps the process alive).
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(55000)]),
+      });
+      return response;
+    } finally {
+      clearTimeout(wait);
+    }
+  }
+
+  // Asks OpenRouter first. If it cannot answer (no credit, outage, bad model, timeout), every other configured
+  // provider gets a turn in order, so one provider going down never takes the chat with it.
+  private async request(body: Record<string, unknown>): Promise<Response> {
+    const failures: string[] = [];
+    if (this.apiKey) {
+      try {
+        const response = await this.requestOpenRouter(body);
+        if (response.ok) return response;
+        failures.push(`openrouter ${response.status}`);
+        console.error('OpenRouter API error:', response.status, (await response.text().catch(() => '')).slice(0, 300));
+      } catch (error) {
+        failures.push('openrouter unreachable');
+        console.error('OpenRouter request failed:', error instanceof Error ? error.message : error);
+      }
+    } else {
+      failures.push('openrouter not configured');
+    }
+
+    for (const target of configuredProviders()) {
+      try {
+        console.warn(`Answering with ${target.label} (${target.model})`);
+        const response = await this.requestProvider(target, body);
+        if (response.ok) return response;
+        failures.push(`${target.id} ${response.status}`);
+        console.error(`${target.label} API error:`, response.status, (await response.text().catch(() => '')).slice(0, 300));
+      } catch (error) {
+        failures.push(`${target.id} unreachable`);
+        console.error(`${target.label} request failed:`, error instanceof Error ? error.message : error);
+      }
+    }
+
+    // Last resort: OpenRouter's free models, slow but they cost nothing.
+    if (this.apiKey) {
+      try {
+        const response = await this.requestOpenRouter(body, 'free');
+        if (response.ok) return response;
+        failures.push(`free ${response.status}`);
+      } catch (error) {
+        failures.push('free unreachable');
+        console.error('Free model request failed:', error instanceof Error ? error.message : error);
+      }
+    }
+
+    throw new Error(`OpenRouter request failed (${failures.join(', ')})`);
   }
 
   async chat(messages: Message[], options?: { tools?: Tool[] | null }): Promise<Message> {

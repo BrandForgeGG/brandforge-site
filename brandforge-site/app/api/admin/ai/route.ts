@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { answerModel, getLiveModelIds, getRemainingCredit } from '@/lib/ai-service';
 import { describeModels } from '@/lib/model-catalog.js';
+import { configuredProviders } from '@/lib/llm-providers';
 import { budgetLimits } from '@/lib/ai-budget.js';
 import { getAiUsageToday, getFunnelSummary, getReturnMetrics, isAdminAccount } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
@@ -33,6 +34,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       answering,
       fastModel: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
+      // Backup providers with a key set, in the order they are tried after OpenRouter.
+      backups: configuredProviders().map((p) => ({ id: p.id, label: p.label, model: p.model })),
       liveListRead: live !== null,
       creditRemaining: credit === null ? null : Math.max(0, Math.round(credit * 100) / 100),
       models: describeModels(live),
