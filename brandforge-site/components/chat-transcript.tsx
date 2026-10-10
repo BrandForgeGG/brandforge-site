@@ -1262,10 +1262,12 @@ export function ChatTranscript({
 
         // Pillar A: a human message is always a named person. Older rows stored before
         // sender_name existed fall back to a neutral word rather than inventing a team identity.
-        const authorName = isAI
-          ? "BrandForge AI"
-          : message.senderName?.trim() || (isHuman ? "BrandForge team" : "You");
-        const authorInitials = initialsFor(authorName);
+        const storedName = message.senderName?.trim() || (isHuman ? "BrandForge team" : "You");
+        // Your own messages read "You" before and after they are saved (it used to flip to "Guest" or your name).
+        const writtenByViewer =
+          !isAI && !isHuman && (currentUserId ? message.senderId === currentUserId : !message.senderId);
+        const authorName = isAI ? "BrandForge AI" : writtenByViewer ? "You" : storedName;
+        const authorInitials = initialsFor(isAI ? authorName : storedName);
 
         // Grouped-message behavior: avatar and name appear on the first message of a run,
         // follow-ups tuck underneath with a compact gap. System pills and embeds break groups.
@@ -1480,7 +1482,8 @@ export function ChatTranscript({
           </p>
         </div>
       ) : null}
-      {isStreaming && !messages.some((message) => message.streaming) ? (
+      {/* Only while an answer is still to come: not in the moment after one has landed. */}
+      {isStreaming && !messages.some((message) => message.streaming) && messages[messages.length - 1]?.sender !== "ai" ? (
         <div className="mt-5 flex gap-3">
           <BrandForgeMark />
           <p className="bf-streaming-state" role="status">

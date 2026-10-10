@@ -385,6 +385,8 @@ function cool(key: string, status: number | 'network', hint?: string) {
 const isCooling = (key: string) => (coolUntil.get(key) ?? 0) > Date.now();
 
 export class BrandForgeAIService {
+  // Who answered the most recent request ("openrouter", a provider id, or "free"): used to skip a provider that returns nothing.
+  private lastAnswerer = 'openrouter';
   private apiKey: string;
   private baseUrl: string;
   private model: string;
@@ -480,7 +482,10 @@ export class BrandForgeAIService {
     if (this.apiKey && (allCooling || !isCooling('openrouter'))) {
       try {
         const response = await this.requestOpenRouter(body);
-        if (response.ok) return response;
+        if (response.ok) {
+          this.lastAnswerer = 'openrouter';
+          return response;
+        }
         failures.push(`openrouter ${response.status}`);
         const detail = (await response.text().catch(() => '')).slice(0, 300);
         console.error('OpenRouter API error:', response.status, detail);
@@ -500,7 +505,10 @@ export class BrandForgeAIService {
         console.warn(`Answering with ${target.label} (${target.model})`);
         // Backup providers get a smaller answer budget: their free tiers count the requested size against a per-minute cap.
         const response = await this.requestProvider(target, typeof body.max_tokens === 'number' ? { ...body, max_tokens: Math.min(body.max_tokens, 2000) } : body);
-        if (response.ok) return response;
+        if (response.ok) {
+          this.lastAnswerer = target.id;
+          return response;
+        }
         failures.push(`${target.id} ${response.status}`);
         const detail = (await response.text().catch(() => '')).slice(0, 300);
         console.error(`${target.label} API error:`, response.status, detail);
@@ -516,7 +524,10 @@ export class BrandForgeAIService {
     if (this.apiKey) {
       try {
         const response = await this.requestOpenRouter(body, 'free');
-        if (response.ok) return response;
+        if (response.ok) {
+          this.lastAnswerer = 'free';
+          return response;
+        }
         failures.push(`free ${response.status}`);
       } catch (error) {
         failures.push('free unreachable');
@@ -655,6 +666,7 @@ export class BrandForgeAIService {
   ): Promise<Message> {
     const conversation: Message[] = [...messages];
     const maxIterations = 6;
+    let emptyRetries = 0;
 
     for (let iteration = 0; iteration < maxIterations; iteration++) {
       let roundText = '';
@@ -674,6 +686,15 @@ export class BrandForgeAIService {
       );
 
       if (!result.tool_calls || result.tool_calls.length === 0) {
+        // A provider that answers with nothing (some reasoning models spend the whole budget thinking) is skipped
+        // for a while and the same round is asked again, so the next provider gets the turn. Up to two retries.
+        if (!result.content.trim() && emptyRetries < 2) {
+          emptyRetries += 1;
+          cool(this.lastAnswerer, 'network');
+          console.warn(`Empty answer from ${this.lastAnswerer}; trying the next provider`);
+          iteration -= 1;
+          continue;
+        }
         return { role: 'assistant', content: result.content };
       }
 

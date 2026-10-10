@@ -152,8 +152,7 @@ const SLASH_COMMANDS = [
   { command: "/carousel", label: "Make a carousel" },
   { command: "/plan", label: "Plan my idea" },
   { command: "/trade", label: "Hire or get hired" },
-  { command: "/image", label: "Make an image" },
-  { command: "/progress", label: "Progress report" },
+    { command: "/progress", label: "Progress report" },
   { command: "/review", label: "Send to BrandForge review" },
   { command: "/contract", label: "Agreement steps" },
   { command: "/attach", label: "How to attach a file" },
@@ -164,12 +163,11 @@ const SLASH_COMMANDS = [
 // Starting points under the composer: one tap fills it, the tooltip says what comes back.
 // What BrandForge does, as commands: pick one and it sits in the message box as a highlighted tag, the way
 // the big assistants show a tool. Only what the platform really has.
-export type ChatCommand = 'carousel' | 'plan' | 'trade' | 'image';
+export type ChatCommand = 'carousel' | 'plan' | 'trade';
 export const COMMANDS: { id: ChatCommand; label: string; hint: string; placeholder: string; icon: string }[] = [
   { id: 'carousel', label: 'Make a carousel', hint: 'Swipeable slides from one sentence', placeholder: 'What is the carousel about?', icon: 'M5 5h8v10H5zM7 3.5h8V13M3.5 7v8' },
   { id: 'plan', label: 'Plan my idea', hint: 'Scope, roadmap and estimate', placeholder: 'Describe your idea…', icon: 'M4 4.5h4v4H4zM12 4.5h4v4h-4zM8 6.5h4M6 8.5v4h6M12 12.5h4v3h-4z' },
   { id: 'trade', label: 'Hire or get hired', hint: 'List what you offer or need', placeholder: 'What do you offer, or what do you need?', icon: 'M4 7h11l-3-3M16 13H5l3 3' },
-  { id: 'image', label: 'Make an image', hint: 'Free, right in the chat', placeholder: 'Describe the image…', icon: 'M4 5h12v10H4zM4 13l3.5-3.5 3 3 2-2L16 14M13 8.2h.01' },
 ];
 
 function StartPrompts({ onPick }: { onPick: (command: ChatCommand) => void }) {
@@ -1295,7 +1293,9 @@ export function ChatWorkspace() {
 
   // Who may make the AI generate here. The server enforces it on every message; this is what the screen shows.
   const { access: aiAccess, request: requestAiUse, decide: decideAiUse } = useAiAccess(conversationId, Boolean(railMeta.userId) && Boolean(conversationId));
-  const isChatOwner = aiAccess ? aiAccess.isOwner : isOwnConversation;
+  // A guest started their chat, so it is theirs: the AI switch shows for them too (the access endpoint is signed-in only).
+  const isGuestOwner = Boolean(conversationId && !railMeta.userId && isGuestBrowser);
+  const isChatOwner = aiAccess ? aiAccess.isOwner : isOwnConversation || isGuestOwner;
   const pauseAiRef = useRef<((callTeam: boolean) => Promise<void>) | null>(null);
 
   // The carousel is sent: it joins the chat as a message with its own date. A brand-new chat is started with it.
@@ -1382,7 +1382,7 @@ export function ChatWorkspace() {
         return;
       }
       // A command tag (or a typed /carousel, /plan, /trade, /image) decides what this message does.
-      const typed = suggestion === undefined ? /^\/(carousel|plan|trade|image)\b\s*([\s\S]*)$/i.exec(text) : null;
+      const typed = suggestion === undefined ? /^\/(carousel|plan|trade)\b\s*([\s\S]*)$/i.exec(text) : null;
       const command: ChatCommand | null = typed ? (typed[1].toLowerCase() as ChatCommand) : suggestion === undefined ? activeCommand : null;
       if (command && !attachment) {
         const body = (typed ? typed[2] : text).trim();
@@ -1407,8 +1407,8 @@ export function ChatWorkspace() {
           requestAnimationFrame(() => composerRef.current?.focus());
           return;
         }
-        // Plan and image go to the AI as an ordinary message, with the command put in words.
-        text = command === "plan" ? `I have an idea: ${body}` : `Create an image: ${body}`;
+        // Plan goes to the AI as an ordinary message, with the command put in words.
+        text = `I have an idea: ${body}`;
       }
       // Asking for a carousel in plain words opens the maker as a card too, instead of sending it to the AI.
       const wantsCarousel = !attachment && suggestion === undefined ? detectMakeIntent(text) : null;
@@ -2315,11 +2315,13 @@ export function ChatWorkspace() {
     const timer = window.setTimeout(() => setCommandStatus(null), 3500);
     return () => window.clearTimeout(timer);
   }, [commandStatus]);
+  // A failed answer needs an action, so it stays until the person acts. Other notices fade.
+  const awaitingAnswer = !isStreaming && aiEnabled && messages.length > 0 && messages[messages.length - 1].sender === "user";
   useEffect(() => {
-    if (!error || policyHit) return;
+    if (!error || policyHit || awaitingAnswer) return;
     const timer = window.setTimeout(() => setError(null), 5000);
     return () => window.clearTimeout(timer);
-  }, [error, policyHit]);
+  }, [error, policyHit, awaitingAnswer]);
   useEffect(() => {
     if (!inviteNote) return;
     const timer = window.setTimeout(() => setInviteNote(""), 3500);
@@ -2867,6 +2869,17 @@ return (
                 >
                   Try again
                 </button>
+              ) : awaitingAnswer && conversationId ? (
+                <button
+                  type="button"
+                  className="bf-error-retry shrink-0"
+                  onClick={() => {
+                    setError(null);
+                    void runTurn(conversationId);
+                  }}
+                >
+                  Try again
+                </button>
               ) : null}
             </div>
           </div>
@@ -3154,6 +3167,12 @@ return (
                 disabled={isBusy}
                 className="bf-composer-input"
                 onKeyDown={(event) => {
+                  // Backspace (or Delete) on an empty box takes the command tag away, like deleting a word.
+                  if ((event.key === "Backspace" || event.key === "Delete") && activeCommand && input === "") {
+                    event.preventDefault();
+                    setActiveCommand(null);
+                    return;
+                  }
                   if (slashMatches.length > 0) {
                     if (event.key === "ArrowDown") {
                       event.preventDefault();

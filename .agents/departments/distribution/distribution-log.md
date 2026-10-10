@@ -1005,3 +1005,9 @@ we do not have.
 **Change:** Found in live logs: with OpenRouter out of credit, Groq's free tier capped at 8,000 tokens a minute and Gemini's free quota spent, a backup model kept calling tools and the chat gave up. Now the last rounds of a turn take tools away so the model must write its answer; a provider that just refused is skipped for a short while (30 seconds for a rate limit, 3 minutes for no credit) instead of being asked again by every request; backup providers get a smaller answer budget so the free per-minute caps last longer; and Gemini's backup uses the lite model, which has the larger free quota.
 
 **Distribution move:** none; reliability. Founder action still open: top up OpenRouter credit, which removes the root cause.
+
+## 2026-10-10 — Browser pass: three commands, tag after the +, and the glitches it found
+
+**Change:** Make an image is gone from the chips and the + menu, leaving Make a carousel, Plan my idea and Hire or get hired. A chosen command now sits right after the + and Backspace on an empty box removes it. A live browser pass (as a guest, second by second) found and fixed: a ghost "Working…" row flashing after an answer; your own messages flipping from "You" to "Guest" once saved; no AI switch for guests (the check for who owns the chat only worked for signed-in people); failed answers vanishing after five seconds with no way to retry (now they stay with Try again); an empty answer from a backup provider ending the turn (the next provider is now tried); and the carousel's working label stepping backwards. GitHub and Binance links are read and summarised correctly.
+
+**Distribution move:** none; polish and reliability.

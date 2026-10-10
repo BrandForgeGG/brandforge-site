@@ -135,7 +135,7 @@ export function CarouselChatCard({ topic, userText, storageKey, restore, onSend,
   // The working animation walks through its steps while the writer does the real work.
   useEffect(() => {
     if (stage !== 'working') return;
-    const timer = window.setInterval(() => setPhase((current) => Math.min(current + 1, 1)), 2600);
+    const timer = window.setInterval(() => setPhase((current) => (current >= 1 ? current : current + 1)), 2600);
     return () => window.clearInterval(timer);
   }, [stage]);
 

@@ -32,7 +32,7 @@ export function ToolsMenu({
   onInvite: () => void;
   onContract: () => void;
   onCallTeam: (() => void) | null;
-  onCommand: (id: 'carousel' | 'plan' | 'trade' | 'image') => void;
+  onCommand: (id: 'carousel' | 'plan' | 'trade') => void;
 }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -70,7 +70,6 @@ export function ToolsMenu({
       items: [
         { key: 'carousel', label: 'Make a carousel', hint: 'Swipeable slides from one sentence', icon: 'M5 5h8v10H5zM7 3.5h8V13M3.5 7v8', run: () => onCommand('carousel') },
         { key: 'plan', label: 'Plan my idea', hint: 'Scope, roadmap and estimate', icon: 'M4 4.5h4v4H4zM12 4.5h4v4h-4zM8 6.5h4M6 8.5v4h6M12 12.5h4v3h-4z', run: () => onCommand('plan') },
-        { key: 'image', label: 'Make an image', hint: 'Free, right in the chat', icon: 'M4 5h12v10H4zM4 13l3.5-3.5 3 3 2-2L16 14M13 8.2h.01', run: () => onCommand('image') },
         { key: 'trade', label: 'Hire or get hired', hint: 'List what you offer or need', icon: 'M4 7h11l-3-3M16 13H5l3 3', run: () => onCommand('trade') },
       ],
     },
