@@ -24,9 +24,8 @@ import { trackEvent } from "@/lib/funnel-client";
 import { useLogin } from "@/components/login-dialog";
 import { AiNotices, AiSwitch, useAiAccess } from "@/components/chat-ai-controls";
 import { ToolsMenu } from "@/components/chat-tools-menu";
-import { CreateSheet } from "@/components/chat/create-sheet";
+import { CarouselChatCard } from "@/components/chat/carousel-chat-card";
 import { detectMakeIntent } from "@/lib/make-intent";
-import type { StudioKind } from "@/components/studio/studio-hub";
 import { PeerContractForm } from "@/components/peer-contract-card";
 import { extractOutline } from "@/lib/deliverable-outline";
 import { ChatTranscript, type ChatMessage } from "@/components/chat-transcript";
@@ -257,8 +256,8 @@ export function ChatWorkspace() {
   );
   const [input, setInput] = useState("");
   // The maker, opened over the chat: which format (null = pick one) and the topic to start from.
-  const [makeOpen, setMakeOpen] = useState<{ kind: StudioKind | null; topic: string } | null>(null);
-  const makeHint = detectMakeIntent(input);
+  // The carousel maker as a card in the thread: set when someone asks for a carousel or taps Make a carousel.
+  const [carouselChat, setCarouselChat] = useState<{ topic: string; userText: string | null; key: number } | null>(null);
   const [isReplyingTo, setIsReplyingTo] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   // A chat opened from a link starts in the loading state, so the empty-chat screen never flashes first.
@@ -1285,6 +1284,14 @@ export function ChatWorkspace() {
         }
         trackEvent("guest_send_gated", { source: "composer" });
         openGuestLogin({ reason: "start", next: "/" });
+        return;
+      }
+      // Asking for a carousel opens the maker as a card in the chat instead of sending it to the AI.
+      const wantsCarousel = !attachment && !suggestion?.startsWith("/") ? detectMakeIntent(text) : null;
+      if (wantsCarousel) {
+        setInput("");
+        setCarouselChat({ topic: wantsCarousel.topic, userText: text, key: Date.now() });
+        trackEvent("next_step_clicked", { source: "carousel_chat_intent" });
         return;
       }
       const slash = parseSlashCommand(text);
@@ -2533,7 +2540,7 @@ return (
                 Loading your conversation…
               </p>
             </div>
-          ) : !conversationId ? (
+          ) : !conversationId ? (carouselChat ? null : (
             <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col items-center justify-center text-center">
               <div
                 className="bf-ai-mark flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl"
@@ -2551,7 +2558,7 @@ return (
               </p>
               <AiPeopleFlow />
             </div>
-          ) : (
+          )) : (
             <>
               {hasOlder ? (
                 <div className="mb-4 flex justify-center">
@@ -2658,6 +2665,7 @@ return (
             />
             </>
           )}
+          {carouselChat ? <CarouselChatCard key={carouselChat.key} topic={carouselChat.topic} userText={carouselChat.userText} onClose={() => setCarouselChat(null)} /> : null}
         </div>
 
         {showJumpToLatest && messages.length > 0 ? (
@@ -2755,8 +2763,7 @@ return (
           </div>
         </div>
 
-        {makeOpen ? <CreateSheet kind={makeOpen.kind} topic={makeOpen.topic} onClose={() => setMakeOpen(null)} /> : null}
-        <div className="bf-composer-shell sticky bottom-0 shrink-0">
+<div className="bf-composer-shell sticky bottom-0 shrink-0">
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -2791,15 +2798,6 @@ return (
                     <span className="bf-menu-hint">{item.command}</span>
                   </button>
                 ))}
-              </div>
-            ) : null}
-            {makeHint ? (
-              <div className="bf-composer-chip" role="status">
-                <span aria-hidden="true">✨</span>
-                <span className="min-w-0 flex-1 truncate">Make it as a {makeHint.kind}, with visuals</span>
-                <button type="button" onClick={() => setMakeOpen({ kind: makeHint.kind, topic: makeHint.topic })} className="rounded-md bg-ember px-2.5 py-1 text-xs font-semibold text-background">
-                  Open the maker
-                </button>
               </div>
             ) : null}
             {attachment ? (
@@ -3055,7 +3053,7 @@ return (
                     onInvite={() => setShowInviteForm(true)}
                     onContract={() => setShowContractForm(true)}
                     onCallTeam={isChatOwner && aiEnabled && conversationId ? () => void pauseAi(true) : null}
-                    onMake={(kind) => setMakeOpen({ kind, topic: "" })}
+                    onMake={() => setCarouselChat({ topic: "", userText: null, key: Date.now() })}
                   />
                 </div>
                   <div className="flex items-center gap-3">

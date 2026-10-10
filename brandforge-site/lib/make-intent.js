@@ -14,7 +14,7 @@ function detectMakeIntent(text) {
   for (const [kind, pattern] of KINDS) {
     if (!pattern.test(value)) continue;
     const about = value.match(/\b(?:about|on|for|regarding)\s+(.{4,})$/i);
-    return { kind, topic: (about ? about[1] : value).trim().slice(0, 500) };
+    return { kind, topic: about ? about[1].trim().slice(0, 500) : '' };
   }
   return null;
 }

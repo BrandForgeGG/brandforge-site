@@ -963,3 +963,9 @@ we do not have.
 **Change:** The Create page and the chat maker now show the Carousel card only. Update, Poll, Quiz and Thread are gone from the cards, the chat + menu and the chat hint. Pages and the overview diagram now say those formats are coming rather than live.
 
 **Distribution move:** none; copy follows what is live. Do not announce polls, quizzes or threads until they return.
+
+## 2026-10-10 — The carousel maker lives inside the chat as a card
+
+**Change:** No side panel any more. Ask for a carousel in the chat (or tap Make a carousel in the + menu) and the AI answers with a card: what is it about, then buttons for the look (eight colours), the cover style and the number of points. It then works in front of you (brainstorming, writing, drawing the cover, laying it out) and the finished slides appear in the chat with buttons to change the look, get new cover art, edit every word and picture, or download all.
+
+**Distribution move:** this is the demo clip: type "make a carousel about…" in the chat and watch the card build it. Changelog line: "Make a carousel without leaving the chat."
