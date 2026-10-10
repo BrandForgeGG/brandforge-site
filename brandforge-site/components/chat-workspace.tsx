@@ -2289,13 +2289,23 @@ return (
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             {isGuestBrowser ? (
-              <button
-                type="button"
-                onClick={() => openGuestLogin({ reason: "save", next: conversationId ? `/chat?conversationId=${conversationId}` : "/" })}
-                className="rounded-full border border-line px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-overlay"
-              >
-                Sign in
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => openGuestLogin({ reason: "save", next: conversationId ? `/chat?conversationId=${conversationId}` : "/" })}
+                  className="rounded-full border border-line px-4 py-2 text-sm font-medium text-foreground transition hover:bg-overlay"
+                >
+                  Log in
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openGuestLogin({ reason: "save", next: conversationId ? `/chat?conversationId=${conversationId}` : "/" })}
+                  className="rounded-full bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90"
+                >
+                  <span className="sm:hidden">Sign up</span>
+                  <span className="hidden sm:inline">Sign up for free</span>
+                </button>
+              </>
             ) : null}
             {conversationId ? (
               <>

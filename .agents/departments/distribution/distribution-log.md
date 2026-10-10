@@ -885,3 +885,9 @@ we do not have.
 **Change:** Where a guest used to see a fake user card, the sidebar footer now says "Sign up or log in" with one large Log in button, like ChatGPT.
 
 **Distribution move:** none beyond the sign-up funnel; watch `signin` dialog opens from the sidebar.
+
+## 2026-10-10 — Guest chat header: Log in and Sign up for free
+
+**Change:** The small top-right "Sign in" is now two larger buttons for guests: Log in and Sign up for free.
+
+**Distribution move:** none beyond the sign-up funnel.
