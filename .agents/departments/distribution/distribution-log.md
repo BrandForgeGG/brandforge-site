@@ -1017,3 +1017,9 @@ we do not have.
 **Change:** The carousel button now says Save to chat (it is already in the chat). From the landing page, the first action (Make a carousel) starts a real chat straight away: the typed line is its first message, the carousel card is waiting inside it, and the AI does not answer an action as if it were a question. Trade is open to everyone: the 17 pre-made BrandForge services are removed, and anyone can answer a request, not only the team. The landing prompt now reads "What do you want to make, plan or trade?".
 
 **Distribution move:** copy: "Trade is open to everyone: say what you offer or need, and answer anyone's request."
+
+## 2026-10-10 — Mobile and keyboard pass: the keyboard no longer crushes the screen
+
+**Change:** With the phone keyboard up, the Terms line used to lie on top of the "Hire or get hired" chip and the logo slid under the Log in button. Now a short screen keeps only the title, the box and the chips; the footer joins the flow on small screens and hides with the keyboard; "Terms · Privacy" never splits across lines; the landing prompt is short enough to fit a phone ("Make, plan or trade anything…"). A chosen command tag takes its own row on phones so the words get the full width. In an open chat on a phone, the status dot no longer lands on Log in (a guest's header drops the team stack on tiny screens). For keyboard users: a "Skip to the message box" link is the first stop, Escape in the + menu returns focus to the +, and Tab order now matches what is on screen (+, tag, words, send).
+
+**Distribution move:** none; polish.

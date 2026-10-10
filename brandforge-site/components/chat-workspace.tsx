@@ -2426,6 +2426,17 @@ export function ChatWorkspace() {
   }, [messages]);
 return (
       <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+      {/* Keyboard users reach the message box in one stop instead of tabbing through the sidebar. */}
+      <a
+        href="#chat-message"
+        onClick={(event) => {
+          event.preventDefault();
+          composerRef.current?.focus();
+        }}
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[60] focus:rounded-lg focus:bg-ember focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-background"
+      >
+        Skip to the message box
+      </a>
       <div className="flex min-h-0 flex-1 overflow-hidden">
       <ConversationRail
         recents={recents}
@@ -2507,7 +2518,8 @@ return (
               <>
             {aiKnown ? <AiSwitch aiEnabled={aiEnabled} canControl={isChatOwner} onToggle={() => void (aiEnabled ? pauseAi(false) : resumeAi())} /> : null}
             {/* Project team: real participants plus BrandForge AI - never a fabricated roster. */}
-            <div className="bf-menu-root relative">
+            {/* On a phone a guest's header is full (Log in, Sign up, the AI switch), so the team stack makes room. */}
+            <div className={`bf-menu-root relative${isGuestBrowser && !railMeta.userId ? " max-[430px]:hidden" : ""}`}>
               <button
                 type="button"
                 onClick={() => setTeamOpen((value) => !value)}
@@ -2720,7 +2732,7 @@ return (
               fallback={(
             <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col items-center justify-center text-center">
               <div
-                className="bf-ai-mark flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl"
+                className="bf-ai-mark bf-start-mark flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl"
                 aria-hidden="true"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- bundled local asset at a fixed size */}
@@ -2729,7 +2741,7 @@ return (
               <h1 className="bf-start-title mt-5 font-serif text-3xl text-foreground sm:text-[2.6rem]">
                 What are we building today?
               </h1>
-              <p className="mt-3 max-w-md text-sm leading-relaxed text-muted">
+              <p className="bf-start-sub mt-3 max-w-md text-sm leading-relaxed text-muted">
                 AI drafts in seconds. People make it good. Create, publish and trade, all in one place.
                 {isGuestBrowser ? <span className="mt-1 block text-xs">Free to start. No card, no sign-up to try it.</span> : null}
               </p>
@@ -3168,7 +3180,19 @@ return (
               tabIndex={-1}
               aria-label="Choose a file to attach"
             />
-            <div className="bf-composer">
+            <div className={`bf-composer${activeCommand ? " bf-composer-tagged" : ""}`}>
+              <div className="bf-composer-bar">
+                <div className="flex items-center gap-1.5">
+                  <ToolsMenu
+                    signedIn={Boolean(railMeta.userId)}
+                    hasChat={Boolean(conversationId)}
+                    onUpload={() => fileInputRef.current?.click()}
+                    onInvite={() => setShowInviteForm(true)}
+                    onContract={() => setShowContractForm(true)}
+                    onCallTeam={isChatOwner && aiEnabled && conversationId ? () => void pauseAi(true) : null}
+                    onCommand={pickCommand}
+                  />
+                </div>
               {activeCommand ? (
                 <span className="bf-command-pill">
                   <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-ember" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -3182,6 +3206,7 @@ return (
               ) : null}
               <textarea
                 ref={composerRef}
+                id="chat-message"
                 value={input}
                 aria-label="Chat message"
                 onChange={(event) => {
@@ -3198,7 +3223,7 @@ return (
                       ? aiEnabled && (!aiAccess || aiAccess.state === "allowed")
                         ? "Ask anything…"
                         : "Message the team…"
-                      : "What do you want to make, plan or trade?"
+                      : "Make, plan or trade anything…"
                 }
                 rows={1}
                 disabled={isBusy}
@@ -3248,18 +3273,6 @@ return (
                   }
                 }}
               />
-              <div className="bf-composer-bar">
-                <div className="flex items-center gap-1.5">
-                  <ToolsMenu
-                    signedIn={Boolean(railMeta.userId)}
-                    hasChat={Boolean(conversationId)}
-                    onUpload={() => fileInputRef.current?.click()}
-                    onInvite={() => setShowInviteForm(true)}
-                    onContract={() => setShowContractForm(true)}
-                    onCallTeam={isChatOwner && aiEnabled && conversationId ? () => void pauseAi(true) : null}
-                    onCommand={pickCommand}
-                  />
-                </div>
                   <div className="flex items-center gap-3">
                   <button
                     type="submit"
@@ -3282,11 +3295,12 @@ return (
           <StartPrompts onPick={pickCommand} />
         ) : null}
         <p className="bf-chat-footer">
-          AI can make mistakes. People check what matters.
-          <span aria-hidden="true"> · </span>
-          <Link href="/terms">Terms</Link>
-          <span aria-hidden="true"> · </span>
-          <Link href="/privacy">Privacy</Link>
+          <span>AI can make mistakes. People check what matters.</span>
+          <span className="bf-chat-footer-links">
+            <Link href="/terms">Terms</Link>
+            <span aria-hidden="true">·</span>
+            <Link href="/privacy">Privacy</Link>
+          </span>
         </p>
       </main>
 

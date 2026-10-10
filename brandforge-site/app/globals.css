@@ -1996,6 +1996,13 @@ main[data-empty='true'] .bf-composer-shell { position: static; }
   font-weight: 600;
   white-space: nowrap;
 }
+/* A phone is too narrow for the tag and the words on one line: the tag takes a row of its own (with the + and the send
+   button) and what you type gets the full width underneath. */
+@media (max-width: 520px) {
+  .bf-composer.bf-composer-tagged { flex-wrap: wrap; align-items: center; row-gap: 0.1rem; }
+  .bf-composer-tagged .bf-composer-bar > :last-child { order: 3; margin-left: auto; }
+  .bf-composer-tagged .bf-composer-input { order: 4; flex: 1 1 100%; padding-left: 0.6rem; padding-right: 0.6rem; }
+}
 .bf-start-chip:hover { border-color: var(--ember); color: var(--foreground); background: var(--overlay); }
 .bf-start-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .bf-start-prompts { margin-top: 1.1rem; }
@@ -2042,9 +2049,28 @@ main[data-empty='true'] .bf-composer-shell { position: static; }
   line-height: 1.4;
   color: var(--muted);
 }
+/* The note and the two links wrap as units: "Terms · Privacy" is never split across lines. */
+.bf-chat-footer { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0 0.7rem; }
+.bf-chat-footer-links { display: inline-flex; align-items: center; gap: 0.5rem; white-space: nowrap; }
+/* With the keyboard up there is no room for it, in any chat. */
+@media (max-height: 560px) { .bf-chat-footer { display: none; } }
 .bf-chat-footer a { color: inherit; text-decoration: none; }
 .bf-chat-footer a:hover { color: var(--foreground); text-decoration: underline; text-underline-offset: 2px; }
+/* In the empty chat the footer is pinned to the bottom of the screen. On a short screen it joins the flow under the
+   chips instead, so it can never lie on top of them. */
 main[data-empty='true'] > .bf-chat-footer { position: absolute; inset: auto 0 0 0; }
+@media (max-height: 640px) {
+  main[data-empty='true'] > .bf-chat-footer { position: static; }
+}
+
+/* The keyboard is up (the screen is very short): the empty chat keeps only what is needed to start typing. */
+@media (max-height: 560px) {
+  .bf-start-mark,
+  .bf-start-sub,
+  .bf-flow-diagram,
+  main[data-empty='true'] > .bf-chat-footer { display: none; }
+  .bf-start-prompts { margin-top: 0.6rem; }
+}
 
 /* ---- Sign-in pop-up ---- */
 @media (prefers-reduced-motion: no-preference) {

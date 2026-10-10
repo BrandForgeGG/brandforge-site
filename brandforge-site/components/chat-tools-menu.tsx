@@ -36,6 +36,7 @@ export function ToolsMenu({
 }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -43,7 +44,12 @@ export function ToolsMenu({
       if (root.current && !root.current.contains(event.target as Node)) setOpen(false);
     };
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') return setOpen(false);
+      if (event.key === 'Escape') {
+        // Closing with Escape puts the focus back on the + so nobody loses their place.
+        setOpen(false);
+        trigger.current?.focus();
+        return;
+      }
       if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
       const items = Array.from(root.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not([disabled])') ?? []);
       if (items.length === 0) return;
@@ -86,6 +92,7 @@ export function ToolsMenu({
   return (
     <div ref={root} className="bf-menu-root relative">
       <button
+        ref={trigger}
         type="button"
         className="bf-composer-tool"
         aria-expanded={open}
