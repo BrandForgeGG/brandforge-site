@@ -68,9 +68,15 @@ async function completeJson({
   if (!response.ok) {
     let detail = '';
     try {
-      detail = String(await response.text()).slice(0, 200);
+      detail = String(await response.text()).slice(0, 400);
     } catch {
       detail = '';
+    }
+    // A nearly empty account refuses a big request but will take a smaller one: ask again for what it can
+    // afford (once), so a short answer still arrives instead of an error.
+    const affordable = Number(/can only afford (\d+)/.exec(detail)?.[1] ?? 0);
+    if (response.status === 402 && maxTokens && affordable >= 500 && affordable - 40 < maxTokens) {
+      return completeJson({ baseUrl, apiKey, model, system, user, temperature, maxTokens: affordable - 40, timeoutMs, fetchImpl });
     }
     throw new Error(`llm_http_${response.status}: ${detail}`);
   }

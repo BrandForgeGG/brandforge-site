@@ -60,7 +60,7 @@ export async function sharpen(kind: SharpenKind, text: string): Promise<SharpenR
   let lastError = 'The editor is busy. Try again in a moment.';
   for (const model of MODELS) {
     try {
-      const completion = await completeJson({ apiKey, model, system, user: words, temperature: 0.7, maxTokens: 900, timeoutMs: model.endsWith(':free') ? 40000 : 25000 });
+      const completion = await completeJson({ apiKey, model, system, user: words, temperature: 0.7, maxTokens: model.endsWith(':free') ? 3000 : 900, timeoutMs: model.endsWith(':free') ? 40000 : 25000 });
       const result = normalizeSharpened(extractJson(completion.text));
       if (result) return { ok: true, result };
       lastError = 'The editor sent back something unreadable.';

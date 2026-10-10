@@ -46,7 +46,7 @@ export async function makePostDraft(type: PostType, topic: string): Promise<Draf
         system: `${SYSTEM}\n\n${SHAPES[type]}`,
         user: `What the post is about:\n${words}`,
         temperature: 0.7,
-        maxTokens: 700,
+        maxTokens: model.endsWith(':free') ? 3000 : 700,
         timeoutMs: model.endsWith(':free') ? 40000 : 25000,
       });
       const raw = extractJson(completion.text) as Record<string, unknown> | null;

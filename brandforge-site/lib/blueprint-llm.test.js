@@ -230,3 +230,18 @@ test('the llm caller turns a hung provider into a timeout error', async () => {
     /llm_timeout/
   );
 });
+
+test('a 402 that names what the account can afford is retried once with a smaller budget', async () => {
+  const sent = [];
+  const fetchImpl = async (_url, init) => {
+    const body = JSON.parse(init.body);
+    sent.push(body.max_tokens);
+    if (body.max_tokens > 800) {
+      return { ok: false, status: 402, text: async () => 'You requested up to 1600 tokens, but can only afford 732.' };
+    }
+    return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: '{"ok":true}' } }], usage: {} }) };
+  };
+  const result = await completeJson({ apiKey: 'k', model: 'm', system: 's', user: 'u', maxTokens: 1600, fetchImpl });
+  assert.equal(result.text, '{"ok":true}');
+  assert.deepEqual(sent, [1600, 692]);
+});

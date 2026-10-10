@@ -107,7 +107,7 @@ export async function makeCarouselPlan(input: PlanInput): Promise<PlanResult> {
   let lastError = 'The writer is busy. Try again in a moment.';
   for (const model of MODELS) {
     try {
-      const completion = await completeJson({ apiKey, model, system: prompt.system, user: prompt.user, temperature: 0.6, maxTokens: 1600, timeoutMs: model.endsWith(':free') ? 40000 : 30000 });
+      const completion = await completeJson({ apiKey, model, system: prompt.system, user: prompt.user, temperature: 0.6, maxTokens: model.endsWith(':free') ? 4000 : 1600, timeoutMs: model.endsWith(':free') ? 55000 : 30000 });
       const checked = normalizePlan(completion.text, { count: prompt.count, cta });
       if (checked.ok) return { ok: true, plan: checked.plan, source: { title: sourceTitle, image: sourceImage, url: sourceUrl } };
       lastError = checked.error;

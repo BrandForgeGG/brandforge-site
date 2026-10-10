@@ -921,3 +921,9 @@ we do not have.
 **Change:** The chat can now open the same maker as the Create page in a sheet over the conversation: the + menu has "Make a carousel" and "Make a post, poll or quiz", and typing "make a carousel about…" shows an "Open the maker" prompt that starts from the typed topic. Edit and download without leaving the chat; Publish stays locked for now. Whoever starts a chat (signed in or guest) is labelled "Project owner" in the people lists and on their messages.
 
 **Distribution move:** demo clip: type "make a carousel about calm teams" in the chat, tap Open the maker, edit and download. Changelog line: "Make it right in the chat. No more leaving the conversation to create."
+
+## 2026-10-10 — Writers keep working when AI credit runs low
+
+**Change:** The carousel, post and Optimize writers asked for more words than the nearly empty AI account could afford, so every request ended in "The writer is busy". They now retry with the smaller amount the account can afford, and the free backup model gets enough room to answer.
+
+**Distribution move:** none; reliability fix. Founder action still open: top up OpenRouter credit.
