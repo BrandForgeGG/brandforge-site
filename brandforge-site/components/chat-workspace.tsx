@@ -3300,6 +3300,12 @@ return (
             <Link href="/terms">Terms</Link>
             <span aria-hidden="true">·</span>
             <Link href="/privacy">Privacy</Link>
+            {!conversationId ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <a href="#how">How it works ↓</a>
+              </>
+            ) : null}
           </span>
         </p>
       </main>

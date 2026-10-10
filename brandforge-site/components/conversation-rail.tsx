@@ -43,7 +43,6 @@ const NAV_ITEMS = [
   { href: "/create", label: "Create", hint: "Make it, download it, publish it", path: "M10 3.5l1.6 4.4 4.4 1.6-4.4 1.6L10 15.5l-1.6-4.4L4 9.5l4.4-1.6zM15.5 3v3M14 4.5h3" },
   { href: "/optimize", label: "Optimize", hint: "See what works", path: "M4 15V9M8 15V5M12 15v-4M16 15V7" },
   { href: "/trade", label: "Trade", hint: "Hire or get hired", path: "M4 7h11l-3-3M16 13H5l3 3" },
-  { href: "/overview", label: "Overview", hint: "What BrandForge is and how it works", path: "M10 3.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM10 9v4.5M10 6.6h.01" },
 ];
 
 const DASHBOARD_ITEM = { href: "/admin", label: "Dashboard", hint: "Admin: people, money, chats", path: "M4 4h5v5H4zM11 4h5v5h-5zM4 11h5v5H4zM11 11h5v5h-5z" };

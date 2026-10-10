@@ -4,25 +4,30 @@ import { ContractDiagram, DistributeDiagram, FormatsDiagram, HeroDiagram, PaceDi
 // The overview is the long answer to "what is this?": one promise, one diagram, real screenshots
 // of the product, a plain price line. Everything it shows is the app itself.
 
-export function OverviewHero() {
+export function OverviewHero({ compact = false }: { compact?: boolean } = {}) {
+  const Title = compact ? 'h2' : 'h1';
   return (
-    <section className="px-6 pb-10 pt-14 text-center sm:pt-20" aria-labelledby="overview-title">
+    <section className={`px-6 pb-10 text-center ${compact ? 'pt-16' : 'pt-14 sm:pt-20'}`} aria-labelledby="overview-title">
       <div className="mx-auto max-w-3xl">
-        <h1 id="overview-title" className="font-serif text-4xl leading-[1.08] tracking-[-0.02em] text-foreground sm:text-6xl" style={{ textWrap: 'balance' }}>
+        <Title id="overview-title" className="font-serif text-4xl leading-[1.08] tracking-[-0.02em] text-foreground sm:text-6xl" style={{ textWrap: 'balance' }}>
           AI and people, <span className="text-ember">on the same page.</span>
-        </h1>
+        </Title>
         <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-muted sm:text-lg">
           Make every kind of message and publish it. Trade products, services and requests. AI does the first draft in seconds; people finish the job.
         </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link href="/" className="rounded-xl bg-ember px-6 py-3 text-sm font-semibold text-background transition hover:opacity-90">
-            Start a chat
-          </Link>
-          <a href="#how" className="rounded-xl border border-line px-6 py-3 text-sm text-foreground transition hover:border-ember">
-            See how it works
-          </a>
-        </div>
-        <p className="mt-3 text-xs text-muted">Free to start. No card, and no sign-up to try it.</p>
+        {compact ? null : (
+          <>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <Link href="/" className="rounded-xl bg-ember px-6 py-3 text-sm font-semibold text-background transition hover:opacity-90">
+                Start a chat
+              </Link>
+              <a href="#how" className="rounded-xl border border-line px-6 py-3 text-sm text-foreground transition hover:border-ember">
+                See how it works
+              </a>
+            </div>
+            <p className="mt-3 text-xs text-muted">Free to start. No card, and no sign-up to try it.</p>
+          </>
+        )}
       </div>
       <div className="mx-auto mt-12 max-w-5xl">
         <HeroDiagram />
@@ -160,9 +165,9 @@ export function OverviewFinal() {
         Your first draft is one message away.
       </h2>
       <div className="mt-8">
-        <Link href="/" className="rounded-xl bg-ember px-7 py-3 text-sm font-semibold text-background transition hover:opacity-90">
+        <a href="#" className="rounded-xl bg-ember px-7 py-3 text-sm font-semibold text-background transition hover:opacity-90">
           Start a chat
-        </Link>
+        </a>
       </div>
       <p className="mt-3 text-xs text-muted">Free to start. No card, and no sign-up to try it.</p>
     </section>

@@ -10,8 +10,8 @@ const NAV_LINKS = [
   { label: 'Features', href: '/features' },
   { label: 'Trade', href: '/trade' },
   { label: 'Pricing', href: '/pricing' },
-  { label: 'Work', href: '/overview#work' },
-  { label: 'Community', href: '/overview#community' },
+  { label: 'Work', href: '/#work' },
+  { label: 'Community', href: '/#community' },
 ];
 
 export function LandingNav() {

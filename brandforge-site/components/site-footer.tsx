@@ -4,7 +4,7 @@ import { SOCIAL_LINKS } from '@/lib/social-links';
 
 // Short on purpose: the product links on one line, the small print and socials on the next.
 const PRODUCT: { label: string; href: string }[] = [
-  { label: 'Overview', href: '/overview' },
+  { label: 'How it works', href: '/#how' },
   { label: 'Features', href: '/features' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Trade', href: '/trade' },

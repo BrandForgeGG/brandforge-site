@@ -1035,3 +1035,9 @@ we do not have.
 **Change:** The four community cards (Discord, Telegram group, Telegram channel, @headstartup) are a swipeable row like the projects and reviews. The browser's own scroll bar is gone from all three rows; a thin progress line under each row now fades in only when the pointer is over it or the keyboard is on it.
 
 **Distribution move:** none; polish.
+
+## 2026-10-10 — The overview is part of the front page
+
+**Change:** The separate /overview page is gone (the old address redirects to the front page). Everything on it now sits under the chat on brandforge.gg: the AI-and-people story, how it works, what it makes, pricing, the work, reviews, community and questions. The chat is still the first screen and exactly one screen tall; "How it works ↓" under the box jumps down. The Overview item left the sidebar, and chats themselves (/chat) have nothing below them. The front page now carries the real content for search engines too.
+
+**Distribution move:** point every link at brandforge.gg itself; the page now explains the product without leaving the front door.

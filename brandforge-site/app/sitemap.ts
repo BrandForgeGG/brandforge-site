@@ -8,7 +8,6 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://brandforge.gg';
 export default function sitemap(): MetadataRoute.Sitemap {
   const pages: Array<{ path: string; frequency: 'weekly' | 'monthly'; priority: number }> = [
     { path: '/', frequency: 'weekly', priority: 1.0 },
-    { path: '/overview', frequency: 'weekly', priority: 0.9 },
     { path: '/features', frequency: 'weekly', priority: 0.9 },
     { path: '/pricing', frequency: 'weekly', priority: 0.9 },
     { path: '/trade', frequency: 'weekly', priority: 0.7 },
