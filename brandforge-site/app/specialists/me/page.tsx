@@ -65,15 +65,15 @@ export default function EditSpecialistProfilePage() {
   if (state === 'denied') {
     return (
       <main className="mx-auto max-w-2xl px-6 py-16">
-        <h1 className="font-serif text-3xl text-foreground">Specialist profiles</h1>
-        <p className="mt-3 text-sm text-muted">Profiles are for approved specialists. <Link href="/apply" className="text-ember underline-offset-2 hover:underline">Apply here</Link>, or <Link href="/login" className="text-ember underline-offset-2 hover:underline">sign in</Link> if you already have access.</p>
+        <h1 className="font-serif text-3xl text-foreground">Team profiles</h1>
+        <p className="mt-3 text-sm text-muted">Profiles are for the BrandForge team. <Link href="/apply" className="text-ember underline-offset-2 hover:underline">Apply here</Link>, or <Link href="/login" className="text-ember underline-offset-2 hover:underline">sign in</Link> if you already have access.</p>
       </main>
     );
   }
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
-      <Link href="/specialists" className="text-sm text-muted transition hover:text-foreground">← Specialists</Link>
+      <Link href="/specialists" className="text-sm text-muted transition hover:text-foreground">← The team</Link>
       <h1 className="mt-4 font-serif text-3xl text-foreground">Your profile</h1>
       <p className="mt-2 text-sm text-muted">Founders see this when you are listed. Only add work you are happy to show.</p>
 

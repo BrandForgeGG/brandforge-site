@@ -106,12 +106,12 @@ export function formatDisplayId(value) {
 // Roles stay on the profile card as a badge — never in the message author line.
 export const ROLE_BADGES = {
   admin: 'Admin',
-  operator: 'Operator',
-  designer: 'Specialist',
+  operator: 'BrandForge team',
+  designer: 'BrandForge team',
   client: 'Founder',
   viewer: 'Member',
   founder: 'Founder',
-  builder: 'Specialist',
+  builder: 'BrandForge team',
   observer: 'Observer',
 };
 

@@ -23,7 +23,7 @@ const FEATURES = [
   },
   {
     title: 'Trade products, services and requests',
-    body: 'Post what you offer or need. Message each other in a private chat, agree the details and sign. Offering services is for specialists who applied and were accepted; anyone can post a request.',
+    body: 'Post what you offer or need. Message each other in a private chat, agree the details and sign. Offering services is for BrandForge team members who applied and were accepted; anyone can post a request.',
   },
   {
     title: 'Contracts between members',
@@ -34,8 +34,8 @@ const FEATURES = [
     body: 'Invite anyone into a chat with a link. Everyone sees the same plan, the same files and the same history, with the AI on your side or paused.',
   },
   {
-    title: 'Specialists for bigger jobs',
-    body: 'A vetted specialist joins your chat with a priced proposal. Both sides sign, funding is verified on-chain, and money releases milestone by milestone as you approve the work.',
+    title: 'The BrandForge team for bigger jobs',
+    body: 'The BrandForge team joins your chat with a priced proposal. Both sides sign, funding is verified on-chain, and money releases milestone by milestone as you approve the work.',
   },
   {
     title: 'Ads, calendars and launch plans',
@@ -60,7 +60,7 @@ export default function FeaturesPage() {
           AI and people, on the same page
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted">
-          Make it, publish it, trade it. AI drafts in seconds; you, your team and vetted specialists finish the job.
+          Make it, publish it, trade it. AI drafts in seconds; you, your team and the BrandForge team finish the job.
         </p>
 
         <div className="mt-10">

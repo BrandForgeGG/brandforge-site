@@ -96,7 +96,7 @@ export default function ApplyPage() {
 
   if (loading) {
     return (
-      <AppShell title="Apply" subtitle="Join BrandForge as a specialist.">
+      <AppShell title="Apply" subtitle="Join the BrandForge team.">
         <p className="text-sm text-muted">Loading…</p>
       </AppShell>
     );
@@ -105,7 +105,7 @@ export default function ApplyPage() {
   if (application) {
     const copy = STATUS_COPY[application.status] ?? STATUS_COPY.pending;
     return (
-      <AppShell title="Apply" subtitle="Join BrandForge as a specialist.">
+      <AppShell title="Apply" subtitle="Join the BrandForge team.">
         <div className="max-w-xl rounded-2xl border border-line bg-panel p-6">
           <h2 className="font-serif text-2xl text-foreground">{copy.title}</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted">{copy.body}</p>
@@ -157,11 +157,11 @@ export default function ApplyPage() {
   }
 
   return (
-    <AppShell title="Apply" subtitle="Join BrandForge as a specialist.">
+    <AppShell title="Apply" subtitle="Join the BrandForge team.">
       <div className="max-w-xl">
         <h2 className="font-serif text-2xl tracking-[-0.02em] text-foreground">Work with us</h2>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          Specialists offer services in the Trade Center and join project chats. Tell us how you work. A person reads every application.
+          The BrandForge team offers services in the Trade Center and joins project chats. Tell us how you work. A person reads every application.
         </p>
 
         {!signedInEmail ? (

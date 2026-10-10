@@ -129,8 +129,8 @@ function buildCore(event, details = {}) {
       const subject = title ? `Counter offer on ${title}` : 'A counter offer is waiting for you';
       const paragraphs = [
         title
-          ? `The specialist countered back on "${title}".`
-          : 'The specialist countered back on your project.',
+          ? `The BrandForge team countered back on "${title}".`
+          : 'The BrandForge team countered back on your project.',
         facts
           ? `${facts}. This is the final offer: accept it or decline in the chat and the deal closes.`
           : 'This is the final offer: accept it or decline in the chat and the deal closes.',
@@ -205,8 +205,8 @@ function buildCore(event, details = {}) {
       const price = money(details.amount, details.currency);
       const paragraphs = [
         price
-          ? `${price} for "${title || 'the milestone'}" has been released to the specialist. That milestone is done.`
-          : `The payment for "${title || 'the milestone'}" has been released to the specialist.`,
+          ? `${price} for "${title || 'the milestone'}" has been released to the BrandForge team. That milestone is done.`
+          : `The payment for "${title || 'the milestone'}" has been released to the BrandForge team.`,
       ];
       return {
         subject: title ? `Payment released: ${title}` : 'Payment released',
@@ -302,7 +302,7 @@ ${chatUrl || ''}`.trim(),
           kicker: 'Your first chat',
           heading: 'Your first chat is saved',
           paragraphs: [
-            'Your chat is saved to your account, so you can pick it up on any device. Invite a teammate with a link, or ask for a specialist when you want a person to finish the job.',
+            'Your chat is saved to your account, so you can pick it up on any device. Invite a teammate with a link, or ask the BrandForge team when you want a person to finish the job.',
           ],
           cta: ['Open your chat', url(details.chatUrl, site + '/chat')],
         },

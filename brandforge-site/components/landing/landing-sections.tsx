@@ -11,8 +11,8 @@ const STEPS = [
   },
   {
     num: '03',
-    title: 'A specialist takes over',
-    body: 'A vetted specialist reviews the project and sends the proposal.',
+    title: 'The BrandForge team takes over',
+    body: 'The BrandForge team reviews the project and sends the proposal.',
   },
   {
     num: '04',
@@ -22,7 +22,7 @@ const STEPS = [
   {
     num: '05',
     title: 'We build',
-    body: 'Your specialist works inside the project.',
+    body: 'The team works inside the project.',
   },
   {
     num: '06',

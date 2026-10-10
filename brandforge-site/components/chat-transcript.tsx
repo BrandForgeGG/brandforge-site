@@ -530,7 +530,7 @@ function SystemEmbedCard({
             </div>
             <p className="mt-1.5 text-[10px] leading-relaxed text-muted">
               {countering === "counter"
-                ? "The specialist can accept this or counter back once. After that you make the final call."
+                ? "The BrandForge team can accept this or counter back once. After that you make the final call."
                 : "This is your last offer. The founder can only accept or decline it."}
             </p>
           </div>
@@ -1050,7 +1050,7 @@ const PROJECT_STAGES = [
   {
     key: "proposal",
     label: "Proposal",
-    hint: "A specialist reviews and prices it",
+    hint: "The BrandForge team reviews and prices it",
   },
   { key: "fund", label: "Fund", hint: "You approve, then fund into escrow" },
   {
@@ -1167,7 +1167,7 @@ export function ChatTranscript({
         </h1>
         <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted">
           Tell me what you want built — a few sentences is enough. I will turn it
-          into requirements you can correct as we talk, and a specialist then
+          into requirements you can correct as we talk, and the BrandForge team then
           sends a priced proposal. Nothing is charged until you approve it.
         </p>
 

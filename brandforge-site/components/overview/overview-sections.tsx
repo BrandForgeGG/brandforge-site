@@ -34,7 +34,7 @@ export function OverviewHero() {
 const STEPS = [
   { title: 'You describe', line: 'Type an idea, paste a URL or drop a file.' },
   { title: 'AI drafts', line: 'A plan, a post, a listing or an ad, in seconds.' },
-  { title: 'People finish', line: 'Your team or a vetted specialist takes it the rest of the way.' },
+  { title: 'People finish', line: 'Your team or the BrandForge team takes it the rest of the way.' },
 ];
 
 export function OverviewHow() {
@@ -91,7 +91,7 @@ export function OverviewFeatures() {
         <Feature flip title="Publish it where people are." line="Pick the platforms and get a caption written for each. Download or copy it today; one-tap publishing opens as each platform approves us.">
           <DistributeDiagram />
         </Feature>
-        <Feature title="Trade products, services and requests." line="Post what you offer or what you need. Message each other in a private chat and agree the details, with AI beside you and a specialist when you want one.">
+        <Feature title="Trade products, services and requests." line="Post what you offer or what you need. Message each other in a private chat and agree the details, with AI beside you and the BrandForge team when you want them.">
           <TradeDiagram />
         </Feature>
         <Feature flip title="Sign a contract. Pay per milestone." line="Agree scope and price in the chat. The payer approves each milestone, or it releases on its own after 48 hours. A flat 5% when it pays out.">

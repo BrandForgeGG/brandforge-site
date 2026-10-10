@@ -903,3 +903,9 @@ we do not have.
 **Change:** Rewrote the overview, features, about, platform and pricing copy, the FAQ, site metadata and the empty-chat line around the core rules: AI and People; make and publish every kind of message; trade products, services and requests; using the internet without AI is a disadvantage. Carousels are now one format among many. New overview diagrams (AI + People hero, formats, Trade, pace) replace the carousel-first ones, and the carousel-only "Make it yours" block left the overview. New blog post "AI and people, one workspace" with three diagrams.
 
 **Distribution move:** blog post is the announcement; post its link in Discord and Telegram with the line "ChatGPT is AI. BrandForge is AI and People." Demo note: show the overview hero diagram, then the Trade diagram.
+
+## 2026-10-10 — Specialists are now "the BrandForge team"
+
+**Change:** Public pages, FAQ, Trade, chat cards, emails and role labels now say "the BrandForge team" instead of "specialist" or "operator". URLs (/specialists, /apply) and the legal terms page are unchanged.
+
+**Distribution move:** use "the BrandForge team" in every post, DM and ad from here on.

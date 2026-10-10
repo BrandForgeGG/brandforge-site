@@ -121,7 +121,7 @@ export function TradeCenter() {
           ))}
         </div>
         <p className="min-w-0 flex-1 text-xs leading-relaxed text-muted">
-          {kind === "offer" ? "People who offer a service. Message one, agree the work, sign a contract." : kind === "request" ? "What people need done. Approved specialists can offer to help." : "Services on offer and work wanted, in one place."}
+          {kind === "offer" ? "People who offer a service. Message one, agree the work, sign a contract." : kind === "request" ? "What people need done. The BrandForge team can offer to help." : "Services on offer and work wanted, in one place."}
         </p>
       </div>
 
@@ -197,7 +197,7 @@ export function TradeCenter() {
                       </button>
                     </div>
                   ) : l.kind === "request" && !isSpecialist ? (
-                    <Link href="/apply" data-tip="Only approved specialists can answer requests" className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">
+                    <Link href="/apply" data-tip="Only the BrandForge team can answer requests" className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">
                       Apply to help
                     </Link>
                   ) : (
@@ -335,7 +335,7 @@ function PostForm({ onClose, onPosted, listing, canOffer }: { onClose: () => voi
       </div>
       {kind === "offer" && !canOffer ? (
         <p className="mt-3 rounded-lg border border-ember/30 bg-ember/10 px-3 py-2 text-xs leading-relaxed text-foreground">
-          Offering services is for approved specialists.{" "}
+          Offering services is for the BrandForge team.{" "}
           <Link href="/apply" className="text-ember underline-offset-2 hover:underline">
             Apply in two minutes
           </Link>{" "}

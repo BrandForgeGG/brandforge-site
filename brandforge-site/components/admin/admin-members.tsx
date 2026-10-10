@@ -7,7 +7,7 @@ type Member = { id: string; name: string; email: string | null; username: string
 
 const ROLES: [string, string, string][] = [
   ['user', 'Member', 'A regular account'],
-  ['operator', 'Specialist', 'Joins chats, sends proposals, works on briefs'],
+  ['operator', 'BrandForge team', 'Joins chats, sends proposals, works on briefs'],
   ['admin', 'Admin', 'Full access, including this dashboard'],
 ];
 
@@ -76,7 +76,7 @@ export function AdminMembers() {
           Show test accounts
         </label>
       </div>
-      <p className="mt-1 text-xs text-muted">Give someone a role: Member, Specialist or Admin. Accepting an application makes the person a Specialist for you.</p>
+      <p className="mt-1 text-xs text-muted">Give someone a role: Member, BrandForge team or Admin. Accepting an application adds the person to the BrandForge team for you.</p>
       <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by name, email or username" aria-label="Search members" className="mt-3 w-full max-w-sm rounded-lg border border-line bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted" />
       {note ? <p role="status" className={`mt-2 text-sm ${note.tone === 'error' ? 'text-danger' : 'text-foreground'}`}>{note.text}</p> : null}
 

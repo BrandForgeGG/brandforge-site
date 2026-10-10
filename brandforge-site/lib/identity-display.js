@@ -67,7 +67,7 @@ function formatRole(role) {
 function roleLine(role, username) {
   const key = String(role ?? '').trim().toLowerCase();
   if (key === 'admin' || key === 'founder') return 'Admin';
-  if (key === 'operator') return 'Operator';
+  if (key === 'operator') return 'BrandForge team';
   const handle = String(username ?? '').trim().replace(/^@/, '');
   return handle ? `@${handle}` : 'Member';
 }

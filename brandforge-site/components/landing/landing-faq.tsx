@@ -22,7 +22,7 @@ const FAQS = [
   {
     question: 'Who builds my project?',
     answer:
-      'Vetted specialists — designers, developers, reverse engineers, and marketers. Your specialist joins your project chat with the proposal and stays there through delivery.',
+      'The BrandForge team: vetted designers, developers, reverse engineers and marketers. They join your project chat with the proposal and stay there through delivery.',
   },
   {
     question: 'How long does it take?',
@@ -32,12 +32,12 @@ const FAQS = [
   {
     question: 'What if something goes wrong?',
     answer:
-      'Money only moves on your approval: escrow releases per milestone, and anything unapproved stays with you. Decline any proposal twice and that specialist is out; your brief stays open.',
+      'Money only moves on your approval: escrow releases per milestone, and anything unapproved stays with you. Decline any proposal twice and that team member is out; your brief stays open.',
   },
   {
     question: 'Why use BrandForge instead of AI alone?',
     answer:
-      'AI is fast, but it does not stand behind the result. On BrandForge the AI drafts and a person finishes: you, your team or a vetted specialist. For paid work, funding is protected through milestone-based escrow, and you only pay after you approve what was delivered.',
+      'AI is fast, but it does not stand behind the result. On BrandForge the AI drafts and a person finishes: you, your team or the BrandForge team. For paid work, funding is protected through milestone-based escrow, and you only pay after you approve what was delivered.',
   },
 ];
 

@@ -54,7 +54,7 @@ test('formatRole capitalizes without relabeling', () => {
 test('roleLine shows Admin, Operator, or the username, never "user"', () => {
   const { roleLine } = require('./identity-display');
   assert.equal(roleLine('admin', 'boss'), 'Admin');
-  assert.equal(roleLine('operator', 'sam'), 'Operator');
+  assert.equal(roleLine('operator', 'sam'), 'BrandForge team');
   assert.equal(roleLine('user', 'mina'), '@mina');
   assert.equal(roleLine('user', '@mina'), '@mina');
   assert.equal(roleLine('user', null), 'Member');

@@ -15,7 +15,7 @@ const STAGES = [
   },
   {
     name: 'Proposal',
-    body: 'A vetted specialist sends a priced proposal with timeline. You can accept it, counter once, or decline — the card in chat carries the numbers.',
+    body: 'The BrandForge team sends a priced proposal with timeline. You can accept it, counter once, or decline — the card in chat carries the numbers.',
   },
   {
     name: 'Contract',
@@ -79,13 +79,13 @@ export default function PlatformPage() {
             </p>
           </section>
           <section className="rounded-2xl border border-line bg-panel p-6">
-            <h2 className="font-serif text-xl text-foreground">For specialists</h2>
+            <h2 className="font-serif text-xl text-foreground">For the BrandForge team</h2>
             <p className="mt-3 text-sm leading-relaxed text-muted">
               Briefs land in a staff inbox and in Discord. Proposals, counters, and
               signatures happen in the founder&apos;s chat, and accepted work is funded
               in escrow               before you start building.{' '}
               <Link href="/apply" className="text-ember underline-offset-2 hover:underline">
-                Apply as a specialist
+                Join the BrandForge team
               </Link>
               .
             </p>

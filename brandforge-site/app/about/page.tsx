@@ -18,7 +18,7 @@ export default function AboutPage() {
         </h1>
         <p className="mt-6 text-lg leading-relaxed text-muted">
           ChatGPT is AI. BrandForge is AI and people. You say what you want in plain language, AI
-          drafts it in seconds, and then you, your team or a vetted specialist take it the rest of
+          drafts it in seconds, and then you, your team or the BrandForge team take it the rest of
           the way. Make every kind of message and publish it. Trade products, services and requests.
         </p>
 
@@ -42,7 +42,7 @@ export default function AboutPage() {
               project.
             </p>
             <p className="mt-2 leading-relaxed text-muted">
-              3. Invite your team, or bring in a specialist with a priced proposal. Money moves
+              3. Invite your team, or bring in the BrandForge team with a priced proposal. Money moves
               milestone by milestone, only when the person paying approves the work.
             </p>
           </section>
@@ -52,7 +52,7 @@ export default function AboutPage() {
             <p className="mt-3 leading-relaxed text-muted">
               BrandForge is built by a small team of designers, developers, and reverse engineers
               who believe great work starts with a great conversation. Every project is matched
-              with a specialist who has proven expertise in the relevant domain.
+              with BrandForge team members who have proven expertise in the relevant domain.
             </p>
           </section>
 
@@ -70,7 +70,7 @@ export default function AboutPage() {
             <h2 className="font-serif text-2xl text-foreground">Escrow protection</h2>
             <p className="mt-3 leading-relaxed text-muted">
               Every payment goes into a BrandForge escrow wallet. Funds are verified on-chain and
-              released to the specialist only when you approve each milestone. If something goes
+              released to the BrandForge team only when you approve each milestone. If something goes
               wrong, the remaining funds stay with you.
             </p>
           </section>

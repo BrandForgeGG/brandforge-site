@@ -81,7 +81,7 @@ test('formatDisplayId degrades safely on missing or invalid ids', () => {
 
 test('roleBadge maps roles to human labels and never leaks a raw enum', () => {
   assert.equal(roleBadge('admin'), 'Admin');
-  assert.equal(roleBadge('operator'), 'Operator');
+  assert.equal(roleBadge('operator'), 'BrandForge team');
   assert.equal(roleBadge('client'), 'Founder');
   assert.equal(roleBadge('ADMIN'), 'Admin');
   assert.equal(roleBadge('viewer'), 'Member');

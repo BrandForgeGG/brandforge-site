@@ -10,8 +10,8 @@ type Props = { params: Promise<{ handle: string }> };
 
 export async function generateMetadata({ params }: Props) {
   const specialist = await getPublicSpecialist((await params).handle).catch(() => null);
-  if (!specialist) return { title: 'Specialists — BrandForge' };
-  return { title: `${specialist.display_name} — BrandForge specialist`, description: specialist.headline };
+  if (!specialist) return { title: 'The team — BrandForge' };
+  return { title: `${specialist.display_name} — BrandForge team`, description: specialist.headline };
 }
 
 export default async function SpecialistPage({ params }: Props) {
@@ -22,7 +22,7 @@ export default async function SpecialistPage({ params }: Props) {
     <div className="bf-page">
       <LandingNav />
       <main className="mx-auto max-w-3xl px-6 py-14">
-        <Link href="/specialists" className="text-sm text-muted transition hover:text-foreground">← All specialists</Link>
+        <Link href="/specialists" className="text-sm text-muted transition hover:text-foreground">← The whole team</Link>
         <h1 className="mt-6 font-serif text-4xl text-foreground sm:text-5xl">{specialist.display_name}</h1>
         <p className="mt-3 text-lg text-muted">{specialist.headline}</p>
         <p className="mt-2 text-xs text-muted">Vetted by the BrandForge team</p>
@@ -53,7 +53,7 @@ export default async function SpecialistPage({ params }: Props) {
 
         <div className="mt-12 rounded-2xl border border-line bg-panel p-6">
           <p className="font-serif text-xl text-foreground">Want help like this?</p>
-          <p className="mt-2 text-sm text-muted">Describe your project in one message. If it needs a specialist, you will see priced proposals and pay only when you approve the work.</p>
+          <p className="mt-2 text-sm text-muted">Describe your project in one message. If it needs the BrandForge team, you will see priced proposals and pay only when you approve the work.</p>
           <Link href="/" className="mt-4 inline-block rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">Start your project</Link>
         </div>
       </main>

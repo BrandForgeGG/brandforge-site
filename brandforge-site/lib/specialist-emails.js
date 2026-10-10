@@ -16,7 +16,7 @@ function shell(heading, paragraphs, stepList, cta, extraHtml = '') {
     ? `<ol style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#4a443c;margin:0 0 18px;padding-left:20px;line-height:1.65">${stepList.map((item) => `<li style="margin-bottom:6px">${item}</li>`).join('')}</ol>`
     : '';
   const raw = paragraphs.map(p).join('') + list + extraHtml;
-  return renderCard('Specialists', heading, [], cta && cta.label, cta && cta.href, 'AI drafts. People finish.', undefined, { rawHtml: raw, preheader: heading });
+  return renderCard('BrandForge team', heading, [], cta && cta.label, cta && cta.href, 'AI drafts. People finish.', undefined, { rawHtml: raw, preheader: heading });
 }
 
 /**
@@ -33,19 +33,19 @@ function buildSpecialistEmail(kind, details = {}) {
     const url = details.signInUrl || 'https://brandforge.gg/login';
     const how = [
       'Sign in with this email address (Google or a one-time email link, no password).',
-      'Your specialist access switches on automatically.',
+      'Your team access switches on automatically.',
       'Set up your profile and portfolio so founders can see your work.',
       'Open a brief you like and send a priced proposal. Nothing is paid until a founder accepts.',
     ];
     return {
-      subject: 'You are invited to BrandForge as a specialist',
-      text: `${hello}\n\nThe BrandForge team invited you to join as a specialist.${note ? `\n\n"${note}"` : ''}\n\n${steps(how)}\n\nSign in: ${url}\nHow we vet and pay specialists: ${vetting}\n`,
+      subject: 'You are invited to join the BrandForge team',
+      text: `${hello}\n\nThe BrandForge team invited you to join them.${note ? `\n\n"${note}"` : ''}\n\n${steps(how)}\n\nSign in: ${url}\nHow we vet and pay the team: ${vetting}\n`,
       html: shell(
         'You are invited to BrandForge',
-        [hello, 'The BrandForge team invited you to join as a specialist.' + (note ? ` They added: &ldquo;${escapeHtml(note)}&rdquo;` : '')],
+        [hello, 'The BrandForge team invited you to join them.' + (note ? ` They added: &ldquo;${escapeHtml(note)}&rdquo;` : '')],
         how.map(escapeHtml),
         { href: url, label: 'Sign in and get started' }
-        , `<p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#8a8174;margin:0 0 6px">How we vet and pay specialists: <a href="${escapeHtml(vetting)}" style="color:#8a8174">${escapeHtml(vetting)}</a></p>`),
+        , `<p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#8a8174;margin:0 0 6px">How we vet and pay the team: <a href="${escapeHtml(vetting)}" style="color:#8a8174">${escapeHtml(vetting)}</a></p>`),
     };
   }
 
@@ -59,9 +59,9 @@ function buildSpecialistEmail(kind, details = {}) {
       'Link Telegram in Settings to get pinged the moment a brief lands.',
     ];
     return {
-      subject: 'You are in: welcome to BrandForge specialists',
-      text: `${hello}\n\nYour application was accepted. Here is how it works from here:\n\n${steps(how)}\n\nOpen your inbox: ${inbox}\nHow we vet and pay specialists: ${vetting}\n`,
-      html: shell('You are in', [hello, 'Your application was accepted. Here is how it works from here:'], how.map(escapeHtml), { href: inbox, label: 'Open your inbox' }, `<p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#8a8174;margin:0 0 6px">How we vet and pay specialists: <a href="${escapeHtml(vetting)}" style="color:#8a8174">${escapeHtml(vetting)}</a></p>`),
+      subject: 'You are in: welcome to the BrandForge team',
+      text: `${hello}\n\nYour application was accepted. Here is how it works from here:\n\n${steps(how)}\n\nOpen your inbox: ${inbox}\nHow we vet and pay the team: ${vetting}\n`,
+      html: shell('You are in', [hello, 'Your application was accepted. Here is how it works from here:'], how.map(escapeHtml), { href: inbox, label: 'Open your inbox' }, `<p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#8a8174;margin:0 0 6px">How we vet and pay the team: <a href="${escapeHtml(vetting)}" style="color:#8a8174">${escapeHtml(vetting)}</a></p>`),
     };
   }
 

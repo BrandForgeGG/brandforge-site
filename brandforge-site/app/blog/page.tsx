@@ -18,13 +18,13 @@ const POSTS: { date: string; title: string; body: Block[] }[] = [
     date: '2026-10-10',
     title: 'AI and people, one workspace',
     body: [
-      'ChatGPT is AI. BrandForge is AI and people. You say what you want, AI drafts it in seconds, and then you, your team or a vetted specialist finish it on the same page.',
+      'ChatGPT is AI. BrandForge is AI and people. You say what you want, AI drafts it in seconds, and then you, your team or the BrandForge team finish it on the same page.',
       { visual: 'idea' },
       'That one idea covers more than a single tool. You can make many kinds of messages and publish them: carousels, updates, polls, quizzes and threads today, with video, reels, newsletters and more on the way. And you can trade. Post a product, a service or a request, talk it through in a private chat, and sign a milestone contract so money moves as each piece lands.',
       { visual: 'trade' },
       'Why build it this way? Using the internet without AI is becoming a disadvantage. The tools exist, but nobody has time to learn ten of them. BrandForge puts the newest internet technology behind one chat, and keeps people in the loop so what comes out is something you would put your name on.',
       { visual: 'pace' },
-      'BrandForge is not a carousel maker. Carousels are one format among many, next to Trade, contracts and specialists. We rewrote the overview, features, about page, FAQ and every diagram to say that plainly. If a page still sounds smaller than this, tell us in Discord or Telegram.',
+      'BrandForge is not a carousel maker. Carousels are one format among many, next to Trade, contracts and the BrandForge team. We rewrote the overview, features, about page, FAQ and every diagram to say that plainly. If a page still sounds smaller than this, tell us in Discord or Telegram.',
     ],
   },
   {

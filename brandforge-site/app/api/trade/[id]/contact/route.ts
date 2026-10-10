@@ -36,7 +36,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (listing.row.kind === 'request') {
       const role = await getProfileRole(user.id);
       if (role !== 'operator' && role !== 'admin') {
-        return NextResponse.json({ error: 'Offering services is for approved specialists. Apply first, it takes two minutes.', apply: true }, { status: 403 });
+        return NextResponse.json({ error: 'Offering services is for the BrandForge team. Apply first, it takes two minutes.', apply: true }, { status: 403 });
       }
     }
 
