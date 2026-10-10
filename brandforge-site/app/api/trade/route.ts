@@ -2,6 +2,7 @@ import { after, NextRequest, NextResponse } from 'next/server';
 import { sendFirstTimeEmail } from '@/lib/first-time-email';
 import {
   createTradeListing,
+  ensureListingAssistant,
   getAdminIds,
   getAvatarUrls,
   getProfileDisplayName,
@@ -98,8 +99,11 @@ export async function POST(request: NextRequest) {
     await recordFunnelEvent('trade_listing_created', { signedIn: true, properties: { source: draft.value.kind } });
     after(() => sendFirstTimeEmail(user.id, user.email, 'first_listing', { title: draft.value.title }));
     await announceReal('listing_posted', { title: draft.value.title }, [{ userId: user.id }]);
+    // Every listing gets a chat that stays its main assistant. Best-effort: publishing never waits on it.
+    const conversationId = await ensureListingAssistant(user.id, { id: created.row.id, title: created.row.title, description: created.row.description, category: created.row.category, kind: created.row.kind }).catch(() => null);
     return NextResponse.json({
       success: true,
+      conversationId,
       listing: toListingView(created.row, await getProfileDisplayName(user.id), user.id),
     });
   } catch (error) {

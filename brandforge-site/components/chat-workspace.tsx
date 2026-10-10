@@ -266,6 +266,8 @@ export function ChatWorkspace() {
   // The command tag in the message box (Make a carousel, Plan my idea, ...), or none.
   const [activeCommand, setActiveCommand] = useState<ChatCommand | null>(null);
   const carouselKey = useRef(0);
+  // What this chat is the main assistant for (a listing, something made here), if anything.
+  const [goalLink, setGoalLink] = useState<{ conversationId: string; kind: string; title: string } | null>(null);
   const [carouselChat, setCarouselChat] = useState<{ topic: string; userText: string | null; key: number } | null>(null);
   const [isReplyingTo, setIsReplyingTo] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -501,6 +503,21 @@ export function ChatWorkspace() {
   const [slashClosed, setSlashClosed] = useState(false);
   // AI participation: when false, the AI does not automatically reply or update project context.
   const [aiEnabled, setAiEnabled] = useState(true);
+  useEffect(() => {
+    if (!conversationId) return;
+    let live = true;
+    void fetch(`/api/conversations/${conversationId}/link`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (live) setGoalLink(data?.link ? { conversationId, kind: data.link.kind, title: data.link.title } : null);
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [conversationId, carouselChat]);
+  const goal = goalLink && goalLink.conversationId === conversationId ? goalLink : null;
+
   // Notices and the pause control wait until the chat's real AI state is known, so a refresh never flashes
   // "pause the AI" at someone who already paused it.
 
@@ -2351,6 +2368,11 @@ return (
                 aria-label={state ? (STATUS_LABELS[state.status] ?? state.status) : "Discovery"}
                 title={state ? (STATUS_LABELS[state.status] ?? state.status) : "Discovery"}
               />
+              {goal ? (
+                <Link href={goal.kind === "listing" ? "/trade" : "/create"} className="hidden max-w-[16rem] truncate rounded-full border border-line px-2.5 py-0.5 text-[11px] text-muted transition hover:border-ember hover:text-foreground sm:inline" title={`This chat is your assistant for: ${goal.title}`}>
+                  {goal.kind === "listing" ? "Listing" : "Made here"}: {goal.title}
+                </Link>
+              ) : null}
               {activeConversation?.staffViewedBy ? (
                 <span className="hidden truncate text-xs text-muted sm:inline">
                   {activeConversation.staffViewedBy} joined
@@ -2719,7 +2741,7 @@ return (
             </>
           )}
           {carouselChat ? (
-            <CarouselChatCard key={carouselChat.key} topic={carouselChat.topic} userText={carouselChat.userText} storageKey={cardKey(conversationId)} restore={false} onClose={() => setCarouselChat(null)} />
+            <CarouselChatCard key={carouselChat.key} conversationId={conversationId} topic={carouselChat.topic} userText={carouselChat.userText} storageKey={cardKey(conversationId)} restore={false} onClose={() => setCarouselChat(null)} />
           ) : conversationId ? (
             <SavedCardOrFallback storageKey={cardKey(conversationId)} hide={false} fallback={null} />
           ) : null}

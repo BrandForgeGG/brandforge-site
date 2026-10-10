@@ -18,6 +18,7 @@ import {
   updateConversationTitle,
   updateProjectContext,
   getAiAccess,
+  getConversationLink,
 } from "@/lib/project-db";
 import { accessState, canGenerate } from "@/lib/ai-access.js";
 import { consumeChatQuota } from "@/lib/blueprint-session";
@@ -409,8 +410,13 @@ export async function POST(request: NextRequest) {
     fileLabels = [];
   }
 
+  // A chat that is the assistant for one goal (a listing, something made here) keeps the AI pointed at it.
+  const goal = await getConversationLink(conversationId).catch(() => null);
+  const goalBlock = goal
+    ? `\n\nGOAL OF THIS CHAT\nThis chat is the person's main assistant for one goal: ${goal.kind === "listing" ? "their Trade listing" : "something they made here"} called "${goal.title}".${goal.summary ? `\nDetails: ${goal.summary}` : ""}\nHelp them move this goal forward. Use only these details and what they say; do not invent facts about it.`
+    : "";
   const systemContent =
-    buildStateBlock(snapshot) + (fileBlock ? `\n\n${fileBlock}` : "");
+    buildStateBlock(snapshot) + goalBlock + (fileBlock ? `\n\n${fileBlock}` : "");
 
   const modelMessages: AIMessage[] = [
     { role: "system", content: systemContent },

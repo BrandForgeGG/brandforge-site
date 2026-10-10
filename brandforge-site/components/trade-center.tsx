@@ -79,7 +79,8 @@ export function TradeCenter() {
   const [making, setMaking] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [published, setPublished] = useState(false);
+  const [published, setPublished] = useState<{ conversationId: string | null } | null>(null);
+  const router = useRouter();
 
   const loadMine = useCallback(async () => {
     try {
@@ -120,7 +121,7 @@ export function TradeCenter() {
     }
     setMaking(true);
     setError(null);
-    setPublished(false);
+    setPublished(null);
     try {
       const response = await fetch("/api/trade/draft", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: words }) });
       const data = await response.json().catch(() => ({}));
@@ -153,6 +154,28 @@ export function TradeCenter() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- this runs once, when the page opens
   }, []);
 
+  // The chat that stays this listing's main assistant (made the first time, reopened after).
+  async function openAssistant(l: ListingView) {
+    try {
+      const response = await fetchAuthed(`/api/trade/${l.id}/assistant`, { method: "POST" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.conversationId) {
+        setError(data.error || "Could not open the assistant. Try again.");
+        return;
+      }
+      router.push(`/chat?conversationId=${data.conversationId}`);
+    } catch {
+      setError("Connection problem. Try again.");
+    }
+  }
+
+  async function removeListing(l: ListingView, hard: boolean) {
+    const ask = hard ? "Delete this listing for good? This cannot be undone. Its chat stays, but is no longer tied to a listing." : "Close this listing? It stops showing to others. You can reopen it any time.";
+    if (!window.confirm(ask)) return;
+    await fetchAuthed(`/api/trade/${l.id}${hard ? "?hard=1" : ""}`, { method: "DELETE" });
+    void load();
+  }
+
   async function publish() {
     if (!draft) return;
     setPublishing(true);
@@ -175,7 +198,7 @@ export function TradeCenter() {
       }
       setDraft(null);
       setText("");
-      setPublished(true);
+      setPublished({ conversationId: (data.conversationId as string | null) ?? null });
       void load();
     } catch {
       setError("Connection problem. Try again.");
@@ -245,7 +268,19 @@ export function TradeCenter() {
               ))}
             </div>
             {error ? <p role="alert" className="mt-2 text-xs text-danger">{error}</p> : null}
-            {published ? <p role="status" className="mt-2 text-sm text-foreground">Published. It is in the list below.</p> : null}
+            {published ? (
+              <p role="status" className="mt-2 text-sm text-foreground">
+                Published. It is in the list below.
+                {published.conversationId ? (
+                  <>
+                    {" "}
+                    <Link href={`/chat?conversationId=${published.conversationId}`} className="text-ember underline-offset-2 hover:underline">
+                      Open its assistant
+                    </Link>
+                  </>
+                ) : null}
+              </p>
+            ) : null}
             <div className="mt-3">
               <button type="button" onClick={() => void makeDraft(text)} disabled={making || text.trim().length < 12} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
                 {making ? "Writing your listing…" : "Make my listing"}
@@ -288,7 +323,7 @@ export function TradeCenter() {
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">From BrandForge</p>
           <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {official.map((l) => (
-              <Card key={l.id} listing={l} isSpecialist={isSpecialist} onContact={setContacting} onEdit={setEditing} onChanged={() => void load()} />
+              <Card key={l.id} listing={l} isSpecialist={isSpecialist} onContact={setContacting} onEdit={setEditing} onAssistant={openAssistant} />
             ))}
           </div>
         </section>
@@ -299,7 +334,7 @@ export function TradeCenter() {
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{official.length > 0 ? "From the community" : "Listings"}</p>
           <div className="mt-2 grid gap-3 sm:grid-cols-2">
             {community.map((l) => (
-              <Card key={l.id} listing={l} isSpecialist={isSpecialist} onContact={setContacting} onEdit={setEditing} onChanged={() => void load()} />
+              <Card key={l.id} listing={l} isSpecialist={isSpecialist} onContact={setContacting} onEdit={setEditing} onAssistant={openAssistant} />
             ))}
           </div>
         </section>
@@ -324,9 +359,20 @@ export function TradeCenter() {
                     {l.kind === "offer" ? "Offer" : "Request"} · <span className={l.status === "open" ? "text-success" : ""}>{l.status === "open" ? "Open" : "Closed"}</span>
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => void openAssistant(l)} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">
+                    Assistant
+                  </button>
                   <button type="button" onClick={() => setEditing(l)} className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted hover:text-foreground">
                     Edit
+                  </button>
+                  {l.status === "open" ? (
+                    <button type="button" onClick={() => void removeListing(l, false)} className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted hover:text-foreground">
+                      Close
+                    </button>
+                  ) : null}
+                  <button type="button" onClick={() => void removeListing(l, true)} className="rounded-lg px-3 py-1.5 text-xs text-muted transition hover:text-danger">
+                    Delete
                   </button>
                   {l.status === "closed" ? (
                     <button
@@ -355,7 +401,7 @@ export function TradeCenter() {
   );
 }
 
-function Card({ listing: l, isSpecialist, onContact, onEdit, onChanged }: { listing: ListingView; isSpecialist: boolean; onContact: (l: ListingView) => void; onEdit: (l: ListingView) => void; onChanged: () => void }) {
+function Card({ listing: l, isSpecialist, onContact, onEdit, onAssistant }: { listing: ListingView; isSpecialist: boolean; onContact: (l: ListingView) => void; onEdit: (l: ListingView) => void; onAssistant: (l: ListingView) => void }) {
   return (
     <article className="bf-card flex flex-col p-4">
       <div className="flex items-center gap-2">
@@ -385,16 +431,8 @@ function Card({ listing: l, isSpecialist, onContact, onEdit, onChanged }: { list
             <button type="button" onClick={() => onEdit(l)} className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted hover:text-foreground">
               Edit
             </button>
-            <button
-              type="button"
-              onClick={async () => {
-                if (!window.confirm("Close this listing? It stops showing to others. You can reopen it from Yours.")) return;
-                await fetchAuthed(`/api/trade/${l.id}`, { method: "DELETE" });
-                onChanged();
-              }}
-              className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted hover:text-foreground"
-            >
-              Close
+            <button type="button" onClick={() => onAssistant(l)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background">
+              Assistant
             </button>
           </div>
         ) : l.kind === "request" && !isSpecialist ? (

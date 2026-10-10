@@ -987,3 +987,9 @@ we do not have.
 **Change:** The 17 pre-made services now show under "From BrandForge" with the BrandForge name and mark, instead of an admin username.
 
 **Distribution move:** none; fix.
+
+## 2026-10-10 — Every chat is the assistant for one goal; listings can be deleted
+
+**Change:** A chat is now tied to what it is for. Publishing a Trade listing creates its own chat, the listing's main assistant, with a first line saying so; "Assistant" on your listing reopens it. A carousel made in a chat becomes that chat's goal. The chat header shows the goal ("Listing: …" or "Made here: …") and the AI is told the goal so it keeps working on it. Your listings can now be closed (reopen any time) or deleted for good; editing your own offers works for everyone again.
+
+**Distribution move:** headline for the changelog: "Every listing and creation now has its own assistant that remembers the goal." Demo note: publish a listing, tap Assistant, show the goal chip in the chat header.

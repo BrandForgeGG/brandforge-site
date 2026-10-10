@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { closeTradeListing, getProfileDisplayName, getProfileRole, reopenTradeListing, updateTradeListing } from '@/lib/project-db';
+import { closeTradeListing, deleteTradeListing, getProfileDisplayName, reopenTradeListing, updateTradeListing } from '@/lib/project-db';
 import { toListingView } from '@/lib/trade-view';
 import { validateListing } from '@/lib/trade.js';
 import { screenText } from '@/lib/content-policy.js';
@@ -28,13 +28,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const screened = screenText(`${draft.value.title}\n${draft.value.description}`);
     if (!screened.ok) return NextResponse.json({ error: screened.message, policy: screened.category }, { status: 422 });
 
-    if (draft.value.kind === 'offer') {
-      const role = await getProfileRole(user.id);
-      if (role !== 'operator' && role !== 'admin') {
-        return NextResponse.json({ error: 'Offering services is for approved specialists. Apply first, it takes two minutes.', apply: true }, { status: 403 });
-      }
-    }
-
     const result = await updateTradeListing(id, user.id, draft.value);
     if (!result.ok) {
       return NextResponse.json({ error: 'Listing not found' }, { status: result.error === 'not_found' ? 404 : 500 });
@@ -46,7 +39,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 }
 
-// DELETE closes your own listing (it stops showing; nothing is erased).
+// DELETE closes your own listing (it stops showing; nothing is erased). With ?hard=1 it is deleted for good.
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthenticatedUser(request);
@@ -54,6 +47,12 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     const { id } = await params;
     if (!id || id.length > 64) return NextResponse.json({ error: 'Invalid listing' }, { status: 400 });
+
+    if (request.nextUrl.searchParams.get('hard') === '1') {
+      const removed = await deleteTradeListing(id, user.id);
+      if (!removed.ok) return NextResponse.json({ error: 'Listing not found' }, { status: removed.error === 'not_found' ? 404 : 500 });
+      return NextResponse.json({ deleted: true });
+    }
 
     const result = await closeTradeListing(id, user.id);
     if (!result.ok) {

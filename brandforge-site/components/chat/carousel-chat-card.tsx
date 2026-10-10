@@ -95,7 +95,7 @@ export function SavedCardOrFallback({ storageKey, hide, fallback }: { storageKey
 // it works in front of you (brainstorming, writing, drawing), and the finished slides land in the chat with
 // the buttons to change the look, get new cover art, edit every word or download. Nothing opens beside the
 // chat: the whole thing is one card in the thread.
-export function CarouselChatCard({ topic, userText, storageKey, restore, onClose }: { topic: string; userText: string | null; storageKey: string; restore: boolean; onClose: () => void }) {
+export function CarouselChatCard({ conversationId = null, topic, userText, storageKey, restore, onClose }: { conversationId?: string | null; topic: string; userText: string | null; storageKey: string; restore: boolean; onClose: () => void }) {
   const { openLogin } = useLogin();
   const [restored] = useState<SavedCard | null>(() => (restore ? readSaved(storageKey) : null));
   const [draft, setDraft] = useState<Draft>(() => {
@@ -218,6 +218,7 @@ export function CarouselChatCard({ topic, userText, storageKey, restore, onClose
       setPhase(3);
       setStage('done');
       void saveToAccount(data.plan);
+      void linkToChat(data.plan);
     } catch {
       setError('Could not reach the writer. Check your connection and try again.');
       setStage('ask');
@@ -241,6 +242,20 @@ export function CarouselChatCard({ topic, userText, storageKey, restore, onClose
       }
     } catch {
       /* saving to the account is a bonus; the card is kept on this device either way */
+    }
+  }
+
+  // The carousel becomes what this chat is the assistant for (if the chat has no goal yet).
+  async function linkToChat(forPlan: NonNullable<Draft['plan']>) {
+    if (!conversationId) return;
+    try {
+      await fetch(`/api/conversations/${conversationId}/link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: forPlan.cover.headline, summary: `A ${forPlan.items.length + 2}-slide carousel about: ${draft.topic}` }),
+      });
+    } catch {
+      /* the link is a bonus; the card works without it */
     }
   }
 

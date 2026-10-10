@@ -5874,3 +5874,67 @@ export async function getAdminIds(userIds: string[]): Promise<Set<string>> {
   for (const row of (data ?? []) as { id: string }[]) out.add(row.id);
   return out;
 }
+
+// ---- A chat is the main assistant for one goal (migration 0039: conversation_links) ----
+export type ConversationLink = { kind: 'listing' | 'creation'; refId: string | null; title: string; summary: string | null };
+
+export async function getConversationLink(conversationId: string): Promise<ConversationLink | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data, error } = await admin.from('conversation_links').select('kind, ref_id, title, summary').eq('conversation_id', conversationId).maybeSingle();
+  if (error || !data) return null;
+  const row = data as { kind: 'listing' | 'creation'; ref_id: string | null; title: string; summary: string | null };
+  return { kind: row.kind, refId: row.ref_id, title: row.title, summary: row.summary };
+}
+
+// Ties a chat to its goal. The first goal wins: a chat that already has one keeps it.
+export async function linkConversation(conversationId: string, link: { kind: 'listing' | 'creation'; refId?: string | null; title: string; summary?: string | null }): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const { error } = await admin.from('conversation_links').insert({
+    conversation_id: conversationId,
+    kind: link.kind,
+    ref_id: link.refId ?? null,
+    title: link.title.slice(0, 160),
+    summary: link.summary ? link.summary.slice(0, 1200) : null,
+  });
+  return !error;
+}
+
+// The assistant chat for a listing: found if it exists, otherwise made (owned by the listing's owner) with a first
+// line that says what it is for.
+export async function ensureListingAssistant(ownerId: string, listing: { id: string; title: string; description: string; category: string; kind: string }): Promise<string | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data: existing } = await admin.from('conversation_links').select('conversation_id').eq('kind', 'listing').eq('ref_id', listing.id).maybeSingle();
+  const found = (existing as { conversation_id: string } | null)?.conversation_id;
+  if (found) return found;
+  const { data: conversation, error } = await admin.from('conversations').insert({ user_id: ownerId, title: listing.title.slice(0, 120), status: 'DISCOVERY', source: 'organic' }).select('id').maybeSingle();
+  const id = (conversation as { id: string } | null)?.id;
+  if (error || !id) return null;
+  const summary = `${listing.kind === 'request' ? 'Request' : 'Offer'} in ${listing.category}. ${listing.description}`;
+  if (!(await linkConversation(id, { kind: 'listing', refId: listing.id, title: listing.title, summary }))) return id;
+  await admin.from('messages').insert({
+    conversation_id: id,
+    sender_type: 'ai',
+    sender_name: 'BrandForge AI',
+    content_type: 'text',
+    content: `This chat is your assistant for "${listing.title}". I can sharpen the listing, write replies to people who get in touch, and plan the work once someone says yes. What would you like to do first?`,
+  });
+  return id;
+}
+
+// Permanently removes your own listing. Its assistant chat stays as an ordinary chat (the goal link is removed).
+export async function deleteTradeListing(id: string, ownerId: string): Promise<{ ok: true } | { ok: false; error: TradeDbError }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'not_configured' };
+  const { data, error } = await admin.from('trade_listings').delete().eq('id', id).eq('owner_id', ownerId).select('id').maybeSingle();
+  if (error) {
+    if (isMissingTable(error)) return { ok: false, error: 'pending_migration' };
+    console.error('Trade listing delete error:', error.message);
+    return { ok: false, error: 'failed' };
+  }
+  if (!data) return { ok: false, error: 'not_found' };
+  await admin.from('conversation_links').delete().eq('kind', 'listing').eq('ref_id', id);
+  return { ok: true };
+}
