@@ -1029,3 +1029,9 @@ we do not have.
 **Change:** The overview now shows five newer client reviews (frontend site, motion graphics, a team that stepped in after a developer left, an understanding support team, two projects at 9/10), replacing the earlier nine on that page (all earlier ones stay on file). Discord's own codes (@mentions, one custom emoji, and a closing thank-you line that was only mentions) were taken out; the rest of each review is word for word, with no names because none were given. Projects and reviews are now swipeable rows: snap-to-card, arrows, a 1 / N counter, arrow keys, every project instead of the first three, and a row always opens on its first card.
 
 **Distribution move:** share the first two reviews as quote posts (credit "a BrandForge client"); ask these clients if they will let us name them.
+
+## 2026-10-10 — Community cards swipe too; the scroll line shows only on hover
+
+**Change:** The four community cards (Discord, Telegram group, Telegram channel, @headstartup) are a swipeable row like the projects and reviews. The browser's own scroll bar is gone from all three rows; a thin progress line under each row now fades in only when the pointer is over it or the keyboard is on it.
+
+**Distribution move:** none; polish.

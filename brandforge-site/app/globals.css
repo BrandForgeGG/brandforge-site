@@ -2003,6 +2003,9 @@ main[data-empty='true'] .bf-composer-shell { position: static; }
   .bf-composer-tagged .bf-composer-bar > :last-child { order: 3; margin-left: auto; }
   .bf-composer-tagged .bf-composer-input { order: 4; flex: 1 1 100%; padding-left: 0.6rem; padding-right: 0.6rem; }
 }
+/* Swipeable rows never show the browser's own scroll bar: a thin progress line fades in under the row on hover or focus. */
+.bf-noscrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.bf-noscrollbar::-webkit-scrollbar { display: none; }
 .bf-start-chip:hover { border-color: var(--ember); color: var(--foreground); background: var(--overlay); }
 .bf-start-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .bf-start-prompts { margin-top: 1.1rem; }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { COMMUNITY_LINKS } from '@/lib/community';
+import { SwipeRow } from '@/components/landing/swipe-row';
 
 const TEAM_ROLES = [
   { role: 'Product', initial: 'P' },
@@ -138,14 +139,15 @@ export function LandingCommunity() {
             Watch us ship, talk to the crew, or bring your project today. A human answers.
           </p>
 
-          <div className="mx-auto mt-10 grid max-w-2xl gap-3 sm:grid-cols-2">
+          <div className="mx-auto mt-10 max-w-2xl">
+            <SwipeRow label="community links" itemClass="flex w-[85%] shrink-0 snap-start sm:w-[calc(50%-0.5rem)]">
             {CARDS.map((card) => (
               <a
                 key={card.key}
                 href={card.href}
                 target="_blank"
                 rel="noreferrer"
-                className={`flex items-start justify-between gap-3 rounded-2xl border px-5 py-4 text-left transition ${card.cardClass}`}
+                className={`flex w-full items-start justify-between gap-3 rounded-2xl border px-5 py-4 text-left transition ${card.cardClass}`}
               >
                 <div className="flex min-w-0 items-start gap-3">
                   <CardIcon kind={card.icon} className={card.iconClass} />
@@ -165,6 +167,7 @@ export function LandingCommunity() {
                 <span className="shrink-0 text-sm text-ember">{card.cta} →</span>
               </a>
             ))}
+            </SwipeRow>
           </div>
         </div>
       </section>
