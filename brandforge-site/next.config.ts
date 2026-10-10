@@ -30,6 +30,8 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/blueprint", destination: "/chat", permanent: false },
+      // The overview page is part of the front page now.
+      { source: "/overview", destination: "/", permanent: true },
       // Free tools live inside Create and Distribute now; Connect became Settings > Integrations.
       { source: "/tools/:slug", destination: "/create", permanent: false },
       { source: "/connect", destination: "/settings#integrations", permanent: false },
