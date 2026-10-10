@@ -496,9 +496,9 @@ onMobileClose,
           /* Collapsed footer: the account stays reachable as an avatar chip. */
           <div className="bf-rail-footer mt-auto flex shrink-0 justify-center">
             <Link
-              href={isVisitor && !account ? "#sign-in" : "/settings"}
+              href={(isVisitor || isGuestBrowser) && !account ? "#sign-in" : "/settings"}
               onClick={(event) => {
-                if (isVisitor && !account) {
+                if ((isVisitor || isGuestBrowser) && !account) {
                   event.preventDefault();
                   openLogin({ reason: "signin" });
                 }
@@ -506,8 +506,8 @@ onMobileClose,
               title={
                 account
                   ? `${account.name} · ${roleLine(account.role, account.username)}`
-                  : isVisitor
-                    ? "Sign in"
+                  : isVisitor || isGuestBrowser
+                    ? "Log in"
                     : "Account settings"
               }
               aria-label={
@@ -536,16 +536,16 @@ onMobileClose,
               </span>
             </Link>
           </div>
-        ) : isVisitor && !account ? (
+        ) : (isVisitor || isGuestBrowser) && !account ? (
           <div className="bf-rail-footer mt-auto shrink-0">
-            <p className="text-sm font-semibold text-foreground">Keep your work</p>
-            <p className="mt-1 text-xs leading-snug text-muted">Sign in to save chats, bring your team and specialists in, and pick up on any device. Free, no card.</p>
+            <p className="text-sm font-semibold text-foreground">Sign up or log in</p>
+            <p className="mt-1 text-xs leading-snug text-muted">Save your chats, bring in your team and pick up on any device. Free, no card.</p>
             <button
               type="button"
-              onClick={() => openLogin({ reason: "signin" })}
-              className="mt-3 w-full rounded-xl bg-ember px-3 py-2.5 text-center text-sm font-semibold text-background transition hover:opacity-90"
+              onClick={() => openLogin({ reason: isGuestBrowser ? "save" : "signin" })}
+              className="mt-3 w-full rounded-full bg-ember px-4 py-3 text-center text-sm font-semibold text-background transition hover:opacity-90"
             >
-              Sign in
+              Log in
             </button>
           </div>
         ) : (

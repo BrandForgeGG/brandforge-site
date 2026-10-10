@@ -879,3 +879,9 @@ we do not have.
 **Change:** Admin People tab gains "Email activity" (recipient, subject, sent or failed, searchable) and a "Send welcome email" button for specialists. Giving someone the Specialist role now emails them (before, only accepting an application did). Sidebar: Dashboard sits with the other pages for admins only, the account menu is three to four lines, guests no longer see Sign out. Profile pictures now show in the team lists and Trade cards. Trade: Everything / Hire someone / Find work switch, sort, poster picture and posted time.
 
 **Distribution move:** changelog line: "Trade is easier to scan: switch between hiring and finding work, sort by budget, and see who posted." Demo note: show a Trade card with a real face, then the admin email activity list.
+
+## 2026-10-10 — Guests get a big "Log in" call to action in the sidebar
+
+**Change:** Where a guest used to see a fake user card, the sidebar footer now says "Sign up or log in" with one large Log in button, like ChatGPT.
+
+**Distribution move:** none beyond the sign-up funnel; watch `signin` dialog opens from the sidebar.
