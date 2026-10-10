@@ -1236,7 +1236,7 @@ export function ChatTranscript({
         // sender_name existed fall back to a neutral word rather than inventing a team identity.
         const authorName = isAI
           ? "BrandForge AI"
-          : message.senderName?.trim() || (isHuman ? "BrandForge" : "You");
+          : message.senderName?.trim() || (isHuman ? "BrandForge team" : "You");
         const authorInitials = initialsFor(authorName);
 
         // Grouped-message behavior: avatar and name appear on the first message of a run,

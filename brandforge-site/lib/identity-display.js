@@ -59,6 +59,7 @@ function avatarLabel(displayName) {
 function formatRole(role) {
   const value = String(role ?? '').trim();
   if (!value) return '';
+  if (value.toLowerCase() === 'operator') return 'BrandForge team';
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 

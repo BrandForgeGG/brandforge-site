@@ -909,3 +909,9 @@ we do not have.
 **Change:** Public pages, FAQ, Trade, chat cards, emails and role labels now say "the BrandForge team" instead of "specialist" or "operator". URLs (/specialists, /apply) and the legal terms page are unchanged.
 
 **Distribution move:** use "the BrandForge team" in every post, DM and ad from here on.
+
+## 2026-10-10 — "Operator" no longer shows in chat
+
+**Change:** Team members listed in a chat now read "BrandForge team" instead of "Operator", and older messages without a stored name show "BrandForge team" instead of plain "BrandForge".
+
+**Distribution move:** none; copy consistency.
