@@ -119,6 +119,7 @@ onMobileClose,
     email: string;
     role: string;
     username: string | null;
+    avatarUrl: string | null;
   } | null>(null);
   const [accountId, setAccountId] = useState("");
   // The readable bf_guest cookie marks an anonymous browser (rail is client-only, no SSR mismatch).
@@ -175,12 +176,14 @@ onMobileClose,
       // a missing username must never break the rail.
       let username: string | null = null;
       let role = "user";
+      let avatarUrl: string | null = null;
       try {
         const response = await fetchAuthed("/api/identity");
         if (response.ok) {
           const data = await response.json();
           username = data?.identity?.username ?? null;
           role = typeof data?.identity?.role === "string" ? data.identity.role : "user";
+          avatarUrl = typeof data?.identity?.avatarUrl === "string" ? data.identity.avatarUrl : null;
         }
       } catch {
         // Profile nicety only.
@@ -193,6 +196,7 @@ onMobileClose,
         email,
         role,
         username,
+        avatarUrl,
       });
     }
 
@@ -600,7 +604,12 @@ onMobileClose,
                     style={avatarTone(accountId || account?.name || "guest")}
                     aria-hidden="true"
                   >
-                    {initialsFor(account?.name ?? "?")}
+                    {account?.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- a small user picture from our own storage
+                      <img src={account.avatarUrl} alt="" decoding="async" className="h-full w-full rounded-full object-cover" />
+                    ) : (
+                      initialsFor(account?.name ?? "?")
+                    )}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium text-foreground">

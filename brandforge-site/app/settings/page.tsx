@@ -7,7 +7,8 @@ import { supabase } from '@/lib/supabase';
 import { fetchAuthed, getSessionUser } from '@/lib/browser-auth';
 import { IntegrationsPanel } from '@/components/integrations/integrations-panel';
 import { getUserRoleFromEmail } from '@/lib/user-roles';
-import { avatarTone, initialsFor } from '@/lib/identity-display';
+import { roleLine } from '@/lib/identity-display';
+import { AvatarEditor } from '@/components/profile/avatar-editor';
 import { getStoredTheme, setStoredTheme, type Theme } from '@/lib/theme';
 
 type SettingsProfile = {
@@ -48,7 +49,6 @@ export default function SettingsPage() {
   const [formEmail, setFormEmail] = useState('');
   const [formUsername, setFormUsername] = useState('');
   const [formPassword, setFormPassword] = useState('');
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme>(() => getStoredTheme());
   const [marketingOptIn, setMarketingOptIn] = useState(false);
@@ -119,7 +119,6 @@ export default function SettingsPage() {
     setFormEmail(profile.email);
     setFormUsername(profile.username);
     setFormPassword('');
-    setAvatarFile(null);
     setAvatarPreview(profile.avatarUrl);
     setError('');
     setSuccess('');
@@ -183,29 +182,6 @@ export default function SettingsPage() {
           password: formPassword,
         });
         if (pwdError) throw new Error(pwdError.message);
-      }
-
-      if (avatarFile) {
-        const ext = avatarFile.name.split('.').pop() || 'png';
-        const path = `avatars/${profile.email}.${ext}`;
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(path, avatarFile, { upsert: true });
-        if (uploadError) throw new Error(uploadError.message);
-
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from('avatars').getPublicUrl(path);
-
-        const response = await fetchAuthed('/api/identity', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ avatar_url: publicUrl }),
-        });
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.error || 'Could not save avatar');
-        }
       }
 
       setProfile((prev) =>
@@ -292,29 +268,20 @@ export default function SettingsPage() {
           </div>
 
           <div className="mt-4 space-y-4">
-            <div className="flex items-center gap-4">
-              <div
-                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-xl font-semibold"
-                style={avatarTone(profile.email)}
-              >
-                {avatarPreview ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={avatarPreview}
-                    alt=""
-                    decoding="async"
-                    className="h-full w-full rounded-full object-cover"
-                  />
-                ) : (
-                  <span>{initialsFor(profile.name)}</span>
-                )}
-              </div>
-              <div className="min-w-0">
+            <div>
+              <AvatarEditor
+                name={profile.name}
+                seed={profile.email}
+                url={avatarPreview}
+                onChange={(url) => {
+                  setAvatarPreview(url);
+                  setProfile((prev) => (prev ? { ...prev, avatarUrl: url } : prev));
+                }}
+              />
+              <div className="mt-3 min-w-0">
                 <p className="truncate text-base text-foreground">{profile.name}</p>
                 <p className="truncate text-sm text-muted">{profile.email}</p>
-                <p className="mt-0.5 text-[10px] uppercase tracking-[0.15em] text-muted">
-                  {profile.role}
-                </p>
+                <p className="mt-0.5 text-xs text-muted">{roleLine(profile.role, profile.username)}</p>
               </div>
             </div>
 
@@ -368,26 +335,6 @@ export default function SettingsPage() {
                     onChange={(e) => setFormPassword(e.target.value)}
                     placeholder="Leave blank to keep current"
                     className="mt-1 w-full rounded-lg border border-line bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ember"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-muted" htmlFor="settings-avatar">
-                    Profile picture
-                  </label>
-                  <input
-                    id="settings-avatar"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] ?? null;
-                      setAvatarFile(file);
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = () => setAvatarPreview(reader.result as string);
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                    className="mt-1 w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-overlay file:px-3 file:py-2 file:text-xs file:text-foreground"
                   />
                 </div>
               </>

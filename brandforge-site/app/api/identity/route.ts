@@ -85,6 +85,11 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (body.avatar_url !== undefined) {
+      // A picture is set through /api/profile/avatar. Here it can only be cleared, or point at our own storage.
+      const own = `${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''}/storage/v1/object/public/avatars/`;
+      if (body.avatar_url !== null && !(typeof body.avatar_url === 'string' && process.env.NEXT_PUBLIC_SUPABASE_URL && body.avatar_url.startsWith(own))) {
+        return NextResponse.json({ error: 'Use the photo button to change your picture.' }, { status: 400 });
+      }
       updates.avatar_url = body.avatar_url ?? null;
     }
 

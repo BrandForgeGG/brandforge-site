@@ -5753,3 +5753,38 @@ export async function isConversationAiEnabled(conversationId: string): Promise<b
   const { data } = await admin.from('conversations').select('ai_enabled').eq('id', conversationId).maybeSingle();
   return (data as { ai_enabled?: boolean | null } | null)?.ai_enabled !== false;
 }
+
+// ---- Profile pictures (bucket "avatars", migration 0037) ----
+// The server stores the picture after checking who is signed in; each upload gets a new file name so the new
+// picture shows at once (no stale cache), and the person's earlier pictures are deleted.
+export async function setProfileAvatar(userId: string, bytes: Buffer, contentType: 'image/jpeg' | 'image/png' | 'image/webp'): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, error: 'Storage is not set up.' };
+  const ext = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
+  const path = `${userId}/${Date.now()}.${ext}`;
+  const uploaded = await admin.storage.from('avatars').upload(path, bytes, { contentType, upsert: false });
+  if (uploaded.error) {
+    console.error('setProfileAvatar upload error:', uploaded.error.message);
+    return { ok: false, error: 'Could not store the picture. Try again.' };
+  }
+  const url = admin.storage.from('avatars').getPublicUrl(path).data.publicUrl;
+  const { error } = await admin.from('profiles').update({ avatar_url: url, updated_at: new Date().toISOString() }).eq('id', userId);
+  if (error) {
+    console.error('setProfileAvatar profile error:', error.message);
+    return { ok: false, error: 'Could not save the picture. Try again.' };
+  }
+  const old = await admin.storage.from('avatars').list(userId, { limit: 50 });
+  const stale = (old.data ?? []).map((file) => `${userId}/${file.name}`).filter((name) => name !== path);
+  if (stale.length > 0) await admin.storage.from('avatars').remove(stale).catch(() => undefined);
+  return { ok: true, url };
+}
+
+export async function clearProfileAvatar(userId: string): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const old = await admin.storage.from('avatars').list(userId, { limit: 50 });
+  const names = (old.data ?? []).map((file) => `${userId}/${file.name}`);
+  if (names.length > 0) await admin.storage.from('avatars').remove(names).catch(() => undefined);
+  const { error } = await admin.from('profiles').update({ avatar_url: null, updated_at: new Date().toISOString() }).eq('id', userId);
+  return !error;
+}

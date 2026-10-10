@@ -867,3 +867,9 @@ we do not have.
 **Change:** The knob of the AI switch is now an emoji: thumbs up while the AI answers, raised hand while it is off. Still no text, banner or badge.
 
 **Distribution move:** none.
+
+## 2026-10-10 — Profile pictures people can actually change
+
+**Change:** Settings now has a friendly picture editor: tap the picture, choose a photo (or drop one), drag and zoom inside a round preview, save. Pictures are shrunk on the device first, stored in a real public bucket, and appear in the sidebar. Remove returns to initials.
+
+**Distribution move:** changelog line for founders: "You can now put your face on your account: tap your picture in Settings, crop it, done." Demo note: show crop dialog on mobile, then the sidebar picture.
