@@ -927,3 +927,9 @@ we do not have.
 **Change:** The carousel, post and Optimize writers asked for more words than the nearly empty AI account could afford, so every request ended in "The writer is busy". They now retry with the smaller amount the account can afford, and the free backup model gets enough room to answer.
 
 **Distribution move:** none; reliability fix. Founder action still open: top up OpenRouter credit.
+
+## 2026-10-10 — A second AI provider behind the writers
+
+**Change:** The carousel, post and Optimize writers now fall back to Cloudflare Workers AI (Llama 3.3 70B) when OpenRouter cannot answer, using the Cloudflare account that already makes cover art. No new signup or key.
+
+**Distribution move:** none; reliability. Not yet proven live: the first provider currently still answers, so the fallback has not been triggered.

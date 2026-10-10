@@ -23,7 +23,7 @@ export type PlanResult =
   | { ok: true; plan: CarouselPlan; source: { title: string; image: string | null; url: string | null } }
   | { ok: false; status: number; error: string };
 
-const MODELS = [process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini', 'nvidia/nemotron-3-super-120b-a12b:free'];
+const MODELS = [process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini', 'cf:@cf/meta/llama-3.3-70b-instruct-fp8-fast', 'nvidia/nemotron-3-super-120b-a12b:free'];
 
 async function newsSources(topic: string): Promise<{ text: string; title: string } | { error: string }> {
   const provider = process.env.SEARCH_PROVIDER || 'serper';

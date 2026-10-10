@@ -26,6 +26,24 @@ async function completeJson({
   timeoutMs = 60000,
   fetchImpl = fetch,
 }) {
+  // A model named "cf:<id>" runs on Cloudflare Workers AI (OpenAI-compatible), with its own account and token.
+  // It is a second provider, so writing keeps working when the first one has no credit.
+  if (typeof model === 'string' && model.startsWith('cf:')) {
+    const account = process.env.CF_ACCOUNT_ID;
+    const token = process.env.CF_API_TOKEN;
+    if (!account || !token) throw new Error('llm_not_configured');
+    return completeJson({
+      baseUrl: `https://api.cloudflare.com/client/v4/accounts/${account}/ai/v1`,
+      apiKey: token,
+      model: model.slice(3),
+      system,
+      user,
+      temperature,
+      maxTokens,
+      timeoutMs,
+      fetchImpl,
+    });
+  }
   if (!apiKey) {
     throw new Error('llm_not_configured');
   }

@@ -8,7 +8,7 @@ import { getAiUsageToday } from '@/lib/project-db';
 // critique of the original. It only rearranges and tightens what the person wrote; it never adds claims,
 // numbers or offers they did not give. Same guards as the other writers: policy screen, daily AI ceiling,
 // a token-capped standard model first and a free model as the second try.
-const MODELS = [process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini', 'nvidia/nemotron-3-super-120b-a12b:free'];
+const MODELS = [process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini', 'cf:@cf/meta/llama-3.3-70b-instruct-fp8-fast', 'nvidia/nemotron-3-super-120b-a12b:free'];
 
 export const KINDS = {
   hook: 'the first line of a post, built to stop the scroll',
