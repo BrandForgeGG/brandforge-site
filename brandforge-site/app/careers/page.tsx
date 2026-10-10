@@ -53,7 +53,7 @@ export default function CareersPage() {
               <Link href="/apply" className="text-ember underline-offset-2 hover:underline">
                 apply as a specialist
               </Link>{' '}
-              to work on BrandForge projects as part of the operator network.
+              to work on BrandForge projects as part of the team. More on the <Link href="/developers" className="text-ember underline-offset-2 hover:underline">developers page</Link>.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <a

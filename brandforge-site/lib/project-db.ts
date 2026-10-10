@@ -5974,3 +5974,33 @@ export async function postCarouselMessage(conversationId: string, fields: Record
   void ownerName;
   return (data as { id: string } | null)?.id ?? null;
 }
+
+// ---- Monthly plans paid by card (migration 0041: subscriptions) ----
+export type SubscriptionRow = { plan: string; status: string; stripeCustomerId: string | null; currentPeriodEnd: string | null };
+
+export async function upsertSubscription(input: { stripeSubscriptionId: string; userId?: string | null; plan?: string | null; status: string; stripeCustomerId?: string | null; currentPeriodEnd?: string | null }): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const { data: existing } = await admin.from('subscriptions').select('user_id, plan').eq('stripe_subscription_id', input.stripeSubscriptionId).maybeSingle();
+  const known = existing as { user_id: string | null; plan: string } | null;
+  const row = {
+    stripe_subscription_id: input.stripeSubscriptionId,
+    user_id: input.userId ?? known?.user_id ?? null,
+    plan: input.plan ?? known?.plan ?? 'unknown',
+    status: input.status,
+    ...(input.stripeCustomerId ? { stripe_customer_id: input.stripeCustomerId } : {}),
+    ...(input.currentPeriodEnd ? { current_period_end: input.currentPeriodEnd } : {}),
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await admin.from('subscriptions').upsert(row, { onConflict: 'stripe_subscription_id' });
+  if (error) console.error('upsertSubscription error:', error.message);
+  return !error;
+}
+
+export async function getActiveSubscription(userId: string): Promise<SubscriptionRow | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data } = await admin.from('subscriptions').select('plan, status, stripe_customer_id, current_period_end').eq('user_id', userId).in('status', ['active', 'trialing', 'past_due']).order('updated_at', { ascending: false }).limit(1).maybeSingle();
+  const row = data as { plan: string; status: string; stripe_customer_id: string | null; current_period_end: string | null } | null;
+  return row ? { plan: row.plan, status: row.status, stripeCustomerId: row.stripe_customer_id, currentPeriodEnd: row.current_period_end } : null;
+}

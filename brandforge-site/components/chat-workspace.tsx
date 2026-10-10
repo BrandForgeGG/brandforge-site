@@ -26,6 +26,7 @@ import { AiNotices, AiSwitch, useAiAccess } from "@/components/chat-ai-controls"
 import { ToolsMenu } from "@/components/chat-tools-menu";
 import { CarouselChatCard, SavedCardOrFallback, cardKey, clearSavedCard, seedCarouselCard, type CarouselSend } from "@/components/chat/carousel-chat-card";
 import { detectMakeIntent } from "@/lib/make-intent";
+import { getRetainer } from "@/lib/plans.js";
 import { PeerContractForm } from "@/components/peer-contract-card";
 import { extractOutline } from "@/lib/deliverable-outline";
 import { ChatTranscript, type ChatMessage } from "@/components/chat-transcript";
@@ -258,7 +259,18 @@ export function ChatWorkspace() {
   const [taskParticipants, setTaskParticipants] = useState<TaskParticipant[]>(
     [],
   );
-  const [input, setInput] = useState("");
+  // Arriving from a plan or package button on the pricing page: the box starts with a first line, and the team is told
+  // when the chat is created.
+  const [activePlan, setActivePlan] = useState<string | null>(() => {
+    const asked = searchParams.get("plan");
+    return asked && getRetainer(asked) ? asked : null;
+  });
+  const [input, setInput] = useState(() => {
+    const plan = getRetainer(searchParams.get("plan"));
+    if (plan) return `I'd like the ${plan.name} plan (${plan.price}${plan.cadence}). About me and what I need: `;
+    const pkg = ({ launch: "Launch (websites and brand)", build: "Build (SaaS and bots)", product: "Product (apps and platforms)", scale: "Scale (features and growth)" } as Record<string, string>)[searchParams.get("pkg") ?? ""];
+    return pkg ? `I'm interested in the ${pkg} package. About the project: ` : "";
+  });
   // The maker, opened over the chat: which format (null = pick one) and the topic to start from.
   // The carousel maker as a card in the thread: set when someone asks for a carousel or taps Make a carousel.
   // The command tag in the message box (Make a carousel, Plan my idea, ...), or none.
@@ -1627,6 +1639,7 @@ export function ChatWorkspace() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               initialMessage: text,
+              ...(activePlan ? { plan: activePlan } : {}),
               ...(railMeta.userId ? {} : { guest: true }),
             }),
           });

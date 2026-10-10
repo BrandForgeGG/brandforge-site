@@ -130,6 +130,7 @@ export function OverviewIdea() {
 export function OverviewPrice() {
   const rows = [
     ['Making and publishing', 'Free to make. Sign in to edit and download.'],
+    ['The BrandForge team', 'From €490 a month. A person and AI deliver your content, ads or product work.'],
     ['Teams', 'Invite anyone into a chat. Work on the same page.'],
     ['Listing in Trade', 'Free to post. Nothing is charged to list or to chat.'],
     ['Contracts between members', 'A flat 5% when a milestone is paid. Nothing else.'],
@@ -150,7 +151,7 @@ export function OverviewPrice() {
         </dl>
         <div className="mt-6 text-center">
           <Link href="/pricing" className="text-sm text-ember underline-offset-4 hover:underline">
-            See plans
+            See the team plans
           </Link>
         </div>
       </div>

@@ -9,6 +9,7 @@ import { IntegrationsPanel } from '@/components/integrations/integrations-panel'
 import { getUserRoleFromEmail } from '@/lib/user-roles';
 import { roleLine } from '@/lib/identity-display';
 import { AvatarEditor } from '@/components/profile/avatar-editor';
+import { SettingsPlanCard } from '@/components/settings-plan-card';
 import { getStoredTheme, setStoredTheme, type Theme } from '@/lib/theme';
 
 type SettingsProfile = {
@@ -381,6 +382,8 @@ export default function SettingsPage() {
             </p>
           ) : null}
         </div>
+
+        <SettingsPlanCard />
 
         <div className="min-w-0 rounded-2xl border border-line bg-panel p-5">
           <h2 className="text-xl font-medium text-foreground">Workspace</h2>

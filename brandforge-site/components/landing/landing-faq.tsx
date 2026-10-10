@@ -7,7 +7,7 @@ const FAQS = [
   {
     question: 'How much does it cost?',
     answer:
-      'Every proposal carries a fixed price and timeline that you accept before anything is funded. Nothing is charged until you approve the proposal, and you can counter the offer in the chat.',
+      'The tools are free. The BrandForge team costs from €490 a month (Starter), €990 (Growth) or €2,490 (Build), and larger builds are quoted. One-off projects carry a fixed price and timeline that you accept before anything is funded; you can counter the offer in the chat. Nothing is charged until you agree.',
   },
   {
     question: 'How do payments work?',

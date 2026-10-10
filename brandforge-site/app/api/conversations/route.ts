@@ -13,6 +13,8 @@ import {
 import { attachGuestCookies, ensureGuestSession, resolveGuestSession } from '@/lib/guest-session';
 import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { getRetainer } from '@/lib/plans.js';
+import { postOpsEvent } from '@/lib/ops-events';
 
 const CONVERSATION_CREATE_RATE_LIMIT = { limit: 10, windowMs: 60 * 60 * 1000 };
 const CONVERSATION_DELETE_RATE_LIMIT = { limit: 20, windowMs: 60 * 60 * 1000 };
@@ -23,7 +25,7 @@ export const dynamic = 'force-dynamic';
 // idea, and the first message is persisted immediately so Recents reflects reality.
 export async function POST(request: NextRequest) {
   try {
-    let body: { initialMessage?: string; source?: string; guest?: unknown } = {};
+    let body: { initialMessage?: string; source?: string; guest?: unknown; plan?: unknown } = {};
 
     try {
       body = await request.json();
@@ -41,6 +43,8 @@ export async function POST(request: NextRequest) {
     }
 
     const initialMessage = String(body.initialMessage ?? '').trim().slice(0, 8000);
+    // A monthly plan asked for on the pricing page: the team is told the moment the chat exists.
+    const asked = typeof body.plan === 'string' ? getRetainer(body.plan) : null;
     // Traffic classification: probes and e2e runs self-declare `source: 'test'` so
     // revenue metrics stay clean. Anything else reads as organic; claiming 'test'
     // only excludes the caller from aggregates, so there is nothing to gain by lying.
@@ -90,6 +94,11 @@ export async function POST(request: NextRequest) {
           signedIn: false,
           properties: { source: 'first_message', percent: 0 },
         });
+      }
+
+      if (asked && created.conversationId) {
+        await recordFunnelEvent('plan_requested', { signedIn: false, properties: { source: asked.id } });
+        after(() => postOpsEvent('plan_requested', { title: `${asked.name} ${asked.price}${asked.cadence}`, conversationId: created.conversationId }));
       }
 
       const response = NextResponse.json({
@@ -162,6 +171,11 @@ export async function POST(request: NextRequest) {
       if (isRepeatFounder) {
         await recordFunnelEvent('repeat_project_started', { signedIn: true });
       }
+    }
+
+    if (asked) {
+      await recordFunnelEvent('plan_requested', { signedIn: true, properties: { source: asked.id } });
+      after(() => postOpsEvent('plan_requested', { title: `${asked.name} ${asked.price}${asked.cadence}`, conversationId }));
     }
 
     return NextResponse.json({

@@ -24,6 +24,13 @@ export default function AboutPage() {
 
         <div className="mt-12 space-y-8">
           <section>
+            <h2 className="font-serif text-2xl text-foreground">Who it is for</h2>
+            <p className="mt-3 leading-relaxed text-muted">
+              Founders and small businesses who need to show up and ship. Creators who want to make more with less effort. People who offer a skill and want clients. Companies with a bigger build. Developers and designers who want paid work. And investors who like early companies that ship every week. There is a page for each: <Link href="/pricing" className="text-ember underline-offset-2 hover:underline">pricing</Link>, <Link href="/trade" className="text-ember underline-offset-2 hover:underline">Trade</Link>, <Link href="/enterprise" className="text-ember underline-offset-2 hover:underline">bigger projects</Link>, <Link href="/developers" className="text-ember underline-offset-2 hover:underline">developers</Link> and <Link href="/investors" className="text-ember underline-offset-2 hover:underline">investors</Link>.
+            </p>
+          </section>
+
+          <section>
             <h2 className="font-serif text-2xl text-foreground">Why now</h2>
             <p className="mt-3 leading-relaxed text-muted">
               Using the internet without AI is becoming a disadvantage. We use the newest internet

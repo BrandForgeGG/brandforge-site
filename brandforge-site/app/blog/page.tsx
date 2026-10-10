@@ -15,6 +15,17 @@ export const metadata = {
 // Real shipping entries, dated to when they actually went live. New posts go on top.
 const POSTS: { date: string; title: string; body: Block[] }[] = [
   {
+    date: '2026-10-11',
+    title: 'Your own BrandForge team, by the month, and everything new this week',
+    body: [
+      'You can now hire the BrandForge team by the month. Starter is €490 (eight carousels or posts, captions for every platform and a content calendar). Growth is €990 (twenty pieces, ad copy, a weekly report and replies within a working day). Build is €2,490 (a website or app that keeps moving, up to two new pages or features a month). Bigger projects start at €5,000 and run as milestone contracts held in escrow. Every plan starts in a chat with a person, and you only pay once you agree what you get.',
+      'The chat is the front door: brandforge.gg/chat. Pick a command, Make a carousel, Plan my idea or Hire or get hired, and the carousel is made right in the conversation, saved as a message with its own date, and keeps the chat going underneath it. You can delete what you send, see how long ago you sent it, and switch the AI off with one tap when you want to talk to people only.',
+      'Trade is open to everyone. Say what you offer or need in your own words, a profile, a gig, a product, a tool, a startup launch or a request, and BrandForge writes the listing for you to check and publish. Every listing gets its own assistant chat that remembers the goal.',
+      'Answers keep coming even when one AI provider has a bad day: the chat now falls back across several providers. Profile pictures show everywhere, the landing page carries real client reviews and shipped projects you can swipe through, and there are new pages for bigger projects, developers and investors.',
+      'Start free at brandforge.gg/chat, or see the plans at brandforge.gg/pricing.',
+    ],
+  },
+  {
     date: '2026-10-10',
     title: 'AI and people, one workspace',
     body: [

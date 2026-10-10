@@ -48,6 +48,8 @@ const KIND_BY_EVENT = {
   peer_dispute: 'contracts',
   // Spend guard: staff-only, never public.
   ai_budget: 'briefs',
+  // Someone asked for a monthly team plan: the first thing the team should answer.
+  plan_requested: 'briefs',
 };
 
 // clip/money live in lib/format.js so every message builder renders identically.
@@ -89,6 +91,14 @@ function buildOpsEmbedBody(event, details = {}) {
   const timeline = weeks(details.weeksMin ?? details.weeks, details.weeksMax ?? details.weeks);
 
   switch (event) {
+    case 'plan_requested':
+      return {
+        title: `Plan requested: ${title}`,
+        description: 'Someone asked for a monthly team plan. Open the chat and answer them while it is fresh.',
+        color: GREEN,
+        footer: footer('briefs'),
+      };
+
     case 'brief_posted':
       return {
         title: `New brief: ${title}`,

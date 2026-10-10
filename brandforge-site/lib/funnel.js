@@ -83,6 +83,9 @@ const FUNNEL_EVENTS = Object.freeze([
   'peer_contract_signed',
   'peer_contract_released',
   'plan_interest',
+  'plan_requested',
+  'checkout_started',
+  'subscription_active',
   'trade_listing_created',
   'trade_offer_sent',
   // Specialist funnel

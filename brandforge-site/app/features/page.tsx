@@ -30,6 +30,10 @@ const FEATURES = [
     body: 'Two people in a chat can sign a milestone contract. The payer funds it, the other person submits each milestone with a link to the work, and the payer has 48 hours to approve or raise an issue. A flat 5% when a milestone is paid.',
   },
   {
+    title: 'Your own BrandForge team, monthly',
+    body: 'From €490 a month, a person on the team and AI deliver your content, ads or product work, with replies in your own chat. Cancel any month.',
+  },
+  {
     title: 'Bring your team',
     body: 'Invite anyone into a chat with a link. Everyone sees the same plan, the same files and the same history, with the AI on your side or paused.',
   },

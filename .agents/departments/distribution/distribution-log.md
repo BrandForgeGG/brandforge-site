@@ -1047,3 +1047,9 @@ we do not have.
 **Change:** Reversed the last move. brandforge.gg is the landing page again (what BrandForge is, the work, the reviews, the community, the questions), with Start a chat leading to brandforge.gg/chat, the app's front door. /chat opens for anyone with no sign-up; a chat that already exists still needs its owner. The sidebar logo and every "start" button (work pages, Optimize, the apply page, sign-in return) now lead to /chat. /overview still redirects to the landing page.
 
 **Distribution move:** use brandforge.gg for sharing and ads (it explains the product); use brandforge.gg/chat as the direct "try it now" link.
+
+## 2026-10-11 — Monthly team plans, three audience pages, and the week-1 campaign
+
+**Change:** New monthly team plans (Starter €490, Growth €990, Build €2,490, Custom from €5,000) on a rewritten pricing page, with a request flow that starts a chat, tells the team, and records the interest. Card subscriptions are built (Stripe checkout, signed webhook, "Your plan" in Settings) and switch on when the Stripe keys are added; until then every plan starts in a chat. New pages: /investors, /developers, /enterprise, linked from the footer and sitemap. Copy revised on the landing page price section, features, about, careers and the FAQ. New blog post. Week-1 campaign pack written (marketing/campaign-week-1: plan, copy for every channel and day, outreach and objections). Fourteen Discord and Telegram posts queued for 09:50 UTC, Sunday to Saturday.
+
+**Distribution move:** this is the campaign. Day 1 (Sunday 11 Oct) is the launch: "ChatGPT is AI. BrandForge is AI and people." plus the plans. Daily routine and tracking are in plan.md.

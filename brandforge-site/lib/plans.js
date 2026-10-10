@@ -35,6 +35,78 @@ const PLANS = [
   },
 ];
 
+// The BrandForge team, monthly. A person on the team, with AI doing the first drafts, delivers the same things every
+// month for a fixed price. Prices are test values to be confirmed in conversation: change them here and the pricing
+// page, the chat and the card checkout all follow.
+const RETAINERS = [
+  {
+    id: 'starter',
+    name: 'Starter',
+    cents: 49000,
+    price: '€490',
+    cadence: '/month',
+    blurb: 'A steady content engine for one brand.',
+    bestFor: 'Founders and small shops who need to show up every week.',
+    features: [
+      '8 carousels or posts a month, designed and written',
+      'A caption for every platform',
+      'A monthly content calendar',
+      'A monthly review chat with your team member',
+    ],
+  },
+  {
+    id: 'growth',
+    name: 'Growth',
+    cents: 99000,
+    price: '€990',
+    cadence: '/month',
+    blurb: 'Content, ads and a weekly rhythm.',
+    bestFor: 'Brands that want to publish daily and learn from it.',
+    features: [
+      '20 carousels or posts a month',
+      'Ad copy and creative ideas for two platforms',
+      'A weekly report: what worked and what to change',
+      'Replies within one working day',
+      'One round of revisions on every piece',
+    ],
+    highlight: true,
+  },
+  {
+    id: 'build',
+    name: 'Build',
+    cents: 249000,
+    price: '€2,490',
+    cadence: '/month',
+    blurb: 'A website or app that keeps moving.',
+    bestFor: 'Products that need steady building after launch.',
+    features: [
+      'Up to two new pages or features a month',
+      'Fixes, updates and a monthly roadmap',
+      'A developer on call in your chat',
+      'Bigger pieces run as milestone contracts',
+    ],
+  },
+  {
+    id: 'custom',
+    name: 'Custom',
+    cents: 0,
+    price: 'From €5,000',
+    cadence: '',
+    blurb: 'Larger builds, teams and several channels.',
+    bestFor: 'Companies and high-value projects.',
+    features: [
+      'A scoped project or retainer built around you',
+      'A named lead and a small team',
+      'Milestone contracts held in escrow, card or crypto',
+      'Direct line to the founder',
+    ],
+  },
+];
+
+function getRetainer(id) {
+  return RETAINERS.find((plan) => plan.id === id) || null;
+}
+
 function getPlan(id) {
   return PLANS.find((plan) => plan.id === id) || PLANS[0];
 }
@@ -46,4 +118,4 @@ function effectivePlan(id, paidThrough, now = new Date()) {
   return new Date(paidThrough).getTime() >= now.getTime() ? getPlan(id) : PLANS[0];
 }
 
-module.exports = { PLANS, getPlan, effectivePlan };
+module.exports = { PLANS, RETAINERS, getPlan, getRetainer, effectivePlan };

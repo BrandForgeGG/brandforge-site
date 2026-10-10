@@ -15,7 +15,7 @@ export function LandingPackages() {
           {PACKAGES.map((pkg) => (
             <Link
               key={pkg.key}
-              href={`/?pkg=${pkg.key}`}
+              href={`/chat?pkg=${pkg.key}`}
               className="rounded-2xl border border-line bg-panel p-5 transition hover:border-ember"
             >
               <p className="font-serif text-lg text-foreground">{pkg.name}</p>
