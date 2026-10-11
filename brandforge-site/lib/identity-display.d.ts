@@ -11,4 +11,5 @@ export declare function avatarLabel(displayName: string | null | undefined): str
 export declare function formatRole(role: string | null | undefined): string;
 export declare const AVATAR_TONES: AvatarTone[];
 
+export declare function roleBadge(role: string | null | undefined): { key: 'admin' | 'team' | 'member'; label: 'Admin' | 'BrandForge Team' | 'Member' };
 export declare function roleLine(role: string | null | undefined, username: string | null | undefined): string;

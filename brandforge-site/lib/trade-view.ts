@@ -1,6 +1,6 @@
 import type { TradeListingRow } from '@/lib/project-db';
 
-export function toListingView(row: TradeListingRow, ownerName: string, viewerId: string | null, ownerAvatar: string | null = null, official = false) {
+export function toListingView(row: TradeListingRow, ownerName: string, viewerId: string | null, ownerAvatar: string | null = null, official = false, ownerRole = 'user') {
   return {
     id: row.id,
     createdAt: row.created_at,
@@ -13,6 +13,7 @@ export function toListingView(row: TradeListingRow, ownerName: string, viewerId:
     budgetMaxCents: row.budget_max_cents == null ? null : Number(row.budget_max_cents),
     ownerName,
     ownerAvatar,
+    ownerRole,
     official,
     mine: viewerId !== null && viewerId === row.owner_id,
     status: row.status,

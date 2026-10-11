@@ -61,3 +61,13 @@ test('roleLine shows Admin, Operator, or the username, never "user"', () => {
   assert.equal(roleLine('user', null), 'Member');
   assert.equal(roleLine(null, ''), 'Member');
 });
+
+test('roleBadge maps every account role to Member, BrandForge Team or Admin', () => {
+  const { roleBadge } = require('./identity-display.js');
+  assert.deepEqual(roleBadge('admin'), { key: 'admin', label: 'Admin' });
+  assert.deepEqual(roleBadge('founder'), { key: 'admin', label: 'Admin' });
+  assert.deepEqual(roleBadge('operator'), { key: 'team', label: 'BrandForge Team' });
+  assert.deepEqual(roleBadge('user'), { key: 'member', label: 'Member' });
+  assert.deepEqual(roleBadge(''), { key: 'member', label: 'Member' });
+  assert.deepEqual(roleBadge(null), { key: 'member', label: 'Member' });
+});

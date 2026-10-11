@@ -75,7 +75,17 @@ function roleLine(role, username) {
   return handle ? `@${handle}` : 'Member';
 }
 
+// The three roles people see, everywhere: Member, BrandForge Team, Admin. profiles.role 'admin' (or the legacy
+// 'founder') is Admin, 'operator' is BrandForge Team, and everyone else is a Member. The word "user" is never shown.
+function roleBadge(role) {
+  const key = String(role ?? '').trim().toLowerCase();
+  if (key === 'admin' || key === 'founder') return { key: 'admin', label: 'Admin' };
+  if (key === 'operator' || key === 'team' || key === 'staff') return { key: 'team', label: 'BrandForge Team' };
+  return { key: 'member', label: 'Member' };
+}
+
 module.exports = {
+  roleBadge,
   roleLine,
   initialsFor,
   avatarTone,

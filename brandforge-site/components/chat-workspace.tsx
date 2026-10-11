@@ -2378,10 +2378,12 @@ export function ChatWorkspace() {
   // Role labels: staff see "admin" or "staff"; regular users see no role badge.
   // The rail reports the profiles.role value ('admin'), with the legacy email hint
   // ('founder') as fallback for rows that predate it.
-  const selfRoleLabel = railMeta.isStaff
-    ? railMeta.role === 'admin' || railMeta.role === 'founder'
-      ? 'admin'
-      : 'operator'
+  const selfRoleLabel = railMeta.userId
+    ? railMeta.isStaff
+      ? railMeta.role === 'admin' || railMeta.role === 'founder'
+        ? 'admin'
+        : 'operator'
+      : 'user'
     : null;
 
   // The people in this chat. Whoever started it is the project owner, signed in or guest, even when no
@@ -2402,7 +2404,7 @@ export function ChatWorkspace() {
     const map: Record<string, string> = {};
     for (const person of people) {
       const name = person.displayName.trim().toLowerCase();
-      if (name && person.role) map[name] = formatRole(person.role);
+      if (name) map[name] = person.accountRole || 'user';
     }
     return map;
   }, [people]);

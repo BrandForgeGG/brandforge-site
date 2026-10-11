@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { fetchAuthed, getSessionUser } from "@/lib/browser-auth";
 import { useLogin } from "@/components/login-dialog";
 import { avatarTone, initialsFor, roleLine } from "@/lib/identity-display";
+import { RoleBadge } from "@/components/role-badge";
 
 export interface RecentConversation {
   id: string;
@@ -594,8 +595,15 @@ onMobileClose,
                     <span className="block truncate text-sm font-medium text-foreground">
                       {account?.name ?? "Guest"}
                     </span>
-                    <span className="block truncate text-[11px] text-muted">
-                      {account ? roleLine(account.role, account.username) : "Not saved yet"}
+                    <span className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-muted">
+                      {account ? (
+                        <>
+                          <RoleBadge role={account.role} />
+                          {account.username ? <span className="truncate">@{account.username}</span> : null}
+                        </>
+                      ) : (
+                        "Not saved yet"
+                      )}
                     </span>
                   </span>
                 </>

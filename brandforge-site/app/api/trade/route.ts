@@ -1,6 +1,6 @@
 import { after, NextRequest, NextResponse } from 'next/server';
 import { sendFirstTimeEmail } from '@/lib/first-time-email';
-import {
+import { getProfileRoles,
   createTradeListing,
   ensureListingAssistant,
   getAdminIds,
@@ -40,7 +40,8 @@ export async function GET(request: NextRequest) {
       if (!mine.ok) return NextResponse.json({ listings: [] });
       const name = await getProfileDisplayName(viewer.id);
       const mineFaces = await getAvatarUrls([viewer.id]);
-      return NextResponse.json({ listings: mine.rows.map((row) => toListingView(row, name, viewer.id, mineFaces.get(viewer.id) ?? null)) });
+      const myRole = (await getProfileRole(viewer.id)) ?? 'user';
+      return NextResponse.json({ listings: mine.rows.map((row) => toListingView(row, name, viewer.id, mineFaces.get(viewer.id) ?? null, false, myRole)) });
     }
 
     const result = await listOpenTradeListings();
@@ -57,9 +58,10 @@ export async function GET(request: NextRequest) {
     const faces = await getAvatarUrls([...names.keys()]);
     // Listings owned by a BrandForge admin account are BrandForge's own pre-made services.
     const officialIds = await getAdminIds([...names.keys()]);
+    const roles = await getProfileRoles([...names.keys()]);
     const viewerRole = viewer ? await getProfileRole(viewer.id) : null;
     return NextResponse.json({
-      listings: rows.map((row) => toListingView(row, officialIds.has(row.owner_id) ? 'BrandForge' : (names.get(row.owner_id) ?? 'Member'), viewer?.id ?? null, officialIds.has(row.owner_id) ? null : (faces.get(row.owner_id) ?? null), officialIds.has(row.owner_id))),
+      listings: rows.map((row) => toListingView(row, officialIds.has(row.owner_id) ? 'BrandForge' : (names.get(row.owner_id) ?? 'Member'), viewer?.id ?? null, officialIds.has(row.owner_id) ? null : (faces.get(row.owner_id) ?? null), officialIds.has(row.owner_id), roles.get(row.owner_id) ?? 'user')),
       viewer: { signedIn: Boolean(viewer), isSpecialist: viewerRole === 'operator' || viewerRole === 'admin' },
     });
   } catch (error) {

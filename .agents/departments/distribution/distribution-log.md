@@ -1077,3 +1077,9 @@ we do not have.
 **Change:** the first screen is one headline, one line and four goals in the order people arrive with them: Make an ad or image, Make a carousel, Post a gig or listing, Hire the BrandForge team (the diagram and the extra reassurance block are gone). Trade: the maker is back to a calm size, says a link is welcome, and "What I read" and the tips are one quiet line; "Yours" is a compact list and no listing is shown twice. Create: the six formats lead, the wish list is tucked into one line.
 
 **Distribution move:** copy line for every channel: "Pick what you want: an ad, a carousel, a gig, or the team. It starts in one box." Screenshot the new first screen as the hero image for the week-1 posts.
+
+## 2026-10-11 — One Trade list, and the same role badges everywhere
+
+**Change:** Trade is one list: no "Yours" section, no All/Offers/Requests, search or category filters. Each listing does the job itself: your own cards carry Assistant, Edit, Close or Reopen and Delete; other people's carry Hire or Offer to help; closed listings of yours stay in the list so they can be reopened. The posting time moved beside the price. A colored role badge (Member blue, BrandForge Team orange, Admin violet) now comes before the name on listings, in chat message headers, in the profile card, in Settings and in the sidebar account card. In chat the "Sent ... · Delete" row is gone: the time sits next to the name and Delete is with the other message actions.
+
+**Distribution move:** trust cue for every post that shows the product: you can see who you are talking to at a glance (Member, BrandForge Team, Admin). Copy line: "Every name shows who they are: a member, the BrandForge team, or an admin."

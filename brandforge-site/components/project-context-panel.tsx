@@ -13,6 +13,8 @@ export interface TaskParticipant {
   displayName: string;
   role: string;
   avatarUrl?: string | null;
+  /** The person's account role (profiles.role): admin, operator or user. Shown as Admin, BrandForge Team or Member. */
+  accountRole?: string;
 }
 
 export interface ProposalSummary {

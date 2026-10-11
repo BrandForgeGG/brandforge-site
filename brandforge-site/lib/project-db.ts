@@ -5858,6 +5858,18 @@ export async function getAvatarUrls(userIds: string[]): Promise<Map<string, stri
   return out;
 }
 
+// The account role of a set of people (profiles.role), so lists can show Member, BrandForge Team or Admin.
+export async function getProfileRoles(userIds: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const ids = [...new Set(userIds.filter(Boolean))].slice(0, 200);
+  if (ids.length === 0) return out;
+  const admin = createSupabaseAdminClient();
+  if (!admin) return out;
+  const { data } = await admin.from('profiles').select('id, role').in('id', ids);
+  for (const row of (data ?? []) as { id: string; role: string | null }[]) out.set(row.id, row.role ?? 'user');
+  return out;
+}
+
 // A guest deleting their own message: the chat must belong to their session and the message must be one
 // they wrote (a guest's messages carry no user id).
 export async function deleteGuestMessage(sessionId: string, conversationId: string, messageId: string): Promise<'deleted' | 'not_found' | 'forbidden'> {

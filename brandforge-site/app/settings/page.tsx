@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { fetchAuthed, getSessionUser } from '@/lib/browser-auth';
 import { IntegrationsPanel } from '@/components/integrations/integrations-panel';
 import { getUserRoleFromEmail } from '@/lib/user-roles';
-import { roleLine } from '@/lib/identity-display';
+import { RoleBadge } from '@/components/role-badge';
 import { AvatarEditor } from '@/components/profile/avatar-editor';
 import { SettingsPlanCard } from '@/components/settings-plan-card';
 import { getStoredTheme, setStoredTheme, type Theme } from '@/lib/theme';
@@ -282,7 +282,10 @@ export default function SettingsPage() {
               <div className="mt-3 min-w-0">
                 <p className="truncate text-base text-foreground">{profile.name}</p>
                 <p className="truncate text-sm text-muted">{profile.email}</p>
-                <p className="mt-0.5 text-xs text-muted">{roleLine(profile.role, profile.username)}</p>
+                <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted">
+                  <RoleBadge role={profile.role} />
+                  {profile.username ? <span>@{profile.username}</span> : null}
+                </p>
               </div>
             </div>
 
@@ -357,8 +360,8 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted">Role</p>
-                  <p className="mt-1 text-base uppercase tracking-[0.15em] text-copper">
-                    {profile.role}
+                  <p className="mt-1.5">
+                    <RoleBadge role={profile.role} />
                   </p>
                 </div>
               </>

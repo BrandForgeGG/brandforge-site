@@ -5,6 +5,7 @@ import { embedActions, showsFundingForm } from "@/lib/embed-actions.js";
 import { avatarLabel, avatarTone, initialsFor } from "@/lib/identity-display";
 import { isDirectlyReadable } from "@/lib/file-context";
 import { RichContent } from "@/components/rich-content";
+import { RoleBadge } from "@/components/role-badge";
 
 import { detectDeliverable, KINDS } from "@/lib/deliverable-intent";
 import { BlueprintEmbedCard } from "@/components/blueprint/blueprint-embed-card";
@@ -780,8 +781,8 @@ function Avatar({
                 </div>
               </div>
               {profile.role ? (
-                <p className="mt-2 text-[10px] uppercase tracking-[0.15em] text-copper">
-                  {profile.role}
+                <p className="mt-2">
+                  <RoleBadge role={profile.role} />
                 </p>
               ) : null}
             </>
@@ -884,7 +885,7 @@ function MessageTime({ iso }: { iso: string | null }) {
   const exact = new Date(iso);
   return (
     <time dateTime={iso} title={exact.toLocaleString()} className="tabular-nums">
-      Sent {sentAgo(iso, now)}
+      {sentAgo(iso, now)}
     </time>
   );
 }
@@ -892,12 +893,14 @@ function MessageTime({ iso }: { iso: string | null }) {
 function MessageActions({
   message,
   canManage,
+  onDelete,
   onEdit,
   onReact,
   onReply,
 }: {
   message: ChatMessage;
   canManage: boolean;
+  onDelete?: () => void;
   onEdit: (content: string) => Promise<void>;
   onReact: (emoji: string) => Promise<void>;
   onReply?: (messageId: string) => void;
@@ -1020,6 +1023,11 @@ function MessageActions({
                 Edit
               </button>
             </>
+          ) : null}
+          {onDelete ? (
+            <button type="button" disabled={busy} onClick={onDelete} className="rounded px-1.5 py-0.5 text-xs text-muted hover:bg-overlay hover:text-danger">
+              Delete
+            </button>
           ) : null}
         </>
       ) : (
@@ -1288,7 +1296,7 @@ export function ChatTranscript({
         );
 
         const roleLabel = isAI
-          ? "Execution Assistant"
+          ? null
           : isUser
             ? selfRole || null
             : participantRoles?.[authorName.trim().toLowerCase()] || null;
@@ -1317,13 +1325,14 @@ export function ChatTranscript({
               className={`min-w-0 max-w-2xl ${isUser ? "order-first flex flex-col items-end" : ""}`}
             >
               {!grouped && !isAI ? (
-                <p className="mb-1 flex items-baseline gap-2">
+                <p className={`mb-1 flex items-center gap-2 ${isUser ? "justify-end" : ""}`}>
+                  {roleLabel ? <RoleBadge role={roleLabel} /> : null}
                   <span className="text-[13px] font-semibold text-foreground">
                     {authorName}
                   </span>
-                  {roleLabel ? (
-                    <span className="text-[10px] uppercase tracking-[0.14em] text-muted">
-                      {roleLabel}
+                  {!message.streaming ? (
+                    <span className="text-[11px] text-muted">
+                      <MessageTime iso={message.createdAt} />
                     </span>
                   ) : null}
                 </p>
@@ -1438,21 +1447,13 @@ export function ChatTranscript({
               {isAI && message.thoughts && message.thoughts.length > 0 ? (
                 <Thoughts steps={message.thoughts} />
               ) : null}
-              {!isAI && !message.streaming ? (
-                <div className={`mt-1 flex items-center gap-2 text-[11px] text-muted ${isUser ? "justify-end" : ""}`}>
-                  <MessageTime iso={message.createdAt} />
-                  {(currentUserId ? message.senderId === currentUserId : message.sender === "user" && !message.senderId) ? (
-                    <>
-                      <span aria-hidden="true">·</span>
-                      <button type="button" onClick={() => void onDeleteMessage(message.id)} className="underline-offset-2 transition hover:text-foreground hover:underline">
-                        Delete
-                      </button>
-                    </>
-                  ) : null}
-                </div>
-              ) : null}
               <MessageActions
                 message={message}
+                onDelete={
+                  !isAI && !message.streaming && (currentUserId ? message.senderId === currentUserId : message.sender === "user" && !message.senderId)
+                    ? () => void onDeleteMessage(message.id)
+                    : undefined
+                }
                 canManage={Boolean(
                   currentUserId && message.senderId === currentUserId,
                 )}

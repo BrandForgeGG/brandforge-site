@@ -11,6 +11,7 @@ import { budgetLabel } from "@/lib/trade.js";
 import { formatMoney } from "@/lib/peer-contract.js";
 import type { ListingView } from "@/lib/trade-view";
 import { avatarTone, initialsFor } from "@/lib/identity-display";
+import { RoleBadge } from "@/components/role-badge";
 
 const field =
   "w-full rounded-lg border border-line bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted";
@@ -67,9 +68,6 @@ export function TradeCenter() {
   const { openLogin } = useLogin();
   const [listings, setListings] = useState<ListingView[] | null>(null);
   const [pending, setPending] = useState(false);
-  const [kind, setKind] = useState<"" | "offer" | "request">("");
-  const [category, setCategory] = useState("");
-  const [q, setQ] = useState("");
   const [editing, setEditing] = useState<ListingView | null>(null);
   const [contacting, setContacting] = useState<ListingView | null>(null);
   const [mine, setMine] = useState<ListingView[]>([]);
@@ -97,24 +95,20 @@ export function TradeCenter() {
 
   const load = useCallback(async () => {
     void loadMine();
-    const params = new URLSearchParams();
-    if (kind) params.set("kind", kind);
-    if (category) params.set("category", category);
-    if (q.trim()) params.set("q", q.trim());
     try {
-      const response = await fetchAuthed(`/api/trade?${params.toString()}`);
+      const response = await fetchAuthed("/api/trade");
       const data = await response.json().catch(() => ({}));
       setListings(response.ok ? (data.listings ?? []) : []);
       setPending(Boolean(data.pending));
     } catch {
       setListings([]);
     }
-  }, [kind, category, q, loadMine]);
+  }, [loadMine]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => void load(), q ? 250 : 0);
+    const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
-  }, [load, q]);
+  }, [load]);
 
   async function makeDraft(words: string) {
     if (words.trim().length < 12) {
@@ -211,9 +205,14 @@ export function TradeCenter() {
     }
   }
 
-  const shown = listings ?? [];
-  const official = shown.filter((l) => l.official && !l.mine);
-  const community = shown.filter((l) => !l.official && !l.mine);
+  // One list: your closed listings first (so you can reopen them), then everything open, yours included. Each
+  // listing carries its own buttons, so there is no second place to look.
+  const closedMine = mine.filter((l) => l.status !== "open");
+  const shown = [...closedMine, ...(listings ?? [])];
+  const reopen = async (l: ListingView) => {
+    await fetchAuthed(`/api/trade/${l.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reopen: true }) });
+    void load();
+  };
 
   return (
     <div className="max-w-5xl">
@@ -312,99 +311,24 @@ export function TradeCenter() {
         )}
       </section>
 
-      {mine.length > 0 ? (
-        <section aria-label="Your listings" className="mt-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Yours</p>
-          <ul className="mt-2 divide-y divide-line rounded-2xl border border-line bg-panel">
-            {mine.map((l) => (
-              <li key={l.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">{l.title}</p>
-                  <p className="text-xs text-muted">
-                    {l.kind === "offer" ? "Offer" : "Request"} · <span className={l.status === "open" ? "text-success" : ""}>{l.status === "open" ? "Open" : "Closed"}</span> · {budgetLabel(l, formatMoney)}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <button type="button" onClick={() => void openAssistant(l)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background">Assistant</button>
-                  <button type="button" onClick={() => setEditing(l)} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground hover:border-ember">Edit</button>
-                  {l.status === "open" ? (
-                    <button type="button" onClick={() => void removeListing(l, false)} className="px-2 py-1.5 text-xs text-muted hover:text-foreground">Close</button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        await fetchAuthed(`/api/trade/${l.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reopen: true }) });
-                        void load();
-                      }}
-                      className="px-2 py-1.5 text-xs text-ember hover:underline"
-                    >
-                      Reopen
-                    </button>
-                  )}
-                  <button type="button" onClick={() => void removeListing(l, true)} className="px-2 py-1.5 text-xs text-muted hover:text-danger">Delete</button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {/* Browse */}
-      <div className="mt-8 flex flex-wrap items-center gap-3">
-        <div role="group" aria-label="Show" className="inline-flex rounded-xl border border-line bg-panel p-1">
-          {([["", "All"], ["offer", "Offers"], ["request", "Requests"]] as const).map(([value, label]) => (
-            <button key={value || "all"} type="button" aria-pressed={kind === value} onClick={() => setKind(value)} className={`rounded-lg px-3.5 py-1.5 text-sm transition ${kind === value ? "bg-ember font-semibold text-background" : "text-muted hover:text-foreground"}`}>
-              {label}
-            </button>
-          ))}
-        </div>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label="Search listings" className={`${field} w-40`} />
-        <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Category" className={`${field} w-auto`}>
-          <option value="">Everything</option>
-          {CATEGORIES.map((c: string) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-      </div>
-
       {listings === null ? (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="bf-card h-32 animate-pulse" />
           ))}
         </div>
-      ) : null}
-
-      {official.length > 0 ? (
-        <section aria-label="From BrandForge" className="mt-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">From BrandForge</p>
-          <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {official.map((l) => (
-              <Card key={l.id} listing={l} onContact={setContacting} onEdit={setEditing} onAssistant={openAssistant} />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {community.length > 0 ? (
-        <section aria-label="From the community" className="mt-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{official.length > 0 ? "From the community" : "Listings"}</p>
-          <div className="mt-2 grid gap-3 sm:grid-cols-2">
-            {community.map((l) => (
-              <Card key={l.id} listing={l} onContact={setContacting} onEdit={setEditing} onAssistant={openAssistant} />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {listings && official.length + community.length === 0 ? (
+      ) : shown.length > 0 ? (
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          {shown.map((l) => (
+            <Card key={l.id} listing={l} onContact={setContacting} onEdit={setEditing} onAssistant={openAssistant} onClose={(item) => void removeListing(item, false)} onReopen={(item) => void reopen(item)} onDelete={(item) => void removeListing(item, true)} />
+          ))}
+        </div>
+      ) : (
         <div className="bf-card mt-6 p-6 text-center">
-          <p className="font-serif text-lg text-foreground">{pending ? "Trade opens shortly." : q || category ? "Nothing matches that." : mine.length > 0 ? "No one else has listed yet." : "Nothing here yet."}</p>
+          <p className="font-serif text-lg text-foreground">{pending ? "Trade opens shortly." : "Nothing here yet."}</p>
           {!pending ? <p className="mt-1 text-xs text-muted">Describe what you offer or need above. It takes a minute.</p> : null}
         </div>
-      ) : null}
+      )}
 
       <p className="mt-8 text-xs text-muted">Agree the details in a private chat and sign a milestone contract. A flat 5% is taken when a milestone is paid. Listing and chatting are free.</p>
 
@@ -414,11 +338,12 @@ export function TradeCenter() {
   );
 }
 
-function Card({ listing: l, onContact, onEdit, onAssistant }: { listing: ListingView; onContact: (l: ListingView) => void; onEdit: (l: ListingView) => void; onAssistant: (l: ListingView) => void }) {
+function Card({ listing: l, onContact, onEdit, onAssistant, onClose, onReopen, onDelete }: { listing: ListingView; onContact: (l: ListingView) => void; onEdit: (l: ListingView) => void; onAssistant: (l: ListingView) => void; onClose: (l: ListingView) => void; onReopen: (l: ListingView) => void; onDelete: (l: ListingView) => void }) {
   const [open, setOpen] = useState(false);
   const long = l.description.length > 150 || l.description.includes("\n");
+  const closed = l.status !== "open";
   return (
-    <article className="bf-card flex flex-col p-4">
+    <article className={`bf-card flex flex-col p-4 ${closed ? "opacity-70" : ""}`}>
       <div className="flex items-center gap-2">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px] font-semibold" style={avatarTone(l.ownerName || l.id)} aria-hidden="true">
           {l.official ? (
@@ -431,11 +356,9 @@ function Card({ listing: l, onContact, onEdit, onAssistant }: { listing: Listing
             initialsFor(l.ownerName || "?")
           )}
         </span>
-        <span className="min-w-0 flex-1 truncate text-xs text-muted">
-          {l.ownerName}
-          {!l.official && l.createdAt ? ` · ${posted(l.createdAt)}` : ""}
-        </span>
-        <span className={`shrink-0 text-[11px] ${l.kind === "request" ? "text-ember" : "text-muted"}`}>{l.kind === "request" ? "Wants" : l.category}</span>
+        <RoleBadge role={l.ownerRole} />
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{l.ownerName}</span>
+        <span className={`shrink-0 text-[11px] ${l.kind === "request" ? "text-ember" : "text-muted"}`}>{closed ? "Closed" : l.kind === "request" ? "Wants" : l.category}</span>
       </div>
       <h3 className="mt-2.5 font-serif text-base leading-snug text-foreground">{l.title}</h3>
       <p className={`mt-1 whitespace-pre-line text-xs leading-relaxed text-muted ${open ? "" : "line-clamp-3"}`}>{l.description}</p>
@@ -446,22 +369,31 @@ function Card({ listing: l, onContact, onEdit, onAssistant }: { listing: Listing
       ) : null}
       <div className="flex-1" />
       <div className="mt-3 flex items-center justify-between gap-2">
-        <p className="min-w-0 truncate text-sm font-semibold tabular-nums text-foreground">{budgetLabel(l, formatMoney)}</p>
+        <p className="min-w-0 truncate text-sm font-semibold tabular-nums text-foreground">
+          {budgetLabel(l, formatMoney)}
+          {!l.official && l.createdAt ? <span className="ml-2 text-[11px] font-normal text-muted">{posted(l.createdAt)}</span> : null}
+        </p>
         {l.mine ? (
-          <div className="flex gap-2">
-            <button type="button" onClick={() => onEdit(l)} className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted hover:text-foreground">
-              Edit
-            </button>
-            <button type="button" onClick={() => onAssistant(l)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background">
-              Assistant
-            </button>
-          </div>
+          <button type="button" onClick={() => onAssistant(l)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background">
+            Assistant
+          </button>
         ) : (
           <button type="button" onClick={() => onContact(l)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background">
             {l.kind === "offer" ? "Hire" : "Offer to help"}
           </button>
         )}
       </div>
+      {l.mine ? (
+        <div className="mt-2 flex items-center gap-1 border-t border-line pt-2 text-xs">
+          <button type="button" onClick={() => onEdit(l)} className="rounded px-2 py-1 text-muted hover:text-foreground">Edit</button>
+          {closed ? (
+            <button type="button" onClick={() => onReopen(l)} className="rounded px-2 py-1 text-ember hover:underline">Reopen</button>
+          ) : (
+            <button type="button" onClick={() => onClose(l)} className="rounded px-2 py-1 text-muted hover:text-foreground">Close</button>
+          )}
+          <button type="button" onClick={() => onDelete(l)} className="ml-auto rounded px-2 py-1 text-muted hover:text-danger">Delete</button>
+        </div>
+      ) : null}
     </article>
   );
 }
