@@ -1146,8 +1146,6 @@ function FirstRunRail() {
 export function ChatTranscript({
   messages,
   isStreaming,
-  isTyping,
-  typingNames,
   onSuggestion,
   currentUserId,
   onEditMessage,
@@ -1167,8 +1165,6 @@ export function ChatTranscript({
 }: {
   messages: ChatMessage[];
   isStreaming: boolean;
-  isTyping: boolean;
-  typingNames: string[];
   onSuggestion: (prompt: string) => void;
   currentUserId: string | null;
   onEditMessage: (id: string, content: string) => Promise<void>;
@@ -1479,17 +1475,6 @@ export function ChatTranscript({
         );
       })}
 
-      {!isStreaming && isTyping && typingNames.length > 0 ? (
-        <div className="mt-5 flex gap-3">
-          <BrandForgeMark />
-          <p className="bf-streaming-state" role="status">
-            <span className="bf-streaming-dot" aria-hidden="true" />
-            {typingNames.length === 1
-              ? `${typingNames[0]} is typing…`
-              : `${typingNames.length} people are typing…`}
-          </p>
-        </div>
-      ) : null}
       {/* Only while an answer is still to come: not in the moment after one has landed. */}
       {isStreaming && !messages.some((message) => message.streaming) && messages[messages.length - 1]?.sender !== "ai" ? (
         <div className="mt-5 flex gap-3">

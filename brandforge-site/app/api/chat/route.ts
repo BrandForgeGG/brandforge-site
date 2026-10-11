@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { notifyChatMembers } from "@/lib/stage-notify";
+import { buildRoomBlock, labelForRoom } from "@/lib/chat-room.js";
 import { answerModel, getAIService, type Message as AIMessage } from "@/lib/ai-service";
 import { budgetLimits, decideBudget } from "@/lib/ai-budget.js";
 import { getActorName, getAuthenticatedUser } from "@/lib/supabase-server";
@@ -19,6 +20,7 @@ import {
   updateConversationTitle,
   updateProjectContext,
   getAiAccess,
+  getChatPeople,
   getConversationLink,
 } from "@/lib/project-db";
 import { accessState, canGenerate } from "@/lib/ai-access.js";
@@ -424,8 +426,14 @@ export async function POST(request: NextRequest) {
   const goalBlock = goal
     ? `\n\nGOAL OF THIS CHAT\nThis chat is the person's main assistant for one goal: ${goal.kind === "listing" ? "their Trade listing" : "something they made here"} called "${goal.title}".${goal.summary ? `\nDetails: ${goal.summary}` : ""}\nHelp them move this goal forward. Use only these details and what they say; do not invent facts about it.`
     : "";
+  // More than one person in the chat: the AI is told who is here and who just spoke, and each person's message
+  // carries their name, so it answers each one as themselves (same tone, same fairness, never mixing people up).
+  const people = await getChatPeople(conversationId).catch(() => []);
+  const speakerName = String(lastMessage.sender_name ?? "").trim();
+  const roomBlock = buildRoomBlock({ people, speaker: speakerName });
+  const inRoom = roomBlock !== "";
   const systemContent =
-    buildStateBlock(snapshot) + goalBlock + (fileBlock ? `\n\n${fileBlock}` : "");
+    buildStateBlock(snapshot) + goalBlock + (roomBlock ? `\n\n${roomBlock}` : "") + (fileBlock ? `\n\n${fileBlock}` : "");
 
   const modelMessages: AIMessage[] = [
     { role: "system", content: systemContent },
@@ -434,7 +442,7 @@ export async function POST(request: NextRequest) {
         entry.sender_type === "user"
           ? ("user" as const)
           : ("assistant" as const),
-      content: entry.content,
+      content: inRoom && entry.sender_type === "user" ? labelForRoom(entry.sender_name, entry.content) : entry.content,
     })),
   ];
 

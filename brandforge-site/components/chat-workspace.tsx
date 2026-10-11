@@ -2537,7 +2537,7 @@ return (
             ) : null}
             {conversationId ? (
               <>
-            {aiKnown ? <AiSwitch aiEnabled={aiEnabled} canControl={isChatOwner} onToggle={() => void (aiEnabled ? pauseAi(false) : resumeAi())} /> : null}
+            {aiKnown ? <AiSwitch aiEnabled={aiEnabled} canControl={isChatOwner || aiAccess?.state === "allowed"} onToggle={() => void (aiEnabled ? pauseAi(false) : resumeAi())} /> : null}
             {/* Project team: real participants plus BrandForge AI - never a fabricated roster. */}
             {/* On a phone a guest's header is full (Log in, Sign up, the AI switch), so the team stack makes room. */}
             <div className={`bf-menu-root relative${isGuestBrowser && !railMeta.userId ? " max-[430px]:hidden" : ""}`}>
@@ -2870,8 +2870,6 @@ return (
                 );
                 requestAnimationFrame(() => composerRef.current?.focus());
               }}
-              isTyping={livePresence.typing.length > 0}
-              typingNames={livePresence.typing}
             />
             </>
           )}

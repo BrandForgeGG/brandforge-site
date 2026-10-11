@@ -1089,3 +1089,9 @@ we do not have.
 **Change:** when someone presses Hire or Offer to help, the listing's owner now gets the chat in their sidebar (the recents query only listed chats you started; it now includes chats you were added to) and a notification on every channel they have (Telegram and email) saying who wrote and what they said. Follow-up messages in member chats ping the other side, at most once every ten minutes per chat. The sidebar also refreshes itself when the tab comes back into view and every 30 seconds.
 
 **Distribution move:** no new public claim. Internal reliability fix for the Trade promise ("hire someone and they hear about it"). Worth a line in the next changelog: "People you hire now hear about it straight away."
+
+## 2026-10-11 — The AI knows it is in a room, and allowed people control it
+
+**Change:** when a chat has two or more people, the AI is told who is here (name, Member / BrandForge Team / Admin, who started it) and who just spoke, each person's message carries their name, and it answers each one in their own tone and language, fair to everyone, reporting only what was really said. Its guidance on kind speech, justice, keeping agreements, verifying before repeating and no backbiting is drawn from the Quran and is applied silently: the AI never quotes a verse or mentions religion unless someone raises it. Anyone the owner allows to use the AI now also sees the AI on/off switch and can use it, and the chat says "X can now use the AI". Also removed the duplicate "is typing" line that appeared inside the chat; the one attached above the message box stays.
+
+**Distribution move:** no religious wording in public copy, as agreed. Public line: "The AI knows who is in the chat, answers each person in their own style, and stays fair to everyone." Good demo for the Trade chat video: two people, one AI.

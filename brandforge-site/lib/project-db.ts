@@ -5669,13 +5669,17 @@ export async function decideAiAccess(conversationId: string, ownerId: string, us
     console.error('decideAiAccess error:', error.message);
     return false;
   }
+  if (decision === 'grant') {
+    const name = await getProfileDisplayName(userId);
+    await addMessage({ conversation_id: conversationId, sender_type: 'ai', sender_name: 'BrandForge', content: `${name.slice(0, 80)} can now use the AI in this chat, and can switch it on or off.`, content_type: 'system' }).catch(() => undefined);
+  }
   return true;
 }
 
 // Turns the AI on or off for one chat. Only the chat's owner may: a signed-in owner, or the guest session
 // that started it. Checked here with the service role so a refreshed session or a guest is never refused
 // for a cookie quirk, and a stranger always is.
-export async function setConversationAiEnabled(conversationId: string, who: { userId?: string; guestSessionId?: string }, enabled: boolean): Promise<'ok' | 'not_found' | 'forbidden' | 'failed'> {
+export async function setConversationAiEnabled(conversationId: string, who: { userId?: string; guestSessionId?: string; allowed?: boolean }, enabled: boolean): Promise<'ok' | 'not_found' | 'forbidden' | 'failed'> {
   const admin = createSupabaseAdminClient();
   if (!admin) return 'failed';
   const { data } = await admin.from('conversations').select('id, user_id').eq('id', conversationId).maybeSingle();
@@ -5683,7 +5687,8 @@ export async function setConversationAiEnabled(conversationId: string, who: { us
   if (!row) return 'not_found';
   let owns = Boolean(who.userId && row.user_id === who.userId);
   if (!owns && who.guestSessionId && !row.user_id) owns = (await getConversationOwnerSession(conversationId)) === who.guestSessionId;
-  if (!owns) return 'forbidden';
+  // Someone the owner has allowed to use the AI (or an admin) may also switch it on and off.
+  if (!owns && !who.allowed) return 'forbidden';
   const { error } = await admin.from('conversations').update({ ai_enabled: enabled }).eq('id', conversationId);
   if (error) {
     console.error('setConversationAiEnabled error:', error.message);
@@ -5873,6 +5878,26 @@ export async function getAvatarUrls(userIds: string[]): Promise<Map<string, stri
     if (row.avatar_url) out.set(row.id, row.avatar_url);
   }
   return out;
+}
+
+// Everyone in a chat: the owner and every participant, with the name they go by and their account role. The AI uses
+// it to know it is talking to several people. Service-role read; a guest owner is listed as "the chat owner".
+export async function getChatPeople(conversationId: string): Promise<{ id: string; name: string; role: string; isOwner: boolean }[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const ownerId = await getConversationOwnerId(conversationId);
+  const { data } = await admin.from('participants').select('user_id, display_name').eq('conversation_id', conversationId);
+  const rows = ((data ?? []) as { user_id: string | null; display_name: string | null }[]).filter((row) => row.user_id);
+  const ids = [...new Set([...(ownerId ? [ownerId] : []), ...rows.map((row) => String(row.user_id))])];
+  const roles = await getProfileRoles(ids);
+  const people: { id: string; name: string; role: string; isOwner: boolean }[] = [];
+  for (const id of ids) {
+    const row = rows.find((entry) => entry.user_id === id);
+    const name = (row?.display_name ?? '').trim() || (await getProfileDisplayName(id));
+    people.push({ id, name, role: roles.get(id) ?? 'user', isOwner: id === ownerId });
+  }
+  if (!ownerId) people.unshift({ id: 'guest-owner', name: 'The chat owner', role: 'user', isOwner: true });
+  return people;
 }
 
 // The account role of a set of people (profiles.role), so lists can show Member, BrandForge Team or Admin.
