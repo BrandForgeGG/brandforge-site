@@ -25,6 +25,8 @@ const STARTERS: [string, string][] = [
   ["A request", "I need "],
 ];
 
+type Research = { sources: { url: string; title: string; ok: boolean }[]; found: string[]; tips: string[] };
+
 type Draft = { kind: string; category: string; title: string; description: string; currency: string; budgetMin: string; budgetMax: string };
 
 function posted(iso: string | undefined) {
@@ -75,6 +77,8 @@ export function TradeCenter() {
   // Describe-it flow
   const [text, setText] = useState("");
   const [draft, setDraft] = useState<Draft | null>(null);
+  // What the writer read and learned while making the draft, shown next to it.
+  const [research, setResearch] = useState<Research | null>(null);
   const [making, setMaking] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,6 +132,7 @@ export function TradeCenter() {
         return;
       }
       setDraft(data.draft as Draft);
+      setResearch((data.research as Research | undefined) ?? null);
     } catch {
       setError("Connection problem. Try again.");
     } finally {
@@ -195,6 +200,7 @@ export function TradeCenter() {
         return;
       }
       setDraft(null);
+      setResearch(null);
       setText("");
       setPublished({ conversationId: (data.conversationId as string | null) ?? null });
       void load();
@@ -216,6 +222,29 @@ export function TradeCenter() {
         {draft ? (
           <div>
             <p className="font-serif text-2xl text-foreground">Here is your listing. Check it, then publish.</p>
+            {research && (research.sources.length > 0 || research.found.length > 0) ? (
+              <div className="mt-4 rounded-xl border border-line bg-background p-4" role="status">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">What I read</p>
+                {research.sources.length > 0 ? (
+                  <ul className="mt-2 space-y-1">
+                    {research.sources.map((source) => (
+                      <li key={source.url} className="flex items-baseline gap-2 text-sm">
+                        <span className={source.ok ? "text-success" : "text-muted"} aria-hidden="true">{source.ok ? "✓" : "•"}</span>
+                        <a href={source.url} target="_blank" rel="noopener noreferrer" className="min-w-0 truncate text-foreground underline-offset-2 hover:underline">{source.title}</a>
+                        {source.ok ? null : <span className="text-xs text-muted">could not be read, so I used your words</span>}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                {research.found.length > 0 ? (
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">
+                    {research.found.map((note) => (
+                      <li key={note}>{note}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            ) : null}
             <div className="mt-3 flex gap-2">
               {(["offer", "request"] as const).map((k) => (
                 <button key={k} type="button" aria-pressed={draft.kind === k} onClick={() => setDraft({ ...draft, kind: k })} className={`flex-1 rounded-lg border px-3 py-1.5 text-xs ${draft.kind === k ? "border-ember bg-ember/10 text-foreground" : "border-line text-muted"}`}>
@@ -234,12 +263,22 @@ export function TradeCenter() {
               <input value={draft.budgetMin} onChange={(e) => setDraft({ ...draft, budgetMin: e.target.value })} inputMode="decimal" placeholder={`From (${draft.currency})`} aria-label="Price from" className={field} />
               <input value={draft.budgetMax} onChange={(e) => setDraft({ ...draft, budgetMax: e.target.value })} inputMode="decimal" placeholder="To" aria-label="Price to" className={field} />
             </div>
+            {research && research.tips.length > 0 ? (
+              <div className="mt-3 rounded-xl border border-dashed border-line p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">To make it stronger</p>
+                <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm text-muted">
+                  {research.tips.map((tip) => (
+                    <li key={tip}>{tip}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             {error ? <p role="alert" className="mt-2 text-xs text-danger">{error}</p> : null}
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <button type="button" onClick={() => void publish()} disabled={publishing} className="rounded-xl bg-ember px-8 py-3.5 text-base font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
                 {publishing ? "Publishing…" : "Publish"}
               </button>
-              <button type="button" onClick={() => setDraft(null)} className="text-sm text-muted transition hover:text-foreground">
+              <button type="button" onClick={() => { setDraft(null); setResearch(null); }} className="text-sm text-muted transition hover:text-foreground">
                 Change my words
               </button>
             </div>
@@ -281,7 +320,7 @@ export function TradeCenter() {
             ) : null}
             <div className="mt-3">
               <button type="button" onClick={() => void makeDraft(text)} disabled={making || text.trim().length < 12} className="rounded-xl bg-ember px-8 py-3.5 text-base font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
-                {making ? "Writing your listing…" : "Make my listing"}
+                {making ? (/https?:\/\/|\b[a-z0-9-]+\.(?:com|co\.uk|uk|io|app|dev|net|org|gg|ai)\b/i.test(text) ? "Reading your page and writing…" : "Writing your listing…") : "Make my listing"}
               </button>
             </div>
           </div>
@@ -306,7 +345,7 @@ export function TradeCenter() {
                   <span className={`shrink-0 rounded-full border px-2.5 py-0.5 ${l.status === "open" ? "border-success/40 text-success" : "border-line text-muted"}`}>{l.status === "open" ? "Open" : "Closed"}</span>
                 </div>
                 <h3 className="mt-3 font-serif text-xl leading-snug text-foreground sm:text-2xl">{l.title}</h3>
-                <p className="mt-2 line-clamp-4 flex-1 text-sm leading-relaxed text-muted">{l.description}</p>
+                <p className="mt-2 line-clamp-5 flex-1 whitespace-pre-line text-sm leading-relaxed text-muted">{l.description}</p>
                 <p className="mt-4 text-lg font-semibold tabular-nums text-foreground">{budgetLabel(l, formatMoney)}</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button type="button" onClick={() => void openAssistant(l)} className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90">
@@ -407,6 +446,8 @@ export function TradeCenter() {
 }
 
 function Card({ listing: l, onContact, onEdit, onAssistant }: { listing: ListingView; onContact: (l: ListingView) => void; onEdit: (l: ListingView) => void; onAssistant: (l: ListingView) => void }) {
+  const [open, setOpen] = useState(false);
+  const long = l.description.length > 150 || l.description.includes("\n");
   return (
     <article className="bf-card flex flex-col p-4">
       <div className="flex items-center gap-2">
@@ -428,7 +469,13 @@ function Card({ listing: l, onContact, onEdit, onAssistant }: { listing: Listing
         <span className={`shrink-0 text-[11px] ${l.kind === "request" ? "text-ember" : "text-muted"}`}>{l.kind === "request" ? "Wants" : l.category}</span>
       </div>
       <h3 className="mt-2.5 font-serif text-base leading-snug text-foreground">{l.title}</h3>
-      <p className="mt-1 line-clamp-2 flex-1 text-xs leading-relaxed text-muted">{l.description}</p>
+      <p className={`mt-1 whitespace-pre-line text-xs leading-relaxed text-muted ${open ? "" : "line-clamp-3"}`}>{l.description}</p>
+      {long ? (
+        <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} className="mt-1 self-start text-xs text-ember underline-offset-2 hover:underline">
+          {open ? "Show less" : "Read more"}
+        </button>
+      ) : null}
+      <div className="flex-1" />
       <div className="mt-3 flex items-center justify-between gap-2">
         <p className="min-w-0 truncate text-sm font-semibold tabular-nums text-foreground">{budgetLabel(l, formatMoney)}</p>
         {l.mine ? (

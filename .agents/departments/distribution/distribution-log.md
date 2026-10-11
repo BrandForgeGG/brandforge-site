@@ -1065,3 +1065,9 @@ we do not have.
 **Change:** Create now shows the carousel and five live image cards (ad, quote, tip, announcement, poll), each with a thumbnail drawn by the real renderer; the same maker as in the chat, outside it, ending in Download and Copy caption. The creation catalog marks those formats live. In Trade, the "Make my listing" panel is bigger (larger words, roomier box, a larger button) and "Your listings" are now full cards right under the maker, with status, price and clear Assistant, Edit, Close or Reopen, Delete buttons.
 
 **Distribution move:** screenshot note for the week-1 posts: the Create page with six live cards (use it for the Monday "Make" post), and a Trade shot of "Your listings" for Tuesday. Copy line: "Carousels, ads, quotes, tips, announcements and polls, all from one sentence."
+
+## 2026-10-11 — Trade listings are researched, not echoed
+
+**Change:** typing a link, a domain or a business into Trade now reads the page (private and internal addresses refused), adds public search context when search is on, and writes a real listing: a one-line hook, "What you get" bullets, "Good for", and "Details" with the page's own prices and terms (never invented). The draft shows "What I read" (sources and what was learned) and "To make it stronger" tips. Descriptions keep their line breaks, and cards have Read more. Live check with a real small-business site: correct category, currency and "from" price taken from the page.
+
+**Distribution move:** this is the demo for Trade posts: paste your site, get a listing worth publishing. Copy line: "Paste a link. BrandForge reads the page and writes your listing, with a short note of what it found." Use the before and after: "I own this + link" became a full offer in about five seconds.

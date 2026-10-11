@@ -22,6 +22,21 @@ function clean(value, max) {
   return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, max) : '';
 }
 
+// Like clean(), but keeps the person's line breaks (at most one blank line in a row), so a listing can have a
+// hook, a short list and a closing line instead of one long block.
+function cleanBlock(value, max) {
+  if (typeof value !== 'string') return '';
+  return value
+    .replace(/\r\n?/g, '\n')
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]+/g, ' ')
+    .split('\n')
+    .map((line) => line.replace(/[ \t]+/g, ' ').trim())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, max);
+}
+
 function cents(value) {
   if (value === '' || value === null || value === undefined) return null;
   const n = Math.round(Number(String(value).replace(',', '.')) * 100);
@@ -38,7 +53,7 @@ function validateListing(input) {
   const title = clean(input.title, 100);
   if (title.length < 5) return { ok: false, error: 'Give the listing a title (at least 5 characters).' };
 
-  const description = clean(input.description, 1200);
+  const description = cleanBlock(input.description, 1200);
   if (description.length < 30) return { ok: false, error: 'Describe it in a couple of sentences (at least 30 characters).' };
 
   const currency = String(input.currency || 'EUR').toUpperCase();
