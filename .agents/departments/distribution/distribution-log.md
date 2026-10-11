@@ -1059,3 +1059,9 @@ we do not have.
 **Change:** /image (and the new "Make an ad or image" chip and + menu item) opens a card in the chat, like the carousel: pick kind, size (square, portrait, story, wide), look and background, edit every word, save to the chat as a dated message, download or copy a caption. Plain requests like "make an ad for my bakery" open it too. The weekly calendar now posts five different formats a day at 07:30, 11:00, 14:00, 18:30 and 21:30 (UTC), at least 2.5 hours apart, with new "inspiring" and "question" topic pools. Admin gets format pickers and a Rebuild week button.
 
 **Distribution move:** blog post "Ads, quotes, tips, announcements and polls, made inside the chat", features page line updated. Demo note: type `/image a bakery selling fresh sourdough on Saturdays`, show the painted result in portrait, switch to story, save, show the message with its date. Use as the Monday/Tuesday video in the week-1 pack.
+
+## 2026-10-11 — Image makers on the Create page, bigger Trade listings
+
+**Change:** Create now shows the carousel and five live image cards (ad, quote, tip, announcement, poll), each with a thumbnail drawn by the real renderer; the same maker as in the chat, outside it, ending in Download and Copy caption. The creation catalog marks those formats live. In Trade, the "Make my listing" panel is bigger (larger words, roomier box, a larger button) and "Your listings" are now full cards right under the maker, with status, price and clear Assistant, Edit, Close or Reopen, Delete buttons.
+
+**Distribution move:** screenshot note for the week-1 posts: the Create page with six live cards (use it for the Monday "Make" post), and a Trade shot of "Your listings" for Tuesday. Copy line: "Carousels, ads, quotes, tips, announcements and polls, all from one sentence."

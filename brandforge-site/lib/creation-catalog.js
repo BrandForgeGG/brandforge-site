@@ -18,11 +18,13 @@ const C = (n, group, name, line, status, tool) => ({ n, group, platform: '', nam
 
 const CREATIONS = [
   C(100, 'images', 'Carousel', 'Swipeable slides from one sentence, with a cover picture painted from your topic.', 'live', { kind: 'carousel' }),
-  C(101, 'images', 'Single image post', 'One strong image with a headline, sized for every feed.', 'building'),
-  C(102, 'images', 'Quote card', 'A quote or a tip on a clean, branded card.', 'building'),
+  C(102, 'images', 'Quote card', 'One line worth sharing on a clean, branded card.', 'live', { kind: 'image', image: 'quote' }),
+  C(106, 'images', 'Tip card', 'One useful idea, taught fast.', 'live', { kind: 'image', image: 'tip' }),
+  C(107, 'images', 'Announcement', 'News, a launch or an update, sized for every feed.', 'live', { kind: 'image', image: 'announcement' }),
+  C(108, 'images', 'Poll image', 'A question with lettered answers that people vote on in the comments.', 'live', { kind: 'image', image: 'question' }),
   C(103, 'images', 'Story or Reel cover', 'A vertical cover that makes people tap.', 'building'),
   C(104, 'images', 'Infographic', 'Numbers and steps laid out so they read at a glance.', 'building'),
-  C(105, 'images', 'Ad image', 'Ad creatives sized for the big ad platforms.', 'building'),
+  C(105, 'images', 'Ad image', 'A headline, a line and a button, in square, portrait, story or wide.', 'live', { kind: 'image', image: 'ad' }),
   C(110, 'text', 'Update', 'A short post with bold, links and line breaks.', 'live', { kind: 'post', type: 'update' }),
   C(111, 'text', 'Poll', 'A question with two to ten answers people vote on.', 'live', { kind: 'post', type: 'poll' }),
   C(112, 'text', 'Quiz', 'A question with one right answer and a short explanation.', 'live', { kind: 'post', type: 'quiz' }),

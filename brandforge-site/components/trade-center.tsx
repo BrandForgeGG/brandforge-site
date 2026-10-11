@@ -212,10 +212,10 @@ export function TradeCenter() {
   return (
     <div className="max-w-5xl">
       {/* Describe it */}
-      <section aria-label="Publish a listing" className="rounded-2xl border border-line bg-panel p-4 sm:p-5">
+      <section aria-label="Publish a listing" className="rounded-2xl border border-line bg-panel p-5 sm:p-8">
         {draft ? (
           <div>
-            <p className="font-serif text-lg text-foreground">Here is your listing. Check it, then publish.</p>
+            <p className="font-serif text-2xl text-foreground">Here is your listing. Check it, then publish.</p>
             <div className="mt-3 flex gap-2">
               {(["offer", "request"] as const).map((k) => (
                 <button key={k} type="button" aria-pressed={draft.kind === k} onClick={() => setDraft({ ...draft, kind: k })} className={`flex-1 rounded-lg border px-3 py-1.5 text-xs ${draft.kind === k ? "border-ember bg-ember/10 text-foreground" : "border-line text-muted"}`}>
@@ -223,8 +223,8 @@ export function TradeCenter() {
                 </button>
               ))}
             </div>
-            <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} maxLength={100} aria-label="Title" className={`${field} mt-3 font-serif text-base`} />
-            <textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} rows={4} maxLength={1200} aria-label="Details" className={`${field} mt-2`} />
+            <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} maxLength={100} aria-label="Title" className={`${field} mt-3 rounded-xl px-4 py-3 font-serif text-xl`} />
+            <textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} rows={7} maxLength={1200} aria-label="Details" className={`${field} mt-2 rounded-xl px-4 py-3 text-base leading-relaxed`} />
             <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
               <select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} aria-label="Category" className={`${field} col-span-2`}>
                 {CATEGORIES.map((c: string) => (
@@ -236,7 +236,7 @@ export function TradeCenter() {
             </div>
             {error ? <p role="alert" className="mt-2 text-xs text-danger">{error}</p> : null}
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              <button type="button" onClick={() => void publish()} disabled={publishing} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
+              <button type="button" onClick={() => void publish()} disabled={publishing} className="rounded-xl bg-ember px-8 py-3.5 text-base font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
                 {publishing ? "Publishing…" : "Publish"}
               </button>
               <button type="button" onClick={() => setDraft(null)} className="text-sm text-muted transition hover:text-foreground">
@@ -246,21 +246,21 @@ export function TradeCenter() {
           </div>
         ) : (
           <div>
-            <label htmlFor="trade-describe" className="font-serif text-lg text-foreground">
+            <label htmlFor="trade-describe" className="font-serif text-2xl text-foreground sm:text-3xl">
               What do you offer or need?
             </label>
             <textarea
               id="trade-describe"
               value={text}
               onChange={(e) => setText(e.target.value)}
-              rows={3}
+              rows={5}
               maxLength={1200}
               placeholder="Say it in your own words. A profile, a gig, a product, a tool, a startup launch or a request."
-              className={`${field} mt-2 text-base`}
+              className={`${field} mt-3 rounded-xl px-4 py-3 text-lg leading-relaxed`}
             />
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {STARTERS.map(([label, start]) => (
-                <button key={label} type="button" onClick={() => setText((current) => (current.trim() ? current : start))} className="rounded-full border border-line px-3 py-1 text-xs text-muted transition hover:border-ember hover:text-foreground">
+                <button key={label} type="button" onClick={() => setText((current) => (current.trim() ? current : start))} className="rounded-full border border-line px-4 py-1.5 text-sm text-muted transition hover:border-ember hover:text-foreground">
                   {label}
                 </button>
               ))}
@@ -280,13 +280,66 @@ export function TradeCenter() {
               </p>
             ) : null}
             <div className="mt-3">
-              <button type="button" onClick={() => void makeDraft(text)} disabled={making || text.trim().length < 12} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
+              <button type="button" onClick={() => void makeDraft(text)} disabled={making || text.trim().length < 12} className="rounded-xl bg-ember px-8 py-3.5 text-base font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
                 {making ? "Writing your listing…" : "Make my listing"}
               </button>
             </div>
           </div>
         )}
       </section>
+
+      {mine.length > 0 ? (
+        <section aria-label="Your listings" className="mt-8">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="font-serif text-2xl text-foreground sm:text-3xl">
+              Your listings <span className="text-base font-normal text-muted">({mine.length})</span>
+            </h2>
+            <p className="text-xs text-muted">{mine.filter((l) => l.status === "open").length} open</p>
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {mine.map((l) => (
+              <article key={l.id} className="bf-card flex flex-col p-5 sm:p-6">
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="truncate text-muted">
+                    {l.kind === "offer" ? "Offer" : "Request"} · {l.category}
+                  </span>
+                  <span className={`shrink-0 rounded-full border px-2.5 py-0.5 ${l.status === "open" ? "border-success/40 text-success" : "border-line text-muted"}`}>{l.status === "open" ? "Open" : "Closed"}</span>
+                </div>
+                <h3 className="mt-3 font-serif text-xl leading-snug text-foreground sm:text-2xl">{l.title}</h3>
+                <p className="mt-2 line-clamp-4 flex-1 text-sm leading-relaxed text-muted">{l.description}</p>
+                <p className="mt-4 text-lg font-semibold tabular-nums text-foreground">{budgetLabel(l, formatMoney)}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button type="button" onClick={() => void openAssistant(l)} className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90">
+                    Assistant
+                  </button>
+                  <button type="button" onClick={() => setEditing(l)} className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember">
+                    Edit
+                  </button>
+                  {l.status === "open" ? (
+                    <button type="button" onClick={() => void removeListing(l, false)} className="rounded-xl border border-line px-4 py-2 text-sm text-muted transition hover:text-foreground">
+                      Close
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await fetchAuthed(`/api/trade/${l.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reopen: true }) });
+                        void load();
+                      }}
+                      className="rounded-xl border border-ember px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-ember/10"
+                    >
+                      Reopen
+                    </button>
+                  )}
+                  <button type="button" onClick={() => void removeListing(l, true)} className="rounded-xl px-3 py-2 text-sm text-muted transition hover:text-danger">
+                    Delete
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {/* Browse */}
       <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -343,52 +396,6 @@ export function TradeCenter() {
           <p className="font-serif text-lg text-foreground">{pending ? "Trade opens shortly." : q || category ? "Nothing matches that." : "Nothing here yet."}</p>
           {!pending ? <p className="mt-1 text-xs text-muted">Describe what you offer or need above. It takes a minute.</p> : null}
         </div>
-      ) : null}
-
-      {mine.length > 0 ? (
-        <section aria-label="Your listings" className="mt-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Yours</p>
-          <ul className="mt-2 divide-y divide-line rounded-2xl border border-line bg-panel">
-            {mine.map((l) => (
-              <li key={l.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">{l.title}</p>
-                  <p className="text-xs text-muted">
-                    {l.kind === "offer" ? "Offer" : "Request"} · <span className={l.status === "open" ? "text-success" : ""}>{l.status === "open" ? "Open" : "Closed"}</span>
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={() => void openAssistant(l)} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">
-                    Assistant
-                  </button>
-                  <button type="button" onClick={() => setEditing(l)} className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted hover:text-foreground">
-                    Edit
-                  </button>
-                  {l.status === "open" ? (
-                    <button type="button" onClick={() => void removeListing(l, false)} className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted hover:text-foreground">
-                      Close
-                    </button>
-                  ) : null}
-                  <button type="button" onClick={() => void removeListing(l, true)} className="rounded-lg px-3 py-1.5 text-xs text-muted transition hover:text-danger">
-                    Delete
-                  </button>
-                  {l.status === "closed" ? (
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        await fetchAuthed(`/api/trade/${l.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reopen: true }) });
-                        void load();
-                      }}
-                      className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background"
-                    >
-                      Reopen
-                    </button>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
       ) : null}
 
       <p className="mt-8 text-xs text-muted">Agree the details in a private chat and sign a milestone contract. A flat 5% is taken when a milestone is paid. Listing and chatting are free.</p>

@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { trackEvent } from '@/lib/funnel-client';
+import { getSessionUser } from '@/lib/browser-auth';
+import { useLogin } from '@/components/login-dialog';
 import { STYLES as COVER_STYLES } from '@/lib/carousel-cover.js';
-import { FORMATS, FORMAT_IDS, KINDS, KIND_IDS, type ImageCopy, type ImageFormat, type ImageKind } from '@/lib/image-kinds.js';
+import { FORMATS, FORMAT_IDS, KINDS, KIND_IDS, imageCaption, type ImageCopy, type ImageFormat, type ImageKind } from '@/lib/image-kinds.js';
 import { THEME_LIST, downscale, loadFonts, loadImage, readDraft, type Brand, type Theme } from '@/components/carousel/carousel-shared';
-import { renderImage } from '@/components/image/image-shared';
+import { imageFileName, renderImage, saveBlob } from '@/components/image/image-shared';
 
 type Stage = 'ask' | 'working' | 'done';
 
@@ -98,7 +100,10 @@ const kindIcon: Record<ImageKind, string> = {
 
 // The image makers as a conversation, same as the carousel: the AI asks what it is about, you tap the kind,
 // the size and the look, it works in front of you, and the finished image lands in the chat as a message.
-export function ImageChatCard({ kind: startKind, topic, userText, storageKey, restore, onSend, onClose }: { kind: ImageKind; topic: string; userText: string | null; storageKey: string; restore: boolean; onSend: (payload: ImageSend) => Promise<string | null>; onClose: () => void }) {
+// `standalone` is the Create page's version: the same maker, outside a chat, ending in a download.
+export function ImageChatCard({ kind: startKind, topic, userText, storageKey, restore, onSend, onClose, standalone = false }: { kind: ImageKind; topic: string; userText: string | null; storageKey: string; restore: boolean; onSend: (payload: ImageSend) => Promise<string | null>; onClose: () => void; standalone?: boolean }) {
+  const { openLogin } = useLogin();
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [restored] = useState<SavedImage | null>(() => (restore ? readSaved(storageKey) : null));
   const [draft, setDraft] = useState<ImageDraft>(() => restored?.draft ?? freshDraft(startKind, topic));
   const [stage, setStage] = useState<Stage>(restored ? restored.stage : 'ask');
@@ -120,6 +125,7 @@ export function ImageChatCard({ kind: startKind, topic, userText, storageKey, re
   useEffect(() => {
     let live = true;
     void loadFonts().then(() => live && setFontsReady(true));
+    if (standalone) void getSessionUser().then((user) => live && setSignedIn(Boolean(user))).catch(() => live && setSignedIn(false));
     if (draft.picture) void loadImage(draft.picture).then((image) => live && setPicture(image));
     rootRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     return () => {
@@ -234,6 +240,33 @@ export function ImageChatCard({ kind: startKind, topic, userText, storageKey, re
     setSending(false);
   }
 
+  // Standalone: download the picture. Guests sign in first; the card is kept in this browser, so it is here when they return.
+  async function download() {
+    if (!copy) return;
+    if (!signedIn) {
+      trackEvent('guest_save_clicked', { source: 'image_create' });
+      openLogin({ reason: 'carousel', next: window.location.pathname + window.location.search });
+      return;
+    }
+    const canvas = document.createElement('canvas');
+    renderImage(canvas, { kind: draft.kind, format: draft.format, copy }, draft.theme, draft.brand, picture, draft.seed);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((value) => resolve(value), 'image/png'));
+    if (blob) {
+      saveBlob(blob, imageFileName(draft.kind, draft.format));
+      trackEvent('image_downloaded', { source: draft.kind });
+    }
+  }
+
+  async function copyCaption() {
+    if (!copy) return;
+    try {
+      await navigator.clipboard.writeText(imageCaption({ kind: draft.kind, copy }, draft.brand.handle ? `Try it free at ${draft.brand.handle}` : ''));
+      setNote('Caption copied.');
+    } catch {
+      setNote('Could not copy the caption.');
+    }
+  }
+
   function startOver() {
     setDraft((current) => ({ ...freshDraft(current.kind, ''), theme: current.theme, coverStyle: current.coverStyle, brand: current.brand }));
     setPicture(null);
@@ -270,18 +303,20 @@ export function ImageChatCard({ kind: startKind, topic, userText, storageKey, re
   );
 
   return (
-    <div ref={rootRef} className="mx-auto mt-6 w-full max-w-3xl space-y-3" aria-live="polite">
-      {asking ? (
+    <div ref={rootRef} className={`mx-auto w-full max-w-3xl space-y-3 ${standalone ? '' : 'mt-6'}`} aria-live="polite">
+      {asking && !standalone ? (
         <div className="flex justify-end">
           <p className="max-w-[85%] rounded-2xl rounded-br-sm bg-overlay px-4 py-2.5 text-sm text-foreground">{asking}</p>
         </div>
       ) : null}
 
       <div className="flex gap-3">
-        <span className="bf-ai-mark flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg" aria-hidden="true">
-          {/* eslint-disable-next-line @next/next/no-img-element -- bundled local asset at a fixed size */}
-          <img src="/discord-server-icon.png" alt="" className="h-full w-full object-cover" />
-        </span>
+        {standalone ? null : (
+          <span className="bf-ai-mark flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg" aria-hidden="true">
+            {/* eslint-disable-next-line @next/next/no-img-element -- bundled local asset at a fixed size */}
+            <img src="/discord-server-icon.png" alt="" className="h-full w-full object-cover" />
+          </span>
+        )}
         <div className="min-w-0 flex-1 rounded-2xl border border-line bg-panel p-4 sm:p-5">
           {stage === 'ask' ? (
             <div>
@@ -332,7 +367,7 @@ export function ImageChatCard({ kind: startKind, topic, userText, storageKey, re
                 <button type="button" onClick={() => void make()} disabled={draft.topic.trim().length < 8} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
                   Make my {KINDS[draft.kind].label.toLowerCase()}
                 </button>
-                <button type="button" onClick={close} className="text-sm text-muted transition hover:text-foreground">Not now</button>
+                <button type="button" onClick={close} className="text-sm text-muted transition hover:text-foreground">{standalone ? 'Back' : 'Not now'}</button>
               </div>
             </div>
           ) : null}
@@ -369,7 +404,7 @@ export function ImageChatCard({ kind: startKind, topic, userText, storageKey, re
 
           {stage === 'done' && copy ? (
             <div>
-              <p className="font-serif text-lg text-foreground">Here it is. Change the words or the look, then save it to the chat.</p>
+              <p className="font-serif text-lg text-foreground">{standalone ? 'Here it is. Change the words or the look, then download it.' : 'Here it is. Change the words or the look, then save it to the chat.'}</p>
               <div className="mt-4 grid gap-4 sm:grid-cols-[minmax(0,20rem)_1fr]">
                 <div>
                   <div className="relative overflow-hidden rounded-xl border border-line bg-background">
@@ -426,9 +461,20 @@ export function ImageChatCard({ kind: startKind, topic, userText, storageKey, re
                   </button>
 
                   <div className="mt-5 flex flex-wrap gap-2">
-                    <button type="button" onClick={() => void save()} disabled={sending || pictureBusy} className="rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
-                      {sending ? 'Saving…' : 'Save to chat'}
-                    </button>
+                    {standalone ? (
+                      <>
+                        <button type="button" onClick={() => void download()} disabled={pictureBusy} className="rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
+                          {signedIn === false ? 'Sign in to download' : 'Download picture'}
+                        </button>
+                        <button type="button" onClick={() => void copyCaption()} className="rounded-xl border border-line px-4 py-2.5 text-sm text-foreground transition hover:border-ember">
+                          Copy caption
+                        </button>
+                      </>
+                    ) : (
+                      <button type="button" onClick={() => void save()} disabled={sending || pictureBusy} className="rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
+                        {sending ? 'Saving…' : 'Save to chat'}
+                      </button>
+                    )}
                     <button type="button" onClick={startOver} className="rounded-xl px-3 py-2.5 text-sm text-muted transition hover:text-foreground">
                       Start over
                     </button>

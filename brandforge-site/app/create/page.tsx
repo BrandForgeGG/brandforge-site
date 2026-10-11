@@ -3,7 +3,7 @@ import { StudioHub } from '@/components/studio/studio-hub';
 
 export const metadata = {
   title: 'Create — BrandForge',
-  description: 'Make a carousel from one sentence, then download it. More formats are coming. Free to make; sign in to edit and download.',
+  description: 'Make a carousel, an ad, a quote, a tip, an announcement or a poll from one sentence, then download it. Free to make; sign in to download.',
 };
 
 export default function CreatePage() {
