@@ -228,6 +228,32 @@ ${chatUrl || ''}`.trim(),
       };
     }
 
+    // Someone pressed Hire (or Offer to help) on your listing and wrote to you.
+    case 'trade_contact': {
+      const who = line(details.name) || 'Someone';
+      const message = line(details.message, 300);
+      if (!message) return null;
+      const paragraphs = [`${who} wrote to you about "${title || 'your listing'}".`, `"${message}"`];
+      return {
+        subject: `${who} wrote to you about ${title || 'your listing'}`,
+        text: `${paragraphs.join('\n\n')}\n\n${chatUrl || ''}`.trim(),
+        html: card('Trade', `${who} wrote to you`, paragraphs, open, chatUrl),
+      };
+    }
+
+    // A new message in a chat you are part of (sent at most once every few minutes per chat).
+    case 'chat_message': {
+      const who = line(details.name) || 'Someone';
+      const message = line(details.message, 300);
+      if (!message) return null;
+      const paragraphs = [`"${message}"`];
+      return {
+        subject: `New message from ${who}${title ? ` in ${title}` : ''}`,
+        text: `${who}: ${message}\n\n${chatUrl || ''}`.trim(),
+        html: card('Chat', `${who} sent you a message`, paragraphs, open, chatUrl),
+      };
+    }
+
     case 'seq_first_carousel':
     case 'seq_hooks':
     case 'seq_week':

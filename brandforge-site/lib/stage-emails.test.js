@@ -185,3 +185,18 @@ test('first-time confirmations and the what-is-new note build with one next step
     assert.ok(email.text.includes('https://brandforge.gg'), `${event} text has a link`);
   }
 });
+
+test('trade_contact tells a listing owner who wrote and what they said', () => {
+  const built = buildStageEmail('trade_contact', { name: 'Sara', title: 'Logo design', message: 'Can you start Monday?', chatUrl: 'https://brandforge.gg/chat?conversationId=abc' });
+  assert.match(built.subject, /Sara wrote to you about Logo design/);
+  assert.match(built.text, /Can you start Monday\?/);
+  assert.match(built.html, /Open the chat/);
+  assert.equal(buildStageEmail('trade_contact', { name: 'Sara', title: 'x', message: '' }), null);
+});
+
+test('chat_message names the sender and carries the words', () => {
+  const built = buildStageEmail('chat_message', { name: 'Omar', title: 'Booking site', message: 'Sent the files.', chatUrl: 'https://brandforge.gg/chat?conversationId=abc' });
+  assert.match(built.subject, /New message from Omar in Booking site/);
+  assert.match(built.text, /Omar: Sent the files\./);
+  assert.equal(buildStageEmail('chat_message', { name: 'Omar', message: '' }), null);
+});

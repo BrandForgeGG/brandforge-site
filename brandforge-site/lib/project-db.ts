@@ -4575,6 +4575,23 @@ export async function closeTradeListing(
   return data ? { ok: true } : { ok: false, error: 'not_found' };
 }
 
+// Who a message in a member-to-member chat (a Trade chat, or a chat with invited teammates) should reach: the owner
+// and the participants added as members, minus the sender. Staff are not included (their own flows tell them), and a
+// message from staff reaches nobody here.
+export async function getMemberChatRecipients(conversationId: string, senderId: string): Promise<string[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin || !senderId) return [];
+  const ownerId = await getConversationOwnerId(conversationId);
+  const { data } = await admin.from('participants').select('user_id, role').eq('conversation_id', conversationId);
+  const members = ((data ?? []) as { user_id: string | null; role: string }[]).filter((row) => row.role === 'member' && row.user_id).map((row) => String(row.user_id));
+  const senderIsPart = senderId === ownerId || members.includes(senderId);
+  if (!senderIsPart) return [];
+  const out = new Set<string>(members);
+  if (ownerId) out.add(ownerId);
+  out.delete(senderId);
+  return [...out];
+}
+
 // Delivery targets for one person (contract updates reach the other party on every channel they
 // have linked). Service-role read: the caller is the other party, not the target.
 export async function getUserNotifyTargets(userId: string): Promise<FounderNotifyTargets> {

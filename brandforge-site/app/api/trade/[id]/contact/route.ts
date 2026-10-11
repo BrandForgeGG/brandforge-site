@@ -9,6 +9,7 @@ import {
   recordFunnelEvent,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
+import { notifyChatMembers } from '@/lib/stage-notify';
 import { screenText } from '@/lib/content-policy.js';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -73,6 +74,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       content: `${myName} reached out about "${listing.row.title}". When you agree on terms, use Actions, then Create a contract.`,
       content_type: 'system',
     });
+
+    // The listing's owner hears about it right away, on every channel they have; the chat is in their sidebar.
+    await notifyChatMembers(conversationId, { id: user.id, name: myName }, text, { event: 'trade_contact', title: listing.row.title, only: [listing.row.owner_id] });
 
     await recordFunnelEvent('trade_offer_sent', { signedIn: true, properties: { source: listing.row.kind } });
     return NextResponse.json({ success: true, conversationId });

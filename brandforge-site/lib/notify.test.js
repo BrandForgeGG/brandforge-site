@@ -309,3 +309,11 @@ test('notify(object) is an unknown event — the signature is (event, details)',
   );
   assert.deepEqual(result, { sent: false, reason: 'unknown_event' });
 });
+
+test('buildPersonalMessage pings a listing owner and chat members with the words', () => {
+  const hire = buildPersonalMessage('trade_contact', { name: 'Sara', title: 'Logo design', message: 'Can you start Monday?' });
+  assert.match(hire, /Sara wrote to you about "Logo design": Can you start Monday\?/);
+  const follow = buildPersonalMessage('chat_message', { name: 'Omar', message: 'Sent the files.' });
+  assert.match(follow, /Omar wrote: Sent the files\./);
+  assert.equal(buildPersonalMessage('chat_message', { name: 'Omar', message: '' }), null);
+});

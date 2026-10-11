@@ -1083,3 +1083,9 @@ we do not have.
 **Change:** Trade is one list: no "Yours" section, no All/Offers/Requests, search or category filters. Each listing does the job itself: your own cards carry Assistant, Edit, Close or Reopen and Delete; other people's carry Hire or Offer to help; closed listings of yours stay in the list so they can be reopened. The posting time moved beside the price. A colored role badge (Member blue, BrandForge Team orange, Admin violet) now comes before the name on listings, in chat message headers, in the profile card, in Settings and in the sidebar account card. In chat the "Sent ... · Delete" row is gone: the time sits next to the name and Delete is with the other message actions.
 
 **Distribution move:** trust cue for every post that shows the product: you can see who you are talking to at a glance (Member, BrandForge Team, Admin). Copy line: "Every name shows who they are: a member, the BrandForge team, or an admin."
+
+## 2026-10-11 — Hire on a listing now reaches the listing's owner
+
+**Change:** when someone presses Hire or Offer to help, the listing's owner now gets the chat in their sidebar (the recents query only listed chats you started; it now includes chats you were added to) and a notification on every channel they have (Telegram and email) saying who wrote and what they said. Follow-up messages in member chats ping the other side, at most once every ten minutes per chat. The sidebar also refreshes itself when the tab comes back into view and every 30 seconds.
+
+**Distribution move:** no new public claim. Internal reliability fix for the Trade promise ("hire someone and they hear about it"). Worth a line in the next changelog: "People you hire now hear about it straight away."

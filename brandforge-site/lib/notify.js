@@ -277,6 +277,14 @@ function buildPersonalMessageText(event, details = {}) {
     case 'peer_update':
       return clip(details.message, 220) ? `BrandForge: ${clip(details.message, 220)}` : null;
 
+    case 'trade_contact':
+      return clip(details.message, 200)
+        ? `BrandForge: ${clip(details.name, 60) || 'Someone'} wrote to you about "${clip(details.title)}": ${clip(details.message, 200)}`
+        : null;
+
+    case 'chat_message':
+      return clip(details.message, 200) ? `BrandForge: ${clip(details.name, 60) || 'Someone'} wrote: ${clip(details.message, 200)}` : null;
+
     case 'telegram_linked':
       return 'BrandForge: your Telegram is linked. You will get a ping here whenever something needs you.';
 

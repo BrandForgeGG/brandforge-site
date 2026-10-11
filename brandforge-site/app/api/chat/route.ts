@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
+import { notifyChatMembers } from "@/lib/stage-notify";
 import { answerModel, getAIService, type Message as AIMessage } from "@/lib/ai-service";
 import { budgetLimits, decideBudget } from "@/lib/ai-budget.js";
 import { getActorName, getAuthenticatedUser } from "@/lib/supabase-server";
@@ -351,6 +352,14 @@ export async function POST(request: NextRequest) {
         { error: "Your message could not be stored" },
         { status: 500 },
       );
+    }
+
+    // Other members of this chat (a Trade chat, invited teammates) get a ping, at most once every ten minutes.
+    if (user) {
+      const sender = { id: user.id, name: getActorName(user) };
+      after(async () => {
+        await notifyChatMembers(conversationId, sender, message);
+      });
     }
   }
 

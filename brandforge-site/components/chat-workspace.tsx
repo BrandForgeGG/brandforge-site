@@ -862,6 +862,20 @@ export function ChatWorkspace() {
     ],
   );
 
+  // A chat someone else started with you (a Hire on your listing, a teammate adding you) shows up in the sidebar
+  // without a reload: the list is checked when the tab comes back into view and every 30 seconds while it is open.
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") void loadRecents().catch(() => undefined);
+    };
+    const timer = window.setInterval(refresh, 30000);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [loadRecents]);
+
   // Realtime pushes new rows; this quiet check is the safety net when it cannot (guests, a dropped connection,
   // a sleeping tab). It only runs while the tab is in front and no answer is streaming.
   useEffect(() => {
