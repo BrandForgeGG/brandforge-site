@@ -147,9 +147,8 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
         </section>
       ) : null}
 
-      <section aria-label="Coming soon">
-        <h2 className="font-serif text-2xl text-foreground sm:text-3xl">Coming soon</h2>
-        <p className="mt-1 text-sm text-muted">Tap the ones you want. They move up.</p>
+      <details aria-label="Coming soon" className="group">
+        <summary className="cursor-pointer text-sm text-muted transition hover:text-foreground">More formats are coming. Tell us which you want.</summary>
         <ul className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-3">
           {coming.map((creation: Format) => (
             <li key={creation.n}>
@@ -167,7 +166,7 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
             </li>
           ))}
         </ul>
-      </section>
+      </details>
     </div>
   );
 }

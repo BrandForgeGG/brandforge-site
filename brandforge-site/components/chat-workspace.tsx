@@ -154,8 +154,8 @@ const GATE_FIRST_MESSAGE = false;
 const SLASH_COMMANDS = [
   { command: "/carousel", label: "Make a carousel" },
   { command: "/image", label: "Make an ad or image" },
-  { command: "/plan", label: "Plan my idea" },
-  { command: "/trade", label: "Hire or get hired" },
+  { command: "/plan", label: "Hire the BrandForge team" },
+  { command: "/trade", label: "Post a gig or listing" },
     { command: "/progress", label: "Progress report" },
   { command: "/review", label: "Send to BrandForge review" },
   { command: "/contract", label: "Agreement steps" },
@@ -169,10 +169,10 @@ const SLASH_COMMANDS = [
 // the big assistants show a tool. Only what the platform really has.
 export type ChatCommand = 'carousel' | 'image' | 'plan' | 'trade';
 export const COMMANDS: { id: ChatCommand; label: string; hint: string; placeholder: string; icon: string }[] = [
-  { id: 'carousel', label: 'Make a carousel', hint: 'Swipeable slides from one sentence', placeholder: 'What is the carousel about?', icon: 'M5 5h8v10H5zM7 3.5h8V13M3.5 7v8' },
   { id: 'image', label: 'Make an ad or image', hint: 'Ads, quotes, tips, announcements and polls', placeholder: 'What is the image for?', icon: 'M3.5 4.5h13v11h-13zM3.5 13l4-4 3 3 2-2 4 4M13 7.5h.01' },
-  { id: 'plan', label: 'Plan my idea', hint: 'Scope, roadmap and estimate', placeholder: 'Describe your idea…', icon: 'M4 4.5h4v4H4zM12 4.5h4v4h-4zM8 6.5h4M6 8.5v4h6M12 12.5h4v3h-4z' },
-  { id: 'trade', label: 'Hire or get hired', hint: 'List what you offer or need', placeholder: 'What do you offer, or what do you need?', icon: 'M4 7h11l-3-3M16 13H5l3 3' },
+  { id: 'carousel', label: 'Make a carousel', hint: 'Swipeable slides from one sentence', placeholder: 'What is the carousel about?', icon: 'M5 5h8v10H5zM7 3.5h8V13M3.5 7v8' },
+  { id: 'trade', label: 'Post a gig or listing', hint: 'We write it, you publish it', placeholder: 'What do you offer, or what do you need?', icon: 'M4 7h11l-3-3M16 13H5l3 3' },
+  { id: 'plan', label: 'Hire the BrandForge team', hint: 'Describe it and get a proposal from people', placeholder: 'What do you need built or made?', icon: 'M4 4.5h4v4H4zM12 4.5h4v4h-4zM8 6.5h4M6 8.5v4h6M12 12.5h4v3h-4z' },
 ];
 
 function StartPrompts({ onPick }: { onPick: (command: ChatCommand) => void }) {
@@ -189,33 +189,6 @@ function StartPrompts({ onPick }: { onPick: (command: ChatCommand) => void }) {
         ))}
       </div>
     </div>
-  );
-}
-
-// You -> AI -> People: the whole product in one small, quietly animated line.
-function AiPeopleFlow() {
-  const nodes: [number, string][] = [
-    [40, 'You'],
-    [140, 'AI'],
-    [240, 'People'],
-  ];
-  return (
-    <svg viewBox="0 0 280 44" className="bf-flow-diagram mx-auto mt-5 h-11 w-[17.5rem] max-w-full" role="img" aria-label="You describe it, AI drafts it, people refine it">
-      <g fill="none" stroke="var(--line)" strokeWidth="1.5">
-        <path d="M76 22h28" />
-        <path d="M176 22h28" />
-      </g>
-      <g fill="none" stroke="var(--ember)" strokeWidth="1.8" strokeLinecap="round">
-        <path className="bf-flow" d="M76 22h28" pathLength={1} />
-        <path className="bf-flow" style={{ animationDelay: '0.5s' }} d="M176 22h28" pathLength={1} />
-      </g>
-      {nodes.map(([x, label]) => (
-        <g key={label}>
-          <rect x={x - 32} y="8" width="64" height="28" rx="14" fill="var(--panel)" stroke="var(--line)" />
-          <text x={x} y="26.5" textAnchor="middle" fontSize="11" fill="var(--foreground)" fontFamily="var(--font-sans)">{label}</text>
-        </g>
-      ))}
-    </svg>
   );
 }
 
@@ -2774,10 +2747,8 @@ return (
                 What are we building today?
               </h1>
               <p className="bf-start-sub mt-3 max-w-md text-sm leading-relaxed text-muted">
-                AI drafts in seconds. People make it good. Create, publish and trade, all in one place.
-                {isGuestBrowser ? <span className="mt-1 block text-xs">Free to start. No card, no sign-up to try it.</span> : null}
+                AI drafts in seconds. People make it good.{isGuestBrowser ? " Free to try, no sign-up." : ""}
               </p>
-              <AiPeopleFlow />
             </div>
           )}
             />

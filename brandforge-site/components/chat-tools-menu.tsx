@@ -76,8 +76,8 @@ export function ToolsMenu({
       items: [
         { key: 'carousel', label: 'Make a carousel', hint: 'Swipeable slides from one sentence', icon: 'M5 5h8v10H5zM7 3.5h8V13M3.5 7v8', run: () => onCommand('carousel') },
         { key: 'image', label: 'Make an ad or image', hint: 'Ads, quotes, tips, announcements and polls', icon: 'M3.5 4.5h13v11h-13zM3.5 13l4-4 3 3 2-2 4 4M13 7.5h.01', run: () => onCommand('image') },
-        { key: 'plan', label: 'Plan my idea', hint: 'Scope, roadmap and estimate', icon: 'M4 4.5h4v4H4zM12 4.5h4v4h-4zM8 6.5h4M6 8.5v4h6M12 12.5h4v3h-4z', run: () => onCommand('plan') },
-        { key: 'trade', label: 'Hire or get hired', hint: 'List what you offer or need', icon: 'M4 7h11l-3-3M16 13H5l3 3', run: () => onCommand('trade') },
+        { key: 'plan', label: 'Hire the BrandForge team', hint: 'Describe it and get a proposal from people', icon: 'M4 4.5h4v4H4zM12 4.5h4v4h-4zM8 6.5h4M6 8.5v4h6M12 12.5h4v3h-4z', run: () => onCommand('plan') },
+        { key: 'trade', label: 'Post a gig or listing', hint: 'We write it, you publish it', icon: 'M4 7h11l-3-3M16 13H5l3 3', run: () => onCommand('trade') },
       ],
     },
     {

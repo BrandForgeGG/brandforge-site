@@ -1071,3 +1071,9 @@ we do not have.
 **Change:** typing a link, a domain or a business into Trade now reads the page (private and internal addresses refused), adds public search context when search is on, and writes a real listing: a one-line hook, "What you get" bullets, "Good for", and "Details" with the page's own prices and terms (never invented). The draft shows "What I read" (sources and what was learned) and "To make it stronger" tips. Descriptions keep their line breaks, and cards have Read more. Live check with a real small-business site: correct category, currency and "from" price taken from the page.
 
 **Distribution move:** this is the demo for Trade posts: paste your site, get a listing worth publishing. Copy line: "Paste a link. BrandForge reads the page and writes your listing, with a short note of what it found." Use the before and after: "I own this + link" became a full offer in about five seconds.
+
+## 2026-10-11 — Minimalist first 30 seconds
+
+**Change:** the first screen is one headline, one line and four goals in the order people arrive with them: Make an ad or image, Make a carousel, Post a gig or listing, Hire the BrandForge team (the diagram and the extra reassurance block are gone). Trade: the maker is back to a calm size, says a link is welcome, and "What I read" and the tips are one quiet line; "Yours" is a compact list and no listing is shown twice. Create: the six formats lead, the wish list is tucked into one line.
+
+**Distribution move:** copy line for every channel: "Pick what you want: an ad, a carousel, a gig, or the team. It starts in one box." Screenshot the new first screen as the hero image for the week-1 posts.

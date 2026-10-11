@@ -212,38 +212,30 @@ export function TradeCenter() {
   }
 
   const shown = listings ?? [];
-  const official = shown.filter((l) => l.official);
-  const community = shown.filter((l) => !l.official);
+  const official = shown.filter((l) => l.official && !l.mine);
+  const community = shown.filter((l) => !l.official && !l.mine);
 
   return (
     <div className="max-w-5xl">
       {/* Describe it */}
-      <section aria-label="Publish a listing" className="rounded-2xl border border-line bg-panel p-5 sm:p-8">
+      <section aria-label="Publish a listing" className="rounded-2xl border border-line bg-panel p-4 sm:p-5">
         {draft ? (
           <div>
-            <p className="font-serif text-2xl text-foreground">Here is your listing. Check it, then publish.</p>
+            <p className="font-serif text-lg text-foreground">Here is your listing. Check it, then publish.</p>
             {research && (research.sources.length > 0 || research.found.length > 0) ? (
-              <div className="mt-4 rounded-xl border border-line bg-background p-4" role="status">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">What I read</p>
-                {research.sources.length > 0 ? (
-                  <ul className="mt-2 space-y-1">
-                    {research.sources.map((source) => (
-                      <li key={source.url} className="flex items-baseline gap-2 text-sm">
-                        <span className={source.ok ? "text-success" : "text-muted"} aria-hidden="true">{source.ok ? "✓" : "•"}</span>
-                        <a href={source.url} target="_blank" rel="noopener noreferrer" className="min-w-0 truncate text-foreground underline-offset-2 hover:underline">{source.title}</a>
-                        {source.ok ? null : <span className="text-xs text-muted">could not be read, so I used your words</span>}
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-                {research.found.length > 0 ? (
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">
-                    {research.found.map((note) => (
-                      <li key={note}>{note}</li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
+              <details className="mt-3 rounded-xl border border-line bg-background px-3 py-2 text-sm" open={research.sources.some((source) => !source.ok)}>
+                <summary className="cursor-pointer text-muted">
+                  {research.sources.some((source) => source.ok) ? "I read " + research.sources.filter((source) => source.ok).map((source) => source.title).join(", ") : "Written from your words"}
+                </summary>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-muted">
+                  {research.found.map((note) => (
+                    <li key={note}>{note}</li>
+                  ))}
+                  {research.sources.filter((source) => !source.ok).map((source) => (
+                    <li key={source.url}>{source.title} could not be read, so I used your words.</li>
+                  ))}
+                </ul>
+              </details>
             ) : null}
             <div className="mt-3 flex gap-2">
               {(["offer", "request"] as const).map((k) => (
@@ -252,8 +244,8 @@ export function TradeCenter() {
                 </button>
               ))}
             </div>
-            <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} maxLength={100} aria-label="Title" className={`${field} mt-3 rounded-xl px-4 py-3 font-serif text-xl`} />
-            <textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} rows={7} maxLength={1200} aria-label="Details" className={`${field} mt-2 rounded-xl px-4 py-3 text-base leading-relaxed`} />
+            <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} maxLength={100} aria-label="Title" className={`${field} mt-3 font-serif text-base`} />
+            <textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} rows={8} maxLength={1200} aria-label="Details" className={`${field} mt-2 leading-relaxed`} />
             <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
               <select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} aria-label="Category" className={`${field} col-span-2`}>
                 {CATEGORIES.map((c: string) => (
@@ -264,18 +256,11 @@ export function TradeCenter() {
               <input value={draft.budgetMax} onChange={(e) => setDraft({ ...draft, budgetMax: e.target.value })} inputMode="decimal" placeholder="To" aria-label="Price to" className={field} />
             </div>
             {research && research.tips.length > 0 ? (
-              <div className="mt-3 rounded-xl border border-dashed border-line p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">To make it stronger</p>
-                <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm text-muted">
-                  {research.tips.map((tip) => (
-                    <li key={tip}>{tip}</li>
-                  ))}
-                </ul>
-              </div>
+              <p className="mt-2 text-xs text-muted">To make it stronger: {research.tips.join(" · ")}</p>
             ) : null}
             {error ? <p role="alert" className="mt-2 text-xs text-danger">{error}</p> : null}
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              <button type="button" onClick={() => void publish()} disabled={publishing} className="rounded-xl bg-ember px-8 py-3.5 text-base font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
+              <button type="button" onClick={() => void publish()} disabled={publishing} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
                 {publishing ? "Publishing…" : "Publish"}
               </button>
               <button type="button" onClick={() => { setDraft(null); setResearch(null); }} className="text-sm text-muted transition hover:text-foreground">
@@ -285,21 +270,21 @@ export function TradeCenter() {
           </div>
         ) : (
           <div>
-            <label htmlFor="trade-describe" className="font-serif text-2xl text-foreground sm:text-3xl">
+            <label htmlFor="trade-describe" className="font-serif text-lg text-foreground">
               What do you offer or need?
             </label>
             <textarea
               id="trade-describe"
               value={text}
               onChange={(e) => setText(e.target.value)}
-              rows={5}
+              rows={3}
               maxLength={1200}
-              placeholder="Say it in your own words. A profile, a gig, a product, a tool, a startup launch or a request."
-              className={`${field} mt-3 rounded-xl px-4 py-3 text-lg leading-relaxed`}
+              placeholder="Say what you offer or need, or paste a link and we read it for you."
+              className={`${field} mt-2 text-base`}
             />
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {STARTERS.map(([label, start]) => (
-                <button key={label} type="button" onClick={() => setText((current) => (current.trim() ? current : start))} className="rounded-full border border-line px-4 py-1.5 text-sm text-muted transition hover:border-ember hover:text-foreground">
+                <button key={label} type="button" onClick={() => setText((current) => (current.trim() ? current : start))} className="rounded-full border border-line px-3 py-1 text-xs text-muted transition hover:border-ember hover:text-foreground">
                   {label}
                 </button>
               ))}
@@ -319,7 +304,7 @@ export function TradeCenter() {
               </p>
             ) : null}
             <div className="mt-3">
-              <button type="button" onClick={() => void makeDraft(text)} disabled={making || text.trim().length < 12} className="rounded-xl bg-ember px-8 py-3.5 text-base font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
+              <button type="button" onClick={() => void makeDraft(text)} disabled={making || text.trim().length < 12} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
                 {making ? (/https?:\/\/|\b[a-z0-9-]+\.(?:com|co\.uk|uk|io|app|dev|net|org|gg|ai)\b/i.test(text) ? "Reading your page and writing…" : "Writing your listing…") : "Make my listing"}
               </button>
             </div>
@@ -328,36 +313,22 @@ export function TradeCenter() {
       </section>
 
       {mine.length > 0 ? (
-        <section aria-label="Your listings" className="mt-8">
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 className="font-serif text-2xl text-foreground sm:text-3xl">
-              Your listings <span className="text-base font-normal text-muted">({mine.length})</span>
-            </h2>
-            <p className="text-xs text-muted">{mine.filter((l) => l.status === "open").length} open</p>
-          </div>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <section aria-label="Your listings" className="mt-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Yours</p>
+          <ul className="mt-2 divide-y divide-line rounded-2xl border border-line bg-panel">
             {mine.map((l) => (
-              <article key={l.id} className="bf-card flex flex-col p-5 sm:p-6">
-                <div className="flex items-center justify-between gap-2 text-xs">
-                  <span className="truncate text-muted">
-                    {l.kind === "offer" ? "Offer" : "Request"} · {l.category}
-                  </span>
-                  <span className={`shrink-0 rounded-full border px-2.5 py-0.5 ${l.status === "open" ? "border-success/40 text-success" : "border-line text-muted"}`}>{l.status === "open" ? "Open" : "Closed"}</span>
+              <li key={l.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">{l.title}</p>
+                  <p className="text-xs text-muted">
+                    {l.kind === "offer" ? "Offer" : "Request"} · <span className={l.status === "open" ? "text-success" : ""}>{l.status === "open" ? "Open" : "Closed"}</span> · {budgetLabel(l, formatMoney)}
+                  </p>
                 </div>
-                <h3 className="mt-3 font-serif text-xl leading-snug text-foreground sm:text-2xl">{l.title}</h3>
-                <p className="mt-2 line-clamp-5 flex-1 whitespace-pre-line text-sm leading-relaxed text-muted">{l.description}</p>
-                <p className="mt-4 text-lg font-semibold tabular-nums text-foreground">{budgetLabel(l, formatMoney)}</p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <button type="button" onClick={() => void openAssistant(l)} className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90">
-                    Assistant
-                  </button>
-                  <button type="button" onClick={() => setEditing(l)} className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember">
-                    Edit
-                  </button>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button type="button" onClick={() => void openAssistant(l)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background">Assistant</button>
+                  <button type="button" onClick={() => setEditing(l)} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground hover:border-ember">Edit</button>
                   {l.status === "open" ? (
-                    <button type="button" onClick={() => void removeListing(l, false)} className="rounded-xl border border-line px-4 py-2 text-sm text-muted transition hover:text-foreground">
-                      Close
-                    </button>
+                    <button type="button" onClick={() => void removeListing(l, false)} className="px-2 py-1.5 text-xs text-muted hover:text-foreground">Close</button>
                   ) : (
                     <button
                       type="button"
@@ -365,18 +336,16 @@ export function TradeCenter() {
                         await fetchAuthed(`/api/trade/${l.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reopen: true }) });
                         void load();
                       }}
-                      className="rounded-xl border border-ember px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-ember/10"
+                      className="px-2 py-1.5 text-xs text-ember hover:underline"
                     >
                       Reopen
                     </button>
                   )}
-                  <button type="button" onClick={() => void removeListing(l, true)} className="rounded-xl px-3 py-2 text-sm text-muted transition hover:text-danger">
-                    Delete
-                  </button>
+                  <button type="button" onClick={() => void removeListing(l, true)} className="px-2 py-1.5 text-xs text-muted hover:text-danger">Delete</button>
                 </div>
-              </article>
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
       ) : null}
 
@@ -430,9 +399,9 @@ export function TradeCenter() {
         </section>
       ) : null}
 
-      {listings && listings.length === 0 ? (
+      {listings && official.length + community.length === 0 ? (
         <div className="bf-card mt-6 p-6 text-center">
-          <p className="font-serif text-lg text-foreground">{pending ? "Trade opens shortly." : q || category ? "Nothing matches that." : "Nothing here yet."}</p>
+          <p className="font-serif text-lg text-foreground">{pending ? "Trade opens shortly." : q || category ? "Nothing matches that." : mine.length > 0 ? "No one else has listed yet." : "Nothing here yet."}</p>
           {!pending ? <p className="mt-1 text-xs text-muted">Describe what you offer or need above. It takes a minute.</p> : null}
         </div>
       ) : null}
