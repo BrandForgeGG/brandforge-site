@@ -127,7 +127,26 @@ async function isMarkedGuestWithoutSession(): Promise<boolean> {
   }
 }
 
-export async function fetchAuthed(
+// Identical GET requests made while one is already on its way share that one request: every caller still gets its own
+// readable copy of the answer. (The sidebar and the chat both load the recent chats at page load, and used to ask twice.)
+const inflightGets = new Map<string, Promise<Response>>();
+
+export function fetchAuthed(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const method = String(init?.method ?? 'GET').toUpperCase();
+  const key = method === 'GET' && !init?.body && !init?.signal ? String(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url) : '';
+  if (!key) return fetchAuthedOnce(input, init);
+  const existing = inflightGets.get(key);
+  if (existing) return existing.then((response) => response.clone());
+  const request = fetchAuthedOnce(input, init);
+  inflightGets.set(key, request);
+  const clear = () => {
+    inflightGets.delete(key);
+  };
+  request.then(clear, clear);
+  return request.then((response) => response.clone());
+}
+
+async function fetchAuthedOnce(
   input: RequestInfo | URL,
   init?: RequestInit,
 ): Promise<Response> {

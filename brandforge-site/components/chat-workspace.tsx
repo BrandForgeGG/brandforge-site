@@ -251,6 +251,34 @@ export function ChatWorkspace() {
     const pkg = ({ launch: "Launch (websites and brand)", build: "Build (SaaS and bots)", product: "Product (apps and platforms)", scale: "Scale (features and growth)" } as Record<string, string>)[searchParams.get("pkg") ?? ""];
     return pkg ? `I'm interested in the ${pkg} package. About the project: ` : "";
   });
+  // A message being typed survives a reload or an accidental close: kept per chat in this browser, cleared when sent.
+  const draftKey = `bf:composer:${conversationId || "new"}`;
+  const draftKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    let saved = "";
+    try {
+      saved = window.localStorage.getItem(draftKey) ?? "";
+    } catch {
+      /* storage blocked: the box simply starts empty */
+    }
+    const first = draftKeyRef.current === null;
+    draftKeyRef.current = draftKey;
+    // On the first render a first line carried in the address (a plan or package) wins; after that each chat shows its own draft.
+    setInput((current) => (first ? current || saved : saved));
+  }, [draftKey]);
+  useEffect(() => {
+    if (draftKeyRef.current !== draftKey) return;
+    const timer = window.setTimeout(() => {
+      try {
+        if (input.trim()) window.localStorage.setItem(draftKey, input);
+        else window.localStorage.removeItem(draftKey);
+      } catch {
+        /* storage blocked: the draft just will not come back */
+      }
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [input, draftKey]);
+
   // The maker, opened over the chat: which format (null = pick one) and the topic to start from.
   // The carousel maker as a card in the thread: set when someone asks for a carousel or taps Make a carousel.
   // The command tag in the message box (Make a carousel, Plan my idea, ...), or none.
@@ -2752,10 +2780,18 @@ return (
           onScroll={handleTranscriptScroll}
         >
           {isBooting && messages.length === 0 ? (
-            <div className="py-10 text-center" role="status" aria-live="polite">
-              <p className="text-sm text-muted">
-                Loading your conversation…
-              </p>
+            <div className="mx-auto w-full max-w-3xl space-y-5 py-6" role="status" aria-live="polite" aria-label="Loading your conversation">
+              <div className="flex justify-end">
+                <div className="bf-skeleton h-10 w-2/5 rounded-2xl bg-overlay" />
+              </div>
+              <div className="flex gap-3">
+                <div className="bf-skeleton h-8 w-8 shrink-0 rounded-lg bg-overlay" />
+                <div className="w-full space-y-2">
+                  <div className="bf-skeleton h-3.5 w-4/5 rounded bg-overlay" />
+                  <div className="bf-skeleton h-3.5 w-full rounded bg-overlay" />
+                  <div className="bf-skeleton h-3.5 w-3/5 rounded bg-overlay" />
+                </div>
+              </div>
             </div>
           ) : !conversationId ? (
             <SavedCardOrFallback

@@ -6,6 +6,7 @@ import { getProfileRoles,
   getAdminIds,
   getAvatarUrls,
   getProfileDisplayName,
+  getProfileDisplayNames,
   getProfileRole,
   listMyTradeListings,
   listOpenTradeListings,
@@ -51,15 +52,16 @@ export async function GET(request: NextRequest) {
     }
 
     const rows = result.rows.filter((row) => matches(row, filter)).slice(0, 60);
-    const names = new Map<string, string>();
-    for (const ownerId of new Set(rows.map((r) => r.owner_id))) {
-      names.set(ownerId, await getProfileDisplayName(ownerId));
-    }
-    const faces = await getAvatarUrls([...names.keys()]);
-    // Listings owned by a BrandForge admin account are BrandForge's own pre-made services.
-    const officialIds = await getAdminIds([...names.keys()]);
-    const roles = await getProfileRoles([...names.keys()]);
-    const viewerRole = viewer ? await getProfileRole(viewer.id) : null;
+    const ownerIds = [...new Set(rows.map((r) => r.owner_id))];
+    // Everything about the owners is read at once, not one lookup after another.
+    const [names, faces, officialIds, roles, viewerRole] = await Promise.all([
+      getProfileDisplayNames(ownerIds),
+      getAvatarUrls(ownerIds),
+      // Listings owned by a BrandForge admin account are BrandForge's own pre-made services.
+      getAdminIds(ownerIds),
+      getProfileRoles(ownerIds),
+      viewer ? getProfileRole(viewer.id) : Promise.resolve(null),
+    ]);
     return NextResponse.json({
       listings: rows.map((row) => toListingView(row, officialIds.has(row.owner_id) ? 'BrandForge' : (names.get(row.owner_id) ?? 'Member'), viewer?.id ?? null, officialIds.has(row.owner_id) ? null : (faces.get(row.owner_id) ?? null), officialIds.has(row.owner_id), roles.get(row.owner_id) ?? 'user')),
       viewer: { signedIn: Boolean(viewer), isSpecialist: viewerRole === 'operator' || viewerRole === 'admin' },

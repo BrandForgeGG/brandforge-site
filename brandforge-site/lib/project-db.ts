@@ -5896,6 +5896,20 @@ export async function getAvatarUrls(userIds: string[]): Promise<Map<string, stri
   return out;
 }
 
+// The names a set of people go by, in one query (the same rule as getProfileDisplayName).
+export async function getProfileDisplayNames(userIds: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const ids = [...new Set(userIds.filter(Boolean))].slice(0, 200);
+  if (ids.length === 0) return out;
+  const admin = createSupabaseAdminClient();
+  if (!admin) return out;
+  const { data } = await admin.from('profiles').select('id, display_name, full_name, username, email').in('id', ids);
+  for (const row of (data ?? []) as { id: string; display_name: string | null; full_name: string | null; username: string | null; email: string | null }[]) {
+    out.set(row.id, (row.display_name && String(row.display_name)) || (row.full_name && String(row.full_name)) || (row.username && String(row.username)) || (row.email && String(row.email).split('@')[0]) || 'The team');
+  }
+  return out;
+}
+
 // Everyone in a chat: the owner and every participant, with the name they go by and their account role. The AI uses
 // it to know it is talking to several people. Service-role read; a guest owner is listed as "the chat owner".
 export async function getChatPeople(conversationId: string): Promise<{ id: string; name: string; role: string; isOwner: boolean }[]> {

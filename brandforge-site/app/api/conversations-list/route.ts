@@ -44,6 +44,8 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // The role is read while the list is being built, not after it.
+    const roleRead = getProfileRole(user.id);
     const isStaff = await isStaffAccount(user.id);
     const conversations = isStaff
       ? await getStaffConversationSummaries()
@@ -56,7 +58,7 @@ export async function GET(request: NextRequest) {
       user.user_metadata?.full_name ?? user.user_metadata?.name ?? null;
     const email = user.email ?? null;
     // profiles.role is the truth; the email hint only covers rows that predate it.
-    const role = (await getProfileRole(user.id)) ?? (email ? getUserRoleFromEmail(email) : 'user');
+    const role = (await roleRead) ?? (email ? getUserRoleFromEmail(email) : 'user');
 
     return NextResponse.json({ conversations, isStaff, unseenCount, userId: user.id, name, email, role });
   } catch (error) {
