@@ -1,12 +1,11 @@
+import type { Metadata } from 'next';
+import { pageMeta, pageGraph } from '@/lib/seo';
+import { JsonLd } from '@/components/json-ld';
 import Link from 'next/link';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { SiteFooter } from '@/components/site-footer';
 
-export const metadata = {
-  title: 'Platform — BrandForge',
-  description:
-    'How the BrandForge platform runs a project end to end: structured briefs, proposals, contracts, admin-verified escrow, and milestone releases.',
-};
+export const metadata: Metadata = pageMeta({ path: "/platform", title: "Platform — BrandForge", description: "How the BrandForge platform runs a project end to end: structured briefs, proposals, contracts, admin-verified escrow, and milestone releases." });
 
 const STAGES = [
   {
@@ -38,6 +37,7 @@ const STAGES = [
 export default function PlatformPage() {
   return (
     <div className="bf-page">
+      <JsonLd data={pageGraph({ path: "/platform", name: "Platform — BrandForge", description: "How the BrandForge platform runs a project end to end: structured briefs, proposals, contracts, admin-verified escrow, and milestone releases.", kind: "WebPage", crumbs: [{ name: "Platform", path: "/platform" }] })} />
       <LandingNav />
       <main className="mx-auto max-w-4xl px-6 py-16">
         <h1 className="mt-2 font-serif text-4xl text-foreground sm:text-5xl">

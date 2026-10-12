@@ -1,3 +1,6 @@
+import type { Metadata } from 'next';
+import { pageMeta, pageGraph } from '@/lib/seo';
+import { JsonLd } from '@/components/json-ld';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -15,10 +18,11 @@ function find(slug: string) {
   return PORTFOLIO_PROJECTS.find((project) => projectSlug(project.name) === slug) ?? null;
 }
 
-export async function generateMetadata({ params }: Props) {
-  const project = find((await params).slug);
-  if (!project) return { title: 'Work — BrandForge' };
-  return { title: `${project.name} — BrandForge`, description: `${project.description}. Shipped by the BrandForge team.` };
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const slug = (await params).slug;
+  const project = find(slug);
+  if (!project) return pageMeta({ path: '/work', title: 'Work — BrandForge', description: 'Real projects shipped by the BrandForge team.' });
+  return pageMeta({ path: `/work/${slug}`, title: `${project.name} — BrandForge`, description: `${project.description}. Shipped by the BrandForge team.` });
 }
 
 export default async function CaseStudyPage({ params }: Props) {
@@ -30,6 +34,7 @@ export default async function CaseStudyPage({ params }: Props) {
 
   return (
     <div className="bf-page">
+      <JsonLd data={pageGraph({ path: `/work/${(await params).slug}`, name: project.name, description: project.description, kind: 'WebPage', crumbs: [{ name: 'Work', path: '/work' }, { name: project.name, path: `/work/${(await params).slug}` }] })} />
       <LandingNav />
       <main className="mx-auto max-w-4xl px-6 py-14">
         <Link href="/work" className="text-sm text-muted transition hover:text-foreground">← All work</Link>

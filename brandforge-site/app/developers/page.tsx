@@ -1,15 +1,13 @@
+import type { Metadata } from 'next';
+import { pageMeta, pageGraph } from '@/lib/seo';
+import { JsonLd } from '@/components/json-ld';
 import Link from 'next/link';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { SiteFooter } from '@/components/site-footer';
 import { COMMUNITY_LINKS } from '@/lib/community';
 import { ContractDiagram } from '@/components/overview/diagrams';
 
-export const metadata = {
-  title: 'BrandForge for developers: build, get paid, ship in the open',
-  description:
-    'Join the BrandForge team as a developer or designer, get paid per milestone through escrow, and build on a stack that ships daily.',
-  alternates: { canonical: '/developers' },
-};
+export const metadata: Metadata = pageMeta({ path: "/developers", title: "BrandForge for developers: build, get paid, ship in the open", description: "Join the BrandForge team as a developer or designer, get paid per milestone through escrow, and build on a stack that ships daily." });
 
 const WHY = [
   ['Paid per milestone', 'Work arrives as milestones. The client funds escrow first, you deliver, they approve, and the money releases. No chasing invoices.'],
@@ -23,6 +21,7 @@ const STACK = ['Next.js and React', 'TypeScript', 'Supabase (Postgres and storag
 export default function DevelopersPage() {
   return (
     <div className="bf-page">
+      <JsonLd data={pageGraph({ path: "/developers", name: "BrandForge for developers: build, get paid, ship in the open", description: "Join the BrandForge team as a developer or designer, get paid per milestone through escrow, and build on a stack that ships daily.", kind: "WebPage", crumbs: [{ name: "Developers", path: "/developers" }] })} />
       <LandingNav />
       <main className="mx-auto max-w-4xl px-6 py-16">
         <p className="text-xs uppercase tracking-[0.2em] text-copper">Developers and designers</p>

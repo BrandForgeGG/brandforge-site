@@ -1,7 +1,9 @@
+import type { Metadata } from 'next';
+import { pageMeta } from '@/lib/seo';
 import { AppShell } from '@/components/app-shell';
 import { AdminDashboard } from '@/components/admin/admin-dashboard';
 
-export const metadata = { title: 'Dashboard — BrandForge' };
+export const metadata: Metadata = pageMeta({ path: "/admin", title: "Dashboard — BrandForge", description: "BrandForge: AI and people, one workspace.", noindex: true });
 
 export default function AdminPage() {
   return (

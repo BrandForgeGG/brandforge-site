@@ -1,10 +1,8 @@
+import { pageMeta } from '@/lib/seo';
 import type { Metadata } from 'next';
 import { LegalPage, type LegalSection } from '@/components/legal-page';
 
-export const metadata: Metadata = {
-  title: 'Delete your data — BrandForge',
-  description: 'How to disconnect a social account from BrandForge and delete the data we hold.',
-};
+export const metadata: Metadata = pageMeta({ path: "/data-deletion", title: "Delete your data — BrandForge", description: "How to disconnect a social account from BrandForge and delete the data we hold." });
 
 const SECTIONS: LegalSection[] = [
   {

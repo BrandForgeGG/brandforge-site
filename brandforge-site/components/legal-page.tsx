@@ -43,7 +43,7 @@ export function LegalPage({
 
         <div className="mt-10 space-y-8">
           {sections.map((section) => (
-            <section key={section.title}>
+            <section key={section.title} id={/cookies/i.test(section.title) ? 'cookies' : undefined}>
               <h2 className="font-serif text-xl text-foreground">{section.title}</h2>
               <div className="mt-3 space-y-3">
                 {section.body.map((paragraph) => (

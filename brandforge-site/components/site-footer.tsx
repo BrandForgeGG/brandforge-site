@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { COMMUNITY_LINKS } from '@/lib/community';
 import { SOCIAL_LINKS } from '@/lib/social-links';
+import { CookieSettingsLink } from '@/components/cookie-consent';
 
 // Short on purpose: the product links on one line, the small print and socials on the next.
 const PRODUCT: { label: string; href: string }[] = [
@@ -65,6 +66,8 @@ export function SiteFooter() {
                 </span>
               ),
             )}
+            <span aria-hidden="true"> · </span>
+            <CookieSettingsLink className="bf-tap transition hover:text-foreground" />
           </p>
           <nav aria-label="Social media" className="flex flex-wrap items-center gap-x-4">
             {SOCIAL_LINKS.map((social) => (

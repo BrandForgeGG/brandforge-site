@@ -1,16 +1,16 @@
+import type { Metadata } from 'next';
+import { pageMeta, pageGraph } from '@/lib/seo';
+import { JsonLd } from '@/components/json-ld';
 import Link from 'next/link';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { SiteFooter } from '@/components/site-footer';
 
-export const metadata = {
-  title: 'About — BrandForge',
-  description:
-    "BrandForge is where AI and people work on the same page: make and publish every kind of message, and trade products, services and requests.",
-};
+export const metadata: Metadata = pageMeta({ path: "/about", title: "About — BrandForge", description: "BrandForge is where AI and people work on the same page: make and publish every kind of message, and trade products, services and requests." });
 
 export default function AboutPage() {
   return (
     <div className="bf-page">
+      <JsonLd data={pageGraph({ path: "/about", name: "About — BrandForge", description: "BrandForge is where AI and people work on the same page: make and publish every kind of message, and trade products, services and requests.", kind: "AboutPage", crumbs: [{ name: "About", path: "/about" }] })} />
       <LandingNav />
       <main className="mx-auto max-w-3xl px-6 py-16">
         <h1 className="mt-2 font-serif text-4xl text-foreground sm:text-5xl">

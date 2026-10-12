@@ -1,3 +1,6 @@
+import type { Metadata } from 'next';
+import { pageMeta, pageGraph } from '@/lib/seo';
+import { JsonLd } from '@/components/json-ld';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { SiteFooter } from '@/components/site-footer';
 import { HeroDiagram, PaceDiagram, TradeDiagram } from '@/components/overview/diagrams';
@@ -6,11 +9,7 @@ type Block = string | { visual: 'idea' | 'trade' | 'pace' };
 
 const VISUALS = { idea: HeroDiagram, trade: TradeDiagram, pace: PaceDiagram } as const;
 
-export const metadata = {
-  title: 'Blog — BrandForge',
-  description:
-    'Product updates, shipping notes, and essays from the BrandForge team — what we built, why, and what is next.',
-};
+export const metadata: Metadata = pageMeta({ path: "/blog", title: "Blog — BrandForge", description: "Product updates, shipping notes, and essays from the BrandForge team — what we built, why, and what is next." });
 
 // Real shipping entries, dated to when they actually went live. New posts go on top.
 const POSTS: { date: string; title: string; body: Block[] }[] = [
@@ -125,6 +124,7 @@ const ESSAY = {
 export default function BlogPage() {
   return (
     <div className="bf-page">
+      <JsonLd data={pageGraph({ path: "/blog", name: "Blog — BrandForge", description: "Product updates, shipping notes, and essays from the BrandForge team — what we built, why, and what is next.", kind: "CollectionPage", crumbs: [{ name: "Blog", path: "/blog" }] })} />
       <LandingNav />
       <main className="mx-auto max-w-3xl px-6 py-16">
         <h1 className="mt-2 font-serif text-4xl text-foreground sm:text-5xl">

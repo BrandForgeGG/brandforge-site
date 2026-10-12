@@ -1,15 +1,13 @@
+import type { Metadata } from 'next';
+import { pageMeta, pageGraph } from '@/lib/seo';
+import { JsonLd } from '@/components/json-ld';
 import Link from 'next/link';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { SiteFooter } from '@/components/site-footer';
 import { COMMUNITY_LINKS } from '@/lib/community';
 import { HeroDiagram, TradeDiagram } from '@/components/overview/diagrams';
 
-export const metadata = {
-  title: 'BrandForge for investors: AI and people, one workspace',
-  description:
-    'What BrandForge is, what is live today, how it earns, and where it goes next. An early company that ships weekly. Talk to the founder.',
-  alternates: { canonical: '/investors' },
-};
+export const metadata: Metadata = pageMeta({ path: "/investors", title: "BrandForge for investors: AI and people, one workspace", description: "What BrandForge is, what is live today, how it earns, and where it goes next. An early company that ships weekly. Talk to the founder." });
 
 const LIVE = [
   ['A chat that works', 'Describe an idea, paste a link or drop a file and get a researched first answer before any sign-up.'],
@@ -29,6 +27,7 @@ const MONEY = [
 export default function InvestorsPage() {
   return (
     <div className="bf-page">
+      <JsonLd data={pageGraph({ path: "/investors", name: "BrandForge for investors: AI and people, one workspace", description: "What BrandForge is, what is live today, how it earns, and where it goes next. An early company that ships weekly. Talk to the founder.", kind: "WebPage", crumbs: [{ name: "Investors", path: "/investors" }] })} />
       <LandingNav />
       <main className="mx-auto max-w-4xl px-6 py-16">
         <p className="text-xs uppercase tracking-[0.2em] text-copper">Investors</p>

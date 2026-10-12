@@ -1,10 +1,9 @@
+import type { Metadata } from 'next';
+import { pageMeta } from '@/lib/seo';
 import { Suspense } from 'react';
 import { ChatWorkspace } from '@/components/chat-workspace';
 
-export const metadata = {
-  title: 'BrandForge - Project chat',
-  description: 'Describe what you want to build. BrandForge turns the conversation into a real project.',
-};
+export const metadata: Metadata = pageMeta({ path: "/chat", title: "BrandForge - Project chat", description: "Describe what you want to build. BrandForge turns the conversation into a real project.", noindex: true });
 
 export default function ChatPage() {
   return (

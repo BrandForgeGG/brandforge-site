@@ -1,3 +1,6 @@
+import type { Metadata } from 'next';
+import { pageMeta, pageGraph } from '@/lib/seo';
+import { JsonLd } from '@/components/json-ld';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { RetainerPlans } from '@/components/retainer-plans';
 import { PricingPlans } from '@/components/pricing-plans';
@@ -6,16 +9,12 @@ import { LandingSections } from '@/components/landing/landing-sections';
 import { LandingFaq } from '@/components/landing/landing-faq';
 import { SiteFooter } from '@/components/site-footer';
 
-export const metadata = {
-  alternates: { canonical: '/pricing' },
-  title: 'Pricing: the BrandForge team by the month, or one project at a time',
-  description:
-    'Plans from €490 a month: a BrandForge team member and AI deliver your content, ads or product work. Or hire for one project at a fixed price. Free tools included.',
-};
+export const metadata: Metadata = pageMeta({ path: "/pricing", title: "Pricing: the BrandForge team by the month, or one project at a time", description: "Plans from €490 a month: a BrandForge team member and AI deliver your content, ads or product work. Or hire for one project at a fixed price. Free tools included." });
 
 export default function PricingPage() {
   return (
     <div className="bf-page">
+      <JsonLd data={pageGraph({ path: "/pricing", name: "Pricing: the BrandForge team by the month, or one project at a time", description: "Plans from €490 a month: a BrandForge team member and AI deliver your content, ads or product work. Or hire for one project at a fixed price. Free tools included.", kind: "WebPage", crumbs: [{ name: "Pricing", path: "/pricing" }] })} />
       <LandingNav />
       <main>
         <header className="px-6 pb-2 pt-14 text-center">

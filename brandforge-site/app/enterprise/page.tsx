@@ -1,15 +1,13 @@
+import type { Metadata } from 'next';
+import { pageMeta, pageGraph } from '@/lib/seo';
+import { JsonLd } from '@/components/json-ld';
 import Link from 'next/link';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { SiteFooter } from '@/components/site-footer';
 import { COMMUNITY_LINKS } from '@/lib/community';
 import { ContractDiagram } from '@/components/overview/diagrams';
 
-export const metadata = {
-  title: 'BrandForge for bigger projects: a named team, fixed prices, escrow',
-  description:
-    'For companies and serious budgets: a scoped build or retainer from a BrandForge team, with fixed-price proposals and milestone contracts held in escrow.',
-  alternates: { canonical: '/enterprise' },
-};
+export const metadata: Metadata = pageMeta({ path: "/enterprise", title: "BrandForge for bigger projects: a named team, fixed prices, escrow", description: "For companies and serious budgets: a scoped build or retainer from a BrandForge team, with fixed-price proposals and milestone contracts held in escrow." });
 
 const GET = [
   ['A named lead and a small team', 'One person who owns your project, with a designer and developers behind them. You always know who is on it.'],
@@ -23,6 +21,7 @@ const BUILD = ['Websites and brands', 'SaaS and web apps', 'Mobile apps', 'Marke
 export default function EnterprisePage() {
   return (
     <div className="bf-page">
+      <JsonLd data={pageGraph({ path: "/enterprise", name: "BrandForge for bigger projects: a named team, fixed prices, escrow", description: "For companies and serious budgets: a scoped build or retainer from a BrandForge team, with fixed-price proposals and milestone contracts held in escrow.", kind: "WebPage", crumbs: [{ name: "Enterprise", path: "/enterprise" }] })} />
       <LandingNav />
       <main className="mx-auto max-w-4xl px-6 py-16">
         <p className="text-xs uppercase tracking-[0.2em] text-copper">Bigger projects</p>

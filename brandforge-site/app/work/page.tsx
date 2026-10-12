@@ -1,17 +1,18 @@
+import type { Metadata } from 'next';
+import { pageMeta, pageGraph } from '@/lib/seo';
+import { JsonLd } from '@/components/json-ld';
 import Image from 'next/image';
 import Link from 'next/link';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { SiteFooter } from '@/components/site-footer';
 import { PORTFOLIO_PROJECTS, projectSlug } from '@/lib/portfolio-projects';
 
-export const metadata = {
-  title: 'Work — BrandForge',
-  description: 'Real projects shipped by the BrandForge team. Open the live sites and judge the work yourself.',
-};
+export const metadata: Metadata = pageMeta({ path: "/work", title: "Work — BrandForge", description: "Real projects shipped by the BrandForge team. Open the live sites and judge the work yourself." });
 
 export default function WorkPage() {
   return (
     <div className="bf-page">
+      <JsonLd data={pageGraph({ path: "/work", name: "Work — BrandForge", description: "Real projects shipped by the BrandForge team. Open the live sites and judge the work yourself.", kind: "CollectionPage", crumbs: [{ name: "Work", path: "/work" }] })} />
       <LandingNav />
       <main className="mx-auto max-w-5xl px-6 py-16">
         <h1 className="font-serif text-4xl text-foreground sm:text-5xl">Work we have shipped</h1>

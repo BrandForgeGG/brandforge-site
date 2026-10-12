@@ -8,6 +8,8 @@
 // to a user or block an interaction.
 'use client';
 
+import { analyticsAllowed } from '@/lib/consent.js';
+
 const VISITOR_KEY = 'bf_visitor_id';
 const sessionKey = 'bf_visitor_session';
 
@@ -44,6 +46,8 @@ function visitorId(): string {
 
 export function trackEvent(event: string, properties?: Record<string, unknown>) {
   if (typeof window === 'undefined') return;
+  // Counting visits waits for a yes to the cookie choice (components/cookie-consent.tsx).
+  if (!analyticsAllowed(document.cookie)) return;
 
   try {
     const body = JSON.stringify({

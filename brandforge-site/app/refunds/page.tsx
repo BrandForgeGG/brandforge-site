@@ -1,11 +1,8 @@
+import { pageMeta } from '@/lib/seo';
 import type { Metadata } from 'next';
 import { LegalPage, type LegalSection } from '@/components/legal-page';
 
-export const metadata: Metadata = {
-  title: 'Refund Policy — BrandForge',
-  description:
-    'How refunds work for BrandForge projects funded through admin-verified crypto escrow.',
-};
+export const metadata: Metadata = pageMeta({ path: "/refunds", title: "Refund Policy — BrandForge", description: "How refunds work for BrandForge projects funded through admin-verified crypto escrow." });
 
 const SECTIONS: LegalSection[] = [
   {

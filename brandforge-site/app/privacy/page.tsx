@@ -1,11 +1,8 @@
+import { pageMeta } from '@/lib/seo';
 import type { Metadata } from 'next';
 import { LegalPage, type LegalSection } from '@/components/legal-page';
 
-export const metadata: Metadata = {
-  title: 'Privacy Policy — BrandForge',
-  description:
-    'What data BrandForge collects, how it is used, and how to delete it.',
-};
+export const metadata: Metadata = pageMeta({ path: "/privacy", title: "Privacy Policy — BrandForge", description: "What data BrandForge collects, how it is used, and how to delete it." });
 
 const SECTIONS: LegalSection[] = [
   {
@@ -40,7 +37,8 @@ const SECTIONS: LegalSection[] = [
   {
     title: '4. Cookies',
     body: [
-      'We use cookies to keep you signed in (Supabase session cookies) and, for visitors without an account, a session cookie that keeps a guest chat yours. There are no advertising or cross-site tracking cookies.',
+      'Necessary cookies keep you signed in (Supabase session cookies), keep a guest chat yours (a session cookie) and remember your choice here (bf_consent, six months). They need no consent.',
+      'Measurement is off until you accept: Vercel Analytics counts page views, and our own first-party funnel counts the steps people take (a random id in your browser, never your account or email). Choose Essential only and neither runs. Change your mind any time with the Cookies link in the footer. There are no advertising or cross-site tracking cookies.',
     ],
   },
   {
@@ -68,7 +66,7 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacy Policy"
-      updated="October 9, 2026"
+      updated="October 12, 2026"
       intro="BrandForge is built around conversations, so this policy explains plainly what those conversations contain, who can see them, and how to make them go away."
       sections={SECTIONS}
     />

@@ -1,12 +1,12 @@
+import type { Metadata } from 'next';
+import { pageMeta, pageGraph } from '@/lib/seo';
+import { JsonLd } from '@/components/json-ld';
 import Link from 'next/link';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { SiteFooter } from '@/components/site-footer';
 import { listPublicSpecialists } from '@/lib/project-db';
 
-export const metadata = {
-  title: 'The BrandForge team — BrandForge',
-  description: 'How BrandForge vets its team, how they get paid, and who is listed today.',
-};
+export const metadata: Metadata = pageMeta({ path: "/specialists", title: "The BrandForge team — BrandForge", description: "How BrandForge vets its team, how they get paid, and who is listed today." });
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +22,7 @@ export default async function SpecialistsPage() {
   const specialists = await listPublicSpecialists().catch(() => []);
   return (
     <div className="bf-page">
+      <JsonLd data={pageGraph({ path: "/specialists", name: "The BrandForge team — BrandForge", description: "How BrandForge vets its team, how they get paid, and who is listed today.", kind: "CollectionPage", crumbs: [{ name: "The team", path: "/specialists" }] })} />
       <LandingNav />
       <main className="mx-auto max-w-4xl px-6 py-16">
         <h1 className="font-serif text-4xl text-foreground sm:text-5xl">The BrandForge team you can trust with the finish</h1>

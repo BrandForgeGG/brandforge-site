@@ -1,12 +1,11 @@
+import type { Metadata } from 'next';
+import { pageMeta, pageGraph } from '@/lib/seo';
+import { JsonLd } from '@/components/json-ld';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { SiteFooter } from '@/components/site-footer';
 import { HeroDiagram } from '@/components/overview/diagrams';
 
-export const metadata = {
-  title: 'Features — BrandForge',
-  description:
-    "Make and publish every kind of message, trade products, services and requests, and get a person to finish the job. AI and people on the same page. Free to start.",
-};
+export const metadata: Metadata = pageMeta({ path: "/features", title: "Features — BrandForge", description: "Make and publish every kind of message, trade products, services and requests, and get a person to finish the job. AI and people on the same page. Free to start." });
 
 const FEATURES = [
   {
@@ -62,6 +61,7 @@ const FEATURES = [
 export default function FeaturesPage() {
   return (
     <div className="bf-page">
+      <JsonLd data={pageGraph({ path: "/features", name: "Features — BrandForge", description: "Make and publish every kind of message, trade products, services and requests, and get a person to finish the job. AI and people on the same page. Free to start.", kind: "WebPage", crumbs: [{ name: "Features", path: "/features" }] })} />
       <LandingNav />
       <main className="mx-auto max-w-5xl px-6 py-16">
         <h1 className="font-serif text-4xl tracking-[-0.02em] text-foreground sm:text-5xl" style={{ textWrap: 'balance' }}>
