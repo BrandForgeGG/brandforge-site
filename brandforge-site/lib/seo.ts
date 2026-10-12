@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { SOCIAL_LINKS } from '@/lib/social-links.js';
+import { pageCopy } from '@/lib/seo-pages';
 
 // One place for how BrandForge presents itself to search engines, link previews and AI assistants: the page metadata
 // (title, description, canonical address, Open Graph and Twitter cards) and the structured data (schema.org JSON-LD).
@@ -21,12 +22,17 @@ function shortTitle(title: string): string {
 }
 
 /** Full metadata for a page: canonical, Open Graph, Twitter card. `noindex` keeps private or thin pages out of results. */
-export function pageMeta(input: { path: string; title: string; description: string; noindex?: boolean; type?: 'website' | 'article'; image?: string }): Metadata {
-  const { path, title, description } = input;
+export function pageMeta(input: { path: string; title: string; description: string; keywords?: string[]; noindex?: boolean; type?: 'website' | 'article'; image?: string }): Metadata {
+  const { path, title } = input;
+  // A page's own description (ending in its call to action) and keywords come from lib/seo-pages.ts when it has an entry.
+  const copy = pageCopy(path);
+  const description = copy?.description ?? input.description;
+  const keywords = input.keywords ?? copy?.keywords;
   const image = input.image ?? ogImageUrl(shortTitle(title), description);
   return {
     title,
     description,
+    ...(keywords && keywords.length ? { keywords } : {}),
     alternates: { canonical: path },
     openGraph: { title, description, url: `${SITE_URL}${path}`, siteName: SITE_NAME, type: input.type ?? 'website', locale: 'en_US', images: [{ url: image, width: 1200, height: 630, alt: title }] },
     twitter: { card: 'summary_large_image', title, description, images: [image] },
@@ -85,11 +91,13 @@ export function breadcrumbLd(trail: Crumb[]): Json {
 /** A page of the site: what it is, where it sits, and (optionally) extra nodes such as an FAQ or a list of offers. */
 export function pageGraph(input: { path: string; name: string; description: string; kind?: 'WebPage' | 'AboutPage' | 'ContactPage' | 'CollectionPage' | 'FAQPage'; crumbs?: Crumb[]; extra?: Json[] }): Json {
   const url = `${SITE_URL}${input.path}`;
+  const copy = pageCopy(input.path);
+  const description = copy?.description ?? input.description;
   const trail = input.crumbs ?? (input.path === '/' ? [{ name: 'Home', path: '/' }] : [{ name: 'Home', path: '/' }, { name: input.name, path: input.path }]);
   return {
     '@context': 'https://schema.org',
     '@graph': [
-      { '@type': input.kind ?? 'WebPage', '@id': `${url}#page`, url, name: input.name, description: input.description, isPartOf: { '@id': `${SITE_URL}/#website` }, about: { '@id': `${SITE_URL}/#organization` }, inLanguage: 'en', breadcrumb: { '@id': `${url}#breadcrumb` } },
+      { '@type': input.kind ?? 'WebPage', '@id': `${url}#page`, url, name: input.name, description, ...(copy?.keywords ? { keywords: copy.keywords.join(', ') } : {}), ...(copy ? { potentialAction: { '@type': 'Action', name: copy.cta, target: url } } : {}), isPartOf: { '@id': `${SITE_URL}/#website` }, about: { '@id': `${SITE_URL}/#organization` }, inLanguage: 'en', breadcrumb: { '@id': `${url}#breadcrumb` } },
       { ...breadcrumbLd(trail), '@id': `${url}#breadcrumb` },
       ...(input.extra ?? []),
     ],

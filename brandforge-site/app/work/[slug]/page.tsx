@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const slug = (await params).slug;
   const project = find(slug);
   if (!project) return pageMeta({ path: '/work', title: 'Work — BrandForge', description: 'Real projects shipped by the BrandForge team.' });
-  return pageMeta({ path: `/work/${slug}`, title: `${project.name} — BrandForge`, description: `${project.description}. Shipped by the BrandForge team.` });
+  return pageMeta({ path: `/work/${slug}`, title: `${project.name} — BrandForge`, description: `${project.description}. Shipped by the BrandForge team. Open the project and judge the work.`, keywords: [project.name, `${project.category} project`, 'BrandForge case study', 'built by BrandForge'] });
 }
 
 export default async function CaseStudyPage({ params }: Props) {

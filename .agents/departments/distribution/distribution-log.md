@@ -1155,3 +1155,9 @@ we do not have.
 **Change:** publishing moved from Create to Distribute. Create keeps captions, copy and download. Distribute now has "Post to" (the channels you linked), "Schedule the whole week", per-post Schedule / Post now / Cancel, and a status dot on each calendar tile. Added Mastodon (free token, pictures, polls, threads) next to Telegram, Discord, Bluesky, Slack and Tumblr; Tumblr secrets are in. Sender runs from a 5-minute Supabase pg_cron job (daily Vercel cron as backup). Needs migration 0044 and the pg_cron SQL (local file) run once by the founder. Bing site verification tag added.
 
 **Distribution move:** landing and features copy now say what is true: "Link Telegram, Discord, Bluesky, Mastodon or Tumblr, then post a week at the times it plans." Launch line: "One sentence in, a week of posts out, and it posts them for you." Instagram, LinkedIn, TikTok and X stay marked as waiting for approval.
+
+### 2026-10-12 — Own keywords and call to action on every page
+
+**Change:** each public page now has its own meta description ending in its call to action, and its own keywords (`lib/seo-pages.ts`), used for the page tags, the share cards and the page's structured data. Project pages get keywords from their name and category.
+
+**Distribution move:** the call to action per page doubles as the line to use when posting that page's link: Trade "Post your first listing", Create "Make your first one", Distribute "Write your week", Pricing "Compare plans".
