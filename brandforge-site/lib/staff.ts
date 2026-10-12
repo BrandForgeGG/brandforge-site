@@ -9,6 +9,7 @@ import {
   hasAcceptedProposalFrom,
 } from '@/lib/project-db';
 import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
+import { notifyFounder } from '@/lib/stage-notify';
 
 // Staff access = profiles.role is operator or admin. Nothing else opens /api/staff/*:
 // owning the conversation or merely being a participant in it does not (H4) — the client
@@ -134,6 +135,8 @@ export async function ensureStaffParticipant(context: StaffContext): Promise<boo
     content: `${context.displayName} joined this conversation.`,
     content_type: 'system',
   });
+  // The person who started the chat hears about it, on every channel they have.
+  await notifyFounder(context.conversationId, 'team_joined', { name: context.displayName });
 
   return true;
 }

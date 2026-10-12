@@ -21,6 +21,7 @@ export declare function normalizeDay(raw: unknown, expected: { closing: string; 
 export declare function readVisual(raw: unknown, format: string): PostVisual | null;
 export declare function fallbackVisual(input: { angle?: string; topic?: string; format: string; cta?: string }): PostVisual;
 export declare const IMAGE_SIZE: Record<string, string>;
+export declare const NO_SITE_ASKS: string[];
 export declare const LOOKS: string[];
 export declare function fallbackPost(input: { angle: string; format: string; closing: string }): { topic: string; caption: string; fallback: true };
 export declare function assembleWeek(input: { week: WeekDay[]; angles: string[]; written: (({ topic: string; caption: string; visual?: PostVisual | null } | null)[] | null)[]; site?: string; brand?: string; seed?: string }): PlannedDay[];

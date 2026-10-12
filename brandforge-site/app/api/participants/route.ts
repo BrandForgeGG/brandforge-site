@@ -3,6 +3,7 @@ import {
   canAccessConversation,
   getParticipants,
   getAvatarUrls,
+  getProfileDisplayName,
   getProfileRoles,
   getConversationOwnerId,
   isStaffAccount,
@@ -44,10 +45,14 @@ export async function GET(request: NextRequest) {
 
     const ownerId = await getConversationOwnerId(conversationId);
     const ids = participants.map((p) => String(p.user_id ?? ''));
-    const [faces, roles] = await Promise.all([getAvatarUrls(ids), getProfileRoles(ownerId ? [...ids, ownerId] : ids)]);
+    const [faces, roles] = await Promise.all([getAvatarUrls(ownerId ? [...ids, ownerId] : ids), getProfileRoles(ownerId ? [...ids, ownerId] : ids)]);
+    const ownerName = ownerId ? await getProfileDisplayName(ownerId) : 'Guest';
     return NextResponse.json({
       // The person who started the chat may not be a participant row; their account role is still shown on their messages.
-      owner: ownerId ? { id: ownerId, account_role: roles.get(ownerId) ?? 'user' } : null,
+      // A guest-started chat has no account to look up: the owner is shown as Guest.
+      owner: ownerId
+        ? { id: ownerId, name: ownerName, avatar_url: faces.get(ownerId) ?? null, account_role: roles.get(ownerId) ?? 'user' }
+        : { id: 'guest-owner', name: 'Guest', avatar_url: null, account_role: 'user' },
       participants: participants.map((p) => ({ ...p, avatar_url: faces.get(String(p.user_id ?? '')) ?? null, account_role: roles.get(String(p.user_id ?? '')) ?? 'user' })),
     });
   } catch (error) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { addMessage, addParticipant, decideOperatorApplication, isAdminAccount, recordFunnelEvent } from '@/lib/project-db';
+import { notifyFounder } from '@/lib/stage-notify';
 import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
 import { sendEmail } from '@/lib/email';
 import { resolveSiteUrl } from '@/lib/auth-utils';
@@ -146,6 +147,7 @@ export async function POST(
       }
 
       const adminName = getActorName(user);
+      await notifyFounder(conversationId, 'team_joined', { name: displayName });
       await addMessage({
         conversation_id: conversationId,
         sender_type: 'ai',

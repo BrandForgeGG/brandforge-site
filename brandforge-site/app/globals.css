@@ -2082,6 +2082,17 @@ main[data-empty='true'] > .bf-chat-footer { position: absolute; inset: auto 0 0 
 }
 @keyframes bf-fade { from { opacity: 0; } to { opacity: 1; } }
 
+/* ---- Smooth loading: content eases in, placeholders shimmer instead of blinking ---- */
+@keyframes bf-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: no-preference) {
+  .bf-fade { animation: bf-fade 0.35s ease-out both; }
+  .bf-skeleton {
+    background-image: linear-gradient(90deg, transparent 20%, color-mix(in srgb, var(--foreground) 7%, transparent) 50%, transparent 80%);
+    background-size: 200% 100%;
+    animation: bf-shimmer 1.5s ease-in-out infinite;
+  }
+}
+
 /* ---- Touch: every control is at least 40px, mouse layouts stay compact ---- */
 @media (pointer: coarse) {
   .bf-composer-tool,

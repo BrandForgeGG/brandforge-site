@@ -392,3 +392,12 @@ test('resolveChannelId memoizes per webhook', async () => {
   assert.equal(await resolveChannelId('https://discord/api/webhooks/m/n', stub), 'chan9');
   assert.equal(fetches, 1);
 });
+
+test('chat_opened posts to the briefs channel with the first message and a hello prompt', () => {
+  const { buildOpsEmbed } = require('./ops-events');
+  const embed = buildOpsEmbed('chat_opened', { who: 'Sara', message: 'I need a booking site', conversationId: 'c1' });
+  assert.match(embed.title, /New chat: Sara/);
+  assert.match(embed.description, /I need a booking site/);
+  assert.match(embed.description, /say hello/);
+  assert.match(embed.footer.text, /ops-briefs/);
+});

@@ -28,6 +28,9 @@ const FORMAT_CYCLE = ['quote', 'tip', 'carousel', 'ad', 'question', 'announcemen
 const IMAGE_SIZE = { ad: 'portrait', quote: 'square', tip: 'square', announcement: 'square', question: 'square' };
 const LOOKS = ['forge', 'violet', 'paper', 'emerald', 'sunrise', 'crystal', 'rose', 'mono'];
 
+// With no site of the person's own there is nowhere to send people, so the asks leave out "try the site" and "hire us".
+const NO_SITE_ASKS = ['follow', 'save', 'like', 'comment', 'share', 'dm'];
+
 const LIMITS = { source: 6000, angle: 110, topic: 150, caption: 480, summary: 420, voice: 160 };
 
 function clean(value, max) {
@@ -294,4 +297,4 @@ function anglesFor({ week, dayIndex, angles }) {
   return week[dayIndex].posts.map((_, i) => angles[(dayIndex * count + i) % angles.length]);
 }
 
-module.exports = { IMAGE_SIZE, LOOKS, fallbackVisual, readVisual, DAY_NAMES, DAY_FOCUS, SLOT_SETS, FORMAT_CYCLE, LIMITS, perDayOf, startOf, addDays, layoutWeek, buildAnglesPrompt, normalizeAngles, buildDayPrompt, normalizeDay, fallbackPost, assembleWeek, closingsFor, anglesFor, withClosing, extractJson };
+module.exports = { NO_SITE_ASKS, IMAGE_SIZE, LOOKS, fallbackVisual, readVisual, DAY_NAMES, DAY_FOCUS, SLOT_SETS, FORMAT_CYCLE, LIMITS, perDayOf, startOf, addDays, layoutWeek, buildAnglesPrompt, normalizeAngles, buildDayPrompt, normalizeDay, fallbackPost, assembleWeek, closingsFor, anglesFor, withClosing, extractJson };

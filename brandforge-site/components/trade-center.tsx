@@ -314,11 +314,11 @@ export function TradeCenter() {
       {listings === null ? (
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="bf-card h-32 animate-pulse" />
+            <div key={i} className="bf-card bf-skeleton h-32 animate-pulse motion-reduce:animate-none" />
           ))}
         </div>
       ) : shown.length > 0 ? (
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <div className="bf-fade mt-6 grid gap-3 sm:grid-cols-2">
           {shown.map((l) => (
             <Card key={l.id} listing={l} onContact={setContacting} onEdit={setEditing} onAssistant={openAssistant} onClose={(item) => void removeListing(item, false)} onReopen={(item) => void reopen(item)} onDelete={(item) => void removeListing(item, true)} />
           ))}

@@ -228,6 +228,30 @@ ${chatUrl || ''}`.trim(),
       };
     }
 
+    // A person from the BrandForge team joined this person's chat.
+    case 'team_joined': {
+      const who = line(details.name) || 'Someone';
+      const paragraphs = [`${who} from the BrandForge team has joined your chat${title ? ` about "${title}"` : ''}.`, 'A real person is now reading along and will help from here. Reply in the chat whenever you are ready.'];
+      return {
+        subject: `${who} from the BrandForge team joined your chat`,
+        text: `${paragraphs.join('\n\n')}\n\n${chatUrl || ''}`.trim(),
+        html: card('Team', `${who} joined your chat`, paragraphs, open, chatUrl),
+      };
+    }
+
+    // For the team: someone opened a chat and wrote their first message.
+    case 'chat_opened': {
+      const who = line(details.name) || 'Someone';
+      const message = line(details.message, 300);
+      if (!message) return null;
+      const paragraphs = [`${who} just opened a chat on BrandForge:`, `"${message}"`, 'Open it, read it, and say hello while they are here.'];
+      return {
+        subject: `New chat from ${who}`,
+        text: `${paragraphs.join('\n\n')}\n\n${chatUrl || ''}`.trim(),
+        html: card('New chat', `${who} opened a chat`, paragraphs, open, chatUrl),
+      };
+    }
+
     // Someone pressed Hire (or Offer to help) on your listing and wrote to you.
     case 'trade_contact': {
       const who = line(details.name) || 'Someone';

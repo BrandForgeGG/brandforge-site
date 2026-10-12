@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse, after } from "next/server";
-import { notifyChatMembers } from "@/lib/stage-notify";
+import { notifyChatMembers, notifyTeamChatOpened } from "@/lib/stage-notify";
 import { buildRoomBlock, labelForRoom } from "@/lib/chat-room.js";
 import { answerModel, getAIService, type Message as AIMessage } from "@/lib/ai-service";
 import { budgetLimits, decideBudget } from "@/lib/ai-budget.js";
@@ -19,8 +19,10 @@ import {
   runAsGuestSession,
   updateConversationTitle,
   updateProjectContext,
+  countMessages,
   getAiAccess,
   getChatPeople,
+  isStaffAccount,
   getConversationLink,
 } from "@/lib/project-db";
 import { accessState, canGenerate } from "@/lib/ai-access.js";
@@ -354,6 +356,18 @@ export async function POST(request: NextRequest) {
         { error: "Your message could not be stored" },
         { status: 500 },
       );
+    }
+
+    // The first message of a chat that was opened empty: the team is called to check it (once per chat).
+    {
+      const senderName = user ? getActorName(user) : "A visitor";
+      const senderId = user?.id ?? null;
+      after(async () => {
+        if (user && (await isStaffAccount(user.id).catch(() => false))) return;
+        if ((await countMessages(conversationId).catch(() => 0)) === 1) {
+          await notifyTeamChatOpened({ conversationId, who: senderName, message, openerId: senderId });
+        }
+      });
     }
 
     // Other members of this chat (a Trade chat, invited teammates) get a ping, at most once every ten minutes.

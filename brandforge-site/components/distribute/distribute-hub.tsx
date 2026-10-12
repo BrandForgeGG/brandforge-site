@@ -8,8 +8,9 @@ import { useLogin } from '@/components/login-dialog';
 import { zipStore } from '@/lib/zip-store.js';
 import { PostVisual } from '@/components/distribute/post-visual';
 import { postFiles } from '@/components/distribute/render-post';
-import type { PlannedDay, PlannedPost } from '@/lib/distribute-plan.js';
+import { assembleWeek, layoutWeek, NO_SITE_ASKS, type PlannedDay, type PlannedPost } from '@/lib/distribute-plan.js';
 
+type Brief = { start: string; perDay: number; summary: string; voice: string; angles: string[]; site: string; brand: string; seed: string; source: 'text' | 'link' | 'file' };
 type Plan = { start: string; perDay: number; summary: string; voice: string; site: string; source: 'text' | 'link' | 'file'; days: PlannedDay[]; plainDays: number };
 type Saved = { v: 1; text: string; perDay: number; start: string; fileName: string; fileText: string; brand?: string; plan: Plan | null };
 
@@ -95,6 +96,10 @@ export function DistributeHub() {
   // The post open in the detail panel under the calendar, and whether the brief is being changed.
   const [selected, setSelected] = useState<{ d: number; p: number }>({ d: 0, p: 0 });
   const [editing, setEditing] = useState(false);
+  // While the days are being written the calendar is already on screen: days not yet in are shown as placeholders.
+  const [writing, setWriting] = useState(false);
+  const [loadingDays, setLoadingDays] = useState<number[]>([]);
+  const stop = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const saved = read();
@@ -113,9 +118,9 @@ export function DistributeHub() {
   }, []);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || writing) return;
     write({ v: 1, text, perDay, start, fileName, fileText: fileText.slice(0, 6000), brand, plan });
-  }, [ready, text, perDay, start, fileName, fileText, brand, plan]);
+  }, [ready, writing, text, perDay, start, fileName, fileText, brand, plan]);
 
   useEffect(() => {
     if (!busy) return;
@@ -134,8 +139,35 @@ export function DistributeHub() {
     setFileText(await file.text());
   }
 
+  // A fetch that gives up after `ms` (or when the person presses Stop) instead of leaving the page waiting.
+  async function post<T>(url: string, body: unknown, ms: number, signal: AbortSignal): Promise<{ ok: boolean; status: number; data: T }> {
+    const timer = new AbortController();
+    const clock_ = window.setTimeout(() => timer.abort(), ms);
+    const onStop = () => timer.abort();
+    signal.addEventListener('abort', onStop);
+    try {
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: timer.signal });
+      const data = (await res.json().catch(() => ({}))) as T;
+      return { ok: res.ok, status: res.status, data };
+    } finally {
+      window.clearTimeout(clock_);
+      signal.removeEventListener('abort', onStop);
+    }
+  }
+
+  // The week with nothing written yet, and a plain day built from the brief alone (used when a day cannot be written).
+  function skeleton(brief: Brief): PlannedDay[] {
+    const week = layoutWeek({ startDate: brief.start, perDay: brief.perDay, seed: brief.seed, allow: brief.site ? undefined : NO_SITE_ASKS });
+    return week.map((day) => ({ date: day.date, name: day.name, focus: day.focus, posts: day.posts.map((post, i) => ({ id: `${day.date}-${i}`, time: post.time, format: post.format, cta: post.cta, angle: '', topic: '', caption: '' })) }));
+  }
+
+  function plainDay(brief: Brief, d: number): PlannedDay {
+    const week = layoutWeek({ startDate: brief.start, perDay: brief.perDay, seed: brief.seed, allow: brief.site ? undefined : NO_SITE_ASKS });
+    return assembleWeek({ week, angles: brief.angles, written: week.map(() => null), site: brief.site, brand: brief.brand, seed: brief.seed })[d];
+  }
+
   async function write_(startDate: string) {
-    if (busy) return;
+    if (busy || writing) return;
     if (text.trim().length < 10 && !fileText) {
       setError('Say what you want to promote, paste a link, or attach a file.');
       return;
@@ -144,27 +176,85 @@ export function DistributeHub() {
     setNote(null);
     setPhase(0);
     setBusy(true);
+    const controller = new AbortController();
+    stop.current = controller;
     trackEvent('distribute_started', { source: fileText ? 'file' : /https?:\/\/|\.[a-z]{2,}/i.test(text) ? 'link' : 'text' });
+
+    // Step 1: read what they gave and decide what to say all week.
+    let brief: Brief | null = null;
     try {
-      const res = await fetch('/api/distribute/plan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, fileText, fileName, perDay, startDate, brand }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.plan) {
-        setError(data.error || 'That did not work. Try again.');
+      // A busy writer (502) is retried once, quietly, before the person sees an error.
+      for (let attempt = 0; attempt < 2 && !brief; attempt++) {
+        const res = await post<{ brief?: Brief; error?: string }>('/api/distribute/brief', { text, fileText, fileName, perDay, startDate, brand }, 50_000, controller.signal);
+        if (res.ok && res.data.brief) {
+          brief = res.data.brief;
+        } else if (res.status === 502 && attempt === 0) {
+          await new Promise((resolve) => window.setTimeout(resolve, 4000));
+          if (controller.signal.aborted) throw new Error('stopped');
+        } else {
+          setError(res.data.error || 'That did not work. Try again.');
+          setBusy(false);
+          return;
+        }
+      }
+      if (!brief) {
+        setError('The writer is busy. Try again in a moment.');
+        setBusy(false);
         return;
       }
-      setPlan(data.plan as Plan);
-      setSelected({ d: 0, p: 0 });
-      setEditing(false);
-      setStart(startDate);
     } catch {
-      setError('Could not reach the writer. Check your connection and try again.');
-    } finally {
+      setError(controller.signal.aborted ? 'Stopped.' : 'The writer took too long. Check your connection and try again.');
       setBusy(false);
+      return;
     }
+
+    // The calendar appears now, and the days fill in as they are written.
+    const days = skeleton(brief);
+    setPlan({ start: brief.start, perDay: brief.perDay, summary: brief.summary, voice: brief.voice, site: brief.site, source: brief.source, days, plainDays: 0 });
+    setStart(startDate);
+    setSelected({ d: 0, p: 0 });
+    setEditing(false);
+    setLoadingDays(days.map((_, d) => d));
+    setWriting(true);
+    setBusy(false);
+
+    // Step 2: one request per day, a few at a time. A failed or unfinished day gets one more try, then a plain day.
+    const queue = days.map((_, d) => d);
+    const done = new Set<number>();
+    const settle = (d: number, day: PlannedDay) => {
+      done.add(d);
+      setPlan((current) => (current ? { ...current, days: current.days.map((entry, i) => (i === d ? day : entry)) } : current));
+      setLoadingDays((current) => current.filter((i) => i !== d));
+    };
+    const worker = async () => {
+      for (let d = queue.shift(); d !== undefined; d = queue.shift()) {
+        if (controller.signal.aborted) return;
+        let made: PlannedDay | null = null;
+        for (let attempt = 0; attempt < 2 && !made; attempt++) {
+          try {
+            const res = await post<{ day?: PlannedDay }>('/api/distribute/day', { brief, dayIndex: d }, 48_000, controller.signal);
+            if (res.ok && res.data.day) {
+              const unfinished = res.data.day.posts.every((entry) => entry.fallback);
+              if (!unfinished || attempt === 1) made = res.data.day;
+            }
+          } catch {
+            if (controller.signal.aborted) return;
+          }
+        }
+        settle(d, made ?? plainDay(brief as Brief, d));
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+
+    // Stopped early (or a day never came back): those days become plain days, so the week is never left with holes.
+    for (let d = 0; d < days.length; d++) if (!done.has(d)) settle(d, plainDay(brief as Brief, d));
+    setPlan((current) => (current ? { ...current, plainDays: current.days.filter((day) => day.posts.some((entry) => entry.fallback)).length } : current));
+    setWriting(false);
+    stop.current = null;
+  }
+
+  function stopWriting() {
+    stop.current?.abort();
   }
 
   function editCaption(dayIndex: number, postIndex: number, caption: string) {
@@ -259,7 +349,13 @@ export function DistributeHub() {
     setError(null);
   }
 
-  if (!ready) return null;
+  if (!ready) {
+    return (
+      <div className="max-w-5xl" aria-hidden="true">
+        <div className="bf-skeleton h-44 rounded-2xl bg-overlay" />
+      </div>
+    );
+  }
 
   if (busy) {
     return (
@@ -276,7 +372,8 @@ export function DistributeHub() {
           ))}
         </div>
         <p className="mt-6 font-serif text-xl text-foreground">{PHASES[phase]}…</p>
-        <p className="mt-1 text-sm text-muted">A week takes about half a minute.</p>
+        <p className="mt-1 text-sm text-muted">Reading what you gave me takes a few seconds. Then the week fills in day by day.</p>
+        <button type="button" onClick={stopWriting} className="mt-4 text-xs text-muted underline-offset-2 hover:text-foreground hover:underline">Stop</button>
         <ol className="mt-4 flex justify-center gap-1.5" aria-hidden="true">
           {PHASES.map((label, i) => (
             <li key={label} className={`h-1 w-10 rounded-full transition-colors duration-500 ${i <= phase ? 'bg-ember' : 'bg-line'}`} />
@@ -343,12 +440,19 @@ export function DistributeHub() {
       {plan && !editing ? (
         <>
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => void downloadAll()} disabled={Boolean(preparing)} className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">{preparing && preparing.startsWith('Preparing') ? preparing : signedIn === false ? 'Sign in to download all' : 'Download all pictures'}</button>
+            <button type="button" onClick={() => void downloadAll()} disabled={Boolean(preparing) || writing} className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">{preparing && preparing.startsWith('Preparing') ? preparing : signedIn === false ? 'Sign in to download all' : 'Download all pictures'}</button>
             <button type="button" onClick={() => void copy(weekText(), 'The whole week is copied.')} className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember">Copy the captions</button>
             <button type="button" onClick={downloadCsv} className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember">Captions CSV</button>
-            <button type="button" onClick={() => void write_(shift(plan.start, 7))} className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember">Write next week</button>
+            <button type="button" onClick={() => void write_(shift(plan.start, 7))} disabled={writing} className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember disabled:opacity-50">Write next week</button>
             <button type="button" onClick={startOver} className="px-2 py-2 text-sm text-muted transition hover:text-foreground">Start over</button>
           </div>
+          {writing ? (
+            <div role="status" className="mt-3 flex items-center gap-3 text-xs text-muted">
+              <span className="h-1 w-32 overflow-hidden rounded-full bg-line" aria-hidden="true"><span className="block h-full rounded-full bg-ember transition-all duration-500" style={{ width: `${Math.round(((7 - loadingDays.length) / 7) * 100)}%` }} /></span>
+              Writing day {Math.min(7, 8 - loadingDays.length)} of 7. You can already open the days that are done.
+              <button type="button" onClick={stopWriting} className="underline-offset-2 hover:text-foreground hover:underline">Stop</button>
+            </div>
+          ) : null}
           {note ? <p role="status" className="mt-2 text-xs text-muted">{note}</p> : null}
           {error ? <p role="alert" className="mt-2 text-sm text-danger">{error}</p> : null}
           {plan.plainDays > 0 ? <p className="mt-2 text-xs text-muted">{plan.plainDays === 1 ? 'One day uses' : `${plan.plainDays} days use`} simpler captions because the writer was busy. Write the week again to improve {plan.plainDays === 1 ? 'it' : 'them'}.</p> : null}
@@ -374,7 +478,7 @@ export function DistributeHub() {
                             aria-label={`${prettyDate(day.date)}, ${clock(post.time)}, ${FORMAT_LABEL[post.format] ?? post.format}`}
                             className={`block w-full rounded-lg border p-1 text-left transition ${on ? 'border-ember ring-1 ring-ember/50' : 'border-line hover:border-muted'}`}
                           >
-                            <PostVisual post={post} brand={pickedBrand} size="tile" />
+                            {loadingDays.includes(d) ? <div className="bf-skeleton aspect-square w-full animate-pulse rounded-lg bg-overlay motion-reduce:animate-none" aria-hidden="true" /> : <div className="bf-fade"><PostVisual post={post} brand={pickedBrand} size="tile" /></div>}
                             <span className="mt-1 flex items-center justify-between gap-1 px-0.5 text-[10px]">
                               <span className="shrink-0 whitespace-nowrap tabular-nums text-foreground">{clock(post.time)}</span>
                               <span className="truncate uppercase tracking-wide text-muted">{FORMAT_LABEL[post.format] ?? post.format}</span>
@@ -389,7 +493,7 @@ export function DistributeHub() {
             </div>
           </section>
 
-          {pickedDay && pickedPost ? (
+          {pickedDay && pickedPost && !loadingDays.includes(Math.min(selected.d, (plan?.days.length ?? 1) - 1)) ? (
             <section aria-label="Selected post" className="mt-4 rounded-2xl border border-line bg-panel p-4 sm:p-5">
               <div className="flex flex-col gap-4 sm:flex-row">
                 <div className="w-full sm:w-64 sm:shrink-0">

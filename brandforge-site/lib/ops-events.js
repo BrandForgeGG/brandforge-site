@@ -50,6 +50,8 @@ const KIND_BY_EVENT = {
   ai_budget: 'briefs',
   // Someone asked for a monthly team plan: the first thing the team should answer.
   plan_requested: 'briefs',
+  // A person opened a chat and wrote their first message: the team should say hello while they are here.
+  chat_opened: 'briefs',
 };
 
 // clip/money live in lib/format.js so every message builder renders identically.
@@ -91,6 +93,14 @@ function buildOpsEmbedBody(event, details = {}) {
   const timeline = weeks(details.weeksMin ?? details.weeks, details.weeksMax ?? details.weeks);
 
   switch (event) {
+    case 'chat_opened':
+      return {
+        title: `New chat: ${clip(details.who, 60) || 'A visitor'}`,
+        description: clip(details.message, 300) ? `"${clip(details.message, 300)}"\n\nSomeone just opened a chat. Open it and say hello while they are here.` : 'Someone just opened a chat. Open it and say hello while they are here.',
+        color: BRAND,
+        footer: footer('briefs'),
+      };
+
     case 'plan_requested':
       return {
         title: `Plan requested: ${title}`,

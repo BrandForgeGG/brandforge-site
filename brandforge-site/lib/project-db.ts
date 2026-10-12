@@ -893,6 +893,22 @@ export async function getStaffTelegramTargets(excludeUserId: string | null): Pro
     .filter((chatId) => chatId !== '');
 }
 
+// Every staff member (operator or admin) with a way to be reached, minus one person (the one who caused the event).
+export async function getStaffNotifyTargets(excludeUserId: string | null): Promise<{ email: string | null; telegramChatId: string | null }[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  let query = admin.from('profiles').select('id, email, telegram_chat_id').in('role', ['operator', 'admin']);
+  if (excludeUserId) query = query.neq('id', excludeUserId);
+  const { data, error } = await query;
+  if (error) {
+    console.error('Error fetching staff notify targets:', error.message);
+    return [];
+  }
+  return ((data ?? []) as { email: string | null; telegram_chat_id: string | number | null }[])
+    .map((row) => ({ email: row.email ? String(row.email) : null, telegramChatId: row.telegram_chat_id == null || row.telegram_chat_id === '' ? null : String(row.telegram_chat_id) }))
+    .filter((row) => row.email || row.telegramChatId);
+}
+
 // Journey spec: a finished brief reaches the team on both channels — the Discord
 // discovery embed (below) and a personal Telegram DM to every linked operator.
 // Best-effort like its Discord sibling: never throws, never fails the transition.

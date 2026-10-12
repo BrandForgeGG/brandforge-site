@@ -366,6 +366,8 @@ export async function PATCH(request: NextRequest) {
         // channel (names are staff-only) while the public feed gets one
         // anonymized line.
         const invited = await inviteProposalAuthor(existing);
+        // The founder is told that the specialist who won the work has joined their chat.
+        if (invited && !invited.already) await notifyFounder(proposal.conversation_id, 'team_joined', { name: invited.displayName, title: existing.title });
         await postOpsEvent('match_made', {
           title: existing.title,
           conversationId: proposal.conversation_id,

@@ -27,6 +27,7 @@ import { ToolsMenu } from "@/components/chat-tools-menu";
 import { CarouselChatCard, SavedCardOrFallback, cardKey, clearSavedCard, seedCarouselCard, type CarouselSend } from "@/components/chat/carousel-chat-card";
 import { ImageChatCard, SavedImageCard, clearSavedImage, imageKey, seedImageCard, type ImageSend } from "@/components/chat/image-chat-card";
 import type { ImageKind } from "@/lib/image-kinds.js";
+import { RoleBadge } from "@/components/role-badge";
 import { detectMakeIntent } from "@/lib/make-intent";
 import { getRetainer } from "@/lib/plans.js";
 import { PeerContractForm } from "@/components/peer-contract-card";
@@ -234,7 +235,7 @@ export function ChatWorkspace() {
   const [payments, setPayments] = useState<PaymentSummary[]>([]);
   // Roster for the task assignee picker: people already in this chat (staff + founder).
   // The chat starter's account role (they may not be a participant row), so their messages carry the right badge.
-  const [ownerAccount, setOwnerAccount] = useState<{ id: string; role: string } | null>(null);
+  const [ownerAccount, setOwnerAccount] = useState<{ id: string; role: string; name: string; avatarUrl: string | null } | null>(null);
   const [taskParticipants, setTaskParticipants] = useState<TaskParticipant[]>(
     [],
   );
@@ -789,7 +790,7 @@ export function ChatWorkspace() {
     if (participantsResult.ok) {
       const data = await participantsResult.json().catch(() => ({}));
       setTaskParticipants(shapeTaskRoster(data.participants));
-      setOwnerAccount(data.owner && typeof data.owner.id === "string" ? { id: data.owner.id, role: String(data.owner.account_role ?? "user") } : null);
+      setOwnerAccount(data.owner && typeof data.owner.id === "string" ? { id: data.owner.id, role: String(data.owner.account_role ?? "user"), name: String(data.owner.name ?? "").trim() || "Member", avatarUrl: typeof data.owner.avatar_url === "string" ? data.owner.avatar_url : null } : null);
     } else {
       setTaskParticipants([]);
     }
@@ -2406,7 +2407,12 @@ export function ChatWorkspace() {
   // The people in this chat. Whoever started it is the project owner, signed in or guest, even when no
   // participant row was ever written for them.
   const people = useMemo<TaskParticipant[]>(() => {
-    const roster = taskParticipants.map((person) => (person.role === 'founder' ? { ...person, role: 'owner' } : person));
+    let roster = taskParticipants.map((person) => (person.role === 'founder' ? { ...person, role: 'owner' } : person));
+    // The person who started the chat is on the list for everyone who opens it, not only for themselves.
+    if (conversationId && ownerAccount) {
+      if (roster.some((person) => person.userId === ownerAccount.id)) roster = roster.map((person) => (person.userId === ownerAccount.id ? { ...person, role: 'owner', accountRole: ownerAccount.role } : person));
+      else if (!roster.some((person) => person.role === 'owner')) roster = [{ userId: ownerAccount.id, displayName: ownerAccount.name, role: 'owner', avatarUrl: ownerAccount.avatarUrl, accountRole: ownerAccount.role }, ...roster];
+    }
     if (!conversationId || roster.some((person) => person.role === 'owner')) return roster;
     if (isChatOwner) {
       const selfId = railMeta.userId ?? 'guest-owner';
@@ -2414,7 +2420,7 @@ export function ChatWorkspace() {
       return [{ userId: selfId, displayName: railMeta.name || 'You', role: 'owner', avatarUrl: null }, ...roster];
     }
     return roster;
-  }, [taskParticipants, conversationId, isChatOwner, railMeta.userId, railMeta.name]);
+  }, [taskParticipants, conversationId, isChatOwner, railMeta.userId, railMeta.name, ownerAccount]);
 
   // Real roster -> role labels for message headers (lowercased-name lookup).
   const participantRoles = useMemo(() => {
@@ -2627,8 +2633,9 @@ return (
                           <span className="block truncate text-sm text-foreground">
                             {person.displayName}
                           </span>
-                          <span className="block text-[10px] uppercase tracking-[0.14em] text-muted">
-                            {formatRole(person.role)}
+                          <span className="mt-0.5 flex items-center gap-1.5">
+                            <RoleBadge role={person.accountRole} />
+                            <span className="text-[10px] uppercase tracking-[0.14em] text-muted">{formatRole(person.role)}</span>
                           </span>
                         </span>
                       </li>

@@ -200,3 +200,17 @@ test('chat_message names the sender and carries the words', () => {
   assert.match(built.text, /Omar: Sent the files\./);
   assert.equal(buildStageEmail('chat_message', { name: 'Omar', message: '' }), null);
 });
+
+test('team_joined tells the person a BrandForge team member is now in their chat', () => {
+  const built = buildStageEmail('team_joined', { name: 'Omar', title: 'Booking site', chatUrl: 'https://brandforge.gg/chat?conversationId=abc' });
+  assert.match(built.subject, /Omar from the BrandForge team joined your chat/);
+  assert.match(built.text, /real person is now reading along/);
+  assert.match(built.html, /Open the chat/);
+});
+
+test('chat_opened calls the team to a new chat with the words that were written', () => {
+  const built = buildStageEmail('chat_opened', { name: 'A visitor', message: 'I need a booking site for my salon', chatUrl: 'https://brandforge.gg/chat?conversationId=abc' });
+  assert.match(built.subject, /New chat from A visitor/);
+  assert.match(built.text, /I need a booking site for my salon/);
+  assert.equal(buildStageEmail('chat_opened', { name: 'x', message: '' }), null);
+});

@@ -1,7 +1,46 @@
 import { notifyUser } from './notify';
 import { sendStageEmail } from './email';
-import { getFounderNotifyTargets, getMemberChatRecipients, getUserNotifyTargets } from './project-db';
+import { getFounderNotifyTargets, getMemberChatRecipients, getStaffNotifyTargets, getUserNotifyTargets } from './project-db';
+import { postOpsEvent } from './ops-events';
 import { resolveSiteUrl } from './auth-utils';
+
+// A person opened a chat and wrote their first message: the whole team is called to check it, on every channel they have
+// (Discord ops channel, each member's Telegram and email). Once per chat. Emails are capped per hour so a burst of new
+// chats can never flood inboxes; Discord and Telegram always go out. Best-effort, never throws.
+const announcedChats = new Set<string>();
+const mailLog: number[] = [];
+const MAIL_CAP_PER_HOUR = 30;
+
+export async function notifyTeamChatOpened(input: { conversationId: string; who: string; message: string; openerId?: string | null }): Promise<number> {
+  const { conversationId } = input;
+  if (announcedChats.has(conversationId)) return 0;
+  announcedChats.add(conversationId);
+  if (announcedChats.size > 1000) announcedChats.clear();
+  try {
+    const chatUrl = `${resolveSiteUrl()}/chat?conversationId=${encodeURIComponent(conversationId)}`;
+    const details = { name: input.who, message: input.message, chatUrl, conversationId };
+    await postOpsEvent('chat_opened', { who: input.who, message: input.message, conversationId, title: input.who }).catch(() => undefined);
+    const targets = await getStaffNotifyTargets(input.openerId ?? null);
+    const now = Date.now();
+    while (mailLog.length && now - mailLog[0] > 3_600_000) mailLog.shift();
+    let reached = 0;
+    for (const target of targets) {
+      if (target.telegramChatId) {
+        await notifyUser(target.telegramChatId, 'chat_opened', details);
+        reached += 1;
+      }
+      if (target.email && mailLog.length < MAIL_CAP_PER_HOUR) {
+        mailLog.push(now);
+        const email = await sendStageEmail('chat_opened', target.email, details);
+        if (!email.ok && !email.skipped) console.warn('notifyTeamChatOpened: email failed:', email.error);
+      }
+    }
+    return reached;
+  } catch (cause) {
+    console.error('notifyTeamChatOpened failed:', cause instanceof Error ? cause.message : cause);
+    return 0;
+  }
+}
 
 // A person wrote in a chat that other members are part of: tell each of them on the channels they have. A first
 // contact (Hire on a listing) always goes out; ordinary follow-up messages go out at most once every ten minutes per

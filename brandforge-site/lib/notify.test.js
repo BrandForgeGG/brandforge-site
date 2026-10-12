@@ -317,3 +317,10 @@ test('buildPersonalMessage pings a listing owner and chat members with the words
   assert.match(follow, /Omar wrote: Sent the files\./);
   assert.equal(buildPersonalMessage('chat_message', { name: 'Omar', message: '' }), null);
 });
+
+test('buildPersonalMessage tells a person the team joined and calls the team to a new chat', () => {
+  assert.match(buildPersonalMessage('team_joined', { name: 'Omar' }), /Omar from our team joined your chat/);
+  const opened = buildPersonalMessage('chat_opened', { name: 'Sara', message: 'I need a booking site' });
+  assert.match(opened, /Sara just opened a chat: "I need a booking site"/);
+  assert.equal(buildPersonalMessage('chat_opened', { name: 'Sara', message: '' }), null);
+});

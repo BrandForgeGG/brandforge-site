@@ -107,7 +107,15 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
     trackEvent('create_interest', { status: `format-${creation.n}` });
   }
 
-  if (!ready) return null;
+  if (!ready) {
+    return (
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3" aria-hidden="true">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="bf-skeleton h-44 rounded-2xl border border-line bg-panel" />
+        ))}
+      </div>
+    );
+  }
   const coming = CREATIONS.filter((c: Format) => c.status !== 'live');
   const current = CARDS.find((card) => card.id === open);
 
