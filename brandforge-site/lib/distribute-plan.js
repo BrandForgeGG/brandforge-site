@@ -1,0 +1,248 @@
+'use strict';
+
+// Distribute: from a sentence, a link or a file to a week of posts. This module is the pure part: it lays the week
+// out (which days, which times, which format, which kind of ask), builds the prompts for the writer, and reads the
+// replies defensively. The model only proposes angles, topics and captions; the schedule, the formats and the asks are
+// decided here, so a week is always full, varied and never two of the same in a row.
+const { ctaPlan, ctaLine } = require('./caption-cta');
+
+const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const DAY_FOCUS = ['Start the week', 'Teach something', 'Show how it works', 'Answer a question', 'Make it personal', 'Keep it light', 'Look ahead'];
+
+// Posting times by how many a day. Every set keeps posts at least 2.5 hours apart (morning scroll, mid-morning,
+// after lunch, evening, prime time).
+const SLOT_SETS = {
+  1: ['11:00'],
+  2: ['09:00', '18:30'],
+  3: ['07:30', '14:00', '21:30'],
+  4: ['07:30', '11:00', '18:30', '21:30'],
+  5: ['07:30', '11:00', '14:00', '18:30', '21:30'],
+};
+
+// The six single-post formats, cycled so neighbouring posts never share one.
+const FORMAT_CYCLE = ['quote', 'tip', 'carousel', 'ad', 'question', 'announcement'];
+
+const LIMITS = { source: 6000, angle: 110, topic: 150, caption: 480, summary: 420, voice: 160 };
+
+function clean(value, max) {
+  return String(value == null ? '' : value).replace(/\r/g, '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]+/g, ' ').replace(/[ \t]+/g, ' ').trim().slice(0, max);
+}
+
+function isoDate(value) {
+  return new Date(value).toISOString().slice(0, 10);
+}
+
+function addDays(iso, n) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return isoDate(d);
+}
+
+function dayName(iso) {
+  return DAY_NAMES[(new Date(`${iso}T00:00:00Z`).getUTCDay() + 6) % 7];
+}
+
+function perDayOf(value) {
+  const n = Math.round(Number(value));
+  return Number.isFinite(n) && n >= 1 && n <= 5 ? n : 3;
+}
+
+function startOf(value) {
+  const text = String(value || '');
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) && !Number.isNaN(new Date(`${text}T00:00:00Z`).getTime()) ? text : isoDate(Date.now() + 86400000);
+}
+
+/**
+ * The empty week: seven days, each with its posts (time, format, kind of ask) and nothing written yet.
+ * @returns {{ date: string, name: string, focus: string, posts: { time: string, format: string, cta: string }[] }[]}
+ */
+function layoutWeek({ startDate, perDay, seed = 'week', allow } = {}) {
+  const count = perDayOf(perDay);
+  const start = startOf(startDate);
+  const times = SLOT_SETS[count];
+  const formats = [];
+  for (let d = 0; d < 7; d++) for (let i = 0; i < count; i++) formats.push(FORMAT_CYCLE[(d * count + i) % FORMAT_CYCLE.length]);
+  const asks = ctaPlan(formats, `${seed}:${start}`, allow);
+  return Array.from({ length: 7 }, (_, d) => {
+    const date = addDays(start, d);
+    return {
+      date,
+      name: dayName(date),
+      focus: DAY_FOCUS[d % DAY_FOCUS.length],
+      posts: times.map((time, i) => ({ time, format: formats[d * count + i], cta: asks[d * count + i] })),
+    };
+  });
+}
+
+// ---- Stage 1: what to say all week ----
+
+const ANGLES_SYSTEM = `You plan a week of social media posts for a business or idea. You read what the person gave you (their own words, a web page or a file) and return ONLY one JSON object, no prose and no code fences:
+{"summary":"...","voice":"...","angles":["...","..."]}
+
+Rules:
+- summary: one or two plain sentences saying what this is and who it is for, using only what the source says.
+- voice: at most 12 words describing how the posts should sound (for example "warm, practical, a little playful").
+- angles: the requested number of DISTINCT things to post about, each at most 14 words. Mix kinds: teach something, answer a common question, show how it works, a myth or mistake, a short story or reason it exists, what to do first, a question for the audience, what is on offer. Each angle must come from the source; never invent facts, numbers, customers, results, prices, awards or testimonials.
+- Never repeat an angle, and never write two that make the same point.
+- Write in the same language as the source.`;
+
+function buildAnglesPrompt({ source, count, site = '' }) {
+  const lines = [`Number of angles: ${Math.max(3, Math.min(40, Math.round(Number(count) || 21)))}.`];
+  if (site) lines.push(`The address people should be sent to: ${clean(site, 120)}`);
+  lines.push('Source:', clean(source, LIMITS.source));
+  return { system: ANGLES_SYSTEM, user: lines.join('\n') };
+}
+
+function extractJson(raw) {
+  if (typeof raw !== 'string' || !raw.trim()) return null;
+  let text = raw.trim();
+  const fenced = text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  if (fenced) text = fenced[1].trim();
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start < 0 || end <= start) return null;
+  try {
+    return JSON.parse(text.slice(start, end + 1));
+  } catch {
+    return null;
+  }
+}
+
+const GENERIC_ANGLES = [
+  'What this is and who it is for',
+  'The problem it solves, in plain words',
+  'How it works in three steps',
+  'The most common mistake people make here',
+  'What to do first if you are starting today',
+  'A question for your audience about their biggest hurdle',
+  'The reason this exists',
+  'One thing people get wrong about it',
+  'What you can get from it this week',
+  'A quick tip you can use right now',
+];
+
+/** -> { ok: true, summary, voice, angles } | { ok: false, error }. Angles are padded to `count` so a week is never short. */
+function normalizeAngles(raw, count) {
+  const data = typeof raw === 'string' ? extractJson(raw) : raw;
+  if (!data || typeof data !== 'object') return { ok: false, error: 'The plan came back unreadable.' };
+  const summary = clean(data.summary, LIMITS.summary);
+  if (summary.length < 10) return { ok: false, error: 'The plan had no summary.' };
+  const seen = new Set();
+  const angles = [];
+  for (const item of Array.isArray(data.angles) ? data.angles : []) {
+    const text = clean(item, LIMITS.angle);
+    const key = text.toLowerCase();
+    if (text.length >= 6 && !seen.has(key)) {
+      seen.add(key);
+      angles.push(text);
+    }
+  }
+  if (angles.length < Math.ceil(count / 3)) return { ok: false, error: 'The plan had too few ideas.' };
+  for (let i = 0; angles.length < count; i++) angles.push(GENERIC_ANGLES[i % GENERIC_ANGLES.length] + (i >= GENERIC_ANGLES.length ? ` (${Math.floor(i / GENERIC_ANGLES.length) + 1})` : ''));
+  return { ok: true, summary, voice: clean(data.voice, LIMITS.voice), angles: angles.slice(0, count) };
+}
+
+// ---- Stage 2: one day's posts ----
+
+const FORMAT_BRIEF = {
+  quote: 'a quote card: the topic is the one idea the quote is about',
+  tip: 'a tip card: the topic is the one tip, written as an instruction',
+  carousel: 'a swipeable carousel: the topic is what the whole carousel teaches',
+  ad: 'an ad image: the topic is what is being offered and to whom, using only the source',
+  question: 'a poll image: the topic is the question people vote on',
+  announcement: 'an announcement image: the topic is the news, using only the source',
+};
+
+const DAY_SYSTEM = `You write one day of social media posts. For each post you are given a format, an angle and the exact closing line to use. You return ONLY one JSON object, no prose and no code fences:
+{"posts":[{"topic":"...","caption":"..."}]}
+
+Rules:
+- Exactly one entry per post, in the same order.
+- topic: a clear instruction for making the picture, at most 22 words, specific to the angle and the format. No invented facts.
+- caption: at most 60 words, in the given voice, in the language of the source. Open with a line that earns the next one (a question, a surprising true point, a plain promise): vary the openings across posts. Then one or two short lines of substance. End with the closing line you were given, word for word. At most two hashtags, and none if they do not fit.
+- Use ONLY facts from the summary and angle. Never invent numbers, prices, customers, results, awards, deadlines or scarcity. No emoji walls: at most one emoji.
+- Posts on the same day must not sound alike.`;
+
+function buildDayPrompt({ summary, voice, brand = '', site = '', day, posts }) {
+  const lines = [`Business: ${clean(summary, LIMITS.summary)}`, `Voice: ${clean(voice, LIMITS.voice) || 'clear and friendly'}`];
+  if (brand) lines.push(`Posting as: ${clean(brand, 60)}`);
+  lines.push(`Day: ${day.name} (${day.focus}).`, 'Posts:');
+  posts.forEach((post, index) => {
+    lines.push(`${index + 1}. Format: ${FORMAT_BRIEF[post.format] || post.format}. Angle: ${clean(post.angle, LIMITS.angle)}. Closing line: ${post.closing}`);
+  });
+  void site;
+  return { system: DAY_SYSTEM, user: lines.join('\n') };
+}
+
+// Makes sure the caption really ends with the closing line, so the ask is never lost.
+function withClosing(caption, closing) {
+  const body = clean(caption, LIMITS.caption);
+  if (!closing) return body;
+  const tail = closing.toLowerCase();
+  if (body.toLowerCase().includes(tail)) return body;
+  return `${body.replace(/[\s.]+$/, '')}.\n\n${closing}`.slice(0, LIMITS.caption + closing.length);
+}
+
+/** One entry per expected post, null where the reply had nothing usable. */
+function normalizeDay(raw, expected) {
+  const data = typeof raw === 'string' ? extractJson(raw) : raw;
+  const list = data && Array.isArray(data.posts) ? data.posts : [];
+  return expected.map((post, index) => {
+    const item = list[index];
+    if (!item || typeof item !== 'object') return null;
+    const topic = clean(item.topic, LIMITS.topic);
+    const caption = clean(item.caption, LIMITS.caption);
+    if (topic.length < 6 || caption.length < 20) return null;
+    return { topic, caption: withClosing(caption, post.closing) };
+  });
+}
+
+const FALLBACK_OPENERS = {
+  quote: (angle) => `One thought: ${angle}.`,
+  tip: (angle) => `Quick tip: ${angle}.`,
+  carousel: (angle) => `Swipe through: ${angle}.`,
+  ad: (angle) => `${angle}.`,
+  question: (angle) => `${angle}?`,
+  announcement: (angle) => `News: ${angle}.`,
+};
+
+/** A plain post from the angle alone, used when the writer could not finish a day, so the week is never empty. */
+function fallbackPost({ angle, format, closing }) {
+  const open = (FALLBACK_OPENERS[format] || FALLBACK_OPENERS.tip)(clean(angle, LIMITS.angle).replace(/[.?!]+$/, ''));
+  return { topic: clean(angle, LIMITS.topic), caption: `${open}\n\n${closing}`.slice(0, LIMITS.caption + 80), fallback: true };
+}
+
+/**
+ * Puts the week together: the layout, the angles and each day's written posts.
+ * @param {{ week: ReturnType<typeof layoutWeek>, angles: string[], written: (({ topic: string, caption: string } | null)[] | null)[], site?: string, brand?: string, seed?: string }} input
+ */
+function assembleWeek({ week, angles, written, site = '', brand = '', seed = 'week' }) {
+  let g = 0;
+  return week.map((day, d) => ({
+    date: day.date,
+    name: day.name,
+    focus: day.focus,
+    posts: day.posts.map((post, i) => {
+      const angle = angles[g % angles.length];
+      const closing = ctaLine(post.cta, { seed: `${seed}:${g}`, site, brand });
+      g += 1;
+      const result = written && written[d] && written[d][i];
+      const made = result || fallbackPost({ angle, format: post.format, closing });
+      return { id: `${day.date}-${i}`, time: post.time, format: post.format, cta: post.cta, angle, topic: made.topic, caption: made.caption, ...(made.fallback ? { fallback: true } : {}) };
+    }),
+  }));
+}
+
+/** The closing lines for a day's posts, in order (the same ones assembleWeek uses). */
+function closingsFor({ week, dayIndex, site = '', brand = '', seed = 'week' }) {
+  const count = week[0].posts.length;
+  return week[dayIndex].posts.map((post, i) => ctaLine(post.cta, { seed: `${seed}:${dayIndex * count + i}`, site, brand }));
+}
+
+/** The angle for each post of a day (angles are dealt out in order across the week). */
+function anglesFor({ week, dayIndex, angles }) {
+  const count = week[0].posts.length;
+  return week[dayIndex].posts.map((_, i) => angles[(dayIndex * count + i) % angles.length]);
+}
+
+module.exports = { DAY_NAMES, DAY_FOCUS, SLOT_SETS, FORMAT_CYCLE, LIMITS, perDayOf, startOf, addDays, layoutWeek, buildAnglesPrompt, normalizeAngles, buildDayPrompt, normalizeDay, fallbackPost, assembleWeek, closingsFor, anglesFor, withClosing, extractJson };

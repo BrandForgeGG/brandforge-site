@@ -39,6 +39,8 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
   const [ready, setReady] = useState(false);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [saved, setSaved] = useState<Saved[]>([]);
+  // A topic carried in the address (from Distribute's "Make the picture"): the maker opens already on it.
+  const [carried, setCarried] = useState('');
   const [voted, setVoted] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
@@ -50,8 +52,17 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
         markResume();
       }
     } else {
-      const make = new URLSearchParams(window.location.search).get('make');
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- the address is only readable in the browser
+      const params = new URLSearchParams(window.location.search);
+      const make = params.get('make');
+      const topic = (params.get('topic') ?? '').trim().slice(0, 500);
+      if (topic) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- the address is only readable in the browser
+        setCarried(topic);
+        if (make === 'carousel') {
+          writeDraft({ ...emptyDraft(), topic: topic.slice(0, 1500) });
+          markResume();
+        }
+      }
       if (make && CARDS.some((card) => card.id === make)) setOpen(make as Kind);
     }
     setReady(true);
@@ -110,7 +121,7 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
           <span className="text-muted" aria-hidden="true">/</span>
           <h2 className="font-serif text-xl text-foreground">{current.name}</h2>
         </div>
-        {current.id === 'carousel' ? <CarouselMaker /> : current.id.startsWith('image-') ? <ImageChatCard key={current.id} kind={current.id.slice(6) as ImageKind} topic={initialTopic} userText={null} storageKey={imageKey(current.id)} restore standalone onSend={async () => null} onClose={() => show(null)} /> : <PostComposer key={current.id} type={current.id as PostType} signedIn={signedIn} initialTopic={embedded && current.id === initialKind ? initialTopic : ''} onSignIn={() => openLogin({ reason: 'signin', next: embedded ? window.location.pathname + window.location.search : `/create?make=${current.id}` })} />}
+        {current.id === 'carousel' ? <CarouselMaker /> : current.id.startsWith('image-') ? <ImageChatCard key={current.id} kind={current.id.slice(6) as ImageKind} topic={initialTopic || carried} userText={null} storageKey={imageKey(current.id)} restore={!carried} standalone onSend={async () => null} onClose={() => show(null)} /> : <PostComposer key={current.id} type={current.id as PostType} signedIn={signedIn} initialTopic={embedded && current.id === initialKind ? initialTopic : ''} onSignIn={() => openLogin({ reason: 'signin', next: embedded ? window.location.pathname + window.location.search : `/create?make=${current.id}` })} />}
       </div>
     );
   }

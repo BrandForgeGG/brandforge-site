@@ -344,7 +344,7 @@ function Card({ listing: l, onContact, onEdit, onAssistant, onClose, onReopen, o
   const closed = l.status !== "open";
   return (
     <article className={`bf-card flex flex-col p-4 ${closed ? "opacity-70" : ""}`}>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px] font-semibold" style={avatarTone(l.ownerName || l.id)} aria-hidden="true">
           {l.official ? (
             // eslint-disable-next-line @next/next/no-img-element -- bundled local asset at a fixed size
@@ -357,10 +357,10 @@ function Card({ listing: l, onContact, onEdit, onAssistant, onClose, onReopen, o
           )}
         </span>
         <RoleBadge role={l.ownerRole} />
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{l.ownerName}</span>
-        <span className={`shrink-0 text-[11px] ${l.kind === "request" ? "text-ember" : "text-muted"}`}>{closed ? "Closed" : l.kind === "request" ? "Wants" : l.category}</span>
+        <span className="min-w-[5rem] flex-1 truncate text-sm font-medium text-foreground">{l.ownerName}</span>
       </div>
-      <h3 className="mt-2.5 font-serif text-base leading-snug text-foreground">{l.title}</h3>
+      <p className={`mt-2.5 text-[11px] uppercase tracking-[0.12em] ${l.kind === "request" && !closed ? "text-ember" : "text-muted"}`}>{closed ? "Closed" : l.kind === "request" ? "Wants · " + l.category : l.category}</p>
+      <h3 className="mt-1 font-serif text-base leading-snug text-foreground">{l.title}</h3>
       <p className={`mt-1 whitespace-pre-line text-xs leading-relaxed text-muted ${open ? "" : "line-clamp-3"}`}>{l.description}</p>
       {long ? (
         <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} className="mt-1 self-start text-xs text-ember underline-offset-2 hover:underline">

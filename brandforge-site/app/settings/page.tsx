@@ -428,7 +428,7 @@ export default function SettingsPage() {
                 ))}
               </div>
               <p className="mt-1 text-xs text-muted">
-                Forge is fire orange, Crystal is crystal blue, Mono is plain black and white.
+                Forge is fire orange, Crystal is crystal blue, Black and white is plain and calm.
               </p>
             </div>
           </div>

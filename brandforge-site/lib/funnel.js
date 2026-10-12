@@ -93,6 +93,7 @@ const FUNNEL_EVENTS = Object.freeze([
   'guest_send_gated',
   'carousel_planned',
   'image_planned',
+  'distribute_planned',
   'image_chat_started',
   'image_downloaded',
   'create_interest',

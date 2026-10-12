@@ -42,7 +42,7 @@ function useIsVisitor(): boolean {
 
 const NAV_ITEMS = [
   { href: "/create", label: "Create", hint: "Make it, download it, publish it", path: "M10 3.5l1.6 4.4 4.4 1.6-4.4 1.6L10 15.5l-1.6-4.4L4 9.5l4.4-1.6zM15.5 3v3M14 4.5h3" },
-  { href: "/optimize", label: "Optimize", hint: "See what works", path: "M4 15V9M8 15V5M12 15v-4M16 15V7" },
+  { href: "/distribute", label: "Distribute", hint: "A week of posts, written for you", path: "M4 5.5h12v10H4zM4 8.5h12M7.5 3.5v3M12.5 3.5v3M7 12h2M11 12h2" },
   { href: "/trade", label: "Trade", hint: "Hire or get hired", path: "M4 7h11l-3-3M16 13H5l3 3" },
 ];
 

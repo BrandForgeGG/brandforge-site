@@ -1,15 +1,6 @@
-import { AppShell } from '@/components/app-shell';
-import { OptimizeHub } from '@/components/optimize/optimize-hub';
+import { redirect } from 'next/navigation';
 
-export const metadata = {
-  title: 'Optimize — BrandForge',
-  description: 'Audit a page and sharpen your own words, free. Nothing invented.',
-};
-
+// Optimize is gone: its place is Distribute, where the AI writes a week of posts for you.
 export default function OptimizePage() {
-  return (
-    <AppShell title="Optimize" subtitle="Fix what is weak, with nothing invented.">
-      <OptimizeHub />
-    </AppShell>
-  );
+  redirect('/distribute');
 }

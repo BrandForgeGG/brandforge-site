@@ -26,7 +26,7 @@ const SAY: Record<ChannelKind, { line: string; add: string }> = {
 
 function Pill({ on, children }: { on: boolean; children: React.ReactNode }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${on ? 'bg-trust/15 text-success' : 'bg-overlay text-muted'}`}>
+    <span className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${on ? 'bg-trust/15 text-success' : 'bg-overlay text-muted'}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${on ? 'bg-success' : 'bg-muted/60'}`} aria-hidden="true" />
       {children}
     </span>
@@ -69,20 +69,18 @@ export function IntegrationsPanel() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 lg:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         {(['telegram', 'discord', 'bluesky', 'slack', 'tumblr'] as ChannelKind[]).map((kind) => {
           const mine = channels.filter((c) => c.kind === kind);
           const live = kind === 'telegram' ? telegramLinked || mine.length > 0 : mine.length > 0;
           return (
             <section key={kind} aria-label={SERVICES[kind].name} className={`flex min-w-0 flex-col rounded-2xl border p-4 transition ${live ? 'border-line bg-panel' : 'border-dashed border-line bg-transparent'}`} style={live ? { boxShadow: `inset 3px 0 0 ${SERVICES[kind].color}` } : undefined}>
-              <div className="flex items-start gap-3">
+              <div className="flex items-center gap-3">
                 <ServiceTile id={kind} on={live} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-foreground">{SERVICES[kind].name}</p>
-                  <p className="text-xs text-muted">{SAY[kind].line}</p>
-                </div>
+                <p className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{SERVICES[kind].name}</p>
                 <Pill on={live}>{loading ? '…' : live ? 'Connected' : 'Not connected'}</Pill>
               </div>
+              <p className="mt-2.5 text-xs leading-relaxed text-muted">{SAY[kind].line}</p>
 
               {kind === 'telegram' ? (
                 <div className="mt-4 rounded-xl border border-line px-3 py-2.5">
@@ -92,7 +90,7 @@ export function IntegrationsPanel() {
                       <p className="text-xs text-muted">{telegramLinked ? 'Briefs, proposals and deliveries ping your Telegram.' : 'Get pinged the moment something needs you.'}</p>
                     </div>
                     {telegramLinked ? <span className="text-xs font-semibold text-success">On</span> : code ? null : (
-                      <button type="button" className={btn} disabled={alertBusy} onClick={() => void startAlerts()}>{alertBusy ? 'Starting…' : 'Turn on'}</button>
+                      <button type="button" className={`${btn} shrink-0 whitespace-nowrap`} disabled={alertBusy} onClick={() => void startAlerts()}>{alertBusy ? 'Starting…' : 'Turn on'}</button>
                     )}
                   </div>
                   {!telegramLinked && code ? (
@@ -143,15 +141,15 @@ export function IntegrationsPanel() {
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.15em] text-muted">Waiting for approval</p>
         <p className="mt-1 text-xs text-muted">These platforms make every app apply before it can post for you. We are applying. Tell us which one you need first and it moves up.</p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
           {COMING.map(({ id, line }) => (
             <div key={id} className="flex items-center gap-3 rounded-xl border border-dashed border-line px-3 py-2.5">
               <ServiceTile id={id} on={false} size={36} />
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-foreground">{SERVICES[id].name}</p>
-                <p className="truncate text-xs text-muted">{line}</p>
+                <p className="text-xs leading-snug text-muted">{line}</p>
               </div>
-              <button type="button" disabled={voted[id]} className="shrink-0 text-xs font-semibold text-ember underline-offset-2 hover:underline disabled:text-muted disabled:no-underline" onClick={() => vote(id)}>{voted[id] ? 'Noted' : 'I need this'}</button>
+              <button type="button" disabled={voted[id]} className="shrink-0 whitespace-nowrap text-xs font-semibold text-ember underline-offset-2 hover:underline disabled:text-muted disabled:no-underline" onClick={() => vote(id)}>{voted[id] ? 'Noted' : 'I need this'}</button>
             </div>
           ))}
         </div>

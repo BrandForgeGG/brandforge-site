@@ -1,10 +1,11 @@
 import { addDays, buildWeekRows, mondayOf } from '@/lib/content-calendar.js';
-import { fallbackCaptions } from '@/lib/carousel-captions.js';
+import { composeCaption } from '@/lib/calendar-caption.js';
+import { ctaPlan } from '@/lib/caption-cta.js';
 import { makeCarouselPlan } from '@/lib/carousel-service';
 import { renderCarouselWithCover } from '@/lib/carousel-server';
 import { renderImageWithPicture } from '@/lib/image-server';
 import { makeImageCopy } from '@/lib/image-service';
-import { imageCaption, type ImageCopy, type ImageFormat, type ImageKind } from '@/lib/image-kinds.js';
+import type { ImageCopy, ImageFormat, ImageKind } from '@/lib/image-kinds.js';
 import { postToOwnChannels } from '@/lib/carousel-publish';
 import { BRAND, CLOSING_LINE } from '@/lib/carousel-bots';
 import type { CarouselPlan } from '@/lib/carousel-plan.js';
@@ -35,6 +36,15 @@ export async function ensureWeek(mondayIso: string): Promise<CalendarPost[]> {
 const IMAGE_SIZE: Record<string, ImageFormat> = { ad: 'portrait', quote: 'square', tip: 'square', announcement: 'square', question: 'square' };
 type ImagePlan = { kind: ImageKind; format: ImageFormat; copy: ImageCopy };
 
+// What this post asks its readers for (follow, save, like, comment, share, try the site, hire the team, message us). Worked
+// out across the whole day, so no two neighbouring posts ask for the same thing.
+async function askFor(post: CalendarPost): Promise<string> {
+  const day = (await listCalendarPosts(post.post_date, post.post_date)).sort((a, b) => a.slot - b.slot);
+  const asks = ctaPlan(day.map((entry) => entry.format || 'carousel'), post.post_date);
+  const index = day.findIndex((entry) => entry.id === post.id);
+  return asks[index >= 0 ? index : 0] ?? 'save';
+}
+
 // Writes the post and its caption. A carousel is written by the carousel planner (news posts search the web first);
 // every other format is one image whose words come from the image writer.
 export async function writePost(post: CalendarPost): Promise<CalendarPost | null> {
@@ -42,11 +52,12 @@ export async function writePost(post: CalendarPost): Promise<CalendarPost | null
     const result = await makeImageCopy({ kind: post.format, topic: post.topic, button: 'Try it free' });
     if (!result.ok) return updateCalendarPost(post.id, { error: result.error, attempts: post.attempts + 1 });
     const plan: ImagePlan = { kind: result.kind, format: IMAGE_SIZE[post.format] ?? 'square', copy: result.copy };
-    return updateCalendarPost(post.id, { plan, caption: imageCaption(plan, CLOSING_LINE), status: post.status === 'planned' ? 'ready' : post.status, error: null });
+    const caption = composeCaption({ format: post.format, kind: await askFor(post), seed: post.id, image: plan });
+    return updateCalendarPost(post.id, { plan, caption, status: post.status === 'planned' ? 'ready' : post.status, error: null });
   }
   const result = await makeCarouselPlan({ mode: 'words', type: post.type, topic: post.topic, cta: CLOSING_LINE, count: 7 });
   if (!result.ok) return updateCalendarPost(post.id, { error: result.error, attempts: post.attempts + 1 });
-  const caption = fallbackCaptions(result.plan, CLOSING_LINE).facebook;
+  const caption = composeCaption({ format: 'carousel', kind: await askFor(post), seed: post.id, plan: result.plan });
   return updateCalendarPost(post.id, { plan: result.plan, caption, status: post.status === 'planned' ? 'ready' : post.status, error: null });
 }
 
