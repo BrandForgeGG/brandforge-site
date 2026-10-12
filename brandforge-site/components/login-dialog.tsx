@@ -24,7 +24,7 @@ const COPY = {
   carousel: { title: 'Sign in to edit and download', line: 'Free, no card. Your carousel is saved and waiting for you the moment you are in.' },
   distribute: { title: 'Sign in to schedule or post', line: 'Free, no card. Your carousel and captions are kept for you.' },
   start: { title: 'Sign in to get your answer', line: 'Free, no card. Your idea is kept and ready the moment you are in.' },
-  signin: { title: 'Sign in to BrandForge', line: 'New or returning, same buttons. Free to start, no card.' },
+  signin: { title: 'Log in or sign up', line: 'New or returning, same options. Free to start, no card.' },
 } as const;
 
 // A pop-up in place of the login page: the chat stays right behind it, and the current address is
@@ -100,19 +100,21 @@ export function LoginProvider({ children }: { children: React.ReactNode }) {
                 if (event.target === event.currentTarget) close();
               }}
             >
-              <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="login-title" className="bf-login-panel relative w-full max-w-sm rounded-2xl border border-line bg-panel p-6 shadow-2xl">
+              <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="login-title" className="bf-login-panel relative max-h-[92dvh] w-full max-w-[26rem] overflow-y-auto rounded-3xl border border-line bg-panel px-6 pb-6 pt-8 shadow-2xl sm:px-8">
                 <button type="button" onClick={close} aria-label="Close" className="absolute right-3 top-3 rounded-lg p-2 text-muted transition hover:bg-overlay hover:text-foreground">
                   <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
                     <path d="M5 5l10 10M15 5L5 15" />
                   </svg>
                 </button>
-                <p className="font-serif text-lg text-foreground">
-                  Brand<span className="text-ember">Forge</span>
-                </p>
-                <h2 id="login-title" className="mt-4 font-serif text-2xl tracking-[-0.02em] text-foreground">
-                  {copy.title}
-                </h2>
-                <p className="mt-2 mb-5 text-sm leading-relaxed text-muted">{copy.line}</p>
+                <div className="text-center">
+                  <p className="font-serif text-xl text-foreground">
+                    Brand<span className="text-ember">Forge</span>
+                  </p>
+                  <h2 id="login-title" className="mt-5 font-serif text-[1.65rem] leading-tight tracking-[-0.02em] text-foreground">
+                    {copy.title}
+                  </h2>
+                  <p className="mx-auto mb-6 mt-2 max-w-xs text-sm leading-relaxed text-muted">{copy.line}</p>
+                </div>
                 <SignInForm next={next} />
               </div>
             </div>,

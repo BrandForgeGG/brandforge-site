@@ -48,22 +48,31 @@ type Tokens = { access: string; refresh: string; expires: number };
 
 async function tokenRequest(kind: OAuthKind, form: Record<string, string>): Promise<Tokens | null> {
   const cfg = CFG[kind];
-  const headers: Record<string, string> = { 'Content-Type': 'application/x-www-form-urlencoded' };
-  const body = new URLSearchParams(form);
-  if (kind === 'x') headers.Authorization = `Basic ${Buffer.from(`${env(cfg.idEnv)}:${env(cfg.secretEnv)}`).toString('base64')}`;
-  else {
-    body.set('client_id', env(cfg.idEnv));
-    body.set('client_secret', env(cfg.secretEnv));
+  // X apps are either confidential (client id and secret sent as a Basic header) or public (client id in the body, no secret).
+  // A mismatch is answered with a 401, so X is tried both ways instead of guessing which kind the app was made as.
+  const attempts: { basic: boolean }[] = kind === 'x' ? [{ basic: true }, { basic: false }] : [{ basic: false }];
+  for (const attempt of attempts) {
+    const headers: Record<string, string> = { 'Content-Type': 'application/x-www-form-urlencoded' };
+    const body = new URLSearchParams(form);
+    if (kind === 'x' && attempt.basic) headers.Authorization = `Basic ${Buffer.from(`${env(cfg.idEnv)}:${env(cfg.secretEnv)}`).toString('base64')}`;
+    else {
+      body.set('client_id', env(cfg.idEnv));
+      if (kind !== 'x') body.set('client_secret', env(cfg.secretEnv));
+    }
+    try {
+      const res = await fetch(cfg.token, { method: 'POST', headers, body: body.toString(), signal: AbortSignal.timeout(15000) });
+      if (!res.ok) {
+        console.error(`[oauth] ${kind} token request failed (${attempt.basic ? 'basic' : 'body'}):`, res.status, (await res.text().catch(() => '')).slice(0, 300));
+        continue;
+      }
+      const data = (await res.json()) as { access_token?: string; refresh_token?: string; expires_in?: number };
+      if (!data.access_token) continue;
+      return { access: data.access_token, refresh: data.refresh_token ?? '', expires: Date.now() + (data.expires_in ?? 3600) * 1000 };
+    } catch {
+      continue;
+    }
   }
-  try {
-    const res = await fetch(cfg.token, { method: 'POST', headers, body: body.toString(), signal: AbortSignal.timeout(15000) });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { access_token?: string; refresh_token?: string; expires_in?: number };
-    if (!data.access_token) return null;
-    return { access: data.access_token, refresh: data.refresh_token ?? '', expires: Date.now() + (data.expires_in ?? 3600) * 1000 };
-  } catch {
-    return null;
-  }
+  return null;
 }
 
 /** Turns the code the platform sent back into a connected account: the stored secret, a label and what posting needs. */
@@ -76,14 +85,21 @@ export async function connectOAuth(kind: OAuthKind, code: string, state: string,
     if (kind === 'linkedin') {
       const res = await fetch('https://api.linkedin.com/v2/userinfo', { headers: { Authorization: `Bearer ${tokens.access}` }, signal: AbortSignal.timeout(15000) });
       const me = (await res.json()) as { sub?: string; name?: string };
-      if (!res.ok || !me.sub) return { ok: false };
+      if (!res.ok || !me.sub) {
+        console.error('[oauth] linkedin profile request failed:', res.status, JSON.stringify(me).slice(0, 300));
+        return { ok: false };
+      }
       return { ok: true, label: `LinkedIn: ${String(me.name ?? 'your profile').slice(0, 40)}`, secret: encryptSecret(JSON.stringify(tokens)), meta: { author: `urn:li:person:${me.sub}` } };
     }
     const res = await fetch('https://api.x.com/2/users/me', { headers: { Authorization: `Bearer ${tokens.access}` }, signal: AbortSignal.timeout(15000) });
     const me = (await res.json()) as { data?: { username?: string } };
-    if (!res.ok || !me.data?.username) return { ok: false };
+    if (!res.ok || !me.data?.username) {
+      console.error('[oauth] x profile request failed:', res.status, JSON.stringify(me).slice(0, 300));
+      return { ok: false };
+    }
     return { ok: true, label: `X: @${me.data.username}`, secret: encryptSecret(JSON.stringify(tokens)), meta: { username: me.data.username } };
-  } catch {
+  } catch (cause) {
+    console.error(`[oauth] ${kind} connect threw:`, cause instanceof Error ? cause.message : cause);
     return { ok: false };
   }
 }

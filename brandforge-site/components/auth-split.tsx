@@ -20,8 +20,8 @@ export function AuthSplit() {
             Brand<span className="text-ember">Forge</span>
           </Link>
 
-          <h1 className="mt-8 font-serif text-3xl text-foreground sm:text-4xl">Continue to BrandForge</h1>
-          <p className="mt-3 mb-8 text-sm leading-relaxed text-muted">New or returning, same buttons. Free to start, no card.</p>
+          <h1 className="mt-8 font-serif text-3xl text-foreground sm:text-4xl">Log in or sign up</h1>
+          <p className="mt-3 mb-8 text-sm leading-relaxed text-muted">New or returning, same options. Free to start, no card.</p>
 
           <SignInForm />
 

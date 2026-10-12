@@ -1173,3 +1173,9 @@ we do not have.
 **Change:** one Meta approval links every Facebook Page a person runs and the Instagram business account on each. Carousels and pictures post to both; text updates, polls and threads post to Facebook (Instagram needs a picture). Shows "Coming soon" until the Meta app keys are added. Instagram pictures are converted to JPEG and kept briefly in the public pictures bucket, deleted once Instagram has fetched them.
 
 **Distribution move:** after the Meta app is added and tested on our own Page and Instagram, a launch line: "Post your week to Instagram, Facebook, LinkedIn and X from one place." Do not announce before one real post has landed on each.
+
+### 2026-10-13 — New sign-in pop-up, phone and Apple ready, log-out confirmation
+
+**Change:** the sign-in pop-up and /login page now read "Log in or sign up": round full-width buttons for Google (and Apple and phone once switched on in Supabase), then email. Phone sign-in texts a 6-digit code. Log out now opens a "Log out of BrandForge?" page showing the signed-in account, with Log out and Cancel; logging out clears the browser's saved work.
+
+**Distribution move:** none public yet. Once Apple and phone are switched on: "Sign in with Apple or your phone number."

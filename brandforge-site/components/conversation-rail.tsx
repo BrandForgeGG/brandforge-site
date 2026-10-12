@@ -1,10 +1,8 @@
 "use client";
 
-import { clearAccountLocalState } from '@/lib/account-local';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import { supabase } from "@/lib/supabase";
 import { fetchAuthed, getSessionUser } from "@/lib/browser-auth";
 import { useLogin } from "@/components/login-dialog";
 import { avatarTone, initialsFor, roleLine } from "@/lib/identity-display";
@@ -302,13 +300,8 @@ onMobileClose,
   const newChatCount = staffUnseenCountProp ?? unseenCount;
 
   async function handleSignOut() {
-    clearAccountLocalState();
-    railCache.account = null;
-    railCache.recents = null;
-    railCache.isStaff = false;
-    railCache.isAdmin = false;
-    await supabase.auth.signOut();
-    router.push("/login");
+    // Signing out asks first, on its own page (the way ChatGPT does), instead of ending the session on one tap.
+    router.push("/logout");
   }
 
   return (
