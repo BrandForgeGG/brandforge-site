@@ -34,7 +34,7 @@ export function LandingProof() {
                   {project.screenshot ? (
                     <Image
                       src={project.screenshot}
-                      alt=""
+                      alt={`Screenshot of ${project.name}, ${project.category.toLowerCase()} built by the BrandForge team`}
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       className="object-cover object-top"
