@@ -52,14 +52,14 @@ export function SiteFooter() {
               item.external ? (
                 <span key={item.label}>
                   <span aria-hidden="true"> · </span>
-                  <a href={item.href} target="_blank" rel="noopener noreferrer" className="transition hover:text-foreground">
+                  <a href={item.href} target="_blank" rel="noopener noreferrer" className="bf-tap transition hover:text-foreground">
                     {item.label}
                   </a>
                 </span>
               ) : (
                 <span key={item.label}>
                   <span aria-hidden="true"> · </span>
-                  <Link href={item.href} className="transition hover:text-foreground">
+                  <Link href={item.href} className="bf-tap transition hover:text-foreground">
                     {item.label}
                   </Link>
                 </span>

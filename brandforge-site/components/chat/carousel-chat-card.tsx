@@ -88,7 +88,7 @@ const PHASES = [
   { label: 'Brainstorming the angle', hint: 'Finding the hook that makes people swipe' },
   { label: 'Writing the slides', hint: 'Three sharp points on every slide' },
   { label: 'Drawing the cover', hint: 'Painting a picture from your topic' },
-  { label: 'Laying it out', hint: 'Fitting words, colour and picture together' },
+  { label: 'Laying it out', hint: 'Fitting words, color and picture together' },
 ];
 
 const COUNTS = [5, 7, 9];

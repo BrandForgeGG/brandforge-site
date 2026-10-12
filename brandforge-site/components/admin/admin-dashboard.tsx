@@ -53,7 +53,7 @@ function Kpi({ value, label, hint }: { value: string | number; label: string; hi
   );
 }
 
-// Two series over 14 days. One accent colour for chats, the foreground for members; values are
+// Two series over 14 days. One accent color for chats, the foreground for members; values are
 // readable from the labels, not only from bar height.
 function DailyChart({ daily }: { daily: Overview['daily'] }) {
   const max = Math.max(1, ...daily.map((d) => Math.max(d.chats, d.members)));

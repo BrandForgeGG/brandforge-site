@@ -18,6 +18,10 @@ const FEATURES = [
     body: 'Carousels, ads, quotes, tips, announcements and polls, in square, portrait, story and wide sizes. Say it in a sentence, edit every word, download it, and get a caption written for each platform. Threads and video are next.',
   },
   {
+    title: 'A week of posts, written for you',
+    body: 'Say what you promote, paste a link or attach a file in Distribute. The AI writes seven days of posts at five set times, with a picture for every one and a caption that asks for something different each time. Open any post in the maker, or download them all.',
+  },
+  {
     title: 'Publish where people are',
     body: 'Pick the platforms for a post. Telegram, Discord and Bluesky are connected; Instagram, LinkedIn, TikTok and others open as each platform approves us.',
   },

@@ -54,7 +54,7 @@ export function LandingProof() {
             </SwipeRow>
           </div>
           <p className="mt-6 text-center">
-            <Link href="/work" className="text-sm text-ember underline-offset-2 hover:underline">See all projects</Link>
+            <Link href="/work" className="bf-tap text-sm text-ember underline-offset-2 hover:underline">See all projects</Link>
           </p>
         </div>
       </section>

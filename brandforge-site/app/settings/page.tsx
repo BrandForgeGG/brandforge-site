@@ -453,7 +453,7 @@ export default function SettingsPage() {
 
         <div id="integrations" className="min-w-0 scroll-mt-6 rounded-2xl border border-line bg-panel p-5 lg:col-span-2">
           <h2 className="text-xl font-medium text-foreground">Integrations</h2>
-          <p className="mt-1 text-sm text-muted">Where BrandForge can reach you and post for you. Connected services light up in their own colour.</p>
+          <p className="mt-1 text-sm text-muted">Where BrandForge can reach you and post for you. Connected services light up in their own color.</p>
           <div className="mt-4">
             <IntegrationsPanel />
           </div>

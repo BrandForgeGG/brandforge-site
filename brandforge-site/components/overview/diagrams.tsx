@@ -241,10 +241,10 @@ export function HeroDiagram() {
 
 /** Many forms of communication, not one. What is live is lit; what is coming waits. */
 export function FormatsDiagram() {
-  const live = ['Carousel'];
-  const soon = ['Update', 'Poll', 'Quiz', 'Thread', 'Video', 'Reel', 'Newsletter', 'Podcast'];
+  const live = ['Carousel', 'Ad', 'Quote', 'Tip', 'Announcement', 'Poll'];
+  const soon = ['Update', 'Quiz', 'Thread', 'Video', 'Reel', 'Newsletter', 'Podcast'];
   return (
-    <Frame label="Carousel is available to make today. Update, poll, quiz, thread, video, reel, newsletter and podcast are coming" className="p-5 sm:p-7">
+    <Frame label="Carousel, ad, quote, tip, announcement and poll are available to make today. Update, quiz, thread, video, reel, newsletter and podcast are coming" className="p-5 sm:p-7">
       <div className="flex flex-wrap justify-center gap-2.5">
         {live.map((name, i) => (
           <span key={name} className="bf-pop rounded-xl border border-ember/50 bg-ember/10 px-3.5 py-2 text-sm text-foreground" style={{ animationDelay: `${i * 0.15}s` }}>{name}</span>

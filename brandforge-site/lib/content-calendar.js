@@ -16,7 +16,7 @@ const POST_TYPES = ['educational', 'news', 'promo', 'list', 'funny', 'story', 'e
 const POST_FORMATS = ['carousel', 'quote', 'tip', 'ad', 'announcement', 'question'];
 
 // Each weekday has a focus, and the topic type and format of its five posts in time order: a quote to start the
-// day, a tip, the carousel, an ad or announcement, and a poll to end it. No two neighbours share a format.
+// day, a tip, the carousel, an ad or announcement, and a poll to end it. No two neighbors share a format.
 const DEFAULT_DAYS = [
   { focus: 'Plan the week', types: ['inspire', 'educational', 'news', 'promo', 'engage'], formats: ['quote', 'tip', 'carousel', 'ad', 'question'] },
   { focus: 'How-to Tuesday', types: ['inspire', 'educational', 'list', 'promo', 'engage'], formats: ['quote', 'tip', 'carousel', 'ad', 'question'] },

@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 // place so moving between Create, Distribute, Projects and the chat never makes the page
 // jump sideways.
 function RailPlaceholder() {
-  return <aside className="hidden h-dvh w-72 shrink-0 border-r border-line bg-deep md:block" aria-hidden="true" />;
+  return <aside className="bf-rail-ph hidden h-dvh w-72 shrink-0 border-r border-line bg-deep md:block" aria-hidden="true" />;
 }
 
 const ConversationRail = dynamic(

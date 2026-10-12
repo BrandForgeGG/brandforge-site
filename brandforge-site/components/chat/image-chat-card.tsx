@@ -85,7 +85,7 @@ const PHASES = [
   { label: 'Brainstorming the angle', hint: 'Finding the line that stops the scroll' },
   { label: 'Writing the words', hint: 'Short, plain and true to what you told me' },
   { label: 'Painting the picture', hint: 'Making a background from your topic' },
-  { label: 'Laying it out', hint: 'Fitting words, colour and picture together' },
+  { label: 'Laying it out', hint: 'Fitting words, color and picture together' },
 ];
 
 const chip = 'rounded-full border px-3 py-1.5 text-xs transition';

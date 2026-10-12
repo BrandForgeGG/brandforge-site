@@ -12,7 +12,7 @@ const PLANS = [
     cadence: '',
     blurb: 'Everything you need to try it with a team.',
     limits: { workspaces: 1, connectedAccounts: 3, queuedPosts: 10, whiteLabel: false, cmsSync: false },
-    features: ['AI research, plans and copy', 'Carousel maker', '1 workspace', '3 connected accounts', 'Contracts with a flat fee on release'],
+    features: ['AI research, plans and copy', 'Carousels, ads, quotes and polls', 'A week of posts, written for you', '1 workspace', '3 connected accounts', 'Contracts with a flat fee on release'],
   },
   {
     id: 'pro',

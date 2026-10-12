@@ -1,14 +1,34 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { loadFonts, slideCount } from '@/components/carousel/carousel-shared';
 import type { PlannedPost } from '@/lib/distribute-plan.js';
 import { drawPost, visualOf, type PostBrand } from '@/components/distribute/render-post';
 
+// Drawing a picture is real work (its art is painted pixel by pixel), and a week has 21 of them. They are drawn one at a
+// time, each in its own turn of the browser, so the page stays alive while they appear instead of freezing until all are done.
+const queue: (() => void)[] = [];
+let running = false;
+function schedule(job: () => void): void {
+  queue.push(job);
+  if (running) return;
+  running = true;
+  const step = () => {
+    const next = queue.shift();
+    if (!next) {
+      running = false;
+      return;
+    }
+    next();
+    window.setTimeout(step, 0);
+  };
+  window.setTimeout(step, 0);
+}
+
 // The picture for one planned post, drawn as soon as the fonts are ready. A `tile` is the small one in the calendar (a
 // carousel shows its cover); `full` is the one in the detail panel, where a carousel steps through its slides with arrows
 // and dots. What shows here is exactly what Download gives.
-export function PostVisual({ post, brand, size = 'full' }: { post: PlannedPost; brand: PostBrand; size?: 'tile' | 'full' }) {
+function PostVisualView({ post, brand, size = 'full' }: { post: PlannedPost; brand: PostBrand; size?: 'tile' | 'full' }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
   const [slide, setSlide] = useState(0);
@@ -26,7 +46,14 @@ export function PostVisual({ post, brand, size = 'full' }: { post: PlannedPost; 
 
   useEffect(() => {
     if (!ready || !canvasRef.current) return;
-    drawPost(canvasRef.current, post, brand, tile ? 0 : slide);
+    const canvas = canvasRef.current;
+    let live = true;
+    schedule(() => {
+      if (live) drawPost(canvas, post, brand, tile ? 0 : slide);
+    });
+    return () => {
+      live = false;
+    };
   }, [ready, post, brand, slide, tile]);
 
   const label = visual.type === 'carousel' ? `Carousel${tile ? ' cover' : `, slide ${slide + 1} of ${total}`}` : `${post.format} picture`;
@@ -49,3 +76,22 @@ export function PostVisual({ post, brand, size = 'full' }: { post: PlannedPost; 
     </div>
   );
 }
+
+// Editing a caption, copying, or any other change on the page must not redraw a single picture: a tile redraws only when
+// something that is actually drawn on it changes (its picture, its look, or the name on it).
+export const PostVisual = memo(PostVisualView, (before, after) => {
+  const a = before.post;
+  const b = after.post;
+  return (
+    before.size === after.size &&
+    before.brand.name === after.brand.name &&
+    before.brand.handle === after.brand.handle &&
+    a.id === b.id &&
+    a.visual === b.visual &&
+    a.theme === b.theme &&
+    a.format === b.format &&
+    a.angle === b.angle &&
+    a.topic === b.topic &&
+    a.cta === b.cta
+  );
+});

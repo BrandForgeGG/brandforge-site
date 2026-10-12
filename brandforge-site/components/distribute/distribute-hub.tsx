@@ -122,6 +122,11 @@ export function DistributeHub() {
     write({ v: 1, text, perDay, start, fileName, fileText: fileText.slice(0, 6000), brand, plan });
   }, [ready, writing, text, perDay, start, fileName, fileText, brand, plan]);
 
+  // Leaving the page stops any writing still on its way, instead of letting it run on unseen.
+  useEffect(() => {
+    return () => stop.current?.abort();
+  }, []);
+
   useEffect(() => {
     if (!busy) return;
     const timer = window.setInterval(() => setPhase((current) => Math.min(current + 1, PHASES.length - 1)), 4500);
@@ -405,7 +410,7 @@ export function DistributeHub() {
           />
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <input ref={fileInput} type="file" accept=".txt,.md,.markdown,.csv,.json,.html,.htm,text/plain" className="hidden" onChange={(event) => void pickFile(event.target.files?.[0])} />
-            <button type="button" onClick={() => fileInput.current?.click()} className="rounded-full border border-line px-3 py-1 text-xs text-muted transition hover:border-ember hover:text-foreground">Attach a file</button>
+            <button type="button" onClick={() => fileInput.current?.click()} className="rounded-full border border-line px-3 py-1 text-xs text-muted bf-tap transition hover:border-ember hover:text-foreground">Attach a file</button>
             {fileName ? (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-overlay px-3 py-1 text-xs text-foreground">
                 {fileName}
@@ -433,17 +438,17 @@ export function DistributeHub() {
             <span className="text-foreground">{plan?.summary}</span>
             {plan?.site ? ` Posts send people to ${plan.site}.` : ''}
           </p>
-          <button type="button" onClick={() => setEditing(true)} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">Change what I promote</button>
+          <button type="button" onClick={() => setEditing(true)} className="rounded-lg border border-line px-3 py-1.5 text-xs bf-tap text-foreground transition hover:border-ember">Change what I promote</button>
         </div>
       )}
 
       {plan && !editing ? (
         <>
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => void downloadAll()} disabled={Boolean(preparing) || writing} className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">{preparing && preparing.startsWith('Preparing') ? preparing : signedIn === false ? 'Sign in to download all' : 'Download all pictures'}</button>
-            <button type="button" onClick={() => void copy(weekText(), 'The whole week is copied.')} className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember">Copy the captions</button>
-            <button type="button" onClick={downloadCsv} className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember">Captions CSV</button>
-            <button type="button" onClick={() => void write_(shift(plan.start, 7))} disabled={writing} className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember disabled:opacity-50">Write next week</button>
+            <button type="button" onClick={() => void downloadAll()} disabled={Boolean(preparing) || writing} className="rounded-xl bg-ember px-4 py-2 text-sm bf-tap font-semibold text-background transition hover:opacity-90 disabled:opacity-60">{preparing && preparing.startsWith('Preparing') ? preparing : signedIn === false ? 'Sign in to download all' : 'Download all pictures'}</button>
+            <button type="button" onClick={() => void copy(weekText(), 'The whole week is copied.')} className="rounded-xl border border-line px-4 py-2 text-sm bf-tap text-foreground transition hover:border-ember">Copy the captions</button>
+            <button type="button" onClick={downloadCsv} className="rounded-xl border border-line px-4 py-2 text-sm bf-tap text-foreground transition hover:border-ember">Captions CSV</button>
+            <button type="button" onClick={() => void write_(shift(plan.start, 7))} disabled={writing} className="rounded-xl border border-line px-4 py-2 text-sm bf-tap text-foreground transition hover:border-ember disabled:opacity-50">Write next week</button>
             <button type="button" onClick={startOver} className="px-2 py-2 text-sm text-muted transition hover:text-foreground">Start over</button>
           </div>
           {writing ? (
@@ -514,11 +519,11 @@ export function DistributeHub() {
                     className={`${field} mt-2 text-[13px] leading-relaxed`}
                   />
                   <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <button type="button" onClick={() => void downloadPost(pickedDay, pickedPost)} disabled={Boolean(preparing)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
+                    <button type="button" onClick={() => void downloadPost(pickedDay, pickedPost)} disabled={Boolean(preparing)} className="rounded-lg bg-ember px-3 py-1.5 text-xs bf-tap font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
                       {preparing === pickedPost.id ? 'Preparing…' : signedIn === false ? 'Sign in to download' : pickedPost.format === 'carousel' ? 'Download slides' : 'Download picture'}
                     </button>
-                    <button type="button" onClick={() => void copy(pickedPost.caption, 'Caption copied.')} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">Copy caption</button>
-                    <Link href={makeLink(pickedPost)} onClick={() => trackEvent('next_step_clicked', { source: 'distribute_make' })} className="px-2 py-1.5 text-xs text-muted transition hover:text-foreground">Edit in the maker</Link>
+                    <button type="button" onClick={() => void copy(pickedPost.caption, 'Caption copied.')} className="rounded-lg border border-line px-3 py-1.5 text-xs bf-tap text-foreground transition hover:border-ember">Copy caption</button>
+                    <Link href={makeLink(pickedPost)} onClick={() => trackEvent('next_step_clicked', { source: 'distribute_make' })} className="px-2 py-1.5 text-xs text-muted bf-tap transition hover:text-foreground">Edit in the maker</Link>
                   </div>
                 </div>
               </div>

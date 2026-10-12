@@ -90,7 +90,7 @@ export function OverviewFeatures() {
   return (
     <section className="border-t border-line px-6 py-16" aria-label="What it does">
       <div className="mx-auto max-w-5xl space-y-20">
-        <Feature title="Make any kind of message." line="Carousels today, with updates, polls, quizzes, threads, video and more on the way. Say it in a sentence; AI writes the first draft, you shape it.">
+        <Feature title="Make any kind of message." line="Carousels, ads, quotes, tips, announcements and polls today, with threads, video and more on the way. Say it in a sentence; AI writes the first draft, you shape it. Or paste a link and get a whole week of posts, pictures included.">
           <FormatsDiagram />
         </Feature>
         <Feature flip title="Publish it where people are." line="Pick the platforms and get a caption written for each. Download or copy it today; one-tap publishing opens as each platform approves us.">
@@ -150,7 +150,7 @@ export function OverviewPrice() {
           ))}
         </dl>
         <div className="mt-6 text-center">
-          <Link href="/pricing" className="text-sm text-ember underline-offset-4 hover:underline">
+          <Link href="/pricing" className="bf-tap text-sm text-ember underline-offset-4 hover:underline">
             See the team plans
           </Link>
         </div>

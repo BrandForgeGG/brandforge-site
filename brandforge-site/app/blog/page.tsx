@@ -20,7 +20,7 @@ const POSTS: { date: string; title: string; body: Block[] }[] = [
     body: [
       'The chat now makes more than carousels. Type /image, or tap Make an ad or image, and say what it is for. The AI asks what it is about, you pick the kind (an ad, a quote, a tip, an announcement or a poll), the size (square, portrait, story or wide), the look and the background, and it writes the words and paints a picture in front of you.',
       'Every word is drawn by us, not by an image model, so it is always spelled right. Edit the headline, the line under it and the button before you save. Put stars around words you want highlighted. Saved to the chat, it becomes a message with its own date, and you can change the size or the look later, copy a caption written for it, or download it.',
-      'Our own calendar uses the same makers. Every day now has five posts at five set times, never closer than two and a half hours apart, and no two neighbours in the same format: a quote to start the morning, a tip, a carousel after lunch, an ad or an announcement in the evening, and a poll at night. Topics rotate through founders, small businesses and creators, so a week never reads like one idea repeated.',
+      'Our own calendar uses the same makers. Every day now has five posts at five set times, never closer than two and a half hours apart, and no two neighbors in the same format: a quote to start the morning, a tip, a carousel after lunch, an ad or an announcement in the evening, and a poll at night. Topics rotate through founders, small businesses and creators, so a week never reads like one idea repeated.',
       'Try it free at brandforge.gg/chat.',
     ],
   },
@@ -29,7 +29,7 @@ const POSTS: { date: string; title: string; body: Block[] }[] = [
     title: 'Your own BrandForge team, by the month, and everything new this week',
     body: [
       'You can now hire the BrandForge team by the month. Starter is €490 (eight carousels or posts, captions for every platform and a content calendar). Growth is €990 (twenty pieces, ad copy, a weekly report and replies within a working day). Build is €2,490 (a website or app that keeps moving, up to two new pages or features a month). Bigger projects start at €5,000 and run as milestone contracts held in escrow. Every plan starts in a chat with a person, and you only pay once you agree what you get.',
-      'The chat is the front door: brandforge.gg/chat. Pick a command, Make a carousel, Plan my idea or Hire or get hired, and the carousel is made right in the conversation, saved as a message with its own date, and keeps the chat going underneath it. You can delete what you send, see how long ago you sent it, and switch the AI off with one tap when you want to talk to people only.',
+      'The chat is the front door: brandforge.gg/chat. Pick a command (Make an ad or image, Make a carousel, Post a gig or listing, or Hire the BrandForge team), and what you ask for is made right in the conversation, saved as a message with its own date, and keeps the chat going underneath it. You can delete what you send, see how long ago you sent it, and switch the AI off with one tap when you want to talk to people only.',
       'Trade is open to everyone. Say what you offer or need in your own words, a profile, a gig, a product, a tool, a startup launch or a request, and BrandForge writes the listing for you to check and publish. Every listing gets its own assistant chat that remembers the goal.',
       'Answers keep coming even when one AI provider has a bad day: the chat now falls back across several providers. Profile pictures show everywhere, the landing page carries real client reviews and shipped projects you can swipe through, and there are new pages for bigger projects, developers and investors.',
       'Start free at brandforge.gg/chat, or see the plans at brandforge.gg/pricing.',
@@ -54,7 +54,7 @@ const POSTS: { date: string; title: string; body: Block[] }[] = [
     body: [
       'The carousel maker now takes just your words, and starts fresh every time you open it. Your brand, closing line and look stay; the old topic does not.',
       'Every cover is a picture made from what the post is about, in five styles: photo, cinematic, 3D render, surreal, or the drawn art we had before. Tap New cover art for another take. Pictures are made by an AI model and are not photos of real events.',
-      'Connections moved into Settings and got a proper face. Telegram, Discord and Bluesky light up in their own colour when linked and sit dashed and grey when not, and Distribute lets you tick where a carousel goes. The admin funnel can now be read for the last 24 hours, 7 days or 30 days, and the Trade Center and overview were redrawn.',
+      'Connections moved into Settings and got a proper face. Telegram, Discord and Bluesky light up in their own color when linked and sit dashed and grey when not, and Distribute lets you tick where a carousel goes. The admin funnel can now be read for the last 24 hours, 7 days or 30 days, and the Trade Center and overview were redrawn.',
     ],
   },
   {
@@ -62,7 +62,7 @@ const POSTS: { date: string; title: string; body: Block[] }[] = [
     title: 'Make a swipeable carousel in a minute',
     body: [
       'Create is now one thing, done well: the carousel maker. Give it a sentence, a web page or a text file and it writes a hook cover, numbered slides with three points each and a closing slide. It only uses facts from what you gave it, and it never invents numbers. Writing and previewing are free. Sign in, free, to edit every word, add your own pictures and download the slides.',
-      'The brand is yours. Slides start with the BrandForge name and closing line, and you can swap in your own name, handle, logo, colour and closing line, or clear them for none. There are eight looks, including a light one.',
+      'The brand is yours. Slides start with the BrandForge name and closing line, and you can swap in your own name, handle, logo, color and closing line, or clear them for none. There are eight looks, including a light one.',
       'Distribute shows your carousel the way each platform will: Instagram, TikTok, LinkedIn, X and Facebook, with a caption written for each. You can post straight to a Telegram channel, a Discord channel or Bluesky today. Instagram, TikTok, LinkedIn and X need each platform to approve us first, so for those you download the slides and post from the app.',
       'The same tool is in the bots. Tap Make a carousel in @brandforge_bot, or use /brandforge in Discord, say what it is about, and the slides arrive in the chat. Videos are in development.',
     ],

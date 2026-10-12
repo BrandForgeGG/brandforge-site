@@ -145,7 +145,7 @@ export async function loadFonts(): Promise<void> {
 
 export type Pictures = { items: Record<number, HTMLImageElement | null>; logo: HTMLImageElement | null };
 
-// The illustration for the look, in the person's own colour when they chose one.
+// The illustration for the look, in the person's own color when they chose one.
 function artOptions(draft: Draft, variant: 'cover' | 'cta') {
   const look = THEMES[draft.theme] ?? THEMES.forge;
   return { art: look.art as 'burst' | 'shards' | 'rings' | 'soft', variant, seed: draft.seed, accent: draft.brand.accent || look.accent };

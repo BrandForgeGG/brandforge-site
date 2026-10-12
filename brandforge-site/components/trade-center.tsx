@@ -283,7 +283,7 @@ export function TradeCenter() {
             />
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {STARTERS.map(([label, start]) => (
-                <button key={label} type="button" onClick={() => setText((current) => (current.trim() ? current : start))} className="rounded-full border border-line px-3 py-1 text-xs text-muted transition hover:border-ember hover:text-foreground">
+                <button key={label} type="button" onClick={() => setText((current) => (current.trim() ? current : start))} className="bf-tap rounded-full border border-line px-3 py-1 text-xs text-muted transition hover:border-ember hover:text-foreground">
                   {label}
                 </button>
               ))}

@@ -13,7 +13,7 @@ export function PricingPlans() {
     <section className="px-6 py-10">
       <div className="mx-auto max-w-5xl">
         <p className="mx-auto max-w-xl text-center text-sm text-muted">
-          AI answers and carousels never cost extra. Plans raise your limits and unlock team and channel features. Pro and Agency open soon; ask for early access.
+          AI answers, carousels and image posts never cost extra. Plans raise your limits and unlock team and channel features. Pro and Agency open soon; ask for early access.
         </p>
         <div className="mt-6 grid gap-3 md:grid-cols-3">
           {PLANS.map((plan) => (

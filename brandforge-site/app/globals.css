@@ -2082,6 +2082,9 @@ main[data-empty='true'] > .bf-chat-footer { position: absolute; inset: auto 0 0 
 }
 @keyframes bf-fade { from { opacity: 0; } to { opacity: 1; } }
 
+/* The sidebar's placeholder is as wide as the sidebar will be, so nothing slides sideways when it arrives. */
+html[data-rail='collapsed'] .bf-rail-ph { width: 4rem; }
+
 /* ---- Smooth loading: content eases in, placeholders shimmer instead of blinking ---- */
 @keyframes bf-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: no-preference) {
@@ -2112,6 +2115,8 @@ main[data-empty='true'] > .bf-chat-footer { position: absolute; inset: auto 0 0 
     min-width: 40px;
   }
   .bf-chat-footer a { display: inline-block; padding: 0.55rem 0.35rem; }
+  /* Small links and chips become full-size touch targets, centred, without changing the mouse layout. */
+  .bf-tap { display: inline-flex; align-items: center; justify-content: center; }
 }
 
 /* Phones: every text field is at least 16px so iOS Safari never zooms the page on focus. */

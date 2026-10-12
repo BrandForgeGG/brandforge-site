@@ -35,6 +35,7 @@ import { extractOutline } from "@/lib/deliverable-outline";
 import { ChatTranscript, type ChatMessage } from "@/components/chat-transcript";
 import {
   ConversationRail,
+  primeRailCache,
   type RecentConversation,
 } from "@/components/conversation-rail";
 import { STATUS_LABELS, type AgreementSummary, type PaymentSummary, type ProposalSummary, type TaskParticipant } from "@/components/project-context-panel";
@@ -241,7 +242,7 @@ export function ChatWorkspace() {
   );
   // Arriving from a plan or package button on the pricing page: the box starts with a first line, and the team is told
   // when the chat is created.
-  const [activePlan, setActivePlan] = useState<string | null>(() => {
+  const [activePlan] = useState<string | null>(() => {
     const asked = searchParams.get("plan");
     return asked && getRetainer(asked) ? asked : null;
   });
@@ -663,6 +664,7 @@ export function ChatWorkspace() {
         ? data.conversations
         : [];
       setRecents(conversations);
+      primeRailCache({ recents: conversations, isStaff: Boolean(data.isStaff), unseen: Number(data.unseenCount ?? 0) });
       const meta = {
         isStaff: Boolean(data.isStaff),
         unseenCount: Number(data.unseenCount ?? 0),
@@ -1725,6 +1727,7 @@ export function ChatWorkspace() {
     },
     [
       activeCommand,
+      activePlan,
       openCarouselCard,
       aiAccess,
       aiEnabled,

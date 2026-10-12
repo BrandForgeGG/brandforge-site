@@ -13,7 +13,7 @@ export const metadata = {
 
 const LIVE = [
   ['A chat that works', 'Describe an idea, paste a link or drop a file and get a researched first answer before any sign-up.'],
-  ['Make and publish', 'A carousel maker inside the chat, with more formats on the way, and captions for every platform.'],
+  ['Make and publish', 'Carousels, ads, quotes, tips, announcements and polls inside the chat, a week of posts written by AI in Distribute, and captions for every platform.'],
   ['Trade, open to everyone', 'Anyone lists a gig, product, tool, launch or request by describing it. Every listing gets its own assistant chat.'],
   ['Contracts with escrow', 'Milestone contracts between members, funded in escrow and released as work is approved. A flat 5% on release.'],
   ['The BrandForge team', 'A named team that builds for clients. Ten shipped projects with live links, and a stream of client reviews.'],

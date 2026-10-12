@@ -27,6 +27,34 @@ export interface RecentConversation {
   aiEnabled?: boolean;
 }
 
+type RailAccount = { name: string; email: string; role: string; username: string | null; avatarUrl: string | null };
+
+// What the rail last knew, kept for as long as the page's scripts stay loaded. Each page has its own rail, so moving between
+// pages rebuilds it; starting from this instead of from nothing means the sidebar never flashes "No chats yet" or loses the
+// account block while it asks again. Everything here is re-checked in the background, so it is never trusted for long.
+const railCache: { account: RailAccount | null; accountId: string; accountAt: number; recents: RecentConversation[] | null; recentsAt: number; isStaff: boolean; isAdmin: boolean; unseen: number; flagsAt: number } = {
+  account: null,
+  accountId: "",
+  accountAt: 0,
+  recents: null,
+  recentsAt: 0,
+  isStaff: false,
+  isAdmin: false,
+  unseen: 0,
+  flagsAt: 0,
+};
+const FRESH_MS = 15000;
+
+/** The chat page loads the recents itself; it hands them over so the rail on the next page starts with them. */
+export function primeRailCache(next: { recents?: RecentConversation[]; isStaff?: boolean; unseen?: number }) {
+  if (next.recents) {
+    railCache.recents = next.recents;
+    railCache.recentsAt = Date.now();
+  }
+  if (typeof next.isStaff === "boolean") railCache.isStaff = railCache.isStaff || next.isStaff;
+  if (typeof next.unseen === "number") railCache.unseen = next.unseen;
+}
+
 // Recents show real timestamps from persisted messages, never a hardcoded "Just now".
 
 // One small stroke icon per workspace page and for chats, drawn inline (no image requests).
@@ -115,22 +143,18 @@ onMobileClose,
     staffUnseenCount?: number;
   }) {
   const router = useRouter();
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [account, setAccount] = useState<{
-    name: string;
-    email: string;
-    role: string;
-    username: string | null;
-    avatarUrl: string | null;
-  } | null>(null);
-  const [accountId, setAccountId] = useState("");
+  // The width the person left it at is known before the first paint (a tiny script in the page head sets it), so the sidebar
+  // never opens wide and then shrinks.
+  const [isCollapsed, setIsCollapsed] = useState(() => typeof document !== "undefined" && document.documentElement.dataset.rail === "collapsed");
+  const [account, setAccount] = useState<RailAccount | null>(() => railCache.account);
+  const [accountId, setAccountId] = useState(() => railCache.accountId);
   // The readable bf_guest cookie marks an anonymous browser (rail is client-only, no SSR mismatch).
   const isVisitor = useIsVisitor();
   const { openLogin } = useLogin();
   const isGuestBrowser = typeof document !== "undefined" && document.cookie.includes("bf_guest=");
-  const [isSelfStaff, setIsSelfStaff] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [unseenCount, setUnseenCount] = useState(0);
+  const [isSelfStaff, setIsSelfStaff] = useState(() => railCache.isStaff);
+  const [isAdmin, setIsAdmin] = useState(() => railCache.isAdmin);
+  const [unseenCount, setUnseenCount] = useState(() => railCache.unseen);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [recentQuery, setRecentQuery] = useState("");
 
@@ -147,11 +171,13 @@ onMobileClose,
     // render; applying it here (rather than in a lazy initializer) avoids a hydration mismatch.
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time restore from localStorage
     if (stored === "1") setIsCollapsed(true);
+    document.documentElement.dataset.rail = stored === "1" ? "collapsed" : "";
   }, []);
 
   function toggleCollapsed() {
     setIsCollapsed((collapsed) => {
       const next = !collapsed;
+      document.documentElement.dataset.rail = next ? "collapsed" : "";
       try {
         window.localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
       } catch {
@@ -165,6 +191,7 @@ onMobileClose,
     let cancelled = false;
 
     async function loadAccount() {
+      if (railCache.account && Date.now() - railCache.accountAt < 60000) return;
       const user = await getSessionUser();
       if (cancelled || !user?.email) {
         return;
@@ -192,14 +219,12 @@ onMobileClose,
       }
 
       if (cancelled) return;
+      const loaded = { name: fullName?.trim() || email.split("@")[0], email, role, username, avatarUrl };
+      railCache.account = loaded;
+      railCache.accountId = user.id;
+      railCache.accountAt = Date.now();
       setAccountId(user.id);
-      setAccount({
-        name: fullName?.trim() || email.split("@")[0],
-        email,
-        role,
-        username,
-        avatarUrl,
-      });
+      setAccount(loaded);
     }
 
     void loadAccount();
@@ -208,18 +233,19 @@ onMobileClose,
     };
   }, []);
 
-  const [selfRecents, setSelfRecents] = useState<RecentConversation[] | null>(
-    null,
-  );
+  const [selfRecents, setSelfRecents] = useState<RecentConversation[] | null>(() => railCache.recents);
 
   const loadSelfRecents = useCallback(async () => {
     try {
       const response = await fetchAuthed("/api/conversations-list");
       if (!response.ok) return;
       const data = await response.json();
-      setSelfRecents(
-        Array.isArray(data.conversations) ? data.conversations : [],
-      );
+      const list: RecentConversation[] = Array.isArray(data.conversations) ? data.conversations : [];
+      railCache.recents = list;
+      railCache.recentsAt = Date.now();
+      railCache.isStaff = railCache.isStaff || Boolean(data.isStaff);
+      railCache.unseen = Number(data.unseenCount ?? 0);
+      setSelfRecents(list);
       setIsSelfStaff(Boolean(data.isStaff));
       setUnseenCount(Number(data.unseenCount ?? 0));
     } catch {
@@ -229,9 +255,10 @@ onMobileClose,
   }, []);
 
   useEffect(() => {
-    if (recentsProp !== undefined || selfRecents !== null) return;
+    if (recentsProp !== undefined) return;
+    // Fresh enough (it was just loaded on the page before this one): show it, check again at the next tick.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadSelfRecents();
+    if (!railCache.recents || Date.now() - railCache.recentsAt > FRESH_MS) void loadSelfRecents();
     // Staff need to notice a brand new chat without reloading the page.
     // Hidden tabs skip the poll: nothing on screen can go stale.
     const timer = window.setInterval(() => {
@@ -239,7 +266,7 @@ onMobileClose,
       void loadSelfRecents();
     }, 30000);
     return () => window.clearInterval(timer);
-  }, [recentsProp, selfRecents, loadSelfRecents]);
+  }, [recentsProp, loadSelfRecents]);
 
   const loadCounts = useCallback(async () => {
     try {
@@ -247,8 +274,11 @@ onMobileClose,
       if (!response.ok) return;
       const data = await response.json();
       // Only the access flags are kept: platform-wide counters no longer render in the rail.
+      railCache.flagsAt = Date.now();
+      railCache.isStaff = railCache.isStaff || Boolean(data.isStaff);
       setIsSelfStaff((current) => current || Boolean(data.isStaff));
       // Admin links follow profiles.role, not the email allowlist: a promoted admin must see them.
+      if (data.isAdmin) railCache.isAdmin = true;
       if (data.isAdmin) setIsAdmin(true);
     } catch {
       // Flags are informational only; they must never break the rail.
@@ -258,7 +288,7 @@ onMobileClose,
   useEffect(() => {
     // Initial load: loadCounts is async and only sets state after the fetch resolves.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadCounts();
+    if (Date.now() - railCache.flagsAt > FRESH_MS) void loadCounts();
     const timer = window.setInterval(() => {
       if (document.hidden) return;
       void loadCounts();

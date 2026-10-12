@@ -40,7 +40,7 @@ const EXAMPLES = ['5 habits of calm teams', 'Why every small shop needs a newsle
 // Makes numbered-list style carousels (Instagram, TikTok, LinkedIn): a hook cover, one slide per point
 // and a closing call to action. Anyone can write one for free and preview every slide. Editing and
 // downloading need a free account, and the draft survives the sign-in. Brand name, handle, logo,
-// colour and the closing line are the person's own: nothing on a slide is ours unless they put it there.
+// color and the closing line are the person's own: nothing on a slide is ours unless they put it there.
 export function CarouselMaker() {
   const { openLogin } = useLogin();
   const [draft, setDraft] = useState<Draft>(emptyDraft());
@@ -365,10 +365,10 @@ export function CarouselMaker() {
               <input className={`${field} mt-1.5`} value={draft.brand.handle} maxLength={40} onChange={(e) => patch({ brand: { ...draft.brand, handle: e.target.value } })} placeholder="@yourhandle" autoCapitalize="none" />
             </label>
             <div className="flex flex-wrap items-center gap-3">
-              <label className="text-sm text-foreground">Accent colour
+              <label className="text-sm text-foreground">Accent color
                 <input type="color" className="ml-2 h-8 w-12 cursor-pointer rounded border border-line bg-background align-middle" value={draft.brand.accent || '#ff6a2b'} onChange={(e) => patch({ brand: { ...draft.brand, accent: e.target.value } })} />
               </label>
-              {draft.brand.accent ? <button type="button" className="text-xs text-ember underline-offset-2 hover:underline" onClick={() => patch({ brand: { ...draft.brand, accent: '' } })}>Use the look&apos;s colour</button> : null}
+              {draft.brand.accent ? <button type="button" className="text-xs text-ember underline-offset-2 hover:underline" onClick={() => patch({ brand: { ...draft.brand, accent: '' } })}>Use the look&apos;s color</button> : null}
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <label className={`${btn} cursor-pointer`}>
@@ -432,7 +432,7 @@ export function CarouselMaker() {
               {signedIn === null ? null : !signedIn ? (
                 <div className="rounded-2xl border border-line bg-panel p-5">
                   <p className="font-serif text-xl text-foreground">Like it? Make it yours.</p>
-                  <p className="mt-2 text-sm leading-relaxed text-muted">Sign in, free, to edit every word, add your own pictures and download the slides. Your carousel is saved and waiting for you, and brand, colour and closing line stay yours.</p>
+                  <p className="mt-2 text-sm leading-relaxed text-muted">Sign in, free, to edit every word, add your own pictures and download the slides. Your carousel is saved and waiting for you, and brand, color and closing line stay yours.</p>
                   <button type="button" className={`${btnPrimary} mt-4`} onClick={askToSignIn}>Sign in and keep going</button>
                   <p className="mt-2 text-xs text-muted">No card. Sign in with Google or an email link.</p>
                 </div>
