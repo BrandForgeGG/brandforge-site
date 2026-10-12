@@ -11,14 +11,14 @@ const { normalizePlan } = require('./carousel-plan');
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const DAY_FOCUS = ['Start the week', 'Teach something', 'Show how it works', 'Answer a question', 'Make it personal', 'Keep it light', 'Look ahead'];
 
-// Posting times by how many a day. Every set keeps posts at least 2.5 hours apart (morning scroll, mid-morning,
-// after lunch, evening, prime time).
+// Posting times by how many a day, drawn from five slots five hours apart: 2 AM, 7 AM, 12 PM, 5 PM and 10 PM. A short day
+// keeps the busiest slots (the 2 AM slot is only used when posting five a day).
 const SLOT_SETS = {
-  1: ['11:00'],
-  2: ['09:00', '18:30'],
-  3: ['07:30', '14:00', '21:30'],
-  4: ['07:30', '11:00', '18:30', '21:30'],
-  5: ['07:30', '11:00', '14:00', '18:30', '21:30'],
+  1: ['12:00'],
+  2: ['07:00', '17:00'],
+  3: ['07:00', '12:00', '22:00'],
+  4: ['07:00', '12:00', '17:00', '22:00'],
+  5: ['02:00', '07:00', '12:00', '17:00', '22:00'],
 };
 
 // The six single-post formats, cycled so neighbouring posts never share one.

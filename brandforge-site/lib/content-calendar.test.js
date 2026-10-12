@@ -47,11 +47,11 @@ test('saved preferences override the default type and time for a day, and used t
 
 test('five posts a day at the five set times, each a different format, 2.5 hours apart', () => {
   const { checkSlotGaps, POST_FORMATS } = require('./content-calendar');
-  assert.deepEqual(SLOT_TIMES, ['07:30', '11:00', '14:00', '18:30', '21:30']);
+  assert.deepEqual(SLOT_TIMES, ['02:00', '07:00', '12:00', '17:00', '22:00']);
   assert.equal(checkSlotGaps(SLOT_TIMES).ok, true);
-  assert.equal(checkSlotGaps(['07:30', '09:00', '14:00', '18:30', '21:30']).ok, false);
-  assert.equal(checkSlotGaps(['11:00', '07:30', '14:00', '18:30', '21:30']).ok, false);
-  assert.equal(checkSlotGaps(['07:30', '', '14:00', '18:30', '21:30']).ok, false);
+  assert.equal(checkSlotGaps(['02:00', '03:00', '12:00', '17:00', '22:00']).ok, false);
+  assert.equal(checkSlotGaps(['07:00', '02:00', '12:00', '17:00', '22:00']).ok, false);
+  assert.equal(checkSlotGaps(['02:00', '', '12:00', '17:00', '22:00']).ok, false);
   for (const day of DEFAULT_DAYS) {
     assert.equal(day.formats.length, 5);
     for (const format of day.formats) assert.ok(POST_FORMATS.includes(format), format);

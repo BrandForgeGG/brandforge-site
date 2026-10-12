@@ -1113,3 +1113,9 @@ we do not have.
 **Change:** every post in a Distribute week now comes with its picture, made automatically. The AI writes the words for each picture in the same call as the caption (quote, tip, ad, announcement and poll images; four-slide carousels), and the page draws them with the same renderer as the makers, in a rotating set of looks so the week is not one colour. Carousels swipe in the card. Each post has Download (one picture, or a zip of slides), the header has Download all pictures (one zip with every picture and a captions CSV), and an optional name for the pictures. Guests see everything and sign in to download. A day the writer cannot finish gets one more try, and any post still without words gets a plain picture built from its angle, so no post is ever without one. Live test: 21 posts, 21 pictures, no fallbacks, about 30 seconds.
 
 **Distribution move:** this is the demo that sells itself: one sentence in, 21 finished posts (words and pictures) out. Record the page from "Write my week" to "Download all pictures" as the hero video for the week-2 posts. Copy line: "Say what you do. Get a week of posts with the pictures, ready to post."
+
+## 2026-10-12 — Posting times: 2 AM, 7 AM, 12 PM, 5 PM, 10 PM
+
+**Change:** the admin weekly calendar and Distribute now post at 2 AM, 7 AM, 12 PM, 5 PM and 10 PM (five hours apart). Distribute shows them as "7:00 AM" and picks from those slots by posts a day (one a day is 12 PM; two are 7 AM and 5 PM; three add 10 PM; four are 7 AM, 12 PM, 5 PM and 10 PM; five add 2 AM). The admin calendar times are UTC; weeks already laid out keep the old times until Rebuild week.
+
+**Distribution move:** none (a scheduling change). Week-1 queued posts are unaffected.

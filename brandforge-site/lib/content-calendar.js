@@ -7,9 +7,9 @@
 const { THEME_LIST } = require('./carousel-render');
 
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-// Morning scroll, mid-morning, after lunch, evening wind-down, prime time. Posts stay at least 2.5 hours apart so
-// the platforms never have to choose between two of them.
-const SLOT_TIMES = ['07:30', '11:00', '14:00', '18:30', '21:30'];
+// Five slots five hours apart: 2 AM, 7 AM, 12 PM, 5 PM and 10 PM. Posts stay at least 2.5 hours apart so the platforms
+// never have to choose between two of them.
+const SLOT_TIMES = ['02:00', '07:00', '12:00', '17:00', '22:00'];
 const MIN_GAP_MINUTES = 150;
 const POST_TYPES = ['educational', 'news', 'promo', 'list', 'funny', 'story', 'explainer', 'inspire', 'engage'];
 // What each post is made as. Carousels are the only format that can search the news.

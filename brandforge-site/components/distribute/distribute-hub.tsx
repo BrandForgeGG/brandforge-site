@@ -19,6 +19,13 @@ const chip = 'rounded-full border px-3 py-1.5 text-xs transition';
 const FORMAT_LABEL: Record<string, string> = { carousel: 'Carousel', quote: 'Quote', tip: 'Tip', ad: 'Ad', announcement: 'Announcement', question: 'Poll' };
 const PHASES = ['Reading what you gave me', 'Deciding what to say this week', 'Writing each day and its pictures'];
 
+// "07:00" -> "7:00 AM", "17:00" -> "5:00 PM".
+function clock(time: string): string {
+  const hour = Number(time.slice(0, 2));
+  const suffix = hour >= 12 ? 'PM' : 'AM';
+  return `${hour % 12 === 0 ? 12 : hour % 12}:${time.slice(3, 5)} ${suffix}`;
+}
+
 function localTomorrow(): string {
   const d = new Date();
   d.setDate(d.getDate() + 1);
@@ -172,7 +179,7 @@ export function DistributeHub() {
   function weekText(): string {
     if (!plan) return '';
     return plan.days
-      .map((day) => `${prettyDate(day.date)} (${day.focus})\n` + day.posts.map((post) => `${post.time}  ${FORMAT_LABEL[post.format] ?? post.format}\n${post.caption}`).join('\n\n'))
+      .map((day) => `${prettyDate(day.date)} (${day.focus})\n` + day.posts.map((post) => `${clock(post.time)}  ${FORMAT_LABEL[post.format] ?? post.format}\n${post.caption}`).join('\n\n'))
       .join('\n\n------\n\n');
   }
 
@@ -306,7 +313,7 @@ export function DistributeHub() {
                       <PostVisual post={post} brand={{ name: brand.trim(), handle: plan.site }} />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2 text-xs">
-                          <span className="tabular-nums text-muted">{post.time}</span>
+                          <span className="tabular-nums text-muted">{clock(post.time)}</span>
                           <span className="rounded-full border border-line px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted">{FORMAT_LABEL[post.format] ?? post.format}</span>
                           <span className="min-w-0 flex-1 truncate text-foreground">{post.topic}</span>
                         </div>
@@ -314,7 +321,7 @@ export function DistributeHub() {
                           value={post.caption}
                           onChange={(event) => editCaption(d, p, event.target.value)}
                           rows={Math.min(8, Math.max(3, Math.ceil(post.caption.length / 56) + post.caption.split('\n').length - 1))}
-                          aria-label={`Caption for ${prettyDate(day.date)} at ${post.time}`}
+                          aria-label={`Caption for ${prettyDate(day.date)} at ${clock(post.time)}`}
                           className={`${field} mt-2 text-[13px] leading-relaxed`}
                         />
                         <div className="mt-2 flex flex-wrap items-center gap-2">
