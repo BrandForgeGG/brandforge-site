@@ -10,8 +10,6 @@ import { useChannels, type ChannelKind } from '@/components/integrations/use-cha
 const COMING: { id: ServiceId; line: string }[] = [
   { id: 'instagram', line: 'Carousels straight to your feed' },
   { id: 'tiktok', line: 'Photo posts and slideshows' },
-  { id: 'linkedin', line: 'Document posts for your page' },
-  { id: 'x', line: 'Threads with pictures' },
   { id: 'facebook', line: 'Page posts' },
   { id: 'youtube', line: 'Community posts and Shorts' },
 ];
@@ -23,6 +21,8 @@ const SAY: Record<ChannelKind, { line: string; add: string }> = {
   slack: { line: 'Post updates, polls and threads to a channel.', add: 'Link a channel' },
   tumblr: { line: 'Post carousels and text to your blog.', add: 'Connect your blog' },
   mastodon: { line: 'Post pictures, polls and threads. Ready in a minute.', add: 'Link an account' },
+  linkedin: { line: 'Post pictures and updates to your profile.', add: 'Connect with LinkedIn' },
+  x: { line: 'Post pictures, polls and threads to your account.', add: 'Connect with X' },
 };
 
 function Pill({ on, children }: { on: boolean; children: React.ReactNode }) {
@@ -38,7 +38,7 @@ function Pill({ on, children }: { on: boolean; children: React.ReactNode }) {
 // the names you linked, a live badge); one that is not linked looks switched off, with one clear
 // button to connect it. Services waiting on a platform's approval say so and let you vote.
 export function IntegrationsPanel() {
-  const { channels, telegramLinked, tumblrReady, loading, reload, unlink } = useChannels();
+  const { channels, telegramLinked, tumblrReady, oauthReady, loading, reload, unlink } = useChannels();
   const [open, setOpen] = useState<ChannelKind | null>(null);
   const [code, setCode] = useState<{ code: string; botUrl: string } | null>(null);
   const [alertBusy, setAlertBusy] = useState(false);
@@ -66,12 +66,15 @@ export function IntegrationsPanel() {
     trackEvent('create_interest', { status: `integration-${id}` });
   }
 
+  // Platforms that need a developer app made first stay "Coming soon" until their keys are in.
+  const ready = (kind: ChannelKind) => (kind === 'tumblr' ? tumblrReady : kind === 'linkedin' || kind === 'x' ? Boolean(oauthReady[kind]) : true);
+
   const btn = 'rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-foreground transition hover:border-ember disabled:opacity-50';
 
   return (
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-2">
-        {(['telegram', 'discord', 'bluesky', 'mastodon', 'slack', 'tumblr'] as ChannelKind[]).map((kind) => {
+        {(['telegram', 'discord', 'bluesky', 'mastodon', 'linkedin', 'x', 'slack', 'tumblr'] as ChannelKind[]).map((kind) => {
           const mine = channels.filter((c) => c.kind === kind);
           const live = kind === 'telegram' ? telegramLinked || mine.length > 0 : mine.length > 0;
           return (
@@ -125,8 +128,8 @@ export function IntegrationsPanel() {
               </div>
 
               <div className="mt-3">
-                <button type="button" aria-expanded={open === kind} disabled={kind === 'tumblr' && !tumblrReady && mine.length === 0} className={`${btn} w-full`} onClick={() => setOpen(open === kind ? null : kind)}>
-                  {open === kind ? 'Close' : kind === 'tumblr' && !tumblrReady && mine.length === 0 ? 'Coming soon' : mine.length > 0 ? 'Link another' : SAY[kind].add}
+                <button type="button" aria-expanded={open === kind} disabled={!ready(kind) && mine.length === 0} className={`${btn} w-full`} onClick={() => setOpen(open === kind ? null : kind)}>
+                  {open === kind ? 'Close' : !ready(kind) && mine.length === 0 ? 'Coming soon' : mine.length > 0 ? 'Link another' : SAY[kind].add}
                 </button>
                 {open === kind ? (
                   <div className="mt-3 rounded-xl border border-line p-3">

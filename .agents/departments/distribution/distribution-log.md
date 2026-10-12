@@ -1161,3 +1161,9 @@ we do not have.
 **Change:** each public page now has its own meta description ending in its call to action, and its own keywords (`lib/seo-pages.ts`), used for the page tags, the share cards and the page's structured data. Project pages get keywords from their name and category.
 
 **Distribution move:** the call to action per page doubles as the line to use when posting that page's link: Trade "Post your first listing", Create "Make your first one", Distribute "Write your week", Pricing "Compare plans".
+
+### 2026-10-12 — LinkedIn and X connect, faster Distribute, clean sign-out
+
+**Change:** Distribute writes all seven days at once (a week took about 46 seconds with three at a time). Signing out now clears the saved week, picked channels and drafts in the browser, so the next person never sees them. LinkedIn and X connect from their own pages (OAuth, tokens encrypted, no passwords) and post pictures, polls and threads; they show "Coming soon" until the developer-app keys are added. Distribute stays open to visitors; signing in is needed to download, post and schedule.
+
+**Distribution move:** once the keys are in: "Connect LinkedIn and X, and BrandForge posts your week for you." Until then, say nothing about LinkedIn or X in public posts.

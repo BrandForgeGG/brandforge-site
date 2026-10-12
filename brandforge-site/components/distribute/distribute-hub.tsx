@@ -6,6 +6,8 @@ import { trackEvent } from '@/lib/funnel-client';
 import { getSessionUser } from '@/lib/browser-auth';
 import { useLogin } from '@/components/login-dialog';
 import { zipStore } from '@/lib/zip-store.js';
+import { clearAccountLocalState } from '@/lib/account-local';
+import { supabase } from '@/lib/supabase';
 import { PostVisual } from '@/components/distribute/post-visual';
 import { postFiles } from '@/components/distribute/render-post';
 import { usePublisher, type ScheduledItem } from '@/components/distribute/use-publisher';
@@ -124,6 +126,18 @@ export function DistributeHub() {
     }
     void getSessionUser().then((user) => setSignedIn(Boolean(user))).catch(() => setSignedIn(false));
     setReady(true);
+    // Signing out in another tab (or this one) clears the saved week here too, so it never stays on screen for the next person.
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event !== 'SIGNED_OUT') return;
+      clearAccountLocalState();
+      setSignedIn(false);
+      setPlan(null);
+      setText('');
+      setFileName('');
+      setFileText('');
+      setBrand('');
+    });
+    return () => data.subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -232,7 +246,7 @@ export function DistributeHub() {
     setWriting(true);
     setBusy(false);
 
-    // Step 2: one request per day, a few at a time. A failed or unfinished day gets one more try, then a plain day.
+    // Step 2: one request per day, all at once (seven writers finish in about the time of one). A failed or unfinished day gets one more try, then a plain day.
     const queue = days.map((_, d) => d);
     const done = new Set<number>();
     const settle = (d: number, day: PlannedDay) => {
@@ -258,7 +272,7 @@ export function DistributeHub() {
         settle(d, made ?? plainDay(brief as Brief, d));
       }
     };
-    await Promise.all([worker(), worker(), worker()]);
+    await Promise.all(days.map(() => worker()));
 
     // Stopped early (or a day never came back): those days become plain days, so the week is never left with holes.
     for (let d = 0; d < days.length; d++) if (!done.has(d)) settle(d, plainDay(brief as Brief, d));

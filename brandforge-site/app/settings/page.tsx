@@ -1,5 +1,6 @@
 'use client';
 
+import { clearAccountLocalState } from '@/lib/account-local';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/app-shell';
@@ -208,6 +209,7 @@ export default function SettingsPage() {
   }
 
   async function handleSignOut() {
+    clearAccountLocalState();
     await supabase.auth.signOut();
     router.push('/login');
   }

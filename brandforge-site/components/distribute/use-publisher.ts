@@ -19,7 +19,7 @@ function localISO(day: PlannedDay, post: PlannedPost): string {
 // what became of each scheduled post. The pictures are drawn here in the browser (the same ones that are downloaded),
 // then handed to the server, which sends them at the planned time.
 export function usePublisher(signedIn: boolean | null) {
-  const { channels, loading, reload } = useChannels();
+  const { channels, loading, reload } = useChannels(Boolean(signedIn));
   const [picked, setPicked] = useState<string[]>([]);
   const [items, setItems] = useState<ScheduledItem[]>([]);
   const [ready, setReady] = useState(true);

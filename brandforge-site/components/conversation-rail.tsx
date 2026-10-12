@@ -1,5 +1,6 @@
 "use client";
 
+import { clearAccountLocalState } from '@/lib/account-local';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
@@ -301,6 +302,11 @@ onMobileClose,
   const newChatCount = staffUnseenCountProp ?? unseenCount;
 
   async function handleSignOut() {
+    clearAccountLocalState();
+    railCache.account = null;
+    railCache.recents = null;
+    railCache.isStaff = false;
+    railCache.isAdmin = false;
     await supabase.auth.signOut();
     router.push("/login");
   }

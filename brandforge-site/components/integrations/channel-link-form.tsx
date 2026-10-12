@@ -70,6 +70,12 @@ export function ChannelLinkForm({ kind, telegramLinked, onLinked }: { kind: Chan
           <p className="text-xs text-muted">Slack webhooks take text, not pictures, so carousels are not posted here. Updates, polls, quizzes and threads are.</p>
         </>
       ) : null}
+      {kind === 'linkedin' || kind === 'x' ? (
+        <>
+          <p className="text-xs leading-relaxed text-muted">You approve BrandForge on {kind === 'x' ? 'X' : 'LinkedIn'}&apos;s own page. We never see your password, and you can revoke access in your {kind === 'x' ? 'X' : 'LinkedIn'} settings at any time.{kind === 'linkedin' ? ' The sign-in lasts about 60 days, then you connect again.' : ''}</p>
+          <a href={`/api/integrations/oauth/${kind}/start`} className={btnPrimary + ' inline-block'}>Connect with {kind === 'x' ? 'X' : 'LinkedIn'}</a>
+        </>
+      ) : null}
       {kind === 'tumblr' ? (
         <>
           <p className="text-xs leading-relaxed text-muted">You approve BrandForge on Tumblr&apos;s own page. We never see your password, and you can revoke access in your Tumblr settings at any time. Posts go to your primary blog.</p>
@@ -106,7 +112,7 @@ export function ChannelLinkForm({ kind, telegramLinked, onLinked }: { kind: Chan
           </label>
         </>
       ) : null}
-      {kind !== 'tumblr' ? (
+      {kind !== 'tumblr' && kind !== 'linkedin' && kind !== 'x' ? (
         <button type="button" className={btnPrimary} disabled={busy} onClick={() => void link()}>
           {busy ? 'Checking…' : 'Check and connect'}
         </button>

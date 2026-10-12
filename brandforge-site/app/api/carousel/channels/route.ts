@@ -5,6 +5,7 @@ import { addCarouselChannel, getUserNotifyTargets, listCarouselChannels, removeC
 import { linkBluesky, linkDiscordWebhook, linkSlackWebhook, linkTelegramChannel, type LinkResult } from '@/lib/carousel-channels';
 import { tumblrConfigured } from '@/lib/tumblr';
 import { linkMastodon } from '@/lib/mastodon';
+import { oauthConfigured } from '@/lib/oauth-channels';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
@@ -25,6 +26,7 @@ export async function GET(request: NextRequest) {
     channels: channels.map((c) => ({ id: c.id, kind: c.kind, label: c.label })),
     telegramLinked: Boolean(targets.telegramChatId),
     tumblrReady: tumblrConfigured(),
+    oauthReady: { linkedin: oauthConfigured('linkedin'), x: oauthConfigured('x') },
   });
 }
 
@@ -42,7 +44,7 @@ export async function POST(request: NextRequest) {
   else if (body.kind === 'slack') linked = await linkSlackWebhook(String(body.webhook ?? ''));
   else if (body.kind === 'mastodon') linked = await linkMastodon(String(body.instance ?? ''), String(body.token ?? ''));
   else if (body.kind === 'bluesky') linked = await linkBluesky(String(body.handle ?? ''), String(body.password ?? ''));
-  else return NextResponse.json({ error: 'Pick Telegram, Discord, Slack, Mastodon or Bluesky. Tumblr connects from its own button.' }, { status: 400 });
+  else return NextResponse.json({ error: 'Pick Telegram, Discord, Slack, Mastodon or Bluesky. Tumblr, LinkedIn and X connect from their own buttons.' }, { status: 400 });
   if (!linked.ok) return NextResponse.json({ error: linked.error }, { status: 422 });
 
   const saved = await addCarouselChannel(auth.user.id, { kind: linked.kind, label: linked.label, secret: linked.secret, meta: linked.meta });

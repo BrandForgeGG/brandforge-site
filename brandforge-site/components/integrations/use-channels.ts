@@ -2,32 +2,35 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-export type ChannelKind = 'telegram' | 'discord' | 'bluesky' | 'slack' | 'tumblr' | 'mastodon';
+export type ChannelKind = 'telegram' | 'discord' | 'bluesky' | 'slack' | 'tumblr' | 'mastodon' | 'linkedin' | 'x';
 export type Channel = { id: string; kind: ChannelKind; label: string };
 
 // The linked channels (names only, never a secret) and whether the person's own Telegram is linked
 // for alerts. One place, used by Settings and by Distribute, so both always agree.
-export function useChannels() {
+export function useChannels(enabled = true) {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [telegramLinked, setTelegramLinked] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [tumblrReady, setTumblrReady] = useState(false);
+  const [oauthReady, setOauthReady] = useState<Record<string, boolean>>({});
 
   const reload = useCallback(async () => {
     const res = await fetch('/api/carousel/channels').catch(() => null);
     if (res && res.ok) {
-      const data = (await res.json()) as { channels: Channel[]; telegramLinked: boolean; tumblrReady?: boolean };
+      const data = (await res.json()) as { channels: Channel[]; telegramLinked: boolean; tumblrReady?: boolean; oauthReady?: Record<string, boolean> };
       setChannels(data.channels);
       setTelegramLinked(data.telegramLinked);
       setTumblrReady(Boolean(data.tumblrReady));
+      setOauthReady(data.oauthReady ?? {});
     }
     setLoading(false);
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on mount
     void reload();
-  }, [reload]);
+  }, [reload, enabled]);
 
   const unlink = useCallback(
     async (id: string) => {
@@ -37,5 +40,5 @@ export function useChannels() {
     [reload],
   );
 
-  return { channels, telegramLinked, tumblrReady, loading, reload, unlink };
+  return { channels, telegramLinked, tumblrReady, oauthReady, loading, reload, unlink };
 }
