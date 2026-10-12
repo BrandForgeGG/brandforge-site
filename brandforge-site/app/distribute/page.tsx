@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function DistributePage() {
   return (
-    <AppShell title="Distribute" subtitle="One sentence in, a week of posts out.">
+    <AppShell title="Distribute" subtitle="One sentence in, a week of posts out." wide>
       <DistributeHub />
     </AppShell>
   );

@@ -15,7 +15,6 @@ type Saved = { v: 1; text: string; perDay: number; start: string; fileName: stri
 
 const KEY = 'bf:distribute';
 const field = 'w-full rounded-xl border border-line bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none';
-const chip = 'rounded-full border px-3 py-1.5 text-xs transition';
 const FORMAT_LABEL: Record<string, string> = { carousel: 'Carousel', quote: 'Quote', tip: 'Tip', ad: 'Ad', announcement: 'Announcement', question: 'Poll' };
 const PHASES = ['Reading what you gave me', 'Deciding what to say this week', 'Writing each day and its pictures'];
 
@@ -93,6 +92,9 @@ export function DistributeHub() {
   const [note, setNote] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  // The post open in the detail panel under the calendar, and whether the brief is being changed.
+  const [selected, setSelected] = useState<{ d: number; p: number }>({ d: 0, p: 0 });
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     const saved = read();
@@ -155,6 +157,8 @@ export function DistributeHub() {
         return;
       }
       setPlan(data.plan as Plan);
+      setSelected({ d: 0, p: 0 });
+      setEditing(false);
       setStart(startDate);
     } catch {
       setError('Could not reach the writer. Check your connection and try again.');
@@ -249,6 +253,7 @@ export function DistributeHub() {
   }
 
   function startOver() {
+    setEditing(false);
     setPlan(null);
     setNote(null);
     setError(null);
@@ -281,116 +286,142 @@ export function DistributeHub() {
     );
   }
 
-  if (plan) {
-    return (
-      <div className="mx-auto max-w-3xl">
-        <p className="text-sm leading-relaxed text-muted">
-          <span className="text-foreground">{plan.summary}</span>
-          {plan.site ? ` Posts send people to ${plan.site}.` : ''}
-        </p>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => void downloadAll()} disabled={Boolean(preparing)} className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">{preparing && preparing.startsWith('Preparing') ? preparing : signedIn === false ? 'Sign in to download all' : 'Download all pictures'}</button>
-          <button type="button" onClick={() => void copy(weekText(), 'The whole week is copied.')} className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember">Copy the captions</button>
-          <button type="button" onClick={downloadCsv} className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember">Captions CSV</button>
-          <button type="button" onClick={() => void write_(shift(plan.start, 7))} className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember">Write next week</button>
-          <button type="button" onClick={startOver} className="px-2 py-2 text-sm text-muted transition hover:text-foreground">Start over</button>
-        </div>
-        {note ? <p role="status" className="mt-2 text-xs text-muted">{note}</p> : null}
-        {error ? <p role="alert" className="mt-2 text-sm text-danger">{error}</p> : null}
-        {plan.plainDays > 0 ? <p className="mt-2 text-xs text-muted">{plan.plainDays === 1 ? 'One day uses' : `${plan.plainDays} days use`} simpler captions because the writer was busy. Write the week again to improve {plan.plainDays === 1 ? 'it' : 'them'}.</p> : null}
-
-        <div className="mt-6 space-y-6">
-          {plan.days.map((day, d) => (
-            <section key={day.date} aria-label={prettyDate(day.date)}>
-              <h2 className="flex items-baseline gap-2 font-serif text-xl text-foreground">
-                {prettyDate(day.date)}
-                <span className="text-xs font-normal text-muted">{day.focus}</span>
-              </h2>
-              <ul className="mt-2 space-y-2">
-                {day.posts.map((post, p) => (
-                  <li key={post.id} className="rounded-2xl border border-line bg-panel p-3.5 sm:p-4">
-                    <div className="flex flex-col gap-3 sm:flex-row">
-                      <PostVisual post={post} brand={{ name: brand.trim(), handle: plan.site }} />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2 text-xs">
-                          <span className="tabular-nums text-muted">{clock(post.time)}</span>
-                          <span className="rounded-full border border-line px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted">{FORMAT_LABEL[post.format] ?? post.format}</span>
-                          <span className="min-w-0 flex-1 truncate text-foreground">{post.topic}</span>
-                        </div>
-                        <textarea
-                          value={post.caption}
-                          onChange={(event) => editCaption(d, p, event.target.value)}
-                          rows={Math.min(8, Math.max(3, Math.ceil(post.caption.length / 56) + post.caption.split('\n').length - 1))}
-                          aria-label={`Caption for ${prettyDate(day.date)} at ${clock(post.time)}`}
-                          className={`${field} mt-2 text-[13px] leading-relaxed`}
-                        />
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <button type="button" onClick={() => void downloadPost(day, post)} disabled={Boolean(preparing)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
-                            {preparing === post.id ? 'Preparing…' : signedIn === false ? 'Sign in to download' : post.format === 'carousel' ? 'Download slides' : 'Download picture'}
-                          </button>
-                          <button type="button" onClick={() => void copy(post.caption, 'Caption copied.')} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">Copy caption</button>
-                          <Link href={makeLink(post)} onClick={() => trackEvent('next_step_clicked', { source: 'distribute_make' })} className="px-2 py-1.5 text-xs text-muted transition hover:text-foreground">Edit in the maker</Link>
-                        </div>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const showMaker = !plan || editing;
+  const pickedDay = plan?.days[Math.min(selected.d, (plan?.days.length ?? 1) - 1)];
+  const pickedPost = pickedDay?.posts[Math.min(selected.p, (pickedDay?.posts.length ?? 1) - 1)];
+  const pickedBrand = { name: brand.trim(), handle: plan?.site ?? '' };
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <h2 className="font-serif text-2xl text-foreground sm:text-3xl">What do you want to promote?</h2>
-      <p className="mt-1 text-sm text-muted">Describe it, paste a link, or attach a file. The AI writes your week.</p>
-      <textarea
-        value={text}
-        onChange={(event) => setText(event.target.value)}
-        rows={4}
-        maxLength={2500}
-        autoFocus
-        placeholder="A bakery in Leeds selling sourdough on Saturdays, or https://yourwebsite.com"
-        aria-label="What do you want to promote?"
-        className={`${field} mt-4 text-base`}
-      />
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <input ref={fileInput} type="file" accept=".txt,.md,.markdown,.csv,.json,.html,.htm,text/plain" className="hidden" onChange={(event) => void pickFile(event.target.files?.[0])} />
-        <button type="button" onClick={() => fileInput.current?.click()} className="rounded-full border border-line px-3 py-1.5 text-xs text-muted transition hover:border-ember hover:text-foreground">Attach a file</button>
-        {fileName ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-overlay px-3 py-1.5 text-xs text-foreground">
-            {fileName}
-            <button type="button" aria-label="Remove the file" onClick={() => { setFileName(''); setFileText(''); }} className="text-muted hover:text-foreground">✕</button>
-          </span>
-        ) : null}
-      </div>
-
-      <label className="mt-4 block text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-        Name on the pictures (optional)
-        <input value={brand} onChange={(event) => setBrand(event.target.value)} maxLength={40} placeholder="Your business or name" className={`${field} mt-2 font-normal normal-case tracking-normal`} />
-      </label>
-
-      <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Posts a day</p>
-          <div className="mt-2 flex gap-2" role="group" aria-label="Posts a day">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button key={n} type="button" onClick={() => setPerDay(n)} aria-pressed={perDay === n} className={`${chip} ${perDay === n ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>{n}</button>
-            ))}
+    <div className="max-w-5xl">
+      {/* The maker: the same calm size as Trade's. With a week written it folds into one line. */}
+      {showMaker ? (
+        <section aria-label="Write a week" className="rounded-2xl border border-line bg-panel p-4 sm:p-5">
+          <label htmlFor="distribute-brief" className="font-serif text-lg text-foreground">What do you want to promote?</label>
+          <textarea
+            id="distribute-brief"
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            rows={3}
+            maxLength={2500}
+            placeholder="Describe it, or paste a link. The AI writes your week."
+            className={`${field} mt-2 text-base`}
+          />
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <input ref={fileInput} type="file" accept=".txt,.md,.markdown,.csv,.json,.html,.htm,text/plain" className="hidden" onChange={(event) => void pickFile(event.target.files?.[0])} />
+            <button type="button" onClick={() => fileInput.current?.click()} className="rounded-full border border-line px-3 py-1 text-xs text-muted transition hover:border-ember hover:text-foreground">Attach a file</button>
+            {fileName ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-overlay px-3 py-1 text-xs text-foreground">
+                {fileName}
+                <button type="button" aria-label="Remove the file" onClick={() => { setFileName(''); setFileText(''); }} className="text-muted hover:text-foreground">✕</button>
+              </span>
+            ) : null}
+            <span className="ml-auto flex items-center gap-1.5 text-xs text-muted" role="group" aria-label="Posts a day">
+              Posts a day
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button key={n} type="button" onClick={() => setPerDay(n)} aria-pressed={perDay === n} className={`h-7 w-7 rounded-full border text-xs transition ${perDay === n ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>{n}</button>
+              ))}
+            </span>
           </div>
+          {error ? <p role="alert" className="mt-2 text-xs text-danger">{error}</p> : null}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => void write_(start)} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">Write my week</button>
+            <input type="date" value={start} onChange={(event) => setStart(event.target.value)} aria-label="First day" className="rounded-lg border border-line bg-background px-2.5 py-1.5 text-sm text-foreground focus:border-ember focus:outline-none" />
+            <input value={brand} onChange={(event) => setBrand(event.target.value)} maxLength={40} placeholder="Name on the pictures (optional)" aria-label="Name on the pictures" className="min-w-0 flex-1 rounded-lg border border-line bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none sm:max-w-[16rem]" />
+            {editing ? <button type="button" onClick={() => setEditing(false)} className="px-2 py-2 text-sm text-muted transition hover:text-foreground">Cancel</button> : null}
+          </div>
+        </section>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="min-w-0 flex-1 basis-60 text-sm leading-relaxed text-muted">
+            <span className="text-foreground">{plan?.summary}</span>
+            {plan?.site ? ` Posts send people to ${plan.site}.` : ''}
+          </p>
+          <button type="button" onClick={() => setEditing(true)} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">Change what I promote</button>
         </div>
-        <label className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-          Starts
-          <input type="date" value={start} onChange={(event) => setStart(event.target.value)} className="mt-2 block rounded-xl border border-line bg-background px-3 py-1.5 text-sm font-normal normal-case tracking-normal text-foreground focus:border-ember focus:outline-none" />
-        </label>
-      </div>
+      )}
 
-      {error ? <p role="alert" className="mt-4 text-sm text-danger">{error}</p> : null}
-      <button type="button" onClick={() => void write_(start)} className="mt-6 rounded-xl bg-ember px-6 py-3 text-sm font-semibold text-background transition hover:opacity-90">Write my week</button>
-      <p className="mt-3 text-xs text-muted">Quotes, tips, carousels, ads and polls, spread over the day, each with a caption that asks for something different. Every post comes with its picture, drawn for you. Nothing is invented: it only uses what you give it.</p>
+      {plan && !editing ? (
+        <>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => void downloadAll()} disabled={Boolean(preparing)} className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">{preparing && preparing.startsWith('Preparing') ? preparing : signedIn === false ? 'Sign in to download all' : 'Download all pictures'}</button>
+            <button type="button" onClick={() => void copy(weekText(), 'The whole week is copied.')} className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember">Copy the captions</button>
+            <button type="button" onClick={downloadCsv} className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember">Captions CSV</button>
+            <button type="button" onClick={() => void write_(shift(plan.start, 7))} className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember">Write next week</button>
+            <button type="button" onClick={startOver} className="px-2 py-2 text-sm text-muted transition hover:text-foreground">Start over</button>
+          </div>
+          {note ? <p role="status" className="mt-2 text-xs text-muted">{note}</p> : null}
+          {error ? <p role="alert" className="mt-2 text-sm text-danger">{error}</p> : null}
+          {plan.plainDays > 0 ? <p className="mt-2 text-xs text-muted">{plan.plainDays === 1 ? 'One day uses' : `${plan.plainDays} days use`} simpler captions because the writer was busy. Write the week again to improve {plan.plainDays === 1 ? 'it' : 'them'}.</p> : null}
+
+          {/* The calendar: seven days across, each post a small picture at its time. Pick one to open it below. */}
+          <section aria-label="Week calendar" className="mt-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+              {prettyDate(plan.days[0].date)} to {prettyDate(plan.days[plan.days.length - 1].date)}
+            </p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-7">
+              {plan.days.map((day, d) => (
+                <div key={day.date} className="min-w-0 rounded-xl border border-line bg-panel/50 p-2">
+                  <p className="text-[11px] font-semibold text-foreground">{new Date(`${day.date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short' })} <span className="font-normal text-muted">{new Date(`${day.date}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span></p>
+                  <ul className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-1">
+                    {day.posts.map((post, p) => {
+                      const on = selected.d === d && selected.p === p;
+                      return (
+                        <li key={post.id}>
+                          <button
+                            type="button"
+                            onClick={() => setSelected({ d, p })}
+                            aria-pressed={on}
+                            aria-label={`${prettyDate(day.date)}, ${clock(post.time)}, ${FORMAT_LABEL[post.format] ?? post.format}`}
+                            className={`block w-full rounded-lg border p-1 text-left transition ${on ? 'border-ember ring-1 ring-ember/50' : 'border-line hover:border-muted'}`}
+                          >
+                            <PostVisual post={post} brand={pickedBrand} size="tile" />
+                            <span className="mt-1 flex items-center justify-between gap-1 px-0.5 text-[10px]">
+                              <span className="shrink-0 whitespace-nowrap tabular-nums text-foreground">{clock(post.time)}</span>
+                              <span className="truncate uppercase tracking-wide text-muted">{FORMAT_LABEL[post.format] ?? post.format}</span>
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {pickedDay && pickedPost ? (
+            <section aria-label="Selected post" className="mt-4 rounded-2xl border border-line bg-panel p-4 sm:p-5">
+              <div className="flex flex-col gap-4 sm:flex-row">
+                <div className="w-full sm:w-64 sm:shrink-0">
+                  <PostVisual key={pickedPost.id} post={pickedPost} brand={pickedBrand} size="full" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="font-semibold text-foreground">{prettyDate(pickedDay.date)}, {clock(pickedPost.time)}</span>
+                    <span className="rounded-full border border-line px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted">{FORMAT_LABEL[pickedPost.format] ?? pickedPost.format}</span>
+                    <span className="text-muted">{pickedDay.focus}</span>
+                  </p>
+                  <p className="mt-1 text-sm text-foreground">{pickedPost.topic}</p>
+                  <textarea
+                    value={pickedPost.caption}
+                    onChange={(event) => editCaption(Math.min(selected.d, plan.days.length - 1), Math.min(selected.p, pickedDay.posts.length - 1), event.target.value)}
+                    rows={Math.min(9, Math.max(4, Math.ceil(pickedPost.caption.length / 60) + pickedPost.caption.split('\n').length - 1))}
+                    aria-label={`Caption for ${prettyDate(pickedDay.date)} at ${clock(pickedPost.time)}`}
+                    className={`${field} mt-2 text-[13px] leading-relaxed`}
+                  />
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <button type="button" onClick={() => void downloadPost(pickedDay, pickedPost)} disabled={Boolean(preparing)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
+                      {preparing === pickedPost.id ? 'Preparing…' : signedIn === false ? 'Sign in to download' : pickedPost.format === 'carousel' ? 'Download slides' : 'Download picture'}
+                    </button>
+                    <button type="button" onClick={() => void copy(pickedPost.caption, 'Caption copied.')} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">Copy caption</button>
+                    <Link href={makeLink(pickedPost)} onClick={() => trackEvent('next_step_clicked', { source: 'distribute_make' })} className="px-2 py-1.5 text-xs text-muted transition hover:text-foreground">Edit in the maker</Link>
+                  </div>
+                </div>
+              </div>
+            </section>
+          ) : null}
+        </>
+      ) : null}
     </div>
   );
 }

@@ -1119,3 +1119,9 @@ we do not have.
 **Change:** the admin weekly calendar and Distribute now post at 2 AM, 7 AM, 12 PM, 5 PM and 10 PM (five hours apart). Distribute shows them as "7:00 AM" and picks from those slots by posts a day (one a day is 12 PM; two are 7 AM and 5 PM; three add 10 PM; four are 7 AM, 12 PM, 5 PM and 10 PM; five add 2 AM). The admin calendar times are UTC; weeks already laid out keep the old times until Rebuild week.
 
 **Distribution move:** none (a scheduling change). Week-1 queued posts are unaffected.
+
+## 2026-10-12 — Distribute is a calendar, with a short maker
+
+**Change:** the Distribute maker is now the same calm size as Trade's (a label, a three-row box, a Attach file chip, posts a day, date, name and one button), and folds into one line once a week is written ("Change what I promote"). The week is a real calendar: seven day columns, each post a small picture tile at its time (a carousel shows its cover); tap a tile to open it below with the larger picture (carousels swipe), the editable caption, Download, Copy caption and Edit in the maker. On a phone the days stack with three tiles a row.
+
+**Distribution move:** the calendar is the screenshot for the Distribute posts: one sentence in, a full week of pictures laid out by day and time. Use it as the hero image on the landing page and in the Product Hunt gallery.
