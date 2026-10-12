@@ -5,6 +5,7 @@ import { getUserNotifyTargets, type CarouselChannelRow } from '@/lib/project-db'
 import { postCarouselToTumblr } from '@/lib/tumblr';
 import { postCarouselToMastodon } from '@/lib/mastodon';
 import { isOAuthKind, postCarouselToOAuth } from '@/lib/oauth-channels';
+import { isMetaKind, postCarouselToMeta } from '@/lib/meta';
 
 // Linking a channel and posting to it. Only platforms that need no app approval are here: a Telegram
 // channel (the person must be its admin), a Discord channel webhook, and Bluesky (an app password the
@@ -155,6 +156,7 @@ async function postCarouselToBluesky(handle: string, password: string, images: B
 export async function publishToChannel(channel: CarouselChannelRow, images: Buffer[], caption: string): Promise<PublishResult> {
   if (channel.kind === 'tumblr') return postCarouselToTumblr(channel, images, caption);
   if (isOAuthKind(channel.kind)) return postCarouselToOAuth(channel.kind, channel, images, caption);
+  if (isMetaKind(channel.kind)) return postCarouselToMeta(channel.kind, channel, images, caption);
   if (channel.kind === 'telegram') return postCarouselToTelegram(String(channel.meta.chatId ?? ''), images, caption);
   const secret = channel.secret ? decryptSecret(channel.secret) : null;
   if (!secret) return { ok: false, note: 'The saved login could not be read. Link this channel again.' };

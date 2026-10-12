@@ -70,6 +70,12 @@ export function ChannelLinkForm({ kind, telegramLinked, onLinked }: { kind: Chan
           <p className="text-xs text-muted">Slack webhooks take text, not pictures, so carousels are not posted here. Updates, polls, quizzes and threads are.</p>
         </>
       ) : null}
+      {kind === 'facebook' || kind === 'instagram' ? (
+        <>
+          <p className="text-xs leading-relaxed text-muted">You approve BrandForge on Meta&apos;s own page, once, for every Facebook Page you run and the Instagram business account attached to each. We never see your password, and you can remove access in your Facebook settings at any time. Instagram needs a business or creator account linked to a Page.</p>
+          <a href="/api/integrations/meta/start" className={btnPrimary + ' inline-block'}>Connect with Meta</a>
+        </>
+      ) : null}
       {kind === 'linkedin' || kind === 'x' ? (
         <>
           <p className="text-xs leading-relaxed text-muted">You approve BrandForge on {kind === 'x' ? 'X' : 'LinkedIn'}&apos;s own page. We never see your password, and you can revoke access in your {kind === 'x' ? 'X' : 'LinkedIn'} settings at any time.{kind === 'linkedin' ? ' The sign-in lasts about 60 days, then you connect again.' : ''}</p>
@@ -112,7 +118,7 @@ export function ChannelLinkForm({ kind, telegramLinked, onLinked }: { kind: Chan
           </label>
         </>
       ) : null}
-      {kind !== 'tumblr' && kind !== 'linkedin' && kind !== 'x' ? (
+      {kind !== 'tumblr' && kind !== 'linkedin' && kind !== 'x' && kind !== 'facebook' && kind !== 'instagram' ? (
         <button type="button" className={btnPrimary} disabled={busy} onClick={() => void link()}>
           {busy ? 'Checking…' : 'Check and connect'}
         </button>

@@ -8,9 +8,7 @@ import { ChannelLinkForm } from '@/components/integrations/channel-link-form';
 import { useChannels, type ChannelKind } from '@/components/integrations/use-channels';
 
 const COMING: { id: ServiceId; line: string }[] = [
-  { id: 'instagram', line: 'Carousels straight to your feed' },
   { id: 'tiktok', line: 'Photo posts and slideshows' },
-  { id: 'facebook', line: 'Page posts' },
   { id: 'youtube', line: 'Community posts and Shorts' },
 ];
 
@@ -23,6 +21,8 @@ const SAY: Record<ChannelKind, { line: string; add: string }> = {
   mastodon: { line: 'Post pictures, polls and threads. Ready in a minute.', add: 'Link an account' },
   linkedin: { line: 'Post pictures and updates to your profile.', add: 'Connect with LinkedIn' },
   x: { line: 'Post pictures, polls and threads to your account.', add: 'Connect with X' },
+  facebook: { line: 'Post pictures and updates to the Pages you run.', add: 'Connect with Meta' },
+  instagram: { line: 'Post carousels and pictures to your business account.', add: 'Connect with Meta' },
 };
 
 function Pill({ on, children }: { on: boolean; children: React.ReactNode }) {
@@ -67,14 +67,14 @@ export function IntegrationsPanel() {
   }
 
   // Platforms that need a developer app made first stay "Coming soon" until their keys are in.
-  const ready = (kind: ChannelKind) => (kind === 'tumblr' ? tumblrReady : kind === 'linkedin' || kind === 'x' ? Boolean(oauthReady[kind]) : true);
+  const ready = (kind: ChannelKind) => (kind === 'tumblr' ? tumblrReady : kind === 'linkedin' || kind === 'x' || kind === 'facebook' || kind === 'instagram' ? Boolean(oauthReady[kind]) : true);
 
   const btn = 'rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-foreground transition hover:border-ember disabled:opacity-50';
 
   return (
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-2">
-        {(['telegram', 'discord', 'bluesky', 'mastodon', 'linkedin', 'x', 'slack', 'tumblr'] as ChannelKind[]).map((kind) => {
+        {(['telegram', 'discord', 'bluesky', 'mastodon', 'linkedin', 'x', 'facebook', 'instagram', 'slack', 'tumblr'] as ChannelKind[]).map((kind) => {
           const mine = channels.filter((c) => c.kind === kind);
           const live = kind === 'telegram' ? telegramLinked || mine.length > 0 : mine.length > 0;
           return (

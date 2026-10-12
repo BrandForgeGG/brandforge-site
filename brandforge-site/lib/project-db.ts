@@ -5542,7 +5542,7 @@ export async function setCalendarAutoPost(on: boolean): Promise<boolean> {
 
 
 // ---- Channels a person has linked to post carousels to (migration 0033: carousel_channels) ----
-export type CarouselChannelRow = { id: string; kind: 'telegram' | 'discord' | 'bluesky' | 'slack' | 'tumblr' | 'mastodon' | 'linkedin' | 'x'; label: string; secret: string | null; meta: Record<string, unknown>; created_at: string };
+export type CarouselChannelRow = { id: string; kind: 'telegram' | 'discord' | 'bluesky' | 'slack' | 'tumblr' | 'mastodon' | 'linkedin' | 'x' | 'facebook' | 'instagram'; label: string; secret: string | null; meta: Record<string, unknown>; created_at: string };
 
 export async function listCarouselChannels(userId: string): Promise<CarouselChannelRow[]> {
   const admin = createSupabaseAdminClient();
@@ -6176,10 +6176,10 @@ export async function removeScheduledImages(paths: string[]): Promise<void> {
   await admin.storage.from('creations').remove(paths).catch(() => undefined);
 }
 
-export async function uploadScheduledImage(path: string, bytes: Buffer): Promise<boolean> {
+export async function uploadScheduledImage(path: string, bytes: Buffer, contentType: 'image/png' | 'image/jpeg' = 'image/png'): Promise<boolean> {
   const admin = createSupabaseAdminClient();
   if (!admin) return false;
-  const { error } = await admin.storage.from('creations').upload(path, bytes, { contentType: 'image/png', upsert: false });
+  const { error } = await admin.storage.from('creations').upload(path, bytes, { contentType, upsert: false });
   if (error) console.error('uploadScheduledImage error:', error.message);
   return !error;
 }

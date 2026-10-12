@@ -1167,3 +1167,9 @@ we do not have.
 **Change:** Distribute writes all seven days at once (a week took about 46 seconds with three at a time). Signing out now clears the saved week, picked channels and drafts in the browser, so the next person never sees them. LinkedIn and X connect from their own pages (OAuth, tokens encrypted, no passwords) and post pictures, polls and threads; they show "Coming soon" until the developer-app keys are added. Distribute stays open to visitors; signing in is needed to download, post and schedule.
 
 **Distribution move:** once the keys are in: "Connect LinkedIn and X, and BrandForge posts your week for you." Until then, say nothing about LinkedIn or X in public posts.
+
+### 2026-10-12 — Facebook Pages and Instagram connect
+
+**Change:** one Meta approval links every Facebook Page a person runs and the Instagram business account on each. Carousels and pictures post to both; text updates, polls and threads post to Facebook (Instagram needs a picture). Shows "Coming soon" until the Meta app keys are added. Instagram pictures are converted to JPEG and kept briefly in the public pictures bucket, deleted once Instagram has fetched them.
+
+**Distribution move:** after the Meta app is added and tested on our own Page and Instagram, a launch line: "Post your week to Instagram, Facebook, LinkedIn and X from one place." Do not announce before one real post has landed on each.
