@@ -233,6 +233,8 @@ export function ChatWorkspace() {
   const [agreement, setAgreement] = useState<AgreementSummary | null>(null);
   const [payments, setPayments] = useState<PaymentSummary[]>([]);
   // Roster for the task assignee picker: people already in this chat (staff + founder).
+  // The chat starter's account role (they may not be a participant row), so their messages carry the right badge.
+  const [ownerAccount, setOwnerAccount] = useState<{ id: string; role: string } | null>(null);
   const [taskParticipants, setTaskParticipants] = useState<TaskParticipant[]>(
     [],
   );
@@ -787,6 +789,7 @@ export function ChatWorkspace() {
     if (participantsResult.ok) {
       const data = await participantsResult.json().catch(() => ({}));
       setTaskParticipants(shapeTaskRoster(data.participants));
+      setOwnerAccount(data.owner && typeof data.owner.id === "string" ? { id: data.owner.id, role: String(data.owner.account_role ?? "user") } : null);
     } else {
       setTaskParticipants([]);
     }
@@ -2419,9 +2422,11 @@ export function ChatWorkspace() {
     for (const person of people) {
       const name = person.displayName.trim().toLowerCase();
       if (name) map[name] = person.accountRole || 'user';
+      if (person.userId) map[person.userId] = person.accountRole || 'user';
     }
+    if (ownerAccount) map[ownerAccount.id] = ownerAccount.role;
     return map;
-  }, [people]);
+  }, [people, ownerAccount]);
 
   // Files in this chat, derived from persisted attachment messages - never a fabricated list.
   const conversationFiles = useMemo(() => {

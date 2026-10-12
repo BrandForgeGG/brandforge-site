@@ -1291,11 +1291,14 @@ export function ChatTranscript({
             (previous.senderName ?? "") === (message.senderName ?? "")),
         );
 
+        // Each message shows its own sender's account role: yours only on what you wrote, never on someone else's.
         const roleLabel = isAI
           ? null
-          : isUser
+          : writtenByViewer
             ? selfRole || null
-            : participantRoles?.[authorName.trim().toLowerCase()] || null;
+            : (message.senderId ? participantRoles?.[message.senderId] : undefined) ||
+              participantRoles?.[storedName.trim().toLowerCase()] ||
+              (isHuman ? "operator" : isUser && message.senderId ? "user" : null);
 
         return (
           <div

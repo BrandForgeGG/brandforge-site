@@ -1095,3 +1095,9 @@ we do not have.
 **Change:** when a chat has two or more people, the AI is told who is here (name, Member / BrandForge Team / Admin, who started it) and who just spoke, each person's message carries their name, and it answers each one in their own tone and language, fair to everyone, reporting only what was really said. Its guidance on kind speech, justice, keeping agreements, verifying before repeating and no backbiting is drawn from the Quran and is applied silently: the AI never quotes a verse or mentions religion unless someone raises it. Anyone the owner allows to use the AI now also sees the AI on/off switch and can use it, and the chat says "X can now use the AI". Also removed the duplicate "is typing" line that appeared inside the chat; the one attached above the message box stays.
 
 **Distribution move:** no religious wording in public copy, as agreed. Public line: "The AI knows who is in the chat, answers each person in their own style, and stays fair to everyone." Good demo for the Trade chat video: two people, one AI.
+
+## 2026-10-12 — Role badges show each sender's own role
+
+**Change:** in chat, an admin looking at another member's chat saw that member's messages badged Admin (the viewer's own role was being used for every non-AI message). Each message now carries its own sender's account role: your role only on what you wrote, Member for a member, BrandForge Team for staff, Admin for an admin, including the person who started the chat.
+
+**Distribution move:** none (internal correctness fix, no marketing angle).
