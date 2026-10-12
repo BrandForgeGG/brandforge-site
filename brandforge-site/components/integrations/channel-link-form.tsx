@@ -9,7 +9,7 @@ const btnPrimary = 'rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-b
 // The form that checks and links one channel. Each platform shows only what it needs, with the
 // steps in plain words. Nothing is saved until the platform itself confirms it.
 export function ChannelLinkForm({ kind, telegramLinked, onLinked }: { kind: ChannelKind; telegramLinked: boolean; onLinked: (channel: Channel) => void }) {
-  const [input, setInput] = useState({ channel: '', webhook: '', handle: '', password: '' });
+  const [input, setInput] = useState({ channel: '', webhook: '', handle: '', password: '', instance: '', token: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,11 +17,11 @@ export function ChannelLinkForm({ kind, telegramLinked, onLinked }: { kind: Chan
     setBusy(true);
     setError(null);
     try {
-      const body = kind === 'telegram' ? { kind, channel: input.channel } : kind === 'discord' || kind === 'slack' ? { kind, webhook: input.webhook } : { kind, handle: input.handle, password: input.password };
+      const body = kind === 'mastodon' ? { kind, instance: input.instance, token: input.token } : kind === 'telegram' ? { kind, channel: input.channel } : kind === 'discord' || kind === 'slack' ? { kind, webhook: input.webhook } : { kind, handle: input.handle, password: input.password };
       const res = await fetch('/api/carousel/channels', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return setError(data.error || 'Could not link that.');
-      setInput({ channel: '', webhook: '', handle: '', password: '' });
+      setInput({ channel: '', webhook: '', handle: '', password: '', instance: '', token: '' });
       onLinked(data.channel as Channel);
     } finally {
       setBusy(false);
@@ -74,6 +74,23 @@ export function ChannelLinkForm({ kind, telegramLinked, onLinked }: { kind: Chan
         <>
           <p className="text-xs leading-relaxed text-muted">You approve BrandForge on Tumblr&apos;s own page. We never see your password, and you can revoke access in your Tumblr settings at any time. Posts go to your primary blog.</p>
           <a href="/api/integrations/tumblr/start" className={btnPrimary + ' inline-block'}>Connect with Tumblr</a>
+        </>
+      ) : null}
+      {kind === 'mastodon' ? (
+        <>
+          <ol className="list-decimal space-y-1 pl-4 text-xs leading-relaxed text-muted">
+            <li>On your Mastodon server open Preferences, then Development, then New application.</li>
+            <li>Name it BrandForge and tick write:statuses and write:media. Save, then copy &quot;Your access token&quot;.</li>
+            <li>Type your server and paste the token below. It is kept encrypted and used only to post for you.</li>
+          </ol>
+          <label className="block text-sm text-foreground">
+            Server
+            <input className={`${field} mt-1.5`} value={input.instance} onChange={(e) => setInput({ ...input, instance: e.target.value })} placeholder="mastodon.social" autoCapitalize="none" />
+          </label>
+          <label className="block text-sm text-foreground">
+            Access token
+            <input className={`${field} mt-1.5`} type="password" value={input.token} onChange={(e) => setInput({ ...input, token: e.target.value })} autoComplete="off" />
+          </label>
         </>
       ) : null}
       {kind === 'bluesky' ? (

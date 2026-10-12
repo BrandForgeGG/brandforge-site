@@ -3,6 +3,7 @@ import { decryptSecret, encryptSecret } from '@/lib/secret-box.js';
 import { postCarouselToDiscordWebhook, postCarouselToTelegram, type PublishResult } from '@/lib/carousel-publish';
 import { getUserNotifyTargets, type CarouselChannelRow } from '@/lib/project-db';
 import { postCarouselToTumblr } from '@/lib/tumblr';
+import { postCarouselToMastodon } from '@/lib/mastodon';
 
 // Linking a channel and posting to it. Only platforms that need no app approval are here: a Telegram
 // channel (the person must be its admin), a Discord channel webhook, and Bluesky (an app password the
@@ -157,5 +158,6 @@ export async function publishToChannel(channel: CarouselChannelRow, images: Buff
   if (!secret) return { ok: false, note: 'The saved login could not be read. Link this channel again.' };
   if (channel.kind === 'discord') return postCarouselToDiscordWebhook(secret, images, caption);
   if (channel.kind === 'slack') return { ok: false, note: 'Slack cannot take pictures through a webhook. Post an update there instead.' };
+  if (channel.kind === 'mastodon') return postCarouselToMastodon(channel, secret, images, caption);
   return postCarouselToBluesky(String(channel.meta.handle ?? ''), secret, images, caption);
 }

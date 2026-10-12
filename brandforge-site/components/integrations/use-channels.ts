@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-export type ChannelKind = 'telegram' | 'discord' | 'bluesky' | 'slack' | 'tumblr';
+export type ChannelKind = 'telegram' | 'discord' | 'bluesky' | 'slack' | 'tumblr' | 'mastodon';
 export type Channel = { id: string; kind: ChannelKind; label: string };
 
 // The linked channels (names only, never a secret) and whether the person's own Telegram is linked

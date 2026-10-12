@@ -22,6 +22,7 @@ const SAY: Record<ChannelKind, { line: string; add: string }> = {
   bluesky: { line: 'Post carousels as a thread.', add: 'Link an account' },
   slack: { line: 'Post updates, polls and threads to a channel.', add: 'Link a channel' },
   tumblr: { line: 'Post carousels and text to your blog.', add: 'Connect your blog' },
+  mastodon: { line: 'Post pictures, polls and threads. Ready in a minute.', add: 'Link an account' },
 };
 
 function Pill({ on, children }: { on: boolean; children: React.ReactNode }) {
@@ -70,7 +71,7 @@ export function IntegrationsPanel() {
   return (
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-2">
-        {(['telegram', 'discord', 'bluesky', 'slack', 'tumblr'] as ChannelKind[]).map((kind) => {
+        {(['telegram', 'discord', 'bluesky', 'mastodon', 'slack', 'tumblr'] as ChannelKind[]).map((kind) => {
           const mine = channels.filter((c) => c.kind === kind);
           const live = kind === 'telegram' ? telegramLinked || mine.length > 0 : mine.length > 0;
           return (

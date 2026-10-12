@@ -1,6 +1,6 @@
 // Small drawn marks for each service, inside a tile. A connected service shows in its own colour;
 // one that is not connected is drawn flat and grey, so the state reads before any word does.
-export type ServiceId = 'telegram' | 'discord' | 'bluesky' | 'instagram' | 'tiktok' | 'linkedin' | 'x' | 'facebook' | 'youtube' | 'slack' | 'tumblr';
+export type ServiceId = 'telegram' | 'discord' | 'bluesky' | 'instagram' | 'tiktok' | 'linkedin' | 'x' | 'facebook' | 'youtube' | 'slack' | 'tumblr' | 'mastodon';
 
 export const SERVICES: Record<ServiceId, { name: string; color: string }> = {
   telegram: { name: 'Telegram', color: '#229ED9' },
@@ -14,6 +14,7 @@ export const SERVICES: Record<ServiceId, { name: string; color: string }> = {
   youtube: { name: 'YouTube', color: '#FF0000' },
   slack: { name: 'Slack', color: '#4A154B' },
   tumblr: { name: 'Tumblr', color: '#001935' },
+  mastodon: { name: 'Mastodon', color: '#6364FF' },
 };
 
 const GLYPH: Record<ServiceId, React.ReactNode> = {
@@ -33,6 +34,7 @@ const GLYPH: Record<ServiceId, React.ReactNode> = {
   facebook: <path d="M13.5 19v-6h2l.4-2.5h-2.4V9c0-.8.3-1.3 1.4-1.3h1.1V5.5c-.4 0-1.1-.1-1.9-.1-2 0-3.3 1.2-3.3 3.4v1.7H8.7V13h2.1v6z" />,
   slack: <path d="M9.5 5.5a1.5 1.5 0 013 0V8H11a1.5 1.5 0 01-1.5-1.5v-1zM5.5 9.5a1.5 1.5 0 000 3H8V11a1.5 1.5 0 00-1.5-1.5h-1zM14.5 11.5a1.5 1.5 0 000-3H12V10a1.5 1.5 0 001.5 1.5h1zM11.5 14.5a1.5 1.5 0 01-3 0V12H10a1.5 1.5 0 011.5 1.5v1z" />,
   tumblr: <path d="M13.4 18.2c-2.600 0-3.800-1.400-3.800-3.500V10.500H8V8.300c1.700-.6 2.400-2 2.500-3.800h2.100v3.500h2.400v2.500h-2.400v3.700c0 1 .5 1.400 1.300 1.400h1.100v2.600z" />,
+  mastodon: <path d="M6.5 7.2C6.5 5.8 7.6 5 9 5h6c1.4 0 2.5.8 2.5 2.2v5.6c0 1.4-1.1 2.2-2.5 2.2h-1.2c0 1 .8 1.6 2.2 1.6H15c-.5 1.3-1.8 1.6-3.2 1.6C9.5 18.2 6.5 17 6.5 12.8V7.2zm3 1.700v3.800m5-3.800v3.800M12 8.900v3.800" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
   youtube: <path d="M19.6 8.2c-.2-.8-.8-1.4-1.6-1.6C16.6 6.3 12 6.3 12 6.3s-4.6 0-6 .3C5.2 6.8 4.6 7.4 4.4 8.2 4.1 9.6 4.1 12 4.1 12s0 2.4.3 3.8c.2.8.8 1.4 1.6 1.6 1.4.3 6 .3 6 .3s4.6 0 6-.3c.8-.2 1.4-.8 1.6-1.6.3-1.4.3-3.8.3-3.8s0-2.4-.3-3.8zM10.3 14.3V9.7L14.3 12z" />,
 };
 

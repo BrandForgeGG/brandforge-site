@@ -93,7 +93,7 @@ export function OverviewFeatures() {
         <Feature title="Make any kind of message." line="Carousels, ads, quotes, tips, announcements and polls today, with threads, video and more on the way. Say it in a sentence; AI writes the first draft, you shape it. Or paste a link and get a whole week of posts, pictures included.">
           <FormatsDiagram />
         </Feature>
-        <Feature flip title="Publish it where people are." line="Pick the platforms and get a caption written for each. Download or copy it today; one-tap publishing opens as each platform approves us.">
+        <Feature flip title="Publish it where people are." line="Link Telegram, Discord, Bluesky, Mastodon or Tumblr, then post a week at the times it plans, or post one now. Instagram, LinkedIn, TikTok and X open as each platform approves us.">
           <DistributeDiagram />
         </Feature>
         <Feature title="Trade products, services and requests." line="Post what you offer or what you need. Message each other in a private chat and agree the details, with AI beside you and the BrandForge team when you want them.">

@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1, 'max-video-preview': -1 } },
   verification: {
     google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
-    other: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION ? { 'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION } : undefined,
+    other: { 'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION ?? '41DDC3CE50460F1A80E82EB137A5AD50' },
   },
   icons: {
     icon: [

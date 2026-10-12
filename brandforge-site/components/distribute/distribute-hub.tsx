@@ -8,6 +8,8 @@ import { useLogin } from '@/components/login-dialog';
 import { zipStore } from '@/lib/zip-store.js';
 import { PostVisual } from '@/components/distribute/post-visual';
 import { postFiles } from '@/components/distribute/render-post';
+import { usePublisher, type ScheduledItem } from '@/components/distribute/use-publisher';
+import { ServiceTile } from '@/components/integrations/brand-icons';
 import { assembleWeek, layoutWeek, NO_SITE_ASKS, type PlannedDay, type PlannedPost } from '@/lib/distribute-plan.js';
 
 type Brief = { start: string; perDay: number; summary: string; voice: string; angles: string[]; site: string; brand: string; seed: string; source: 'text' | 'link' | 'file' };
@@ -44,6 +46,12 @@ function shift(iso: string, days: number): string {
 
 function prettyDate(iso: string): string {
   return new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+const STATUS_TEXT: Record<ScheduledItem['status'], string> = { scheduled: 'Scheduled', posting: 'Posting now', done: 'Posted', partial: 'Posted to some', failed: 'Could not post', cancelled: 'Cancelled' };
+
+function statusOf(items: ScheduledItem[], postId: string): ScheduledItem | undefined {
+  return [...items].reverse().find((item) => item.label === postId && item.status !== 'cancelled');
 }
 
 function makeLink(post: PlannedPost): string {
@@ -100,6 +108,7 @@ export function DistributeHub() {
   const [writing, setWriting] = useState(false);
   const [loadingDays, setLoadingDays] = useState<number[]>([]);
   const stop = useRef<AbortController | null>(null);
+  const publisher = usePublisher(signedIn);
 
   useEffect(() => {
     const saved = read();
@@ -451,6 +460,35 @@ export function DistributeHub() {
             <button type="button" onClick={() => void write_(shift(plan.start, 7))} disabled={writing} className="rounded-xl border border-line px-4 py-2 text-sm bf-tap text-foreground transition hover:border-ember disabled:opacity-50">Write next week</button>
             <button type="button" onClick={startOver} className="px-2 py-2 text-sm text-muted transition hover:text-foreground">Start over</button>
           </div>
+          {/* Where the posts go. Channels are linked in Settings; the choice is remembered in this browser. */}
+          <section aria-label="Where to post" className="mt-3 rounded-2xl border border-line bg-panel p-3 sm:p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="mr-1 text-sm font-semibold text-foreground">Post to</p>
+              {signedIn === false ? (
+                <button type="button" onClick={() => needSignIn()} className="rounded-full border border-line px-3 py-1 text-xs text-muted bf-tap transition hover:border-ember hover:text-foreground">Sign in to post and schedule</button>
+              ) : publisher.channels.length === 0 ? (
+                <span className="text-xs text-muted">{publisher.loading ? 'Loading your channels…' : 'No channel linked yet.'}</span>
+              ) : (
+                publisher.channels.map((channel) => {
+                  const on = publisher.picked.includes(channel.id);
+                  return (
+                    <button key={channel.id} type="button" aria-pressed={on} onClick={() => publisher.toggle(channel.id)} className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-xs bf-tap transition ${on ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>
+                      <ServiceTile id={channel.kind} on={on} size={24} />
+                      <span className="max-w-[10rem] truncate">{channel.label}</span>
+                    </button>
+                  );
+                })
+              )}
+              {signedIn ? <Link href="/settings" className="text-xs text-muted underline-offset-2 hover:text-foreground hover:underline">{publisher.channels.length === 0 ? 'Link Telegram, Discord, Bluesky, Mastodon or Tumblr' : 'Link another'}</Link> : null}
+              {signedIn && publisher.channels.length > 0 ? (
+                <button type="button" onClick={() => void publisher.scheduleWeek(plan.days, pickedBrand)} disabled={Boolean(publisher.busy) || writing || publisher.picked.length === 0 || !publisher.ready} className="ml-auto rounded-xl bg-ember px-4 py-2 text-sm bf-tap font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
+                  {publisher.busy && publisher.busy.startsWith('Scheduling') ? publisher.busy : 'Schedule the whole week'}
+                </button>
+              ) : null}
+            </div>
+            {!publisher.ready ? <p className="mt-2 text-xs text-muted">Scheduling is being switched on. Download or post now in the meantime.</p> : null}
+            {publisher.message ? <p role={publisher.message.bad ? 'alert' : 'status'} className={`mt-2 text-xs ${publisher.message.bad ? 'text-danger' : 'text-muted'}`}>{publisher.message.text}</p> : null}
+          </section>
           {writing ? (
             <div role="status" className="mt-3 flex items-center gap-3 text-xs text-muted">
               <span className="h-1 w-32 overflow-hidden rounded-full bg-line" aria-hidden="true"><span className="block h-full rounded-full bg-ember transition-all duration-500" style={{ width: `${Math.round(((7 - loadingDays.length) / 7) * 100)}%` }} /></span>
@@ -485,7 +523,13 @@ export function DistributeHub() {
                           >
                             {loadingDays.includes(d) ? <div className="bf-skeleton aspect-square w-full animate-pulse rounded-lg bg-overlay motion-reduce:animate-none" aria-hidden="true" /> : <div className="bf-fade"><PostVisual post={post} brand={pickedBrand} size="tile" /></div>}
                             <span className="mt-1 flex items-center justify-between gap-1 px-0.5 text-[10px]">
-                              <span className="shrink-0 whitespace-nowrap tabular-nums text-foreground">{clock(post.time)}</span>
+                              <span className="shrink-0 whitespace-nowrap tabular-nums text-foreground">
+                                {(() => {
+                                  const item = statusOf(publisher.items, post.id);
+                                  return item ? <span className={`mr-1 inline-block h-1.5 w-1.5 rounded-full align-middle ${item.status === 'done' ? 'bg-success' : item.status === 'failed' ? 'bg-danger' : 'bg-ember'}`} title={STATUS_TEXT[item.status]} aria-label={STATUS_TEXT[item.status]} /> : null;
+                                })()}
+                                {clock(post.time)}
+                              </span>
                               <span className="truncate uppercase tracking-wide text-muted">{FORMAT_LABEL[post.format] ?? post.format}</span>
                             </span>
                           </button>
@@ -509,6 +553,13 @@ export function DistributeHub() {
                     <span className="font-semibold text-foreground">{prettyDate(pickedDay.date)}, {clock(pickedPost.time)}</span>
                     <span className="rounded-full border border-line px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted">{FORMAT_LABEL[pickedPost.format] ?? pickedPost.format}</span>
                     <span className="text-muted">{pickedDay.focus}</span>
+                    {(() => {
+                      const item = statusOf(publisher.items, pickedPost.id);
+                      if (!item) return null;
+                      const bad = item.status === 'failed' || item.status === 'partial';
+                      const note = Object.values(item.results).find((r) => !r.ok)?.note;
+                      return <span className={bad ? 'text-danger' : 'text-ember'}>{STATUS_TEXT[item.status]}{bad && note ? `: ${note}` : ''}</span>;
+                    })()}
                   </p>
                   <p className="mt-1 text-sm text-foreground">{pickedPost.topic}</p>
                   <textarea
@@ -523,6 +574,22 @@ export function DistributeHub() {
                       {preparing === pickedPost.id ? 'Preparing…' : signedIn === false ? 'Sign in to download' : pickedPost.format === 'carousel' ? 'Download slides' : 'Download picture'}
                     </button>
                     <button type="button" onClick={() => void copy(pickedPost.caption, 'Caption copied.')} className="rounded-lg border border-line px-3 py-1.5 text-xs bf-tap text-foreground transition hover:border-ember">Copy caption</button>
+                    {signedIn && publisher.channels.length > 0 ? (
+                      <>
+                        {(() => {
+                          const item = statusOf(publisher.items, pickedPost.id);
+                          const waiting = item && (item.status === 'scheduled' || item.status === 'posting');
+                          return waiting ? (
+                            <button type="button" onClick={() => void publisher.cancel(item.id)} disabled={item.status === 'posting'} className="rounded-lg border border-line px-3 py-1.5 text-xs bf-tap text-foreground transition hover:border-danger disabled:opacity-50">Cancel schedule</button>
+                          ) : (
+                            <button type="button" onClick={() => void publisher.scheduleOne(pickedDay, pickedPost, pickedBrand)} disabled={Boolean(publisher.busy) || publisher.picked.length === 0 || !publisher.ready} className="rounded-lg border border-ember px-3 py-1.5 text-xs bf-tap font-semibold text-foreground transition hover:bg-ember/10 disabled:opacity-50">
+                              {publisher.busy === pickedPost.id ? 'Working…' : `Schedule for ${clock(pickedPost.time)}`}
+                            </button>
+                          );
+                        })()}
+                        <button type="button" onClick={() => void publisher.postNow(pickedDay, pickedPost, pickedBrand)} disabled={Boolean(publisher.busy) || publisher.picked.length === 0} className="rounded-lg border border-line px-3 py-1.5 text-xs bf-tap text-foreground transition hover:border-ember disabled:opacity-50">Post now</button>
+                      </>
+                    ) : null}
                     <Link href={makeLink(pickedPost)} onClick={() => trackEvent('next_step_clicked', { source: 'distribute_make' })} className="px-2 py-1.5 text-xs text-muted bf-tap transition hover:text-foreground">Edit in the maker</Link>
                   </div>
                 </div>

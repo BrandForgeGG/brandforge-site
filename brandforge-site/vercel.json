@@ -2,6 +2,10 @@
   "regions": ["cdg1"],
   "crons": [
     {
+      "path": "/api/cron/publish",
+      "schedule": "30 8 * * *"
+    },
+    {
       "path": "/api/cron/marketing",
       "schedule": "0 10 * * *"
     },

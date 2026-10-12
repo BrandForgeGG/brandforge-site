@@ -5542,7 +5542,7 @@ export async function setCalendarAutoPost(on: boolean): Promise<boolean> {
 
 
 // ---- Channels a person has linked to post carousels to (migration 0033: carousel_channels) ----
-export type CarouselChannelRow = { id: string; kind: 'telegram' | 'discord' | 'bluesky' | 'slack' | 'tumblr'; label: string; secret: string | null; meta: Record<string, unknown>; created_at: string };
+export type CarouselChannelRow = { id: string; kind: 'telegram' | 'discord' | 'bluesky' | 'slack' | 'tumblr' | 'mastodon'; label: string; secret: string | null; meta: Record<string, unknown>; created_at: string };
 
 export async function listCarouselChannels(userId: string): Promise<CarouselChannelRow[]> {
   const admin = createSupabaseAdminClient();
@@ -6110,4 +6110,84 @@ export async function getActiveSubscription(userId: string): Promise<Subscriptio
   const { data } = await admin.from('subscriptions').select('plan, status, stripe_customer_id, current_period_end').eq('user_id', userId).in('status', ['active', 'trialing', 'past_due']).order('updated_at', { ascending: false }).limit(1).maybeSingle();
   const row = data as { plan: string; status: string; stripe_customer_id: string | null; current_period_end: string | null } | null;
   return row ? { plan: row.plan, status: row.status, stripeCustomerId: row.stripe_customer_id, currentPeriodEnd: row.current_period_end } : null;
+}
+
+// ---- Scheduled posts (migration 0044: scheduled_posts) ----
+// Every function tolerates the table not existing yet: it reports `ready: false` instead of throwing, so the page can say
+// that scheduling is being switched on rather than failing.
+export type ScheduledPostRow = { id: string; user_id: string; channel_ids: string[]; caption: string; image_paths: string[]; label: string; run_at: string; status: 'scheduled' | 'posting' | 'done' | 'partial' | 'failed' | 'cancelled'; results: Record<string, { ok: boolean; note?: string }>; attempts: number; claimed_at: string | null; sent_at: string | null; created_at: string };
+
+const SCHEDULED_COLUMNS = 'id, user_id, channel_ids, caption, image_paths, label, run_at, status, results, attempts, claimed_at, sent_at, created_at';
+const NO_TABLE = /scheduled_posts|schema cache|does not exist/i;
+
+export async function createScheduledPost(userId: string, input: { id: string; channelIds: string[]; caption: string; imagePaths: string[]; label: string; runAt: string }): Promise<{ ok: true } | { ok: false; reason: 'not_ready' | 'failed' }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ok: false, reason: 'failed' };
+  const { error } = await admin.from('scheduled_posts').insert({ id: input.id, user_id: userId, channel_ids: input.channelIds, caption: input.caption, image_paths: input.imagePaths, label: input.label, run_at: input.runAt });
+  if (error) {
+    console.error('createScheduledPost error:', error.message);
+    return { ok: false, reason: NO_TABLE.test(error.message) ? 'not_ready' : 'failed' };
+  }
+  return { ok: true };
+}
+
+export async function listScheduledPosts(userId: string): Promise<{ ready: boolean; rows: ScheduledPostRow[] }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { ready: false, rows: [] };
+  const since = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await admin.from('scheduled_posts').select(SCHEDULED_COLUMNS).eq('user_id', userId).gte('run_at', since).order('run_at', { ascending: true }).limit(300);
+  if (error) return { ready: !NO_TABLE.test(error.message), rows: [] };
+  return { ready: true, rows: (data ?? []) as ScheduledPostRow[] };
+}
+
+/** Cancels one scheduled post of yours and returns its picture paths so they can be deleted. */
+export async function cancelScheduledPost(userId: string, id: string): Promise<string[] | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data } = await admin.from('scheduled_posts').update({ status: 'cancelled' }).eq('id', id).eq('user_id', userId).eq('status', 'scheduled').select('image_paths').maybeSingle();
+  return data ? ((data as { image_paths: string[] }).image_paths ?? []) : null;
+}
+
+/** Takes up to `limit` due posts for sending. The status flip is the lock: a post can only be claimed once. */
+export async function claimDueScheduledPosts(limit = 10): Promise<ScheduledPostRow[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const now = new Date();
+  // A run cut off mid-send goes back in the queue while it still has tries.
+  await admin.from('scheduled_posts').update({ status: 'scheduled' }).eq('status', 'posting').lt('claimed_at', new Date(now.getTime() - 15 * 60 * 1000).toISOString()).lt('attempts', 3);
+  const { data: due } = await admin.from('scheduled_posts').select('id').eq('status', 'scheduled').lte('run_at', now.toISOString()).lt('attempts', 3).order('run_at', { ascending: true }).limit(limit);
+  const claimed: ScheduledPostRow[] = [];
+  for (const { id } of (due ?? []) as { id: string }[]) {
+    const { data } = await admin.from('scheduled_posts').update({ status: 'posting', claimed_at: now.toISOString() }).eq('id', id).eq('status', 'scheduled').select(SCHEDULED_COLUMNS).maybeSingle();
+    if (data) claimed.push(data as ScheduledPostRow);
+  }
+  return claimed;
+}
+
+export async function finishScheduledPost(id: string, patch: { status: ScheduledPostRow['status']; results: ScheduledPostRow['results']; attempts: number; sent: boolean }): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return;
+  await admin.from('scheduled_posts').update({ status: patch.status, results: patch.results, attempts: patch.attempts, ...(patch.sent ? { sent_at: new Date().toISOString() } : {}) }).eq('id', id);
+}
+
+export async function removeScheduledImages(paths: string[]): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  if (!admin || paths.length === 0) return;
+  await admin.storage.from('creations').remove(paths).catch(() => undefined);
+}
+
+export async function uploadScheduledImage(path: string, bytes: Buffer): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const { error } = await admin.storage.from('creations').upload(path, bytes, { contentType: 'image/png', upsert: false });
+  if (error) console.error('uploadScheduledImage error:', error.message);
+  return !error;
+}
+
+export async function downloadScheduledImage(path: string): Promise<Buffer | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data, error } = await admin.storage.from('creations').download(path);
+  if (error || !data) return null;
+  return Buffer.from(await data.arrayBuffer());
 }

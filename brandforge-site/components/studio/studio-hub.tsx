@@ -31,7 +31,7 @@ const CARDS: { id: Kind; name: string; line: string; visual: React.ReactNode }[]
 
 type Saved = { id: string; title: string; type: string; theme: string; plan: Draft['plan']; brand: Draft['brand']; captions: Record<string, string> };
 
-// The one page for making things: pick a card, make it, download it, and publish when publishing opens.
+// The one page for making things: pick a card, make it, download it, and post or schedule it in Distribute.
 // The card you opened is in the address (?make=) so a link can open straight to a poll.
 export function StudioHub({ embedded = false, initialKind = null, initialTopic = '' }: { embedded?: boolean; initialKind?: Kind | null; initialTopic?: string } = {}) {
   const { openLogin } = useLogin();

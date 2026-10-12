@@ -4,6 +4,7 @@ import type { PublishResult } from '@/lib/carousel-publish';
 import type { CarouselChannelRow } from '@/lib/project-db';
 import { blueskyPosts, discordEmbed, numbered, slackMessages, telegramText, type Post } from '@/lib/post-types.js';
 import { postToTumblr } from '@/lib/tumblr';
+import { postToMastodon } from '@/lib/mastodon';
 
 // Sends an update, poll, quiz or thread to a channel the person linked. Each platform gets the closest
 // native form: Telegram polls and quizzes are real polls, Discord polls are real polls, and Bluesky
@@ -119,5 +120,6 @@ export async function publishPostToChannel(channel: CarouselChannelRow, post: Po
   if (!secret) return { ok: false, note: 'The saved login could not be read. Link this channel again.' };
   if (channel.kind === 'discord') return postToDiscord(secret, post);
   if (channel.kind === 'slack') return postToSlack(secret, post);
+  if (channel.kind === 'mastodon') return postToMastodon(channel, secret, post);
   return postToBluesky(String(channel.meta.handle ?? ''), secret, post);
 }

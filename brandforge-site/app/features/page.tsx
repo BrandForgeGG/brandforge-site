@@ -22,7 +22,7 @@ const FEATURES = [
   },
   {
     title: 'Publish where people are',
-    body: 'Pick the platforms for a post. Telegram, Discord and Bluesky are connected; Instagram, LinkedIn, TikTok and others open as each platform approves us.',
+    body: 'Link Telegram, Discord, Bluesky, Mastodon or Tumblr, then post a week at its planned times or send one now. Instagram, LinkedIn, TikTok and X open as each platform approves us.',
   },
   {
     title: 'Trade products, services and requests',
