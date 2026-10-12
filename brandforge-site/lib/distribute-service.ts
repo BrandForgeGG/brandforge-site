@@ -104,10 +104,9 @@ export async function makeDistributePlan(input: DistributeInput): Promise<Distri
 
   // 2. One call per day, a few at a time so a free provider is not flooded.
   const written: (ReturnType<typeof normalizeDay> | null)[] = week.map(() => null);
-  let next = 0;
+  const queue: number[] = week.map((_, d) => d);
   const worker = async () => {
-    while (next < week.length) {
-      const d = next++;
+    for (let d = queue.shift(); d !== undefined; d = queue.shift()) {
       const closings = closingsFor({ week, dayIndex: d, site, brand, seed });
       const dayAngles = anglesFor({ week, dayIndex: d, angles: planned.ok ? planned.angles : [] });
       const prompt = buildDayPrompt({
@@ -118,13 +117,20 @@ export async function makeDistributePlan(input: DistributeInput): Promise<Distri
         day: week[d],
         posts: week[d].posts.map((post, i) => ({ format: post.format, angle: dayAngles[i], closing: closings[i] })),
       });
-      const reply = await ask(prompt.system, prompt.user, until, 900);
+      const reply = await ask(prompt.system, prompt.user, until, 2000);
       if (!reply) continue;
-      const day = normalizeDay(reply, closings.map((closing) => ({ closing })));
+      const day = normalizeDay(reply, closings.map((closing, i) => ({ closing, format: week[d].posts[i].format })));
       if (day.some(Boolean)) written[d] = day;
     }
   };
   await Promise.all([worker(), worker(), worker(), worker()]);
+
+  // A day the writer could not finish (a busy provider) gets one more try while there is time left.
+  const unfinished = () => week.map((_, d) => d).filter((d) => !written[d] || written[d]!.some((post) => !post || !post.visual));
+  if (until - Date.now() > 9000) {
+    queue.push(...unfinished());
+    await Promise.all([worker(), worker()]);
+  }
 
   const days = assembleWeek({ week, angles: planned.angles, written, site, brand, seed });
   const plainDays = days.filter((day) => day.posts.some((post) => post.fallback)).length;

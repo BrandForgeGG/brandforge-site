@@ -5,6 +5,8 @@
 // replies defensively. The model only proposes angles, topics and captions; the schedule, the formats and the asks are
 // decided here, so a week is always full, varied and never two of the same in a row.
 const { ctaPlan, ctaLine } = require('./caption-cta');
+const { normalizeImageCopy } = require('./image-kinds');
+const { normalizePlan } = require('./carousel-plan');
 
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const DAY_FOCUS = ['Start the week', 'Teach something', 'Show how it works', 'Answer a question', 'Make it personal', 'Keep it light', 'Look ahead'];
@@ -21,6 +23,10 @@ const SLOT_SETS = {
 
 // The six single-post formats, cycled so neighbouring posts never share one.
 const FORMAT_CYCLE = ['quote', 'tip', 'carousel', 'ad', 'question', 'announcement'];
+
+// The size each single-image format is posted at, and the looks the week rotates through so it never reads as one colour.
+const IMAGE_SIZE = { ad: 'portrait', quote: 'square', tip: 'square', announcement: 'square', question: 'square' };
+const LOOKS = ['forge', 'violet', 'paper', 'emerald', 'sunrise', 'crystal', 'rose', 'mono'];
 
 const LIMITS = { source: 6000, angle: 110, topic: 150, caption: 480, summary: 420, voice: 160 };
 
@@ -154,14 +160,23 @@ const FORMAT_BRIEF = {
 };
 
 const DAY_SYSTEM = `You write one day of social media posts. For each post you are given a format, an angle and the exact closing line to use. You return ONLY one JSON object, no prose and no code fences:
-{"posts":[{"topic":"...","caption":"..."}]}
+{"posts":[{"topic":"...","caption":"...","visual":{...}}]}
 
 Rules:
 - Exactly one entry per post, in the same order.
-- topic: a clear instruction for making the picture, at most 22 words, specific to the angle and the format. No invented facts.
+- topic: what the picture is about, at most 22 words, specific to the angle and the format. No invented facts.
+- visual: the words that are drawn ON the picture, written for the format (see below). Short: they are printed large. Use only the summary and angle; never invent numbers, prices, customers or results.
 - caption: at most 60 words, in the given voice, in the language of the source. Open with a line that earns the next one (a question, a surprising true point, a plain promise): vary the openings across posts. Then one or two short lines of substance. End with the closing line you were given, word for word. At most two hashtags, and none if they do not fit.
 - Use ONLY facts from the summary and angle. Never invent numbers, prices, customers, results, awards, deadlines or scarcity. No emoji walls: at most one emoji.
-- Posts on the same day must not sound alike.`;
+- Posts on the same day must not sound alike.
+
+VISUAL SHAPES (use the one for the post's format; wrap the 1 to 3 most important words of a headline in asterisks, like STOP POSTING *WITHOUT* A HOOK):
+- quote: {"headline":"one original line, at most 14 words","kicker":"","sub":"","button":"","options":[]}
+- tip: {"kicker":"QUICK TIP","headline":"the tip as an instruction, at most 9 words","sub":"the reason, at most 22 words","button":"","options":[]}
+- ad: {"kicker":"at most 3 words","headline":"at most 9 words","sub":"at most 22 words","button":"at most 3 words","options":[]}
+- announcement: {"kicker":"NEW","headline":"at most 9 words","sub":"at most 22 words","button":"at most 3 words","options":[]}
+- question: {"kicker":"POLL","headline":"one clear question, at most 12 words","sub":"","button":"","options":["2 to 4 answers, at most 4 words each"]}
+- carousel: {"headline":"scroll-stopping hook, at most 8 words","subtitle":"at most 5 words","items":[{"name":"at most 3 words","bullets":["at most 12 words","at most 12 words","at most 12 words"]}],"ctaHeadline":"at most 8 words","button":"at most 3 words"} with exactly 4 items.`;
 
 function buildDayPrompt({ summary, voice, brand = '', site = '', day, posts }) {
   const lines = [`Business: ${clean(summary, LIMITS.summary)}`, `Voice: ${clean(voice, LIMITS.voice) || 'clear and friendly'}`];
@@ -183,6 +198,20 @@ function withClosing(caption, closing) {
   return `${body.replace(/[\s.]+$/, '')}.\n\n${closing}`.slice(0, LIMITS.caption + closing.length);
 }
 
+// The picture's words, checked for the format. -> { type: 'image', kind, format, copy } | { type: 'carousel', plan } | null
+function readVisual(raw, format) {
+  if (!raw || typeof raw !== 'object') return null;
+  if (format === 'carousel') {
+    const items = (Array.isArray(raw.items) ? raw.items : []).slice(0, 6);
+    const checked = normalizePlan({ cover: { headline: raw.headline, subtitle: raw.subtitle, scene: '' }, items, cta: { headline: raw.ctaHeadline, button: raw.button, note: '' } }, { count: 4 });
+    return checked.ok ? { type: 'carousel', plan: checked.plan } : null;
+  }
+  const kind = IMAGE_SIZE[format] ? format : null;
+  if (!kind) return null;
+  const checked = normalizeImageCopy(raw, kind);
+  return checked.ok ? { type: 'image', kind, format: IMAGE_SIZE[kind], copy: checked.copy } : null;
+}
+
 /** One entry per expected post, null where the reply had nothing usable. */
 function normalizeDay(raw, expected) {
   const data = typeof raw === 'string' ? extractJson(raw) : raw;
@@ -193,7 +222,7 @@ function normalizeDay(raw, expected) {
     const topic = clean(item.topic, LIMITS.topic);
     const caption = clean(item.caption, LIMITS.caption);
     if (topic.length < 6 || caption.length < 20) return null;
-    return { topic, caption: withClosing(caption, post.closing) };
+    return { topic, caption: withClosing(caption, post.closing), visual: readVisual(item.visual, post.format) };
   });
 }
 
@@ -212,6 +241,25 @@ function fallbackPost({ angle, format, closing }) {
   return { topic: clean(angle, LIMITS.topic), caption: `${open}\n\n${closing}`.slice(0, LIMITS.caption + 80), fallback: true };
 }
 
+const FALLBACK_BUTTON = { try: 'Try it free', hire: 'Hire us', dm: 'Message us', follow: 'Follow us', save: 'Learn more', like: 'Learn more', comment: 'Learn more', share: 'Learn more' };
+
+function shortHeadline(text, words) {
+  const parts = clean(text, 160).replace(/[.?!]+$/, '').split(' ').filter(Boolean);
+  return parts.slice(0, words).join(' ');
+}
+
+/**
+ * A picture built from the post's own words when the writer gave none: the angle as the headline, on a tip, quote, ad,
+ * announcement or poll. A carousel falls back to a tip card, since a carousel needs real slides to be worth showing.
+ */
+function fallbackVisual({ angle, topic, format, cta }) {
+  const base = clean(angle || topic, LIMITS.angle);
+  const headline = shortHeadline(base, format === 'quote' ? 14 : 9);
+  const kind = IMAGE_SIZE[format] && format !== 'carousel' ? format : 'tip';
+  const copy = { kicker: kind === 'tip' ? 'Quick tip' : kind === 'question' ? 'Poll' : kind === 'announcement' ? 'New' : '', headline, sub: kind === 'quote' || kind === 'question' ? '' : clean(topic && topic !== base ? topic : '', 160), button: kind === 'ad' || kind === 'announcement' ? FALLBACK_BUTTON[cta] || 'Learn more' : '', options: kind === 'question' ? ['Yes', 'No'] : [], attribution: '', scene: '' };
+  return { type: 'image', kind, format: IMAGE_SIZE[kind], copy, fallback: true };
+}
+
 /**
  * Puts the week together: the layout, the angles and each day's written posts.
  * @param {{ week: ReturnType<typeof layoutWeek>, angles: string[], written: (({ topic: string, caption: string } | null)[] | null)[], site?: string, brand?: string, seed?: string }} input
@@ -228,7 +276,8 @@ function assembleWeek({ week, angles, written, site = '', brand = '', seed = 'we
       g += 1;
       const result = written && written[d] && written[d][i];
       const made = result || fallbackPost({ angle, format: post.format, closing });
-      return { id: `${day.date}-${i}`, time: post.time, format: post.format, cta: post.cta, angle, topic: made.topic, caption: made.caption, ...(made.fallback ? { fallback: true } : {}) };
+      const visual = (result && result.visual) || fallbackVisual({ angle, topic: made.topic, format: post.format, cta: post.cta });
+      return { id: `${day.date}-${i}`, time: post.time, format: post.format, cta: post.cta, angle, topic: made.topic, caption: made.caption, visual, theme: LOOKS[(d * week[0].posts.length + i) % LOOKS.length], ...(made.fallback ? { fallback: true } : {}) };
     }),
   }));
 }
@@ -245,4 +294,4 @@ function anglesFor({ week, dayIndex, angles }) {
   return week[dayIndex].posts.map((_, i) => angles[(dayIndex * count + i) % angles.length]);
 }
 
-module.exports = { DAY_NAMES, DAY_FOCUS, SLOT_SETS, FORMAT_CYCLE, LIMITS, perDayOf, startOf, addDays, layoutWeek, buildAnglesPrompt, normalizeAngles, buildDayPrompt, normalizeDay, fallbackPost, assembleWeek, closingsFor, anglesFor, withClosing, extractJson };
+module.exports = { IMAGE_SIZE, LOOKS, fallbackVisual, readVisual, DAY_NAMES, DAY_FOCUS, SLOT_SETS, FORMAT_CYCLE, LIMITS, perDayOf, startOf, addDays, layoutWeek, buildAnglesPrompt, normalizeAngles, buildDayPrompt, normalizeDay, fallbackPost, assembleWeek, closingsFor, anglesFor, withClosing, extractJson };

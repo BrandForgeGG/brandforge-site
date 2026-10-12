@@ -3,16 +3,21 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { trackEvent } from '@/lib/funnel-client';
+import { getSessionUser } from '@/lib/browser-auth';
+import { useLogin } from '@/components/login-dialog';
+import { zipStore } from '@/lib/zip-store.js';
+import { PostVisual } from '@/components/distribute/post-visual';
+import { postFiles } from '@/components/distribute/render-post';
 import type { PlannedDay, PlannedPost } from '@/lib/distribute-plan.js';
 
 type Plan = { start: string; perDay: number; summary: string; voice: string; site: string; source: 'text' | 'link' | 'file'; days: PlannedDay[]; plainDays: number };
-type Saved = { v: 1; text: string; perDay: number; start: string; fileName: string; fileText: string; plan: Plan | null };
+type Saved = { v: 1; text: string; perDay: number; start: string; fileName: string; fileText: string; brand?: string; plan: Plan | null };
 
 const KEY = 'bf:distribute';
 const field = 'w-full rounded-xl border border-line bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none';
 const chip = 'rounded-full border px-3 py-1.5 text-xs transition';
 const FORMAT_LABEL: Record<string, string> = { carousel: 'Carousel', quote: 'Quote', tip: 'Tip', ad: 'Ad', announcement: 'Announcement', question: 'Poll' };
-const PHASES = ['Reading what you gave me', 'Deciding what to say this week', 'Writing each day'];
+const PHASES = ['Reading what you gave me', 'Deciding what to say this week', 'Writing each day and its pictures'];
 
 function localTomorrow(): string {
   const d = new Date();
@@ -70,6 +75,10 @@ export function DistributeHub() {
   const [start, setStart] = useState(localTomorrow);
   const [fileName, setFileName] = useState('');
   const [fileText, setFileText] = useState('');
+  const [brand, setBrand] = useState('');
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [preparing, setPreparing] = useState<string | null>(null);
+  const { openLogin } = useLogin();
   const [plan, setPlan] = useState<Plan | null>(null);
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState(0);
@@ -87,15 +96,17 @@ export function DistributeHub() {
       setStart(saved.start || localTomorrow());
       setFileName(saved.fileName);
       setFileText(saved.fileText);
+      setBrand(saved.brand ?? '');
       setPlan(saved.plan);
     }
+    void getSessionUser().then((user) => setSignedIn(Boolean(user))).catch(() => setSignedIn(false));
     setReady(true);
   }, []);
 
   useEffect(() => {
     if (!ready) return;
-    write({ v: 1, text, perDay, start, fileName, fileText: fileText.slice(0, 6000), plan });
-  }, [ready, text, perDay, start, fileName, fileText, plan]);
+    write({ v: 1, text, perDay, start, fileName, fileText: fileText.slice(0, 6000), brand, plan });
+  }, [ready, text, perDay, start, fileName, fileText, brand, plan]);
 
   useEffect(() => {
     if (!busy) return;
@@ -129,7 +140,7 @@ export function DistributeHub() {
       const res = await fetch('/api/distribute/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, fileText, fileName, perDay, startDate }),
+        body: JSON.stringify({ text, fileText, fileName, perDay, startDate, brand }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.plan) {
@@ -165,16 +176,69 @@ export function DistributeHub() {
       .join('\n\n------\n\n');
   }
 
+  function csvText(week: Plan): string {
+    const rows = [['Date', 'Time', 'Format', 'What to make', 'Caption'].map(csvCell).join(',')];
+    for (const day of week.days) for (const post of day.posts) rows.push([day.date, post.time, FORMAT_LABEL[post.format] ?? post.format, post.topic, post.caption].map(csvCell).join(','));
+    return rows.join('\n');
+  }
+
   function downloadCsv() {
     if (!plan) return;
-    const rows = [['Date', 'Time', 'Format', 'What to make', 'Caption'].map(csvCell).join(',')];
-    for (const day of plan.days) for (const post of day.posts) rows.push([day.date, post.time, FORMAT_LABEL[post.format] ?? post.format, post.topic, post.caption].map(csvCell).join(','));
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' }));
+    link.href = URL.createObjectURL(new Blob([csvText(plan)], { type: 'text/csv' }));
     link.download = `brandforge-week-${plan.start}.csv`;
     link.click();
     window.setTimeout(() => URL.revokeObjectURL(link.href), 4000);
     trackEvent('distribute_downloaded', { source: 'csv' });
+  }
+
+  // The pictures people download are the ones on the page. Guests sign in first; the week stays in this browser.
+  function needSignIn(): boolean {
+    if (signedIn) return false;
+    trackEvent('guest_save_clicked', { source: 'distribute' });
+    openLogin({ reason: 'carousel', next: '/distribute' });
+    return true;
+  }
+
+  function saveBlob(blob: Blob, name: string) {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = name;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(link.href), 4000);
+  }
+
+  async function downloadPost(day: PlannedDay, post: PlannedPost) {
+    if (needSignIn() || preparing) return;
+    setPreparing(post.id);
+    try {
+      const files = await postFiles(post, { name: brand.trim(), handle: plan?.site ?? '' }, day.date);
+      if (files.length === 1) saveBlob(files[0].blob, files[0].name);
+      else if (files.length > 1) {
+        const entries = await Promise.all(files.map(async (file) => ({ name: file.name, bytes: new Uint8Array(await file.blob.arrayBuffer()) })));
+        saveBlob(new Blob([zipStore(entries) as BlobPart], { type: 'application/zip' }), `${day.date}-${post.time.replace(':', '')}-carousel.zip`);
+      }
+      trackEvent('distribute_downloaded', { source: 'post' });
+    } finally {
+      setPreparing(null);
+    }
+  }
+
+  async function downloadAll() {
+    if (!plan || needSignIn() || preparing) return;
+    const posts = plan.days.flatMap((day) => day.posts.map((post) => ({ day, post })));
+    const entries: { name: string; bytes: Uint8Array }[] = [];
+    try {
+      for (let i = 0; i < posts.length; i++) {
+        setPreparing(`Preparing ${i + 1} of ${posts.length}…`);
+        for (const file of await postFiles(posts[i].post, { name: brand.trim(), handle: plan.site }, posts[i].day.date)) entries.push({ name: file.name, bytes: new Uint8Array(await file.blob.arrayBuffer()) });
+      }
+      entries.push({ name: 'captions.csv', bytes: new TextEncoder().encode(csvText(plan)) });
+      saveBlob(new Blob([zipStore(entries) as BlobPart], { type: 'application/zip' }), `brandforge-week-${plan.start}.zip`);
+      trackEvent('distribute_downloaded', { source: 'zip' });
+    } finally {
+      setPreparing(null);
+    }
   }
 
   function startOver() {
@@ -218,8 +282,9 @@ export function DistributeHub() {
           {plan.site ? ` Posts send people to ${plan.site}.` : ''}
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => void copy(weekText(), 'The whole week is copied.')} className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90">Copy the week</button>
-          <button type="button" onClick={downloadCsv} className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember">Download CSV</button>
+          <button type="button" onClick={() => void downloadAll()} disabled={Boolean(preparing)} className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">{preparing && preparing.startsWith('Preparing') ? preparing : signedIn === false ? 'Sign in to download all' : 'Download all pictures'}</button>
+          <button type="button" onClick={() => void copy(weekText(), 'The whole week is copied.')} className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember">Copy the captions</button>
+          <button type="button" onClick={downloadCsv} className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember">Captions CSV</button>
           <button type="button" onClick={() => void write_(shift(plan.start, 7))} className="rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember">Write next week</button>
           <button type="button" onClick={startOver} className="px-2 py-2 text-sm text-muted transition hover:text-foreground">Start over</button>
         </div>
@@ -237,23 +302,29 @@ export function DistributeHub() {
               <ul className="mt-2 space-y-2">
                 {day.posts.map((post, p) => (
                   <li key={post.id} className="rounded-2xl border border-line bg-panel p-3.5 sm:p-4">
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <span className="tabular-nums text-muted">{post.time}</span>
-                      <span className="rounded-full border border-line px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted">{FORMAT_LABEL[post.format] ?? post.format}</span>
-                      <span className="min-w-0 flex-1 truncate text-foreground">{post.topic}</span>
-                    </div>
-                    <textarea
-                      value={post.caption}
-                      onChange={(event) => editCaption(d, p, event.target.value)}
-                      rows={Math.min(8, Math.max(3, Math.ceil(post.caption.length / 70) + post.caption.split('\n').length - 1))}
-                      aria-label={`Caption for ${prettyDate(day.date)} at ${post.time}`}
-                      className={`${field} mt-2 text-[13px] leading-relaxed`}
-                    />
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <Link href={makeLink(post)} onClick={() => trackEvent('next_step_clicked', { source: 'distribute_make' })} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background transition hover:opacity-90">
-                        Make the {post.format === 'carousel' ? 'carousel' : 'picture'}
-                      </Link>
-                      <button type="button" onClick={() => void copy(post.caption, 'Caption copied.')} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">Copy caption</button>
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <PostVisual post={post} brand={{ name: brand.trim(), handle: plan.site }} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          <span className="tabular-nums text-muted">{post.time}</span>
+                          <span className="rounded-full border border-line px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted">{FORMAT_LABEL[post.format] ?? post.format}</span>
+                          <span className="min-w-0 flex-1 truncate text-foreground">{post.topic}</span>
+                        </div>
+                        <textarea
+                          value={post.caption}
+                          onChange={(event) => editCaption(d, p, event.target.value)}
+                          rows={Math.min(8, Math.max(3, Math.ceil(post.caption.length / 56) + post.caption.split('\n').length - 1))}
+                          aria-label={`Caption for ${prettyDate(day.date)} at ${post.time}`}
+                          className={`${field} mt-2 text-[13px] leading-relaxed`}
+                        />
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <button type="button" onClick={() => void downloadPost(day, post)} disabled={Boolean(preparing)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
+                            {preparing === post.id ? 'Preparing…' : signedIn === false ? 'Sign in to download' : post.format === 'carousel' ? 'Download slides' : 'Download picture'}
+                          </button>
+                          <button type="button" onClick={() => void copy(post.caption, 'Caption copied.')} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">Copy caption</button>
+                          <Link href={makeLink(post)} onClick={() => trackEvent('next_step_clicked', { source: 'distribute_make' })} className="px-2 py-1.5 text-xs text-muted transition hover:text-foreground">Edit in the maker</Link>
+                        </div>
+                      </div>
                     </div>
                   </li>
                 ))}
@@ -290,6 +361,11 @@ export function DistributeHub() {
         ) : null}
       </div>
 
+      <label className="mt-4 block text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+        Name on the pictures (optional)
+        <input value={brand} onChange={(event) => setBrand(event.target.value)} maxLength={40} placeholder="Your business or name" className={`${field} mt-2 font-normal normal-case tracking-normal`} />
+      </label>
+
       <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Posts a day</p>
@@ -307,7 +383,7 @@ export function DistributeHub() {
 
       {error ? <p role="alert" className="mt-4 text-sm text-danger">{error}</p> : null}
       <button type="button" onClick={() => void write_(start)} className="mt-6 rounded-xl bg-ember px-6 py-3 text-sm font-semibold text-background transition hover:opacity-90">Write my week</button>
-      <p className="mt-3 text-xs text-muted">Quotes, tips, carousels, ads and polls, spread over the day, each with a caption that asks for something different. Nothing is invented: it only uses what you give it.</p>
+      <p className="mt-3 text-xs text-muted">Quotes, tips, carousels, ads and polls, spread over the day, each with a caption that asks for something different. Every post comes with its picture, drawn for you. Nothing is invented: it only uses what you give it.</p>
     </div>
   );
 }

@@ -73,3 +73,37 @@ test('prompts carry the source, the closing line and the rule against invention'
   assert.match(d.user, /Closing line: Save this\./);
   assert.match(d.system, /word for word/);
 });
+
+test('each post comes with a picture: the writer\'s words when usable, built from the angle when not', () => {
+  const { readVisual, fallbackVisual, normalizeDay, assembleWeek: assemble, layoutWeek: layout, closingsFor: closings } = require('./distribute-plan');
+  const tip = readVisual({ kicker: 'QUICK TIP', headline: 'Write the *hook* first', sub: 'The first line decides who reads the rest.' }, 'tip');
+  assert.equal(tip.type, 'image');
+  assert.equal(tip.kind, 'tip');
+  assert.equal(readVisual({ headline: 'ok' }, 'tip'), null, 'too short to use');
+  assert.equal(readVisual({ headline: 'Which do you like', options: ['one'] }, 'question'), null, 'a poll needs two answers');
+  assert.equal(readVisual({ kicker: 'NEW', headline: 'Trade is open to everyone', sub: 'List anything.', button: 'List it' }, 'ad').format, 'portrait');
+  const carousel = readVisual({ headline: 'FIVE *MISTAKES* TO AVOID', subtitle: '4 things', items: [1, 2, 3, 4].map((n) => ({ name: `Mistake ${n}`, bullets: ['One plain point here', 'Another useful point', 'A third clear point'] })), ctaHeadline: 'WANT MORE? *FOLLOW*', button: 'Follow us' }, 'carousel');
+  assert.equal(carousel.type, 'carousel');
+  assert.equal(carousel.plan.items.length, 4);
+  assert.equal(readVisual({ headline: 'x', items: [] }, 'carousel'), null);
+
+  const fb = fallbackVisual({ angle: 'Why slow bread tastes better than fast bread every time', topic: 'Why slow bread tastes better', format: 'carousel', cta: 'save' });
+  assert.equal(fb.kind, 'tip', 'a carousel with no slides falls back to a tip card');
+  assert.ok(fb.copy.headline.split(' ').length <= 9);
+  assert.deepEqual(fallbackVisual({ angle: 'Morning or evening posts', topic: 'Morning or evening posts', format: 'question', cta: 'comment' }).copy.options, ['Yes', 'No']);
+  assert.equal(fallbackVisual({ angle: 'Start free today', topic: 'Start free today', format: 'ad', cta: 'try' }).copy.button, 'Try it free');
+
+  const week = layout({ startDate: '2026-10-12', perDay: 2 });
+  const angles = Array.from({ length: 14 }, (_, i) => `Angle ${i + 1} about sourdough bread`);
+  const written = week.map((day, d) => day.posts.map((post, i) => ({ topic: `Topic ${d}-${i} for the picture`, caption: `Caption ${d}-${i} that is long enough. ${closings({ week, dayIndex: d })[i]}`, visual: i === 0 ? tip : null })));
+  const out = assemble({ week, angles, written });
+  const posts = out.flatMap((day) => day.posts);
+  assert.ok(posts.every((post) => post.visual && (post.visual.type === 'image' || post.visual.type === 'carousel')), 'every post has a picture');
+  assert.ok(posts.every((post) => typeof post.theme === 'string'));
+  assert.ok(new Set(posts.map((post) => post.theme)).size >= 6, 'the week rotates through many looks');
+  assert.equal(posts[0].visual.copy.headline, 'Write the *hook* first');
+  assert.ok(posts[1].visual.fallback, 'a post without words from the writer gets a built picture');
+
+  const day = normalizeDay(JSON.stringify({ posts: [{ topic: 'Why sourdough takes two days', caption: 'Ever wondered why good bread takes time? The slow rise builds flavour.', visual: { kicker: 'QUICK TIP', headline: 'Give the dough *time*', sub: 'Slow rises build flavour.' } }] }), [{ closing: 'Save this.', format: 'tip' }]);
+  assert.equal(day[0].visual.kind, 'tip');
+});
