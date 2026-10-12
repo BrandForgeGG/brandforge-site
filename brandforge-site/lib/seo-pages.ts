@@ -1,7 +1,7 @@
 // What each public page says about itself to search engines and AI assistants: its own keywords, and a description that
 // ends with the one thing the page wants the reader to do (the CTA). Descriptions are kept near 155 characters so they
 // are not cut in results. Everything stated here is true of the page today.
-export type PageCopy = { description: string; keywords: string[]; cta: string };
+export type PageCopy = { title?: string; description: string; keywords: string[]; cta: string };
 
 export const PAGE_COPY: Record<string, PageCopy> = {
   '/': {
@@ -10,6 +10,7 @@ export const PAGE_COPY: Record<string, PageCopy> = {
     cta: 'Start free',
   },
   '/features': {
+    title: 'Features: AI chat, makers, marketplace and team',
     description: 'A chat that does the work, makers for carousels, ads and polls, a week of posts, a marketplace and a team to finish the job. See every feature.',
     keywords: ['BrandForge features', 'AI chat workspace', 'carousel and ad maker', 'content calendar', 'AI post scheduler', 'milestone contracts'],
     cta: 'See every feature',
@@ -20,21 +21,25 @@ export const PAGE_COPY: Record<string, PageCopy> = {
     cta: 'Compare plans',
   },
   '/create': {
+    title: 'Create: free carousel, ad and poll maker',
     description: 'Turn one sentence into a carousel, ad, quote, tip, announcement or poll, then download it. Free to make. Make your first one now.',
     keywords: ['carousel maker', 'free ad maker', 'quote post maker', 'poll maker', 'social media graphics generator', 'Instagram carousel generator'],
     cta: 'Make your first one',
   },
   '/distribute': {
+    title: 'Distribute: a week of social posts, scheduled for you',
     description: 'Say what you promote and get a week of posts: pictures, captions and times. Post or schedule them to your channels. Write your week.',
     keywords: ['social media content calendar', 'AI post scheduler', 'weekly content plan generator', 'schedule posts to Telegram Discord Bluesky Mastodon', 'content planner'],
     cta: 'Write your week',
   },
   '/trade': {
+    title: 'Trade: hire freelancers or get hired, with escrow',
     description: 'Hire, or get hired. List a gig, product, tool or request, agree terms in a private chat and sign a milestone contract. Post your first listing.',
     keywords: ['freelance marketplace', 'hire freelancers', 'sell digital services', 'milestone contracts', 'escrow marketplace', 'post a gig'],
     cta: 'Post your first listing',
   },
   '/platform': {
+    title: 'How it works: brief, proposal, escrow, delivery',
     description: 'How a BrandForge project runs: brief, priced proposal, contract, verified escrow and milestone payments. See each step before you start.',
     keywords: ['how BrandForge works', 'project brief to delivery', 'escrow milestone payments', 'fixed price proposal', 'hire a dev team with escrow'],
     cta: 'See each step',
@@ -45,21 +50,25 @@ export const PAGE_COPY: Record<string, PageCopy> = {
     cta: 'Get a proposal',
   },
   '/work': {
+    title: 'Work: live projects built by BrandForge',
     description: 'Real sites and apps the BrandForge team shipped, all live. Open any of them and judge the work. Browse the projects.',
     keywords: ['BrandForge portfolio', 'web development portfolio', 'SaaS projects shipped', 'case studies', 'client work'],
     cta: 'Browse the projects',
   },
   '/specialists': {
+    title: 'The BrandForge team: vetted designers and developers',
     description: 'How BrandForge vets its team: real work reviewed by a person, paid per milestone, held to quality. Meet the team and brief them.',
     keywords: ['vetted freelancers', 'BrandForge team', 'hire designers and developers', 'specialist marketplace', 'trusted freelancers'],
     cta: 'Meet the team',
   },
   '/blog': {
+    title: 'Blog: BrandForge product updates and shipping notes',
     description: 'Dated product updates and shipping notes from the BrandForge team: what we built, why, and what is next. Read the latest.',
     keywords: ['BrandForge blog', 'product updates', 'changelog', 'building in public', 'AI workspace news'],
     cta: 'Read the latest',
   },
   '/about': {
+    title: 'About BrandForge: AI and people, one workspace',
     description: 'BrandForge is where AI and people work on the same page: make and publish every kind of message, and trade services. Learn what we do.',
     keywords: ['about BrandForge', 'AI and people', 'who runs BrandForge', 'BrandForge mission'],
     cta: 'Learn what we do',
@@ -75,11 +84,13 @@ export const PAGE_COPY: Record<string, PageCopy> = {
     cta: 'Talk to the founder',
   },
   '/careers': {
+    title: 'Careers at BrandForge: a small team shipping in public',
     description: 'A small team shipping in the open. See how we work and what we are hiring for, then say hello.',
     keywords: ['BrandForge careers', 'remote startup jobs', 'small team hiring', 'work in public'],
     cta: 'Say hello',
   },
   '/apply': {
+    title: 'Apply to join the BrandForge team',
     description: 'Developers, designers, marketers and writers: apply to work on real briefs, get paid per milestone through escrow. Send your application.',
     keywords: ['apply to join BrandForge', 'freelance marketing jobs', 'freelance writer jobs', 'paid per milestone'],
     cta: 'Send your application',
