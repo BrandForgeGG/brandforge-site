@@ -7,6 +7,9 @@ import { trackEvent } from '@/lib/funnel-client';
 import { buildOAuthRedirectUrl, getAuthErrorMessage, isValidEmail, resolveSiteUrl } from '@/lib/auth-utils';
 import { maskPhone, normalizeCode, normalizePhone } from '@/lib/phone.js';
 
+// X sign-in (Supabase provider `x`, OAuth 2.0) is on in the dashboard but missing from the public settings, so it is set here.
+const X_SIGNIN = true;
+
 // Which sign-in methods the project has switched on. Google and email are always offered; Apple and phone appear only when
 // Supabase says they are enabled, so a button is never a dead end. Read once per page load.
 type Methods = { apple: boolean; phone: boolean; x: boolean };
@@ -19,9 +22,9 @@ function loadMethods(): Promise<Methods> {
     methodsPromise = base && key
       ? fetch(`${base}/auth/v1/settings`, { headers: { apikey: key } })
           .then((res) => (res.ok ? res.json() : null))
-          .then((json: { external?: { apple?: boolean; phone?: boolean; twitter?: boolean } } | null) => ({ apple: Boolean(json?.external?.apple), phone: Boolean(json?.external?.phone), x: Boolean(json?.external?.twitter) }))
-          .catch(() => ({ apple: false, phone: false, x: false }))
-      : Promise.resolve({ apple: false, phone: false, x: false });
+          .then((json: { external?: { apple?: boolean; phone?: boolean; twitter?: boolean } } | null) => ({ apple: Boolean(json?.external?.apple), phone: Boolean(json?.external?.phone), x: X_SIGNIN || Boolean(json?.external?.twitter) }))
+          .catch(() => ({ apple: false, phone: false, x: X_SIGNIN }))
+      : Promise.resolve({ apple: false, phone: false, x: X_SIGNIN });
   }
   return methodsPromise;
 }
@@ -74,7 +77,7 @@ type View = 'choose' | 'phone' | 'code';
 export function SignInForm({ next }: { next?: string }) {
   const [methods, setMethods] = useState<Methods>({ apple: false, phone: false, x: false });
   const [view, setView] = useState<View>('choose');
-  const [loading, setLoading] = useState<'google' | 'apple' | 'twitter' | 'email' | 'phone' | 'code' | null>(null);
+  const [loading, setLoading] = useState<'google' | 'apple' | 'x' | 'email' | 'phone' | 'code' | null>(null);
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
@@ -106,7 +109,7 @@ export function SignInForm({ next }: { next?: string }) {
     return buildOAuthRedirectUrl(target() || '/chat', siteUrl);
   }
 
-  async function handleOAuth(provider: 'google' | 'apple' | 'twitter') {
+  async function handleOAuth(provider: 'google' | 'apple' | 'x') {
     setLoading(provider);
     setError('');
     setMessage('');
@@ -282,7 +285,7 @@ export function SignInForm({ next }: { next?: string }) {
         </button>
       ) : null}
       {methods.x ? (
-        <button type="button" onClick={() => void handleOAuth('twitter')} disabled={loading !== null} className={choice}>
+        <button type="button" onClick={() => void handleOAuth('x')} disabled={loading !== null} className={choice}>
           <XMark />
           <span className="flex-1 text-center">Continue with X</span>
         </button>
