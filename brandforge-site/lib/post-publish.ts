@@ -7,6 +7,7 @@ import { postToTumblr } from '@/lib/tumblr';
 import { postToMastodon } from '@/lib/mastodon';
 import { isOAuthKind, postToOAuth } from '@/lib/oauth-channels';
 import { isMetaKind, postToMeta } from '@/lib/meta';
+import { postToThreads } from '@/lib/threads';
 
 // Sends an update, poll, quiz or thread to a channel the person linked. Each platform gets the closest
 // native form: Telegram polls and quizzes are real polls, Discord polls are real polls, and Bluesky
@@ -120,6 +121,7 @@ export async function publishPostToChannel(channel: CarouselChannelRow, post: Po
   if (channel.kind === 'tumblr') return postToTumblr(channel, post);
   if (isOAuthKind(channel.kind)) return postToOAuth(channel.kind, channel, post);
   if (isMetaKind(channel.kind)) return postToMeta(channel.kind, channel, post);
+  if (channel.kind === 'threads') return postToThreads(channel, post);
   const secret = channel.secret ? decryptSecret(channel.secret) : null;
   if (!secret) return { ok: false, note: 'The saved login could not be read. Link this channel again.' };
   if (channel.kind === 'discord') return postToDiscord(secret, post);

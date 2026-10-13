@@ -5542,7 +5542,7 @@ export async function setCalendarAutoPost(on: boolean): Promise<boolean> {
 
 
 // ---- Channels a person has linked to post carousels to (migration 0033: carousel_channels) ----
-export type CarouselChannelRow = { id: string; kind: 'telegram' | 'discord' | 'bluesky' | 'slack' | 'tumblr' | 'mastodon' | 'linkedin' | 'x' | 'facebook' | 'instagram'; label: string; secret: string | null; meta: Record<string, unknown>; created_at: string };
+export type CarouselChannelRow = { id: string; kind: 'telegram' | 'discord' | 'bluesky' | 'slack' | 'tumblr' | 'mastodon' | 'linkedin' | 'x' | 'facebook' | 'instagram' | 'threads'; label: string; secret: string | null; meta: Record<string, unknown>; created_at: string };
 
 export async function listCarouselChannels(userId: string): Promise<CarouselChannelRow[]> {
   const admin = createSupabaseAdminClient();

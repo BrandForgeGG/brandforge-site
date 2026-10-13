@@ -23,6 +23,7 @@ const SAY: Record<ChannelKind, { line: string; add: string }> = {
   x: { line: 'Post pictures, polls and threads to your account.', add: 'Connect with X' },
   facebook: { line: 'Post pictures and updates to the Pages you run.', add: 'Connect with Meta' },
   instagram: { line: 'Post carousels and pictures to your business account.', add: 'Connect with Meta' },
+  threads: { line: 'Post pictures, carousels and threads of replies.', add: 'Connect with Threads' },
 };
 
 function Pill({ on, children }: { on: boolean; children: React.ReactNode }) {
@@ -67,14 +68,14 @@ export function IntegrationsPanel() {
   }
 
   // Platforms that need a developer app made first stay "Coming soon" until their keys are in.
-  const ready = (kind: ChannelKind) => (kind === 'tumblr' ? tumblrReady : kind === 'linkedin' || kind === 'x' || kind === 'facebook' || kind === 'instagram' ? Boolean(oauthReady[kind]) : true);
+  const ready = (kind: ChannelKind) => (kind === 'tumblr' ? tumblrReady : kind === 'linkedin' || kind === 'x' || kind === 'facebook' || kind === 'instagram' || kind === 'threads' ? Boolean(oauthReady[kind]) : true);
 
   const btn = 'rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-foreground transition hover:border-ember disabled:opacity-50';
 
   return (
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-2">
-        {(['telegram', 'discord', 'bluesky', 'mastodon', 'linkedin', 'x', 'facebook', 'instagram', 'slack', 'tumblr'] as ChannelKind[]).map((kind) => {
+        {(['telegram', 'discord', 'bluesky', 'mastodon', 'linkedin', 'x', 'facebook', 'instagram', 'threads', 'slack', 'tumblr'] as ChannelKind[]).map((kind) => {
           const mine = channels.filter((c) => c.kind === kind);
           const live = kind === 'telegram' ? telegramLinked || mine.length > 0 : mine.length > 0;
           return (

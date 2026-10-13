@@ -70,6 +70,12 @@ export function ChannelLinkForm({ kind, telegramLinked, onLinked }: { kind: Chan
           <p className="text-xs text-muted">Slack webhooks take text, not pictures, so carousels are not posted here. Updates, polls, quizzes and threads are.</p>
         </>
       ) : null}
+      {kind === 'threads' ? (
+        <>
+          <p className="text-xs leading-relaxed text-muted">You approve BrandForge on Threads&apos; own page. We never see your password, and you can remove access in your Threads settings at any time.</p>
+          <a href="/api/integrations/threads/start" className={btnPrimary + ' inline-block'}>Connect with Threads</a>
+        </>
+      ) : null}
       {kind === 'facebook' || kind === 'instagram' ? (
         <>
           <p className="text-xs leading-relaxed text-muted">You approve BrandForge on Meta&apos;s own page, once, for every Facebook Page you run and the Instagram business account attached to each. We never see your password, and you can remove access in your Facebook settings at any time. Instagram needs a business or creator account linked to a Page.</p>
@@ -118,7 +124,7 @@ export function ChannelLinkForm({ kind, telegramLinked, onLinked }: { kind: Chan
           </label>
         </>
       ) : null}
-      {kind !== 'tumblr' && kind !== 'linkedin' && kind !== 'x' && kind !== 'facebook' && kind !== 'instagram' ? (
+      {kind !== 'tumblr' && kind !== 'linkedin' && kind !== 'x' && kind !== 'facebook' && kind !== 'instagram' && kind !== 'threads' ? (
         <button type="button" className={btnPrimary} disabled={busy} onClick={() => void link()}>
           {busy ? 'Checking…' : 'Check and connect'}
         </button>

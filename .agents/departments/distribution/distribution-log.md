@@ -1179,3 +1179,9 @@ we do not have.
 **Change:** the sign-in pop-up and /login page now read "Log in or sign up": round full-width buttons for Google (and Apple and phone once switched on in Supabase), then email. Phone sign-in texts a 6-digit code. Log out now opens a "Log out of BrandForge?" page showing the signed-in account, with Log out and Cancel; logging out clears the browser's saved work.
 
 **Distribution move:** none public yet. Once Apple and phone are switched on: "Sign in with Apple or your phone number."
+
+### 2026-10-13 — Threads connect
+
+**Change:** Threads connects from its own page (a Meta app with the Threads API use case) and posts pictures, carousels up to 20, text updates and threads of replies; polls go out as numbered questions. Shows "Coming soon" until THREADS_APP_ID and THREADS_APP_SECRET are added. Tokens last 60 days and refresh while in use.
+
+**Distribution move:** none public until one real post lands on our own Threads.

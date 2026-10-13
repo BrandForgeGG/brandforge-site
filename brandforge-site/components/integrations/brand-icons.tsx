@@ -1,6 +1,6 @@
 // Small drawn marks for each service, inside a tile. A connected service shows in its own colour;
 // one that is not connected is drawn flat and grey, so the state reads before any word does.
-export type ServiceId = 'telegram' | 'discord' | 'bluesky' | 'instagram' | 'tiktok' | 'linkedin' | 'x' | 'facebook' | 'youtube' | 'slack' | 'tumblr' | 'mastodon';
+export type ServiceId = 'telegram' | 'discord' | 'bluesky' | 'instagram' | 'tiktok' | 'linkedin' | 'x' | 'facebook' | 'youtube' | 'slack' | 'tumblr' | 'mastodon' | 'threads';
 
 export const SERVICES: Record<ServiceId, { name: string; color: string }> = {
   telegram: { name: 'Telegram', color: '#229ED9' },
@@ -15,6 +15,7 @@ export const SERVICES: Record<ServiceId, { name: string; color: string }> = {
   slack: { name: 'Slack', color: '#4A154B' },
   tumblr: { name: 'Tumblr', color: '#001935' },
   mastodon: { name: 'Mastodon', color: '#6364FF' },
+  threads: { name: 'Threads', color: '#101010' },
 };
 
 const GLYPH: Record<ServiceId, React.ReactNode> = {
@@ -35,6 +36,7 @@ const GLYPH: Record<ServiceId, React.ReactNode> = {
   slack: <path d="M9.5 5.5a1.5 1.5 0 013 0V8H11a1.5 1.5 0 01-1.5-1.5v-1zM5.5 9.5a1.5 1.5 0 000 3H8V11a1.5 1.5 0 00-1.5-1.5h-1zM14.5 11.5a1.5 1.5 0 000-3H12V10a1.5 1.5 0 001.5 1.5h1zM11.5 14.5a1.5 1.5 0 01-3 0V12H10a1.5 1.5 0 011.5 1.5v1z" />,
   tumblr: <path d="M13.4 18.2c-2.600 0-3.800-1.400-3.800-3.500V10.500H8V8.300c1.700-.6 2.400-2 2.500-3.800h2.100v3.500h2.400v2.500h-2.400v3.700c0 1 .5 1.400 1.300 1.400h1.100v2.600z" />,
   mastodon: <path d="M6.5 7.2C6.5 5.8 7.6 5 9 5h6c1.4 0 2.5.8 2.5 2.2v5.6c0 1.4-1.1 2.2-2.5 2.2h-1.2c0 1 .8 1.6 2.2 1.6H15c-.5 1.3-1.8 1.6-3.2 1.6C9.5 18.2 6.5 17 6.5 12.8V7.2zm3 1.700v3.800m5-3.800v3.800M12 8.900v3.800" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
+  threads: <path d="M16.3 11.2c-.1-.05-.2-.1-.3-.14-.18-3.3-1.98-5.2-5.02-5.22h-.04c-1.82 0-3.33.78-4.26 2.19l1.67 1.15c.7-1.06 1.79-1.28 2.6-1.28h.03c1 0 1.76.3 2.24.87.35.42.59 1 .7 1.73a12.4 12.4 0 0 0-2.83-.14c-2.84.16-4.67 1.82-4.55 4.13.06 1.17.65 2.18 1.65 2.84.85.56 1.94.83 3.08.77 1.5-.08 2.68-.65 3.5-1.7.63-.8 1.02-1.82 1.2-3.12.72.43 1.25 1 1.54 1.69.5 1.17.53 3.08-1.03 4.64-1.37 1.37-3.01 1.96-5.5 1.98-2.75-.02-4.84-.9-6.2-2.63C3.3 15.4 2.63 13.1 2.6 10.2c.03-2.9.7-5.2 2-6.85 1.36-1.73 3.45-2.61 6.2-2.63 2.78.02 4.9.91 6.3 2.65.69.85 1.2 1.92 1.55 3.17l1.95-.52c-.42-1.55-1.08-2.88-1.98-3.99C16.8.44 14.18-.68 10.8-.7h-.01C7.42-.68 4.83.45 3.08 2.66 1.53 4.63.72 7.37.7 10.2v.02c.03 2.83.83 5.57 2.38 7.54 1.75 2.21 4.34 3.34 7.71 3.36h.01c3-.02 5.11-.8 6.85-2.54 2.28-2.28 2.2-5.13 1.46-6.88-.54-1.25-1.56-2.27-2.95-2.94zm-5.2 4.9c-1.25.07-2.55-.49-2.62-1.69-.05-.89.63-1.88 2.68-2 .23-.01.47-.02.69-.02.75 0 1.44.07 2.07.21-.24 2.94-1.62 3.43-2.82 3.5z" transform="translate(1.3 1.6) scale(.9)" />,
   youtube: <path d="M19.6 8.2c-.2-.8-.8-1.4-1.6-1.6C16.6 6.3 12 6.3 12 6.3s-4.6 0-6 .3C5.2 6.8 4.6 7.4 4.4 8.2 4.1 9.6 4.1 12 4.1 12s0 2.4.3 3.8c.2.8.8 1.4 1.6 1.6 1.4.3 6 .3 6 .3s4.6 0 6-.3c.8-.2 1.4-.8 1.6-1.6.3-1.4.3-3.8.3-3.8s0-2.4-.3-3.8zM10.3 14.3V9.7L14.3 12z" />,
 };
 
