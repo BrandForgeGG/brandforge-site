@@ -6,6 +6,7 @@ import { trackEvent } from '@/lib/funnel-client';
 import { ServiceTile, SERVICES, type ServiceId } from '@/components/integrations/brand-icons';
 import { ChannelLinkForm } from '@/components/integrations/channel-link-form';
 import { useChannels, type ChannelKind } from '@/components/integrations/use-channels';
+import { donateUrl, lockedReason } from '@/lib/locked-channels.js';
 
 const COMING: { id: ServiceId; line: string }[] = [
   { id: 'tiktok', line: 'Photo posts and slideshows' },
@@ -83,7 +84,7 @@ export function IntegrationsPanel() {
               <div className="flex items-center gap-3">
                 <ServiceTile id={kind} on={live} />
                 <p className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{SERVICES[kind].name}</p>
-                <Pill on={live}>{loading ? '…' : live ? 'Connected' : 'Not connected'}</Pill>
+                <Pill on={live && !lockedReason(kind)}>{loading ? '…' : lockedReason(kind) ? 'Paused' : live ? 'Connected' : 'Not connected'}</Pill>
               </div>
               <p className="mt-2.5 text-xs leading-relaxed text-muted">{SAY[kind].line}</p>
 
@@ -128,6 +129,12 @@ export function IntegrationsPanel() {
                 )}
               </div>
 
+              {lockedReason(kind) ? (
+                <div className="mt-3 rounded-xl border border-ember/30 bg-ember/10 px-3 py-2.5">
+                  <p className="text-xs leading-relaxed text-foreground">{lockedReason(kind)}</p>
+                  <a href={donateUrl()} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background transition hover:opacity-90">Donate</a>
+                </div>
+              ) : (
               <div className="mt-3">
                 <button type="button" aria-expanded={open === kind} disabled={!ready(kind) && mine.length === 0} className={`${btn} w-full`} onClick={() => setOpen(open === kind ? null : kind)}>
                   {open === kind ? 'Close' : !ready(kind) && mine.length === 0 ? 'Coming soon' : mine.length > 0 ? 'Link another' : SAY[kind].add}
@@ -138,6 +145,7 @@ export function IntegrationsPanel() {
                   </div>
                 ) : null}
               </div>
+              )}
             </section>
           );
         })}

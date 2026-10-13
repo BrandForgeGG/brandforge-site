@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchAuthed } from '@/lib/browser-auth';
 import { trackEvent } from '@/lib/funnel-client';
 import { useChannels } from '@/components/integrations/use-channels';
+import { isLocked } from '@/lib/locked-channels.js';
 import { postFiles, type PostBrand } from '@/components/distribute/render-post';
 import type { PlannedDay, PlannedPost } from '@/lib/distribute-plan.js';
 
@@ -19,7 +20,8 @@ function localISO(day: PlannedDay, post: PlannedPost): string {
 // what became of each scheduled post. The pictures are drawn here in the browser (the same ones that are downloaded),
 // then handed to the server, which sends them at the planned time.
 export function usePublisher(signedIn: boolean | null) {
-  const { channels, loading, reload } = useChannels(Boolean(signedIn));
+  const { channels: linked, loading, reload } = useChannels(Boolean(signedIn));
+  const channels = linked.filter((channel) => !isLocked(channel.kind));
   const [picked, setPicked] = useState<string[]>([]);
   const [items, setItems] = useState<ScheduledItem[]>([]);
   const [ready, setReady] = useState(true);

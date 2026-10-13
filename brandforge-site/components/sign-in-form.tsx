@@ -9,7 +9,7 @@ import { maskPhone, normalizeCode, normalizePhone } from '@/lib/phone.js';
 
 // Which sign-in methods the project has switched on. Google and email are always offered; Apple and phone appear only when
 // Supabase says they are enabled, so a button is never a dead end. Read once per page load.
-type Methods = { apple: boolean; phone: boolean };
+type Methods = { apple: boolean; phone: boolean; x: boolean };
 let methodsPromise: Promise<Methods> | null = null;
 
 function loadMethods(): Promise<Methods> {
@@ -19,9 +19,9 @@ function loadMethods(): Promise<Methods> {
     methodsPromise = base && key
       ? fetch(`${base}/auth/v1/settings`, { headers: { apikey: key } })
           .then((res) => (res.ok ? res.json() : null))
-          .then((json: { external?: { apple?: boolean; phone?: boolean } } | null) => ({ apple: Boolean(json?.external?.apple), phone: Boolean(json?.external?.phone) }))
-          .catch(() => ({ apple: false, phone: false }))
-      : Promise.resolve({ apple: false, phone: false });
+          .then((json: { external?: { apple?: boolean; phone?: boolean; twitter?: boolean } } | null) => ({ apple: Boolean(json?.external?.apple), phone: Boolean(json?.external?.phone), x: Boolean(json?.external?.twitter) }))
+          .catch(() => ({ apple: false, phone: false, x: false }))
+      : Promise.resolve({ apple: false, phone: false, x: false });
   }
   return methodsPromise;
 }
@@ -50,6 +50,14 @@ function AppleMark() {
   );
 }
 
+function XMark() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-[18px] w-[18px] shrink-0" fill="currentColor" aria-hidden="true">
+      <path d="M17.75 3h3.07l-6.7 7.66L22 21h-6.17l-4.83-6.32L5.47 21H2.4l7.17-8.2L2 3h6.33l4.37 5.77L17.75 3zm-1.08 16.17h1.7L7.4 4.73H5.57l11.1 14.44z" />
+    </svg>
+  );
+}
+
 function PhoneMark() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -64,9 +72,9 @@ type View = 'choose' | 'phone' | 'code';
 // The sign-in choices, shared by the /login page and the sign-in pop-up. `next` is where the person lands after signing in;
 // without it the form honours ?next= in the address.
 export function SignInForm({ next }: { next?: string }) {
-  const [methods, setMethods] = useState<Methods>({ apple: false, phone: false });
+  const [methods, setMethods] = useState<Methods>({ apple: false, phone: false, x: false });
   const [view, setView] = useState<View>('choose');
-  const [loading, setLoading] = useState<'google' | 'apple' | 'email' | 'phone' | 'code' | null>(null);
+  const [loading, setLoading] = useState<'google' | 'apple' | 'twitter' | 'email' | 'phone' | 'code' | null>(null);
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
@@ -98,7 +106,7 @@ export function SignInForm({ next }: { next?: string }) {
     return buildOAuthRedirectUrl(target() || '/chat', siteUrl);
   }
 
-  async function handleOAuth(provider: 'google' | 'apple') {
+  async function handleOAuth(provider: 'google' | 'apple' | 'twitter') {
     setLoading(provider);
     setError('');
     setMessage('');
@@ -112,12 +120,12 @@ export function SignInForm({ next }: { next?: string }) {
 
     if (oauthError) {
       console.error(`${provider} OAuth error:`, oauthError);
-      const name = provider === 'google' ? 'Google' : 'Apple';
-      setError(/provider|google|apple|oauth/i.test(oauthError?.message ?? '') ? `${name} sign-in is not available right now. Try another way or ask for help in the Discord.` : getAuthErrorMessage(oauthError?.code ?? 'generic'));
+      const name = provider === 'google' ? 'Google' : provider === 'apple' ? 'Apple' : 'X';
+      setError(/provider|google|apple|twitter|oauth/i.test(oauthError?.message ?? '') ? `${name} sign-in is not available right now. Try another way or ask for help in the Discord.` : getAuthErrorMessage(oauthError?.code ?? 'generic'));
       setLoading(null);
       return;
     }
-    setMessage(`Opening ${provider === 'google' ? 'Google' : 'Apple'}…`);
+    setMessage(`Opening ${provider === 'google' ? 'Google' : provider === 'apple' ? 'Apple' : 'X'}…`);
   }
 
   async function handleEmailSignIn(event: React.FormEvent) {
@@ -271,6 +279,12 @@ export function SignInForm({ next }: { next?: string }) {
         <button type="button" onClick={() => void handleOAuth('apple')} disabled={loading !== null} className={choice}>
           <AppleMark />
           <span className="flex-1 text-center">Continue with Apple</span>
+        </button>
+      ) : null}
+      {methods.x ? (
+        <button type="button" onClick={() => void handleOAuth('twitter')} disabled={loading !== null} className={choice}>
+          <XMark />
+          <span className="flex-1 text-center">Continue with X</span>
         </button>
       ) : null}
       {methods.phone ? (

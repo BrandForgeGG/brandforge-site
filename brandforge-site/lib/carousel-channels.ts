@@ -7,6 +7,7 @@ import { postCarouselToMastodon } from '@/lib/mastodon';
 import { isOAuthKind, postCarouselToOAuth } from '@/lib/oauth-channels';
 import { isMetaKind, postCarouselToMeta } from '@/lib/meta';
 import { postCarouselToThreads } from '@/lib/threads';
+import { lockedReason } from '@/lib/locked-channels.js';
 
 // Linking a channel and posting to it. Only platforms that need no app approval are here: a Telegram
 // channel (the person must be its admin), a Discord channel webhook, and Bluesky (an app password the
@@ -155,6 +156,8 @@ async function postCarouselToBluesky(handle: string, password: string, images: B
 }
 
 export async function publishToChannel(channel: CarouselChannelRow, images: Buffer[], caption: string): Promise<PublishResult> {
+  const locked = lockedReason(channel.kind);
+  if (locked) return { ok: false, note: locked };
   if (channel.kind === 'tumblr') return postCarouselToTumblr(channel, images, caption);
   if (isOAuthKind(channel.kind)) return postCarouselToOAuth(channel.kind, channel, images, caption);
   if (isMetaKind(channel.kind)) return postCarouselToMeta(channel.kind, channel, images, caption);

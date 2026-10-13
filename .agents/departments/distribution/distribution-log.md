@@ -1185,3 +1185,9 @@ we do not have.
 **Change:** Threads connects from its own page (a Meta app with the Threads API use case) and posts pictures, carousels up to 20, text updates and threads of replies; polls go out as numbered questions. Shows "Coming soon" until THREADS_APP_ID and THREADS_APP_SECRET are added. Tokens last 60 days and refresh while in use.
 
 **Distribution move:** none public until one real post lands on our own Threads.
+
+### 2026-10-13 — X posting paused, X sign-in ready
+
+**Change:** X now charges for every API post (402 Payment Required), so X posting is locked: Settings shows "Paused" with "BrandForge cannot afford to use X for now. Donate to help us turn it back on." and a Donate button (goes to NEXT_PUBLIC_DONATE_URL once set, the team's Telegram until then); Distribute no longer offers X, and the server refuses to send to it. "Continue with X" sign-in appears once the Twitter/X provider is switched on in Supabase. Public copy now lists what actually posts today: LinkedIn, Bluesky, Tumblr, Mastodon, Telegram, Discord.
+
+**Distribution move:** a small honest ask in the community: "X wants money for every post. If BrandForge helps you, a donation turns X back on for everyone."

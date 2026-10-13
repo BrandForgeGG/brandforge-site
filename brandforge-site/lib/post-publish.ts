@@ -8,6 +8,7 @@ import { postToMastodon } from '@/lib/mastodon';
 import { isOAuthKind, postToOAuth } from '@/lib/oauth-channels';
 import { isMetaKind, postToMeta } from '@/lib/meta';
 import { postToThreads } from '@/lib/threads';
+import { lockedReason } from '@/lib/locked-channels.js';
 
 // Sends an update, poll, quiz or thread to a channel the person linked. Each platform gets the closest
 // native form: Telegram polls and quizzes are real polls, Discord polls are real polls, and Bluesky
@@ -117,6 +118,8 @@ export async function postToBluesky(handle: string, password: string, post: Post
 }
 
 export async function publishPostToChannel(channel: CarouselChannelRow, post: Post): Promise<PublishResult> {
+  const locked = lockedReason(channel.kind);
+  if (locked) return { ok: false, note: locked };
   if (channel.kind === 'telegram') return postToTelegram(String(channel.meta.chatId ?? ''), post);
   if (channel.kind === 'tumblr') return postToTumblr(channel, post);
   if (isOAuthKind(channel.kind)) return postToOAuth(channel.kind, channel, post);

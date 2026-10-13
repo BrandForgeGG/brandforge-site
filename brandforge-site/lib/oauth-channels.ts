@@ -132,10 +132,17 @@ const LI_HEADERS = { 'LinkedIn-Version': '202506', 'X-Restli-Protocol-Version': 
 
 async function linkedinUpload(token: string, owner: string, png: Buffer): Promise<string | null> {
   const init = await fetch(`${LI}/images?action=initializeUpload`, { method: 'POST', headers: { ...LI_HEADERS, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ initializeUploadRequest: { owner } }), signal: AbortSignal.timeout(20000) });
-  if (!init.ok) return null;
+  if (!init.ok) {
+    console.error('[oauth] linkedin image init failed:', init.status, (await init.text().catch(() => '')).slice(0, 300));
+    return null;
+  }
   const { value } = (await init.json()) as { value?: { uploadUrl?: string; image?: string } };
-  if (!value?.uploadUrl || !value.image) return null;
+  if (!value?.uploadUrl || !value.image) {
+    console.error('[oauth] linkedin image init returned no upload address');
+    return null;
+  }
   const put = await fetch(value.uploadUrl, { method: 'PUT', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/octet-stream' }, body: new Uint8Array(png), signal: AbortSignal.timeout(45000) });
+  if (!put.ok) console.error('[oauth] linkedin image upload failed:', put.status, (await put.text().catch(() => '')).slice(0, 300));
   return put.ok ? value.image : null;
 }
 
@@ -148,6 +155,7 @@ async function linkedinPost(token: string, author: string, commentary: string, i
     signal: AbortSignal.timeout(30000),
   });
   if (res.ok) return { ok: true };
+  console.error('[oauth] linkedin post failed:', res.status, (await res.text().catch(() => '')).slice(0, 300));
   return { ok: false, note: res.status === 401 ? 'LinkedIn needs you to connect again.' : `LinkedIn said: ${res.status}` };
 }
 
@@ -167,7 +175,10 @@ async function xUpload(token: string, png: Buffer): Promise<string | null> {
   form.append('media', new Blob([new Uint8Array(png)], { type: 'image/png' }), 'slide.png');
   form.append('media_category', 'tweet_image');
   const res = await fetch(`${X}/media/upload`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form, signal: AbortSignal.timeout(45000) });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    console.error('[oauth] x media upload failed:', res.status, (await res.text().catch(() => '')).slice(0, 300));
+    return null;
+  }
   const data = (await res.json()) as { data?: { id?: string }; media_id_string?: string };
   return data.data?.id ?? data.media_id_string ?? null;
 }
@@ -175,7 +186,8 @@ async function xUpload(token: string, png: Buffer): Promise<string | null> {
 async function xTweet(token: string, body: Record<string, unknown>): Promise<{ id?: string; error?: string }> {
   const res = await fetch(`${X}/tweets`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(30000) });
   if (res.ok) return { id: ((await res.json()) as { data?: { id?: string } }).data?.id };
-  return { error: res.status === 401 ? 'X needs you to connect again.' : res.status === 429 ? 'X says the posting limit is used up for now.' : `X said: ${res.status}` };
+  if (res.status !== 401 && res.status !== 429) console.error('[oauth] x tweet failed:', res.status, (await res.text().catch(() => '')).slice(0, 300));
+  return { error: res.status === 401 ? 'X needs you to connect again.' : res.status === 429 ? 'X says the posting limit is used up for now.' : res.status === 402 ? 'X needs API credits on the developer account before it can post.' : `X said: ${res.status}` };
 }
 
 function xFit(text: string): string {
@@ -206,7 +218,7 @@ export async function postCarouselToOAuth(kind: OAuthKind, channel: CarouselChan
       const ids: string[] = [];
       for (const png of images.slice(start, start + 4)) {
         const id = await xUpload(token, png);
-        if (!id) return { ok: false, note: 'X refused a picture. The app needs the media.write permission.' };
+        if (!id) return { ok: false, note: 'X refused a picture. If the log says 402, the developer account needs API credits; otherwise the app needs the media.write permission.' };
         ids.push(id);
       }
       const text = start === 0 ? xFit(caption) : `Slides ${start + 1} to ${Math.min(images.length, start + 4)}`;
