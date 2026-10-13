@@ -12,6 +12,7 @@ const PAGES: Array<{ path: string; frequency: 'daily' | 'weekly' | 'monthly'; pr
   { path: '/create', frequency: 'weekly', priority: 0.9, modified: '2026-10-11' },
   { path: '/distribute', frequency: 'weekly', priority: 0.8, modified: '2026-10-12' },
   { path: '/trade', frequency: 'daily', priority: 0.8, modified: '2026-10-12' },
+  { path: '/explore', frequency: 'daily', priority: 0.7, modified: '2026-10-13' },
   { path: '/platform', frequency: 'weekly', priority: 0.8, modified: '2026-10-05' },
   { path: '/apply', frequency: 'monthly', priority: 0.8, modified: '2026-10-05' },
   { path: '/enterprise', frequency: 'monthly', priority: 0.7, modified: '2026-10-11' },

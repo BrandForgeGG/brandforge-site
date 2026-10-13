@@ -67,6 +67,12 @@ export const PAGE_COPY: Record<string, PageCopy> = {
     keywords: ['BrandForge blog', 'product updates', 'changelog', 'building in public', 'AI workspace news'],
     cta: 'Read the latest',
   },
+  '/explore': {
+    title: 'Explore: where BrandForge is going',
+    description: 'Where BrandForge is going, what members are making and listing right now, and what is live, being built and needed next. See the roadmap.',
+    keywords: ['BrandForge roadmap', 'what is new on BrandForge', 'BrandForge community activity', 'product roadmap'],
+    cta: 'See the roadmap',
+  },
   '/about': {
     title: 'About BrandForge: AI and people, one workspace',
     description: 'BrandForge is where AI and people work on the same page: make and publish every kind of message, and trade services. Learn what we do.',

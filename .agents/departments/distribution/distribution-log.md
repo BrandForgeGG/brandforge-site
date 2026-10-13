@@ -1203,3 +1203,9 @@ we do not have.
 **Change:** Create and Distribute now show what members chose to share ("From the community", "Posts from the community"): a Share to the community button sits next to Download on the carousel maker, the image maker and each Distribute post. Only shared work is public; the owner can remove it, an admin can hide it. Sidebar: no line under the logo, the logo goes to the home page, New chat is a normal-size row like Create, Distribute and Trade. Trade uses the same width and spacing as Create and Distribute. Funnel now records distribute_downloaded and community_shared (they were silently dropped before).
 
 **Distribution move:** seed both feeds with our own best carousel and a week of posts, then post in Discord: "Make something on BrandForge and share it, the best ones go on the front of Create."
+
+### 2026-10-13 — Explore page, bigger sidebar, no chat flash
+
+**Change:** new Explore page (sidebar and sitemap): where BrandForge is going, "Happening now" (real member activity: new Trade listings and community shares, newest first) and a three-column roadmap (Live / Building now / Needs to happen) kept honest in lib/roadmap.js. Sidebar: chat search removed; page rows bigger (39px, 15px labels). Opening a chat no longer flashes: the loading frame keeps the sidebar and composer in place, and a new chat goes straight to its loading skeleton instead of an empty frame.
+
+**Distribution move:** Explore is the link to share when people ask "what is BrandForge working on": "Here is what is live, what we are building and what is next: brandforge.gg/explore".

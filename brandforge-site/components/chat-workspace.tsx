@@ -616,9 +616,10 @@ export function ChatWorkspace() {
     setHasOlder(false);
     setIsLoadingOlder(false);
     // A stream or spinner from the previous chat must not follow us into the next one:
-    // the composer would stay locked and the loading state would strand (H5).
+    // the composer would stay locked and the loading state would strand (H5). Opening a real chat goes straight to the
+    // loading skeleton (the boot effect clears it), so there is no empty frame between the start screen and the messages.
     setIsStreaming(false);
-    setIsBooting(false);
+    setIsBooting(Boolean(conversationId));
     setState(null);
     setProposal(null);
     setAgreement(null);

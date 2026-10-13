@@ -71,6 +71,7 @@ const NAV_ITEMS = [
   { href: "/create", label: "Create", hint: "Make it, download it, publish it", path: "M10 3.5l1.6 4.4 4.4 1.6-4.4 1.6L10 15.5l-1.6-4.4L4 9.5l4.4-1.6zM15.5 3v3M14 4.5h3" },
   { href: "/distribute", label: "Distribute", hint: "A week of posts, written for you", path: "M4 5.5h12v10H4zM4 8.5h12M7.5 3.5v3M12.5 3.5v3M7 12h2M11 12h2" },
   { href: "/trade", label: "Trade", hint: "Hire or get hired", path: "M4 7h11l-3-3M16 13H5l3 3" },
+  { href: "/explore", label: "Explore", hint: "Where BrandForge is going and what is happening now", path: "M10 3a7 7 0 100 14 7 7 0 000-14zM12.8 7.2l-1.6 4-4 1.6 1.6-4z" },
 ];
 
 const DASHBOARD_ITEM = { href: "/admin", label: "Dashboard", hint: "Admin: people, money, chats", path: "M4 4h5v5H4zM11 4h5v5h-5zM4 11h5v5H4zM11 11h5v5h-5z" };
@@ -155,7 +156,6 @@ onMobileClose,
   const [isAdmin, setIsAdmin] = useState(() => railCache.isAdmin);
   const [unseenCount, setUnseenCount] = useState(() => railCache.unseen);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [recentQuery, setRecentQuery] = useState("");
 
   // Remember how wide the founder left the sidebar. Read after mount so the server render and the
   // first client render agree (no hydration mismatch); the flip one frame later is invisible.
@@ -384,11 +384,11 @@ onMobileClose,
               data-tip-pos="right"
               className={
                 isCollapsed
-                  ? "flex h-9 w-9 items-center justify-center rounded-lg text-foreground transition hover:bg-overlay disabled:opacity-60"
-                  : "flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-left text-[13px] font-medium text-foreground transition hover:bg-overlay disabled:opacity-60"
+                  ? "flex h-10 w-10 items-center justify-center rounded-lg text-foreground transition hover:bg-overlay disabled:opacity-60"
+                  : "flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-left text-[15px] font-medium text-foreground transition hover:bg-overlay disabled:opacity-60"
               }
             >
-              <RailIcon path="M14.5 3.5l2 2L9 13l-3 1 1-3 7.5-7.5zM4 16.5h12" className="h-4 w-4 shrink-0" />
+              <RailIcon path="M14.5 3.5l2 2L9 13l-3 1 1-3 7.5-7.5zM4 16.5h12" className="h-[18px] w-[18px] shrink-0" />
               {isCollapsed ? null : isCreatingConversation ? "Starting…" : "New chat"}
             </button>
             {(isAdmin ? [...NAV_ITEMS, DASHBOARD_ITEM] : NAV_ITEMS).map((item) => (
@@ -401,11 +401,11 @@ onMobileClose,
                 aria-label={item.label}
                 className={
                   isCollapsed
-                    ? "flex h-9 w-9 items-center justify-center rounded-lg text-muted transition hover:bg-overlay hover:text-foreground"
-                    : "flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-[13px] text-muted transition hover:bg-overlay hover:text-foreground"
+                    ? "flex h-10 w-10 items-center justify-center rounded-lg text-muted transition hover:bg-overlay hover:text-foreground"
+                    : "flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-[15px] text-muted transition hover:bg-overlay hover:text-foreground"
                 }
               >
-                <RailIcon path={item.path} className="h-4 w-4 shrink-0" />
+                <RailIcon path={item.path} className="h-[18px] w-[18px] shrink-0" />
                 {isCollapsed ? null : item.label}
               </Link>
             ))}
@@ -465,22 +465,8 @@ onMobileClose,
                 </div>
               ) : (
                 <div className="bf-recents">
-                  {recents.length > 5 ? (
-                    <div className="px-1 pb-2">
-                      <input
-                        type="search"
-                        value={recentQuery}
-                        onChange={(event) => setRecentQuery(event.target.value)}
-                        placeholder="Search chats"
-                        aria-label="Search chats"
-                        className="w-full rounded-lg border border-line bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none"
-                      />
-                    </div>
-                  ) : null}
                   {(() => {
-                    const query = recentQuery.trim().toLowerCase();
-                    const shown = recents.filter((conversation) => !query || (conversation.title + " " + (conversation.preview ?? "")).toLowerCase().includes(query));
-                    if (shown.length === 0) return <p className="px-3 py-2 text-xs text-muted">No chat matches &ldquo;{recentQuery}&rdquo;.</p>;
+                    const shown = recents;
                     const groups: { label: string; items: typeof shown }[] = [];
                     for (const conversation of shown) {
                       const label = recencyGroup(conversation.lastActivity);
