@@ -1,7 +1,8 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import type { EmailOtpType } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { sanitizeNextPath } from '@/lib/auth-utils';
+import { EMAIL_LINK_TYPES, linkErrorMessage, sanitizeNextPath } from '@/lib/auth-utils';
 import { announceReal, countRegisteredProfiles, mergeBlueprintSessionToUser, recordFunnelEvent } from '@/lib/project-db';
 import { verifySessionToken } from '@/lib/blueprint-session';
 import { isFreshSignup, postRegistrationNotice } from '@/lib/registration-notice';
@@ -18,16 +19,26 @@ export async function GET(request: Request) {
   const next = sanitizeNextPath(requestUrl.searchParams.get('next'), requestUrl.origin);
   const errorParam = requestUrl.searchParams.get('error');
   const errorDescription = requestUrl.searchParams.get('error_description');
+  // Three ways in: a code (Google, or an email link opened in the browser that asked for it), a token hash (an email link
+  // checked here on the server, so it works in any browser or app), or finish=1 (the person typed the 6-digit code from the
+  // email and is already signed in; this only runs the first-sign-in steps below).
+  const tokenHash = requestUrl.searchParams.get('token_hash');
+  const linkType = requestUrl.searchParams.get('type') ?? 'email';
+  const finishing = requestUrl.searchParams.get('finish') === '1';
+  const fromEmail = requestUrl.searchParams.get('bp') === 'email' || Boolean(tokenHash);
+  const loginWith = (message: string) => {
+    const loginUrl = new URL('/login', requestUrl.origin);
+    loginUrl.searchParams.set('error', message);
+    if (next !== '/chat') loginUrl.searchParams.set('next', next);
+    return loginUrl;
+  };
 
   if (errorParam) {
-    const loginUrl = new URL('/login', requestUrl.origin);
-    if (errorDescription) {
-      loginUrl.searchParams.set('error', errorDescription);
-    }
-    return NextResponse.redirect(loginUrl);
+    const message = fromEmail || /otp|link|email/i.test(`${errorParam} ${errorDescription ?? ''}`) ? linkErrorMessage(errorDescription, requestUrl.searchParams.get('error_code')) : 'Sign-in did not finish. Try again.';
+    return NextResponse.redirect(loginWith(message));
   }
 
-  if (!code) {
+  if (!code && !tokenHash && !finishing) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
@@ -73,10 +84,18 @@ export async function GET(request: Request) {
     requestCookies: cookieStore.getAll().map((entry) => entry.name),
   });
 
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  let error: { message: string; code?: string } | null = null;
+  if (code) {
+    ({ error } = await supabase.auth.exchangeCodeForSession(code));
+  } else if (tokenHash) {
+    error = EMAIL_LINK_TYPES.includes(linkType)
+      ? (await supabase.auth.verifyOtp({ token_hash: tokenHash, type: linkType as EmailOtpType })).error
+      : { message: 'unknown link type' };
+  }
 
   console.log('OAuth exchange result', {
     ok: !error,
+    via: code ? 'code' : tokenHash ? 'token_hash' : 'finish',
     error: error?.message ?? null,
     cookiesToSet: pendingCookies.map((entry) => entry.name),
   });
@@ -84,8 +103,9 @@ export async function GET(request: Request) {
   if (error) {
     console.error('OAuth callback exchange failed:', error.message);
     // Still carry the pending cookie mutations (verifier cleanup) so a failed exchange does
-    // not leave a stale code_verifier behind for the next attempt.
-    return redirectWithCookies(new URL('/login', request.url));
+    // not leave a stale code_verifier behind for the next attempt. Say what happened instead
+    // of landing silently back on the sign-in page.
+    return redirectWithCookies(loginWith(fromEmail ? linkErrorMessage(error.message, error.code) : 'Sign-in did not finish. Try again.'));
   }
 
   // Open auth: any Google account that completes OAuth keeps the session.

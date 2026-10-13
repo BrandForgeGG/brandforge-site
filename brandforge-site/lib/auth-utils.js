@@ -24,6 +24,11 @@ function getAuthErrorMessage(code) {
     otp_disabled: 'Email sign-in is not enabled yet — continue with Google for now.',
     signup_disabled: 'Email sign-up is not enabled yet — continue with Google for now.',
     email_not_allowed: 'That email cannot be used to sign in. Try Google instead.',
+    over_email_send_rate_limit: 'Too many sign-in emails were sent just now. Wait a minute and try again, or continue with Google.',
+    over_request_rate_limit: 'Too many attempts. Please wait a moment and try again.',
+    email_address_not_authorized: 'We cannot send email to that address yet. Continue with Google for now.',
+    email_address_invalid: 'Please enter a valid email address.',
+    otp_expired: 'That code has expired. Ask for a new one.',
     generic: 'Something went wrong. Please try again.',
   };
 
@@ -76,7 +81,26 @@ function buildOAuthRedirectUrl(nextPath = '/chat', customSiteUrl) {
   return url.toString();
 }
 
+// What went wrong when someone arrives from a sign-in email, in words that say what to do next. The two real cases:
+// the link was opened in a different browser or app than the one that asked for it (the security code it needs lives
+// only in that first browser), or the link expired or was already used.
+function linkErrorMessage(description, code) {
+  const text = `${code || ''} ${description || ''}`.toLowerCase();
+  if (/expired|already been used|otp_expired|invalid or has expired|access_denied/.test(text)) {
+    return 'That sign-in link has expired or was already used. Enter your email to get a new one.';
+  }
+  if (/code verifier|code_verifier|flow state|flow_state|non-empty|bad_code_verifier|pkce/.test(text)) {
+    return 'That link was opened in a different browser or app. Type the 6-digit code from the email instead, or ask for a new link here.';
+  }
+  return 'That sign-in link did not work. Enter your email to get a new one, or continue with Google.';
+}
+
+// The kinds of email link Supabase can send with a token hash, checked on the server (no same-browser requirement).
+const EMAIL_LINK_TYPES = ['email', 'magiclink', 'signup', 'invite', 'recovery', 'email_change'];
+
 module.exports = {
+  linkErrorMessage,
+  EMAIL_LINK_TYPES,
   isValidEmail,
   getAuthErrorMessage,
   resolveSiteUrl,

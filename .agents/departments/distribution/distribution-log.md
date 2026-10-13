@@ -1191,3 +1191,9 @@ we do not have.
 **Change:** X now charges for every API post (402 Payment Required), so X posting is locked: Settings shows "Paused" with "BrandForge cannot afford to use X for now. Donate to help us turn it back on." and a Donate button (goes to NEXT_PUBLIC_DONATE_URL once set, the team's Telegram until then); Distribute no longer offers X, and the server refuses to send to it. "Continue with X" sign-in appears once the Twitter/X provider is switched on in Supabase. Public copy now lists what actually posts today: LinkedIn, Bluesky, Tumblr, Mastodon, Telegram, Discord.
 
 **Distribution move:** a small honest ask in the community: "X wants money for every post. If BrandForge helps you, a donation turns X back on for everyone."
+
+### 2026-10-13 — Email sign-in that works anywhere; Google and email only
+
+**Change:** sign-in is now Google (highlighted) and email only; X, Apple and phone buttons are gone. Email sign-in failed silently whenever the link was opened in a different browser or app (the Gmail app, a phone): the person landed back on the sign-in page with no message. Now the email carries a 6-digit code as well as the link (once the Supabase template is updated), the "Check your email" step takes the code in the same tab with a resend timer, links can be checked on the server so they work in any browser, and expired or wrong-browser links say exactly what to do.
+
+**Distribution move:** reply to the person who reported it: "Email sign-in is fixed. Type the code from the email, or open the link, either works now."

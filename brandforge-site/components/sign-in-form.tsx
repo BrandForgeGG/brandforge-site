@@ -5,34 +5,9 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { trackEvent } from '@/lib/funnel-client';
 import { buildOAuthRedirectUrl, getAuthErrorMessage, isValidEmail, resolveSiteUrl } from '@/lib/auth-utils';
-import { maskPhone, normalizeCode, normalizePhone } from '@/lib/phone.js';
 
-// X sign-in (Supabase provider `x`, OAuth 2.0) is on in the dashboard but missing from the public settings, so it is set here.
-const X_SIGNIN = true;
-
-// Which sign-in methods the project has switched on. Google and email are always offered; Apple and phone appear only when
-// Supabase says they are enabled, so a button is never a dead end. Read once per page load.
-type Methods = { apple: boolean; phone: boolean; x: boolean };
-let methodsPromise: Promise<Methods> | null = null;
-
-function loadMethods(): Promise<Methods> {
-  if (!methodsPromise) {
-    const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    methodsPromise = base && key
-      ? fetch(`${base}/auth/v1/settings`, { headers: { apikey: key } })
-          .then((res) => (res.ok ? res.json() : null))
-          .then((json: { external?: { apple?: boolean; phone?: boolean; twitter?: boolean } } | null) => ({ apple: Boolean(json?.external?.apple), phone: Boolean(json?.external?.phone), x: X_SIGNIN || Boolean(json?.external?.twitter) }))
-          .catch(() => ({ apple: false, phone: false, x: X_SIGNIN }))
-      : Promise.resolve({ apple: false, phone: false, x: X_SIGNIN });
-  }
-  return methodsPromise;
-}
-
-const choice =
-  'flex w-full items-center gap-3 rounded-full border border-line bg-background px-5 py-3 text-[15px] font-medium text-foreground transition hover:bg-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember disabled:cursor-not-allowed disabled:opacity-60';
 const inputClass = 'w-full rounded-full border border-line bg-background px-5 py-3 text-[15px] text-foreground outline-none transition placeholder:text-muted focus:border-ember focus:ring-1 focus:ring-ember';
-const primary = 'w-full rounded-full bg-foreground px-5 py-3 text-[15px] font-semibold text-background transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60';
+const RESEND_AFTER = 45;
 
 function GoogleMark() {
   return (
@@ -45,43 +20,16 @@ function GoogleMark() {
   );
 }
 
-function AppleMark() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="currentColor" aria-hidden="true">
-      <path d="M16.37 1.43c0 1.14-.46 2.2-1.2 2.98-.8.85-2.1 1.5-3.15 1.42-.13-1.1.4-2.25 1.12-2.98.8-.83 2.2-1.45 3.23-1.42zM20.5 17.3c-.55 1.27-.82 1.84-1.53 2.96-1 1.56-2.4 3.5-4.14 3.52-1.55.02-1.95-1-4.05-.99-2.1.01-2.54 1.01-4.09.99-1.74-.02-3.07-1.77-4.07-3.33C-.2 16.1-.5 10.9 1.2 8.3c1.2-1.85 3.1-2.93 4.88-2.93 1.82 0 2.96 1 4.46 1 1.46 0 2.35-1 4.45-1 1.58 0 3.26.86 4.46 2.35-3.92 2.15-3.28 7.75.55 9.58z" />
-    </svg>
-  );
-}
-
-function XMark() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-[18px] w-[18px] shrink-0" fill="currentColor" aria-hidden="true">
-      <path d="M17.75 3h3.07l-6.7 7.66L22 21h-6.17l-4.83-6.32L5.47 21H2.4l7.17-8.2L2 3h6.33l4.37 5.77L17.75 3zm-1.08 16.17h1.7L7.4 4.73H5.57l11.1 14.44z" />
-    </svg>
-  );
-}
-
-function PhoneMark() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
-      <path d="M11 18.5h2" />
-    </svg>
-  );
-}
-
-type View = 'choose' | 'phone' | 'code';
-
-// The sign-in choices, shared by the /login page and the sign-in pop-up. `next` is where the person lands after signing in;
-// without it the form honours ?next= in the address.
+// The sign-in choices, shared by the /login page and the sign-in pop-up: Google first (one tap), then email. Email sends
+// one message with both a link and a 6-digit code, so it works wherever the email is read: open the link in this browser,
+// or type the code here. `next` is where the person lands after signing in; without it the form honours ?next=.
 export function SignInForm({ next }: { next?: string }) {
-  const [methods, setMethods] = useState<Methods>({ apple: false, phone: false, x: false });
-  const [view, setView] = useState<View>('choose');
-  const [loading, setLoading] = useState<'google' | 'apple' | 'x' | 'email' | 'phone' | 'code' | null>(null);
+  const [view, setView] = useState<'choose' | 'check'>('choose');
+  const [loading, setLoading] = useState<'google' | 'email' | 'code' | null>(null);
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [code, setCode] = useState('');
   const [sentTo, setSentTo] = useState('');
+  const [code, setCode] = useState('');
+  const [wait, setWait] = useState(0);
   const [message, setMessage] = useState('');
   const [error, setError] = useState(() => {
     if (typeof window === 'undefined') return '';
@@ -89,15 +37,12 @@ export function SignInForm({ next }: { next?: string }) {
     return callbackError ? decodeURIComponent(callbackError) : '';
   });
 
+  // The resend button counts down instead of letting people trip the email rate limit.
   useEffect(() => {
-    let alive = true;
-    void loadMethods().then((found) => {
-      if (alive) setMethods(found);
-    });
-    return () => {
-      alive = false;
-    };
-  }, []);
+    if (wait <= 0) return;
+    const timer = window.setTimeout(() => setWait((value) => value - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [wait]);
 
   function target() {
     return next ?? (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('next') : null) ?? '/chat';
@@ -109,101 +54,82 @@ export function SignInForm({ next }: { next?: string }) {
     return buildOAuthRedirectUrl(target() || '/chat', siteUrl);
   }
 
-  async function handleOAuth(provider: 'google' | 'apple' | 'x') {
-    setLoading(provider);
+  async function handleGoogle() {
+    setLoading('google');
     setError('');
     setMessage('');
-    // Intent, not outcome: recorded before the redirect so a drop-off before the provider is still visible.
-    trackEvent('signin_started', { source: provider });
-
+    // Intent, not outcome: recorded before the redirect so a drop-off before Google is still visible.
+    trackEvent('signin_started', { source: 'google' });
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: redirectUrl(), ...(provider === 'google' ? { queryParams: { access_type: 'offline', prompt: 'consent' } } : {}) },
+      provider: 'google',
+      options: { redirectTo: redirectUrl(), queryParams: { access_type: 'offline', prompt: 'consent' } },
     });
-
     if (oauthError) {
-      console.error(`${provider} OAuth error:`, oauthError);
-      const name = provider === 'google' ? 'Google' : provider === 'apple' ? 'Apple' : 'X';
-      setError(/provider|google|apple|twitter|oauth/i.test(oauthError?.message ?? '') ? `${name} sign-in is not available right now. Try another way or ask for help in the Discord.` : getAuthErrorMessage(oauthError?.code ?? 'generic'));
+      console.error('Google OAuth error:', oauthError);
+      setError(/provider|google|oauth/i.test(oauthError?.message ?? '') ? 'Google sign-in is not available right now. Use your email below, or try again in a moment.' : getAuthErrorMessage(oauthError?.code ?? 'generic'));
       setLoading(null);
       return;
     }
-    setMessage(`Opening ${provider === 'google' ? 'Google' : provider === 'apple' ? 'Apple' : 'X'}…`);
+    setMessage('Opening Google…');
   }
 
-  async function handleEmailSignIn(event: React.FormEvent) {
+  async function sendEmail(address: string) {
+    setLoading('email');
+    setError('');
+    setMessage('');
+    trackEvent('signin_started', { source: 'email' });
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email: address,
+      // bp=email marks the callback as an email arrival so the blueprint merge is counted.
+      options: { emailRedirectTo: `${redirectUrl()}&bp=email`, shouldCreateUser: true },
+    });
+    setLoading(null);
+    if (otpError) {
+      console.error('Email sign-in error:', otpError);
+      setError(otpError.status === 429 ? getAuthErrorMessage('over_email_send_rate_limit') : getAuthErrorMessage(otpError?.code ?? 'generic'));
+      return false;
+    }
+    setSentTo(address);
+    setCode('');
+    setWait(RESEND_AFTER);
+    setView('check');
+    return true;
+  }
+
+  async function handleEmail(event: React.FormEvent) {
     event.preventDefault();
     const trimmed = email.trim().toLowerCase();
-
     if (!isValidEmail(trimmed)) {
       setError(getAuthErrorMessage('invalid_email'));
       setMessage('');
       return;
     }
-
-    setLoading('email');
-    setError('');
-    setMessage('');
-    trackEvent('signin_started', { source: 'email' });
-
-    const { error: otpError } = await supabase.auth.signInWithOtp({
-      email: trimmed,
-      // bp=email marks the callback as a magic-link arrival so the blueprint merge is counted.
-      options: { emailRedirectTo: `${redirectUrl()}&bp=email` },
-    });
-
-    if (otpError) {
-      console.error('Email sign-in error:', otpError);
-      setError(getAuthErrorMessage(otpError?.code ?? 'generic'));
-      setLoading(null);
-      return;
-    }
-
-    setMessage(`Check your inbox. We sent a sign-in link to ${trimmed}. Open it on this device to continue.`);
-    setLoading(null);
+    await sendEmail(trimmed);
   }
 
-  async function sendCode(event: React.FormEvent) {
+  async function handleCode(event: React.FormEvent) {
     event.preventDefault();
-    const normalized = normalizePhone(phone);
-    if (!normalized) {
-      setError('Enter your number with the country code, like +971 50 123 4567.');
-      return;
-    }
-    setLoading('phone');
-    setError('');
-    trackEvent('signin_started', { source: 'phone' });
-    const { error: smsError } = await supabase.auth.signInWithOtp({ phone: normalized });
-    setLoading(null);
-    if (smsError) {
-      console.error('Phone sign-in error:', smsError);
-      setError(smsError.status === 429 ? 'Too many tries. Wait a minute and try again.' : 'We could not text that number. Check it and try again.');
-      return;
-    }
-    setSentTo(normalized);
-    setCode('');
-    setView('code');
-  }
-
-  async function verifyCode(event: React.FormEvent) {
-    event.preventDefault();
-    const digits = normalizeCode(code);
-    if (!digits) {
-      setError('Enter the 6-digit code from the text message.');
+    const digits = code.replace(/\D/g, '');
+    if (digits.length < 6 || digits.length > 8) {
+      setError('Enter the code from the email. It is 6 digits.');
       return;
     }
     setLoading('code');
     setError('');
-    const { error: verifyError } = await supabase.auth.verifyOtp({ phone: sentTo, token: digits, type: 'sms' });
+    const { error: verifyError } = await supabase.auth.verifyOtp({ email: sentTo, token: digits, type: 'email' });
     if (verifyError) {
-      console.error('Phone code error:', verifyError);
-      setError('That code did not work. Check it, or go back and get a new one.');
+      console.error('Email code error:', verifyError);
+      setError(/expired/i.test(verifyError.message) ? getAuthErrorMessage('otp_expired') : 'That code did not work. Check it, or send a new one.');
       setLoading(null);
       return;
     }
     setMessage('Signed in. Opening BrandForge…');
-    // A full load, so every part of the page starts out signed in.
-    window.location.assign(target().startsWith('/') ? target() : '/chat');
+    // Signed in already; the callback only runs the first-sign-in steps (welcome, onboarding) and sends them on.
+    const finish = new URL('/auth/callback', window.location.origin);
+    finish.searchParams.set('finish', '1');
+    finish.searchParams.set('bp', 'email');
+    finish.searchParams.set('next', target().startsWith('/') ? target() : '/chat');
+    window.location.assign(finish.toString());
   }
 
   const legal = (
@@ -235,67 +161,52 @@ export function SignInForm({ next }: { next?: string }) {
     </>
   );
 
-  if (view === 'phone' || view === 'code') {
+  if (view === 'check') {
     return (
       <div className="space-y-4">
-        <button type="button" onClick={() => { setView('choose'); setError(''); setMessage(''); }} className="inline-flex items-center gap-1 text-sm text-muted transition hover:text-foreground">
-          <span aria-hidden="true">←</span> Back
-        </button>
-        {view === 'phone' ? (
-          <form onSubmit={sendCode} className="space-y-3">
-            <label htmlFor="auth-phone" className="block text-sm text-muted">
-              Your phone number
-            </label>
-            <input id="auth-phone" type="tel" inputMode="tel" autoComplete="tel" autoFocus placeholder="+971 50 123 4567" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} />
-            <p className="text-xs text-muted">Start with the country code. We text you a 6-digit code. Message and data rates may apply.</p>
-            <button type="submit" disabled={loading !== null} className={primary}>
-              {loading === 'phone' ? 'Sending…' : 'Send code'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={verifyCode} className="space-y-3">
-            <label htmlFor="auth-code" className="block text-sm text-muted">
-              Enter the code we texted to {maskPhone(sentTo)}
-            </label>
-            <input id="auth-code" type="text" inputMode="numeric" autoComplete="one-time-code" autoFocus maxLength={9} placeholder="123456" value={code} onChange={(e) => setCode(e.target.value)} className={`${inputClass} text-center text-lg tracking-[0.35em]`} />
-            <button type="submit" disabled={loading !== null} className={primary}>
-              {loading === 'code' ? 'Checking…' : 'Continue'}
-            </button>
-            <button type="button" onClick={() => { setView('phone'); setError(''); }} className="block w-full text-center text-sm text-muted underline-offset-2 hover:text-foreground hover:underline">
-              Use a different number or send a new code
-            </button>
-          </form>
-        )}
+        <div className="rounded-2xl border border-line bg-background px-4 py-3 text-center">
+          <p className="text-sm font-semibold text-foreground">Check your email</p>
+          <p className="mt-1 text-sm leading-relaxed text-muted">
+            We sent a sign-in email to <span className="break-all text-foreground">{sentTo}</span>. Open the link in it, or type the code here.
+          </p>
+        </div>
+        <form onSubmit={handleCode} className="space-y-3">
+          <label htmlFor="auth-code" className="sr-only">
+            Code from the email
+          </label>
+          <input id="auth-code" type="text" inputMode="numeric" autoComplete="one-time-code" autoFocus maxLength={10} placeholder="6-digit code" value={code} onChange={(e) => setCode(e.target.value)} className={`${inputClass} text-center text-lg tracking-[0.3em]`} />
+          <button type="submit" disabled={loading !== null} className="w-full rounded-full bg-foreground px-5 py-3 text-[15px] font-semibold text-background transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
+            {loading === 'code' ? 'Checking…' : 'Continue'}
+          </button>
+        </form>
         {alerts}
-        {legal}
+        <div className="flex items-center justify-between gap-2 text-sm">
+          <button type="button" onClick={() => { setView('choose'); setError(''); setMessage(''); }} className="text-muted underline-offset-2 hover:text-foreground hover:underline">
+            Use a different email
+          </button>
+          <button type="button" disabled={wait > 0 || loading !== null} onClick={() => void sendEmail(sentTo)} className="text-muted underline-offset-2 hover:text-foreground hover:underline disabled:no-underline disabled:opacity-60">
+            {wait > 0 ? `Send again in ${wait}s` : loading === 'email' ? 'Sending…' : 'Send again'}
+          </button>
+        </div>
+        <p className="text-center text-xs text-muted">Nothing there? Check spam or promotions, or continue with Google.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-3">
-      <button type="button" onClick={() => void handleOAuth('google')} disabled={loading !== null} className={choice}>
-        <GoogleMark />
-        <span className="flex-1 text-center">Continue with Google</span>
+      <button
+        type="button"
+        onClick={() => void handleGoogle()}
+        disabled={loading !== null}
+        className="flex w-full items-center gap-3 rounded-full bg-foreground px-5 py-3.5 text-[15px] font-semibold text-background shadow-sm transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember focus-visible:ring-offset-2 focus-visible:ring-offset-panel disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white">
+          <GoogleMark />
+        </span>
+        <span className="flex-1 text-center">{loading === 'google' ? 'Opening Google…' : 'Continue with Google'}</span>
+        <span className="w-7" aria-hidden="true" />
       </button>
-      {methods.apple ? (
-        <button type="button" onClick={() => void handleOAuth('apple')} disabled={loading !== null} className={choice}>
-          <AppleMark />
-          <span className="flex-1 text-center">Continue with Apple</span>
-        </button>
-      ) : null}
-      {methods.x ? (
-        <button type="button" onClick={() => void handleOAuth('x')} disabled={loading !== null} className={choice}>
-          <XMark />
-          <span className="flex-1 text-center">Continue with X</span>
-        </button>
-      ) : null}
-      {methods.phone ? (
-        <button type="button" onClick={() => { setView('phone'); setError(''); setMessage(''); }} disabled={loading !== null} className={choice}>
-          <PhoneMark />
-          <span className="flex-1 text-center">Continue with phone</span>
-        </button>
-      ) : null}
 
       <div className="flex items-center gap-4 py-1" aria-hidden="true">
         <span className="h-px flex-1 bg-line" />
@@ -303,13 +214,13 @@ export function SignInForm({ next }: { next?: string }) {
         <span className="h-px flex-1 bg-line" />
       </div>
 
-      <form onSubmit={handleEmailSignIn} className="space-y-3">
+      <form onSubmit={handleEmail} className="space-y-3">
         <label htmlFor="auth-email" className="sr-only">
           Email address
         </label>
-        <input id="auth-email" type="email" autoComplete="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
-        <button type="submit" disabled={loading !== null} className={primary}>
-          {loading === 'email' ? 'Sending…' : 'Continue'}
+        <input id="auth-email" type="email" autoComplete="email" inputMode="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
+        <button type="submit" disabled={loading !== null} className="w-full rounded-full border border-ember bg-ember/10 px-5 py-3 text-[15px] font-semibold text-foreground transition hover:bg-ember/20 disabled:cursor-not-allowed disabled:opacity-60">
+          {loading === 'email' ? 'Sending…' : 'Continue with email'}
         </button>
       </form>
 

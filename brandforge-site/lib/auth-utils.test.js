@@ -65,3 +65,18 @@ test('the legacy demo-session helpers are gone', () => {
   assert.equal(utils.saveDemoSession, undefined);
   assert.equal(utils.clearDemoSession, undefined);
 });
+
+test('sign-in link errors become plain next steps', () => {
+  const { linkErrorMessage } = require('./auth-utils.js');
+  assert.match(linkErrorMessage('Email link is invalid or has expired', 'otp_expired'), /expired or was already used/);
+  assert.match(linkErrorMessage('invalid request: both auth code and code verifier should be non-empty', ''), /different browser or app/);
+  assert.match(linkErrorMessage('invalid flow state, no valid flow state found', 'flow_state_not_found'), /different browser or app/);
+  assert.match(linkErrorMessage('something odd', ''), /did not work/);
+  assert.match(linkErrorMessage(null, null), /did not work/);
+});
+
+test('rate limit and unauthorised email errors have their own messages', () => {
+  const { getAuthErrorMessage } = require('./auth-utils.js');
+  assert.match(getAuthErrorMessage('over_email_send_rate_limit'), /Wait a minute/);
+  assert.match(getAuthErrorMessage('email_address_not_authorized'), /cannot send email/);
+});
