@@ -94,6 +94,8 @@ const FUNNEL_EVENTS = Object.freeze([
   'carousel_planned',
   'image_planned',
   'distribute_planned',
+  'distribute_downloaded',
+  'community_shared',
   'image_chat_started',
   'image_downloaded',
   'create_interest',

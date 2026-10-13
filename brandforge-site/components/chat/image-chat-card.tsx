@@ -8,6 +8,7 @@ import { STYLES as COVER_STYLES } from '@/lib/carousel-cover.js';
 import { FORMATS, FORMAT_IDS, KINDS, KIND_IDS, imageCaption, type ImageCopy, type ImageFormat, type ImageKind } from '@/lib/image-kinds.js';
 import { THEME_LIST, downscale, loadFonts, loadImage, readDraft, type Brand, type Theme } from '@/components/carousel/carousel-shared';
 import { imageFileName, renderImage, saveBlob } from '@/components/image/image-shared';
+import { ShareButton } from '@/components/community/share-button';
 
 type Stage = 'ask' | 'working' | 'done';
 
@@ -469,6 +470,19 @@ export function ImageChatCard({ kind: startKind, topic, userText, storageKey, re
                         <button type="button" onClick={() => void copyCaption()} className="rounded-xl border border-line px-4 py-2.5 text-sm text-foreground transition hover:border-ember">
                           Copy caption
                         </button>
+                        <ShareButton
+                          kind="create"
+                          format={draft.kind}
+                          title={copy.headline.replace(/\*/g, '')}
+                          caption={imageCaption({ kind: draft.kind, copy }, draft.brand.handle ? `Try it free at ${draft.brand.handle}` : '')}
+                          className="rounded-xl border border-line px-4 py-2.5 text-sm text-foreground transition hover:border-ember disabled:opacity-60"
+                          getImages={async () => {
+                            const canvas = document.createElement('canvas');
+                            renderImage(canvas, { kind: draft.kind, format: draft.format, copy }, draft.theme, draft.brand, picture, draft.seed);
+                            const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((value) => resolve(value), 'image/png'));
+                            return blob ? [blob] : [];
+                          }}
+                        />
                       </>
                     ) : (
                       <button type="button" onClick={() => void save()} disabled={sending || pictureBusy} className="rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">

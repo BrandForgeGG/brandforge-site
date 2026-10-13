@@ -12,6 +12,8 @@ import { PostVisual } from '@/components/distribute/post-visual';
 import { postFiles } from '@/components/distribute/render-post';
 import { usePublisher, type ScheduledItem } from '@/components/distribute/use-publisher';
 import { ServiceTile } from '@/components/integrations/brand-icons';
+import { ShareButton } from '@/components/community/share-button';
+import { CommunityFeed } from '@/components/community/community-feed';
 import { assembleWeek, layoutWeek, NO_SITE_ASKS, type PlannedDay, type PlannedPost } from '@/lib/distribute-plan.js';
 
 type Brief = { start: string; perDay: number; summary: string; voice: string; angles: string[]; site: string; brand: string; seed: string; source: 'text' | 'link' | 'file' };
@@ -604,6 +606,7 @@ export function DistributeHub() {
                         <button type="button" onClick={() => void publisher.postNow(pickedDay, pickedPost, pickedBrand)} disabled={Boolean(publisher.busy) || publisher.picked.length === 0} className="rounded-lg border border-line px-3 py-1.5 text-xs bf-tap text-foreground transition hover:border-ember disabled:opacity-50">Post now</button>
                       </>
                     ) : null}
+                    <ShareButton kind="distribute" format={pickedPost.format} title={pickedPost.topic} caption={pickedPost.caption} getImages={async () => (await postFiles(pickedPost, pickedBrand, pickedDay.date)).map((file) => file.blob)} />
                     <Link href={makeLink(pickedPost)} onClick={() => trackEvent('next_step_clicked', { source: 'distribute_make' })} className="px-2 py-1.5 text-xs text-muted bf-tap transition hover:text-foreground">Edit in the maker</Link>
                   </div>
                 </div>
@@ -612,6 +615,7 @@ export function DistributeHub() {
           ) : null}
         </>
       ) : null}
+      <CommunityFeed kind="distribute" title="Posts from the community" />
     </div>
   );
 }

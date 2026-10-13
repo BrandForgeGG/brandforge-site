@@ -6191,3 +6191,56 @@ export async function downloadScheduledImage(path: string): Promise<Buffer | nul
   if (error || !data) return null;
   return Buffer.from(await data.arrayBuffer());
 }
+
+// ---- Community posts (migration 0048: community_posts) ----
+// What people chose to share from Create and Distribute. Public to read through the API; only the owner or an admin removes.
+export type CommunityKind = 'create' | 'distribute';
+export type CommunityPostRow = { id: string; user_id: string; kind: CommunityKind; format: string; title: string; caption: string; image_urls: string[]; image_paths: string[]; created_at: string };
+
+export async function uploadCommunityImage(path: string, bytes: Buffer): Promise<string | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { error } = await admin.storage.from('creations').upload(path, bytes, { contentType: 'image/png', upsert: false });
+  if (error) {
+    console.error('uploadCommunityImage error:', error.message);
+    return null;
+  }
+  return admin.storage.from('creations').getPublicUrl(path).data.publicUrl;
+}
+
+export async function createCommunityPost(userId: string, input: { id: string; kind: CommunityKind; format: string; title: string; caption: string; imageUrls: string[]; imagePaths: string[] }): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const { error } = await admin.from('community_posts').insert({ id: input.id, user_id: userId, kind: input.kind, format: input.format, title: input.title, caption: input.caption, image_urls: input.imageUrls, image_paths: input.imagePaths });
+  if (error) console.error('createCommunityPost error:', error.message);
+  return !error;
+}
+
+export async function listCommunityPosts(kind: CommunityKind, limit = 24, before?: string): Promise<CommunityPostRow[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  let query = admin.from('community_posts').select('id, user_id, kind, format, title, caption, image_urls, image_paths, created_at').eq('kind', kind).eq('hidden', false).order('created_at', { ascending: false }).limit(Math.min(48, Math.max(1, limit)));
+  if (before) query = query.lt('created_at', before);
+  const { data, error } = await query;
+  if (error) {
+    console.error('listCommunityPosts error:', error.message);
+    return [];
+  }
+  return (data ?? []) as CommunityPostRow[];
+}
+
+/** Removes a post: its owner deletes it (pictures included); an admin hides it. Returns the picture paths to delete, or null. */
+export async function removeCommunityPost(userId: string, id: string, isAdmin: boolean): Promise<string[] | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data: row } = await admin.from('community_posts').select('user_id, image_paths').eq('id', id).maybeSingle();
+  if (!row) return null;
+  const owned = (row as { user_id: string }).user_id === userId;
+  if (owned) {
+    const { error } = await admin.from('community_posts').delete().eq('id', id);
+    return error ? null : ((row as { image_paths: string[] }).image_paths ?? []);
+  }
+  if (!isAdmin) return null;
+  const { error } = await admin.from('community_posts').update({ hidden: true }).eq('id', id);
+  return error ? null : [];
+}

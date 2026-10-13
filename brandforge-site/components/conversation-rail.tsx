@@ -325,9 +325,9 @@ onMobileClose,
       >
         <div className="bf-rail-header flex shrink-0 items-center justify-between">
           <Link
-            href="/chat"
+            href="/"
             onClick={onMobileClose}
-            aria-label="New chat"
+            aria-label="BrandForge home"
             className="font-serif text-lg tracking-tight text-foreground"
           >
             {isCollapsed ? (
@@ -366,33 +366,31 @@ onMobileClose,
           </button>
         </div>
 
-        <div className="shrink-0 p-4">
-          <button
-            type="button"
-            onClick={() => {
-              onMobileClose();
-              if (onNewChat) {
-                onNewChat();
-              } else {
-                router.push("/chat");
-              }
-            }}
-            disabled={isCreatingConversation}
-            aria-label="New chat"
-            title="New chat"
-            className="bf-new-chat"
-          >
-            <span className="text-lg leading-none">+</span>
-            {isCollapsed
-              ? null
-              : isCreatingConversation
-                ? "Starting..."
-                : "New Chat"}
-          </button>
-        </div>
-
-        <div className={isCollapsed ? "shrink-0 px-2 pb-2" : "shrink-0 px-4 pb-2"}>
+        <div className={isCollapsed ? "shrink-0 px-2 pb-2 pt-1" : "shrink-0 px-4 pb-2 pt-1"}>
           <nav aria-label="Workspace" className={isCollapsed ? "flex flex-col items-center gap-1" : "flex flex-col gap-0.5"}>
+            <button
+              type="button"
+              onClick={() => {
+                onMobileClose();
+                if (onNewChat) {
+                  onNewChat();
+                } else {
+                  router.push("/chat");
+                }
+              }}
+              disabled={isCreatingConversation}
+              aria-label="New chat"
+              data-tip={isCollapsed ? "New chat" : undefined}
+              data-tip-pos="right"
+              className={
+                isCollapsed
+                  ? "flex h-9 w-9 items-center justify-center rounded-lg text-foreground transition hover:bg-overlay disabled:opacity-60"
+                  : "flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-left text-[13px] font-medium text-foreground transition hover:bg-overlay disabled:opacity-60"
+              }
+            >
+              <RailIcon path="M14.5 3.5l2 2L9 13l-3 1 1-3 7.5-7.5zM4 16.5h12" className="h-4 w-4 shrink-0" />
+              {isCollapsed ? null : isCreatingConversation ? "Starting…" : "New chat"}
+            </button>
             {(isAdmin ? [...NAV_ITEMS, DASHBOARD_ITEM] : NAV_ITEMS).map((item) => (
               <Link
                 key={item.href}

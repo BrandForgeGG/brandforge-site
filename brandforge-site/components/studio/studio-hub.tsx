@@ -8,6 +8,7 @@ import { CarouselMaker } from '@/components/carousel/carousel-maker';
 import { PostComposer } from '@/components/carousel/post-composer';
 import { ImageChatCard, imageKey } from '@/components/chat/image-chat-card';
 import { ImageSampleVisual } from '@/components/studio/image-sample-visual';
+import { CommunityFeed } from '@/components/community/community-feed';
 import { KINDS as IMAGE_KINDS, KIND_IDS as IMAGE_KIND_IDS, type ImageKind } from '@/lib/image-kinds.js';
 import { CarouselVisual, DocumentVisual, ImageVisual, OfferVisual, UpdateVisual, VideoVisual } from '@/components/studio/card-visuals';
 import { emptyDraft, markResume, writeDraft, type Draft } from '@/components/carousel/carousel-shared';
@@ -186,6 +187,7 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
           ))}
         </ul>
       </details>
+      {embedded ? null : <CommunityFeed kind="create" title="From the community" />}
     </div>
   );
 }

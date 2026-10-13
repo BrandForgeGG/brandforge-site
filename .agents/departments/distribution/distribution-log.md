@@ -1197,3 +1197,9 @@ we do not have.
 **Change:** sign-in is now Google (highlighted) and email only; X, Apple and phone buttons are gone. Email sign-in failed silently whenever the link was opened in a different browser or app (the Gmail app, a phone): the person landed back on the sign-in page with no message. Now the email carries a 6-digit code as well as the link (once the Supabase template is updated), the "Check your email" step takes the code in the same tab with a resend timer, links can be checked on the server so they work in any browser, and expired or wrong-browser links say exactly what to do.
 
 **Distribution move:** reply to the person who reported it: "Email sign-in is fixed. Type the code from the email, or open the link, either works now."
+
+### 2026-10-13 — Community feeds, quieter sidebar, Trade layout
+
+**Change:** Create and Distribute now show what members chose to share ("From the community", "Posts from the community"): a Share to the community button sits next to Download on the carousel maker, the image maker and each Distribute post. Only shared work is public; the owner can remove it, an admin can hide it. Sidebar: no line under the logo, the logo goes to the home page, New chat is a normal-size row like Create, Distribute and Trade. Trade uses the same width and spacing as Create and Distribute. Funnel now records distribute_downloaded and community_shared (they were silently dropped before).
+
+**Distribution move:** seed both feeds with our own best carousel and a week of posts, then post in Discord: "Make something on BrandForge and share it, the best ones go on the front of Create."

@@ -6,6 +6,7 @@ import { trackEvent } from '@/lib/funnel-client';
 import { getSessionUser } from '@/lib/browser-auth';
 import { STYLES as COVER_STYLES } from '@/lib/carousel-cover.js';
 import { useLogin } from '@/components/login-dialog';
+import { ShareButton } from '@/components/community/share-button';
 import { CAROUSEL_PLATFORMS, PublishPanel } from '@/components/studio/publish-panel';
 import { PLATFORMS, fallbackCaptions } from '@/lib/carousel-captions.js';
 import {
@@ -418,6 +419,7 @@ export function CarouselMaker() {
                   <button type="button" className={btn} disabled={busy || !fontsReady} onClick={() => void downloadOne()}>This slide (PNG)</button>
                   <button type="button" className={btn} disabled={coverBusy} onClick={() => newCover()}>{coverBusy ? 'Painting…' : 'New cover art'}</button>
                   <button type="button" className={btn} disabled={busy} onClick={() => void saveToAccount()}>Save</button>
+                  <ShareButton kind="create" format="carousel" title={plan.cover.headline.replace(/\*/g, '')} caption={captionSet.instagram ?? Object.values(captionSet)[0] ?? ''} className={btn} getImages={async () => { const out: Blob[] = []; for (let i = 0; i < total; i++) { const blob = await toPng(i); if (blob) out.push(blob); } return out; }} />
                 </div>
               ) : (
                 <div className="mt-4 flex flex-wrap gap-2">

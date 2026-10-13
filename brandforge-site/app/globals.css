@@ -317,9 +317,8 @@ body {
 
 .bf-rail-header {
   /* Same surface as the rail body: one calm column, not three bands. */
-  border-bottom: 1px solid var(--line);
   background: transparent;
-  padding: 1rem;
+  padding: 1rem 1rem 0.5rem;
 }
 
 .bf-new-chat {
