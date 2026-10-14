@@ -7,7 +7,7 @@ import { useLogin } from '@/components/login-dialog';
 import { loadFonts } from '@/components/carousel/carousel-shared';
 import { THEMES } from '@/lib/carousel-render.js';
 import { VIDEO_FORMATS, fitToVoice, totalSeconds, type VideoFormat, type VideoScene, planToScenes } from '@/lib/video-scenes.js';
-import { canEncode, drawFrame, encodeVideo, lookOf, makeArt } from '@/components/video/video-engine';
+import { canEncode, drawFrame, encodeVideo, lookOf, makeArt, type SceneArt } from '@/components/video/video-engine';
 import { VOICES, clipsFor, layTrack, playClips, type Clip, type VoiceId } from '@/components/video/voice';
 import { YouTubePost } from '@/components/video/youtube-post';
 
@@ -15,6 +15,19 @@ const field = 'w-full rounded-xl border border-line bg-background px-3 py-2.5 te
 const chip = 'rounded-full border px-3 py-1.5 text-xs transition';
 const LOOKS = Object.keys(THEMES);
 const NEWLINE = String.fromCharCode(10);
+
+const ASPECT: Record<VideoFormat, 'story' | 'wide' | 'square'> = { short: 'story', long: 'wide', square: 'square' };
+
+/** One AI picture for a scene, shaped to the video. null when none could be painted (the drawn art stands in). */
+async function paintScene(topic: string, scene: VideoScene, index: number, format: VideoFormat): Promise<ImageBitmap | null> {
+  const res = await fetch('/api/carousel/cover', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scene: `${topic.slice(0, 160)}. ${scene.heading}`.slice(0, 220), headline: scene.heading, style: 'photo', variant: index, aspect: ASPECT[format], fast: true }),
+  }).catch(() => null);
+  if (!res || res.status !== 200) return null;
+  return createImageBitmap(await res.blob()).catch(() => null);
+}
 
 function startsOf(scenes: VideoScene[]): number[] {
   const starts: number[] = [];
@@ -42,6 +55,10 @@ export function VideoMaker({ initialFormat = 'short' }: { initialFormat?: VideoF
   const [error, setError] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const [withVoice, setWithVoice] = useState(true);
+  // A painted picture for every scene (FLUX.2), on by default; the drawn art stands in for any scene without one.
+  const [withPictures, setWithPictures] = useState(true);
+  const [pictures, setPictures] = useState<(ImageBitmap | null)[]>([]);
+  const [painting, setPainting] = useState<string | null>(null);
   const [voice, setVoice] = useState<VoiceId>('af_heart');
   const [clips, setClips] = useState<Clip[] | null>(null);
   const [voiceState, setVoiceState] = useState<{ status: 'idle' | 'working' | 'ready' | 'failed'; text: string }>({ status: 'idle', text: '' });
@@ -59,6 +76,42 @@ export function VideoMaker({ initialFormat = 'short' }: { initialFormat?: VideoF
   const timed = useMemo(() => (voiced && clips ? fitToVoice(scenes, clips.map((clip) => clip.seconds)) : scenes), [voiced, clips, scenes]);
   const seconds = totalSeconds(timed);
   const voiceText = scenes.map((scene) => scene.voice).join('|');
+  const headings = scenes.map((scene) => scene.heading).join('|');
+  const sceneArt = useMemo<SceneArt | null>(() => (art ? (i: number) => (withPictures && pictures[i]) || art : null), [art, withPictures, pictures]);
+
+  // Paint the scene pictures once the scenes exist (three at a time), and again when the headings or the shape change.
+  useEffect(() => {
+    if (!withPictures || scenes.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- the pictures follow the scenes and the tick box
+      setPictures([]);
+      setPainting(null);
+      return;
+    }
+    let live = true;
+    const made: (ImageBitmap | null)[] = new Array(scenes.length).fill(null);
+    setPictures([...made]);
+    const timer = window.setTimeout(() => {
+      let next = 0;
+      let done = 0;
+      setPainting(`Painting the scenes, 0 of ${scenes.length}…`);
+      const worker = async () => {
+        for (let i = next++; i < scenes.length; i = next++) {
+          const picture = await paintScene(topic, scenes[i], i, format);
+          if (!live) return;
+          made[i] = picture;
+          done += 1;
+          setPictures([...made]);
+          setPainting(done < scenes.length ? `Painting the scenes, ${done} of ${scenes.length}…` : null);
+        }
+      };
+      void Promise.all([worker(), worker(), worker()]);
+    }, 500);
+    return () => {
+      live = false;
+      window.clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- headings stand for the scenes; the topic is read as it was
+  }, [withPictures, headings, format]);
 
   useEffect(() => {
     void loadFonts().then(() => setFontsReady(true));
@@ -94,14 +147,14 @@ export function VideoMaker({ initialFormat = 'short' }: { initialFormat?: VideoF
   // The preview: a still frame when stopped; when playing, the animation with the voice in time.
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !art || !fontsReady || timed.length === 0) return;
+    if (!canvas || !sceneArt || !fontsReady || timed.length === 0) return;
     canvas.width = f.w;
     canvas.height = f.h;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     const brandInfo = { name: brand.trim(), handle: handle.trim() };
     if (!playing) {
-      drawFrame(ctx, f.w, f.h, timed, 0.9, look, brandInfo, art);
+      drawFrame(ctx, f.w, f.h, timed, 0.9, look, brandInfo, sceneArt);
       return;
     }
     const stopVoice = voiced && clips ? playClips(clips, startsOf(timed)) : () => undefined;
@@ -113,7 +166,7 @@ export function VideoMaker({ initialFormat = 'short' }: { initialFormat?: VideoF
         setPlaying(false);
         return;
       }
-      drawFrame(ctx, f.w, f.h, timed, t, look, brandInfo, art);
+      drawFrame(ctx, f.w, f.h, timed, t, look, brandInfo, sceneArt);
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
@@ -121,7 +174,7 @@ export function VideoMaker({ initialFormat = 'short' }: { initialFormat?: VideoF
       cancelAnimationFrame(frame);
       stopVoice();
     };
-  }, [timed, playing, art, fontsReady, f.w, f.h, look, brand, handle, seconds, voiced, clips]);
+  }, [timed, playing, sceneArt, fontsReady, f.w, f.h, look, brand, handle, seconds, voiced, clips]);
 
   useEffect(() => () => {
     if (result) URL.revokeObjectURL(result.url);
@@ -160,7 +213,7 @@ export function VideoMaker({ initialFormat = 'short' }: { initialFormat?: VideoF
   }
 
   async function make() {
-    if (!art || scenes.length === 0 || busy) return;
+    if (!sceneArt || scenes.length === 0 || busy) return;
     if (!(await getSessionUser().catch(() => null))) {
       openLogin({ reason: 'carousel', next: `/create?make=video-${format}` });
       return;
@@ -181,7 +234,7 @@ export function VideoMaker({ initialFormat = 'short' }: { initialFormat?: VideoF
       const track = voiced && clips ? layTrack(clips, startsOf(timed), seconds) : null;
       setBusy('Making the video…');
       setProgress(0);
-      const blob = await encodeVideo({ w: f.w, h: f.h, scenes: timed, look, brand: { name: brand.trim(), handle: handle.trim() }, art, voice: track, onProgress: setProgress, signal: controller.signal });
+      const blob = await encodeVideo({ w: f.w, h: f.h, scenes: timed, look, brand: { name: brand.trim(), handle: handle.trim() }, art: sceneArt, voice: track, onProgress: setProgress, signal: controller.signal });
       if (result) URL.revokeObjectURL(result.url);
       setResult({ url: URL.createObjectURL(blob), name: `brandforge-${format}-video.mp4`, seconds, voiced: Boolean(track), blob });
       trackEvent('carousel_downloaded', { source: `video-${format}` });
@@ -192,6 +245,16 @@ export function VideoMaker({ initialFormat = 'short' }: { initialFormat?: VideoF
       stopRef.current = null;
     }
   }
+
+  const picturePicker = (
+    <label className="mt-3 flex items-start gap-2 rounded-xl border border-line bg-background p-3 text-sm text-foreground">
+      <input type="checkbox" checked={withPictures} onChange={(event) => { setWithPictures(event.target.checked); setResult(null); }} className="mt-1" />
+      <span>
+        AI pictures
+        <span className="block text-xs text-muted">A painted picture for every scene, shaped to the video, with slow camera moves and soft cuts.</span>
+      </span>
+    </label>
+  );
 
   const voicePicker = (
     <div className="mt-3 rounded-xl border border-line bg-background p-3">
@@ -230,6 +293,7 @@ export function VideoMaker({ initialFormat = 'short' }: { initialFormat?: VideoF
           <input value={brand} onChange={(event) => setBrand(event.target.value)} maxLength={40} placeholder="Name on the video (optional)" aria-label="Name on the video" className="min-w-0 flex-1 rounded-lg border border-line bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none sm:max-w-[14rem]" />
           <input value={handle} onChange={(event) => setHandle(event.target.value)} maxLength={40} placeholder="@handle or site (optional)" aria-label="Handle or site" className="min-w-0 flex-1 rounded-lg border border-line bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none sm:max-w-[14rem]" />
         </div>
+        {picturePicker}
         {voicePicker}
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <button type="button" onClick={() => void write()} disabled={Boolean(busy)} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
@@ -252,6 +316,7 @@ export function VideoMaker({ initialFormat = 'short' }: { initialFormat?: VideoF
               </button>
               <span className="text-xs text-muted">{timed.length} scenes, about {Math.round(seconds)} seconds</span>
             </div>
+            {withPictures && painting ? <p role="status" className="text-xs text-muted">{painting}</p> : null}
             {withVoice && voiceState.text ? <p role={voiceState.status === 'failed' ? 'alert' : 'status'} className={`text-xs ${voiceState.status === 'failed' ? 'text-danger' : 'text-muted'}`}>{voiceState.text}</p> : null}
             <div className="flex flex-wrap gap-1.5" role="group" aria-label="Look">
               {LOOKS.map((id) => (
@@ -276,8 +341,8 @@ export function VideoMaker({ initialFormat = 'short' }: { initialFormat?: VideoF
             </ol>
 
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={() => void make()} disabled={Boolean(busy) || !fontsReady || (withVoice && voiceState.status === 'working')} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
-                {busy === 'Making the video…' ? `Making the video, ${Math.round(progress * 100)}%` : withVoice && voiceState.status === 'working' ? 'Waiting for the voice…' : 'Make the MP4'}
+              <button type="button" onClick={() => void make()} disabled={Boolean(busy) || !fontsReady || (withVoice && voiceState.status === 'working') || (withPictures && Boolean(painting))} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
+                {busy === 'Making the video…' ? `Making the video, ${Math.round(progress * 100)}%` : withPictures && painting ? 'Waiting for the pictures…' : withVoice && voiceState.status === 'working' ? 'Waiting for the voice…' : 'Make the MP4'}
               </button>
               {busy ? <button type="button" onClick={() => stopRef.current?.abort()} className="px-2 py-2 text-xs text-muted hover:text-foreground">Stop</button> : null}
             </div>

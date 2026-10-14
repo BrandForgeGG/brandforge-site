@@ -41,27 +41,52 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): st
 
 const ease = (x: number) => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
 
+/** A scene's picture (an AI painting when there is one, otherwise the look's drawn art). */
+export type SceneArt = (index: number) => CanvasImageSource & { width: number; height: number };
+
+const CROSSFADE = 0.5;
+
+// Draws a picture to cover the frame (cropping, never stretching), with a slow push-in that drifts a different way each
+// scene: the "Ken Burns" move that makes still pictures feel filmed.
+function drawCover(ctx: CanvasRenderingContext2D, image: CanvasImageSource & { width: number; height: number }, w: number, h: number, progress: number, index: number, k: number): void {
+  const scale = Math.max(w / image.width, h / image.height) * (1.06 + 0.1 * progress);
+  const dw = image.width * scale;
+  const dh = image.height * scale;
+  const drift = (index % 2 === 0 ? -1 : 1) * 40 * k * progress;
+  const lift = (index % 3 === 0 ? -1 : 1) * 20 * k * progress;
+  ctx.drawImage(image, (w - dw) / 2 + drift, (h - dh) / 2 + lift, dw, dh);
+}
+
 /** Draws the frame at time t (seconds) onto a canvas sized w by h. */
-export function drawFrame(ctx: CanvasRenderingContext2D, w: number, h: number, scenes: VideoScene[], t: number, look: Look, brand: VideoBrand, art: HTMLCanvasElement): void {
+export function drawFrame(ctx: CanvasRenderingContext2D, w: number, h: number, scenes: VideoScene[], t: number, look: Look, brand: VideoBrand, art: HTMLCanvasElement | SceneArt): void {
   if (scenes.length === 0) return;
   const { index, local } = sceneAt(scenes, t);
   const scene = scenes[index];
   const k = Math.min(w, h) / 1080;
   const m = 90 * k;
   const total = totalSeconds(scenes);
+  const pictureOf: SceneArt = typeof art === 'function' ? art : () => art;
 
-  // Background: the look's art, drifting slowly (a different direction each scene), under a darkening veil.
+  // Background: this scene's picture moving slowly; in its last half second the next scene's picture fades in over it.
   ctx.fillStyle = look.bg;
   ctx.fillRect(0, 0, w, h);
-  const zoom = 1.06 + 0.08 * (local / Math.max(1, scene.seconds));
-  const dx = (index % 2 === 0 ? -1 : 1) * 30 * k * (local / Math.max(1, scene.seconds));
-  ctx.save();
-  ctx.translate(w / 2 + dx, h / 2);
-  ctx.scale(zoom, zoom);
-  ctx.drawImage(art, -w / 2, -h / 2, w, h);
-  ctx.restore();
-  const veil = look.light ? '246,241,233' : '0,0,0';
-  ctx.fillStyle = `rgba(${veil},${scene.kind === 'point' ? 0.62 : 0.45})`;
+  drawCover(ctx, pictureOf(index), w, h, local / Math.max(1, scene.seconds), index, k);
+  const left = scene.seconds - local;
+  if (left < CROSSFADE && index < scenes.length - 1) {
+    ctx.globalAlpha = 1 - left / CROSSFADE;
+    drawCover(ctx, pictureOf(index + 1), w, h, 0, index + 1, k);
+    ctx.globalAlpha = 1;
+  }
+  // Shade for the words: a soft wash plus darker top and bottom, so text reads on any photo.
+  const shade = look.light ? '246,241,233' : '0,0,0';
+  ctx.fillStyle = `rgba(${shade},${scene.kind === 'point' ? 0.42 : 0.28})`;
+  ctx.fillRect(0, 0, w, h);
+  const gradient = ctx.createLinearGradient(0, 0, 0, h);
+  gradient.addColorStop(0, `rgba(${shade},0.55)`);
+  gradient.addColorStop(0.3, `rgba(${shade},0)`);
+  gradient.addColorStop(0.62, `rgba(${shade},0.15)`);
+  gradient.addColorStop(1, `rgba(${shade},0.8)`);
+  ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, w, h);
 
   // Words: in over half a second, out over the last third of a second.
@@ -177,7 +202,7 @@ export function resample(samples: Float32Array, from: number, to: number): Float
 }
 
 /** Renders every frame and returns an MP4. onProgress gets 0..1. */
-export async function encodeVideo(opts: { w: number; h: number; scenes: VideoScene[]; look: Look; brand: VideoBrand; art: HTMLCanvasElement; voice: VoiceTrack; onProgress?: (share: number) => void; signal?: AbortSignal }): Promise<Blob> {
+export async function encodeVideo(opts: { w: number; h: number; scenes: VideoScene[]; look: Look; brand: VideoBrand; art: HTMLCanvasElement | SceneArt; voice: VoiceTrack; onProgress?: (share: number) => void; signal?: AbortSignal }): Promise<Blob> {
   const { w, h, scenes, look, brand, art, voice } = opts;
   const video = await pickVideoCodec(w, h);
   if (!video) throw new Error('This browser cannot make MP4 video. Try a recent Chrome, Edge or Safari.');

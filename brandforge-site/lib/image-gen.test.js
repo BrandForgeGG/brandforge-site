@@ -91,14 +91,14 @@ test('cloudflare tries FLUX.2 (multipart) first, then FLUX.1 (json), and reports
   assert.equal(result.ok, true);
   assert.equal(result.provider, 'cloudflare');
   assert.equal(seen.length, 2);
-  assert.match(seen[0].url, /flux-2-klein-4b/);
+  assert.match(seen[0].url, /flux-2-klein-9b/);
   assert.equal(seen[0].multipart, true);
   assert.match(seen[1].url, /flux-1-schnell/);
   assert.equal(seen[1].multipart, false);
-  assert.match(result.attempts.join(' '), /flux-2-klein-4b.*400/);
+  assert.match(result.attempts.join(' '), /flux-2-klein-9b.*400/);
 });
 
-test("quality 'fast' tries FLUX.1 before FLUX.2", async () => {
+test("quality 'fast' (many pictures at once) tries the cheap FLUX.1 schnell first", async () => {
   const urls = [];
   const bytes = fakePng();
   await generateImage({

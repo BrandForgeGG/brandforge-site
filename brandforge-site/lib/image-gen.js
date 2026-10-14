@@ -50,8 +50,12 @@ function isBlockedPrompt(prompt) {
   return BLOCKED.some((pattern) => pattern.test(prompt));
 }
 
+// The sizes people post at: 4:5 feed, 9:16 stories and shorts, 16:9 widescreen, square. FLUX.2 klein 9B paints these in
+// about a second and a half, so the real shape is asked for instead of a square that gets cropped.
 function sizeFor(aspect) {
-  if (aspect === 'portrait') return { width: 768, height: 1024 };
+  if (aspect === 'portrait') return { width: 864, height: 1080 };
+  if (aspect === 'story') return { width: 864, height: 1536 };
+  if (aspect === 'wide') return { width: 1536, height: 864 };
   if (aspect === 'landscape') return { width: 1024, height: 768 };
   return { width: 1024, height: 1024 };
 }
@@ -75,18 +79,16 @@ function classify(provider, status, text) {
 const PROVIDERS = {
   cloudflare: {
     enabled: (env) => Boolean(env.CF_ACCOUNT_ID && env.CF_API_TOKEN),
-    // FLUX.2 first (it renders lettering far better, multipart form input), then FLUX.1 schnell
-    // (JSON input, cheaper) as a safety net that still stays inside the free allowance.
+    // Measured on our account (2026-10-14), 864x1080: FLUX.2 klein 9B about 1.5 s and the best detail, but about 1,364 neurons a
+    // picture (the free 10,000 a day is about 7 pictures); FLUX.1 schnell about 2.5 s and about 67 neurons (about 150 a day).
+    // So single pictures (covers, image posts) get klein 9B first, and many-at-once work (quality 'fast': video scenes) gets
+    // schnell first. Each falls back to the other.
     async run({ prompt, aspect, quality, prefer, fetchImpl, env, timeoutMs }) {
-      const klein = '@cf/black-forest-labs/flux-2-klein-4b';
+      const klein9 = '@cf/black-forest-labs/flux-2-klein-9b';
       const schnell = '@cf/black-forest-labs/flux-1-schnell';
-      // quality 'fast' (several images at once, e.g. video scenes) goes straight to schnell: three
-      // FLUX.2 calls together were slow enough to threaten the 60 second request limit.
-      // prefer 'photo' (carousel covers): the SDXL models answer in 4 to 12 seconds with real photographic
-      // detail and return the picture as raw bytes; the FLUX models were timing out on the free tier.
+      // Covers (prefer 'photo') keep SDXL Lightning as a last resort, since it answers with raw bytes even when FLUX is busy.
       const lightning = '@cf/bytedance/stable-diffusion-xl-lightning';
-      const sdxl = '@cf/stabilityai/stable-diffusion-xl-base-1.0';
-      const models = env.CF_IMAGE_MODEL ? [env.CF_IMAGE_MODEL] : prefer === 'photo' ? [lightning, sdxl] : quality === 'fast' ? [schnell, klein] : [klein, schnell];
+      const models = env.CF_IMAGE_MODEL ? [env.CF_IMAGE_MODEL] : quality === 'fast' ? [schnell, klein9] : prefer === 'photo' ? [klein9, schnell, lightning] : [klein9, schnell];
       const { width, height } = sizeFor(aspect);
       const notes = [];
       for (const model of models) {

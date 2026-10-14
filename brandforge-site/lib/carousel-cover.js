@@ -27,14 +27,21 @@ function clean(value, max) {
  * plan has none we fall back to the headline so the art still follows the subject.
  * `variant` (a small number) asks for a different take on the same scene.
  */
-function buildCoverPrompt({ scene, headline, style, variant = 0 }) {
+const FRAMING = {
+  portrait: 'Vertical 4:5 composition, subject in the upper two thirds, calm dark area at the bottom',
+  story: 'Tall vertical 9:16 composition, subject in the middle, calm areas at the top and bottom for words',
+  wide: 'Widescreen 16:9 cinematic composition, subject off-centre, calm space on one side for words',
+  square: 'Square composition, subject centred, calm area at the bottom',
+};
+
+function buildCoverPrompt({ scene, headline, style, variant = 0, aspect = 'portrait' }) {
   const picked = STYLES.find((entry) => entry.id === styleOf(style)) || STYLES[0];
   if (!picked.suffix) return '';
   const subject = clean(scene, 220) || clean(String(headline || '').replace(/\*/g, ''), 120);
   if (!subject) return '';
   const takes = ['', ', from a low angle', ', wide establishing view', ', tight close-up', ', top-down view'];
   const take = takes[Math.abs(Number(variant) || 0) % takes.length];
-  return `${subject}${take}. ${picked.suffix}. Vertical 4:5 composition, subject in the upper two thirds, calm dark area at the bottom. No text, no letters, no logos, no watermark.`;
+  return `${subject}${take}. ${picked.suffix}. ${FRAMING[aspect] || FRAMING.portrait}. No text, no letters, no logos, no watermark.`;
 }
 
 module.exports = { STYLES, STYLE_IDS, styleOf, buildCoverPrompt };

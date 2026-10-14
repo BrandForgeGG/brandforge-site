@@ -11,15 +11,18 @@ export const maxDuration = 40;
 // "no picture right now": the maker keeps its drawn art and says nothing alarming.
 export async function POST(request: NextRequest) {
   const forwarded = request.headers.get('x-forwarded-for') ?? '';
-  const rate = checkRateLimit(`carousel-cover:${forwarded.split(',')[0].trim() || 'unknown'}`, { limit: 24, windowMs: 60 * 60 * 1000 });
+  const rate = checkRateLimit(`carousel-cover:${forwarded.split(',')[0].trim() || 'unknown'}`, { limit: 60, windowMs: 60 * 60 * 1000 });
   if (!rate.allowed) return NextResponse.json({ error: 'That is a lot of cover art for one hour. Try again later, or pick the Drawn style.' }, { status: 429 });
 
-  const body = (await request.json().catch(() => ({}))) as { scene?: unknown; headline?: unknown; style?: unknown; variant?: unknown };
+  const body = (await request.json().catch(() => ({}))) as { scene?: unknown; headline?: unknown; style?: unknown; variant?: unknown; aspect?: unknown; fast?: unknown };
+  const aspect = body.aspect === 'story' || body.aspect === 'wide' || body.aspect === 'square' ? body.aspect : 'portrait';
   const cover = await makeCoverImage({
     scene: typeof body.scene === 'string' ? body.scene : '',
     headline: typeof body.headline === 'string' ? body.headline : '',
     style: typeof body.style === 'string' ? body.style : 'photo',
     variant: typeof body.variant === 'number' ? body.variant : 0,
+    aspect,
+    fast: body.fast === true,
   });
   if (!cover) return new NextResponse(null, { status: 204 });
   return new NextResponse(Buffer.from(cover.bytes), { headers: { 'Content-Type': cover.contentType, 'Cache-Control': 'no-store' } });
