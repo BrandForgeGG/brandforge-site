@@ -13,7 +13,6 @@ import { postFiles } from '@/components/distribute/render-post';
 import { usePublisher, type ScheduledItem } from '@/components/distribute/use-publisher';
 import { ServiceTile } from '@/components/integrations/brand-icons';
 import { ShareButton } from '@/components/community/share-button';
-import { CommunityFeed } from '@/components/community/community-feed';
 import { PublishedFeed } from '@/components/distribute/published-feed';
 import { assembleWeek, layoutWeek, NO_SITE_ASKS, type PlannedDay, type PlannedPost } from '@/lib/distribute-plan.js';
 
@@ -645,7 +644,6 @@ export function DistributeHub() {
         </>
       ) : null}
       <PublishedFeed />
-      <CommunityFeed kind="distribute" title="Posts from the community" />
     </div>
   );
 }

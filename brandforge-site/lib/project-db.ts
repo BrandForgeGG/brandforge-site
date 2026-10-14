@@ -6246,11 +6246,11 @@ export async function removeCommunityPost(userId: string, id: string, isAdmin: b
 }
 
 // ---- Published links and time on site (migration 0049: published_posts, usage_days) ----
-export type PublishedPostRow = { id: string; user_id: string; network: string; url: string; caption: string; created_at: string };
+export type PublishedPostRow = { id: string; user_id: string; network: string; url: string; caption: string; thumb_url: string; created_at: string };
 
 /** Keeps the public links a send produced. Best-effort: a failure here never fails the post itself. */
-export async function recordPublishedPosts(userId: string, items: { network: string; url: string; caption: string }[]): Promise<void> {
-  const rows = items.filter((item) => /^https:\/\//.test(item.url)).map((item) => ({ user_id: userId, network: item.network.slice(0, 20), url: item.url.slice(0, 500), caption: item.caption.replace(/\s+/g, ' ').trim().slice(0, 280) }));
+export async function recordPublishedPosts(userId: string, items: { network: string; url: string; caption: string; thumb?: string }[]): Promise<void> {
+  const rows = items.filter((item) => /^https:\/\//.test(item.url)).map((item) => ({ user_id: userId, network: item.network.slice(0, 20), url: item.url.slice(0, 500), caption: item.caption.replace(/\s+/g, ' ').trim().slice(0, 280), thumb_url: item.thumb && /^https:\/\//.test(item.thumb) ? item.thumb.slice(0, 600) : '' }));
   if (rows.length === 0) return;
   const admin = createSupabaseAdminClient();
   if (!admin) return;
@@ -6261,7 +6261,7 @@ export async function recordPublishedPosts(userId: string, items: { network: str
 export async function listPublishedPosts(limit = 24): Promise<PublishedPostRow[]> {
   const admin = createSupabaseAdminClient();
   if (!admin) return [];
-  const { data, error } = await admin.from('published_posts').select('id, user_id, network, url, caption, created_at').eq('hidden', false).order('created_at', { ascending: false }).limit(Math.min(48, Math.max(1, limit)));
+  const { data, error } = await admin.from('published_posts').select('id, user_id, network, url, caption, thumb_url, created_at').eq('hidden', false).order('created_at', { ascending: false }).limit(Math.min(48, Math.max(1, limit)));
   if (error) return [];
   return (data ?? []) as PublishedPostRow[];
 }

@@ -23,9 +23,23 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   // The server-side carousel renderer is a native module, and it reads its fonts from public/fonts at run time.
-  serverExternalPackages: ["@napi-rs/canvas"],
+  // The voice-over model runs on the server through onnxruntime's native build, so those stay real node modules too.
+  serverExternalPackages: ["@napi-rs/canvas", "kokoro-js", "@huggingface/transformers", "onnxruntime-node", "phonemizer"],
   outputFileTracingIncludes: {
     "/api/**": ["./public/fonts/**"],
+    // The speech runtime's native module loads its shared library at run time, which file tracing cannot see.
+    "/api/voice": ["./node_modules/onnxruntime-node/bin/napi-v3/linux/x64/libonnxruntime.so.1", "./node_modules/onnxruntime-node/bin/napi-v3/linux/x64/libonnxruntime_providers_shared.so", "./node_modules/kokoro-js/voices/**"],
+  },
+  // The servers run Linux on x64: the speech runtime's builds for other systems, and its browser-only files, stay out of the
+  // functions so they fit the size limit.
+  outputFileTracingExcludes: {
+    "*": [
+      "node_modules/onnxruntime-node/bin/napi-v3/darwin/**",
+      "node_modules/onnxruntime-node/bin/napi-v3/win32/**",
+      "node_modules/onnxruntime-node/bin/napi-v3/linux/arm64/**",
+      "node_modules/@huggingface/transformers/dist/*.wasm",
+      "node_modules/@huggingface/transformers/dist/*.map",
+    ],
   },
   // The standalone Blueprint page is gone: the same research and planning run inside chat.
   // Old links (including saved-blueprint return emails) land in the chat.

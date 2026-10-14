@@ -29,7 +29,7 @@ export async function runDueScheduledPosts(): Promise<{ ran: number; done: numbe
         }
       }
     }
-    if (channels.length > 0) await recordLinks(row.user_id, channels, results, row.caption);
+    if (channels.length > 0) await recordLinks(row.user_id, channels, results, row.caption, images[0] ?? null);
     const outcome = outcomeOf(results);
     const attempts = row.attempts + 1;
     const again = outcome === 'failed' && attempts < MAX_ATTEMPTS && images.length > 0 && channels.length > 0;

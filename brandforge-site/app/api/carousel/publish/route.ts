@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 
     const results: Record<string, { ok: boolean; note?: string; ref?: string; url?: string }> = {};
     for (const channel of chosen) results[channel.id] = await publishToChannel(channel, images, caption);
-    await recordLinks(user.id, chosen, results, caption);
+    await recordLinks(user.id, chosen, results, caption, images[0] ?? null);
     void recordFunnelEvent('carousel_published', { signedIn: true, source: 'organic', properties: { status: Object.values(results).every((r) => r.ok) ? 'ok' : 'partial' } }).catch(() => undefined);
     return NextResponse.json({ results });
   } catch (error) {

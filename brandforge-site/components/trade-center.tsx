@@ -74,6 +74,8 @@ export function TradeCenter() {
 
   // Describe-it flow
   const [text, setText] = useState("");
+  // The listing maker stays folded until someone wants to list something; the page opens on the listings.
+  const [makerOpen, setMakerOpen] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
   // What the writer read and learned while making the draft, shown next to it.
   const [research, setResearch] = useState<Research | null>(null);
@@ -197,6 +199,7 @@ export function TradeCenter() {
       setResearch(null);
       setText("");
       setPublished({ conversationId: (data.conversationId as string | null) ?? null });
+      setMakerOpen(false);
       void load();
     } catch {
       setError("Connection problem. Try again.");
@@ -217,7 +220,34 @@ export function TradeCenter() {
   return (
     <div className="max-w-5xl">
       {/* Describe it */}
+      {!makerOpen && !draft ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel p-4 sm:p-5">
+          <div className="min-w-0">
+            <p className="font-serif text-lg text-foreground">List something</p>
+            <p className="text-sm text-muted">A gig, a product, a tool or a request. Describe it and the listing is written for you.</p>
+            {published ? (
+              <p role="status" className="mt-1 text-sm text-foreground">
+                Published. It is in the list below.
+                {published.conversationId ? (
+                  <>
+                    {" "}
+                    <Link href={`/chat?conversationId=${published.conversationId}`} className="text-ember underline-offset-2 hover:underline">
+                      Open its assistant
+                    </Link>
+                  </>
+                ) : null}
+              </p>
+            ) : null}
+          </div>
+          <button type="button" aria-expanded={makerOpen} onClick={() => { setMakerOpen(true); setPublished(null); }} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">Create a listing</button>
+        </div>
+      ) : (
       <section aria-label="Publish a listing" className="rounded-2xl border border-line bg-panel p-4 sm:p-5">
+        {draft ? null : (
+          <div className="mb-2 flex justify-end">
+            <button type="button" onClick={() => setMakerOpen(false)} className="text-xs text-muted transition hover:text-foreground">Close</button>
+          </div>
+        )}
         {draft ? (
           <div>
             <p className="font-serif text-lg text-foreground">Here is your listing. Check it, then publish.</p>
@@ -310,6 +340,7 @@ export function TradeCenter() {
           </div>
         )}
       </section>
+      )}
 
       {listings === null ? (
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
