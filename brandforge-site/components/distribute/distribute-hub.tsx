@@ -111,6 +111,9 @@ export function DistributeHub() {
   const [editing, setEditing] = useState(false);
   // With no week written yet the maker stays folded: the page opens on what members are publishing.
   const [makerOpen, setMakerOpen] = useState(false);
+  // A week saved in this browser comes back folded, so a refresh opens on the page, not on the calendar. It opens on its own
+  // only right after being written.
+  const [weekOpen, setWeekOpen] = useState(false);
   // While the days are being written the calendar is already on screen: days not yet in are shown as placeholders.
   const [writing, setWriting] = useState(false);
   const [loadingDays, setLoadingDays] = useState<number[]>([]);
@@ -249,6 +252,7 @@ export function DistributeHub() {
     setEditing(false);
     setLoadingDays(days.map((_, d) => d));
     setWriting(true);
+    setWeekOpen(true);
     setBusy(false);
 
     // Step 2: one request per day, all at once (seven writers finish in about the time of one). A failed or unfinished day gets one more try, then a plain day.
@@ -377,6 +381,7 @@ export function DistributeHub() {
 
   function startOver() {
     setEditing(false);
+    setWeekOpen(false);
     setPlan(null);
     setNote(null);
     setError(null);
@@ -469,16 +474,29 @@ export function DistributeHub() {
           <button type="button" aria-expanded={makerOpen} onClick={() => setMakerOpen(true)} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">Start a week</button>
         </div>
       ) : (
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="min-w-0 flex-1 basis-60 text-sm leading-relaxed text-muted">
-            <span className="text-foreground">{plan?.summary}</span>
-            {plan?.site ? ` Posts send people to ${plan.site}.` : ''}
-          </p>
-          <button type="button" onClick={() => setEditing(true)} className="rounded-lg border border-line px-3 py-1.5 text-xs bf-tap text-foreground transition hover:border-ember">Change what I promote</button>
+        <div className={weekOpen ? 'flex flex-wrap items-center gap-2' : 'flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-panel p-4 sm:p-5'}>
+          <div className="min-w-0 flex-1 basis-60">
+            {weekOpen ? null : <p className="font-serif text-lg text-foreground">Your week{plan ? `, from ${prettyDate(plan.days[0].date)}` : ''}</p>}
+            <p className="text-sm leading-relaxed text-muted">
+              <span className={weekOpen ? 'text-foreground' : ''}>{plan?.summary}</span>
+              {plan?.site ? ` Posts send people to ${plan.site}.` : ''}
+            </p>
+          </div>
+          {weekOpen ? (
+            <>
+              <button type="button" onClick={() => setEditing(true)} className="rounded-lg border border-line px-3 py-1.5 text-xs bf-tap text-foreground transition hover:border-ember">Change what I promote</button>
+              <button type="button" onClick={() => setWeekOpen(false)} className="px-2 py-1.5 text-xs text-muted transition hover:text-foreground">Close</button>
+            </>
+          ) : (
+            <>
+              <button type="button" onClick={() => setWeekOpen(true)} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">Open your week</button>
+              <button type="button" onClick={() => setEditing(true)} className="rounded-xl border border-line px-4 py-2.5 text-sm text-foreground transition hover:border-ember">Start a new week</button>
+            </>
+          )}
         </div>
       )}
 
-      {plan && !editing ? (
+      {plan && !editing && weekOpen ? (
         <>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => void downloadAll()} disabled={Boolean(preparing) || writing} className="rounded-xl bg-ember px-4 py-2 text-sm bf-tap font-semibold text-background transition hover:opacity-90 disabled:opacity-60">{preparing && preparing.startsWith('Preparing') ? preparing : signedIn === false ? 'Sign in to download all' : 'Download all pictures'}</button>

@@ -1227,3 +1227,9 @@ we do not have.
 **Change:** Explore's live feed now covers every kind of activity, newest first, refreshed every 30 seconds: new members, new chats, carousels made, community shares, published posts (linking to the post), Trade listings, applications to the team (craft only) and signed contracts. Public-safe wording: chats never show titles or words, applications never show names, money never appears, and usernames are not shown (one live username was a slur and the content filter did not catch it). Only real people count: staff, throwaway test accounts and test chats are left out.
 
 **Distribution move:** point people at brandforge.gg/explore as proof the place is alive; screenshot the feed for Discord once a day.
+
+### 2026-10-14 — Distribute opens closed, even with a saved week
+
+**Change:** a week saved in the browser no longer opens the whole calendar on refresh. It comes back as one "Your week" bar (date and summary) with Open your week and Start a new week; the calendar opens on its own only right after a week is written, and can be closed again. Start a new week keeps the old week until the new one is written.
+
+**Distribution move:** none public (layout).
