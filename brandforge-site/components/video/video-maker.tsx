@@ -124,7 +124,10 @@ export function VideoMaker({ initialFormat = 'short' }: { initialFormat?: VideoF
       let timed = scenes;
       let track = null;
       if (withVoice) {
-        const clips = await speakScenes(scenes.map((scene) => scene.voice), voice, (text) => setBusy(text));
+        const clips = await speakScenes(scenes.map((scene) => scene.voice), voice, (text) => setBusy(text)).catch(() => {
+          // The voice model is about 90 MB and comes from a public model host; a slow or blocked connection is the usual cause.
+          throw new Error('The voice could not be downloaded on this connection (it is about 90 MB, once). Untick the voice-over to make the video without it, or try again on a faster connection.');
+        });
         timed = fitToVoice(scenes, clips.map((clip) => clip.samples.length / clip.sampleRate));
         const starts: number[] = [];
         timed.reduce((at, scene) => {
@@ -209,7 +212,7 @@ export function VideoMaker({ initialFormat = 'short' }: { initialFormat?: VideoF
                 <input type="checkbox" checked={withVoice} onChange={(event) => { setWithVoice(event.target.checked); setResult(null); }} className="mt-1" />
                 <span>
                   Add a voice-over
-                  <span className="block text-xs text-muted">Free and private: a speech model runs in your browser. The first time it downloads once (it can take a minute), English voices.</span>
+                  <span className="block text-xs text-muted">Free and private: a speech model runs in your browser. The first time it downloads once (about 90 MB, then your browser keeps it). English voices.</span>
                 </span>
               </label>
               {withVoice ? (
