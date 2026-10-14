@@ -16,6 +16,7 @@ import type { VideoFormat } from '@/lib/video-scenes.js';
 
 // The video and article makers load only when opened, so Create itself stays light.
 const VideoMaker = dynamic(() => import('@/components/video/video-maker').then((mod) => mod.VideoMaker), { ssr: false, loading: () => <div className="bf-skeleton h-64 rounded-2xl bg-overlay" /> });
+const LaunchMaker = dynamic(() => import('@/components/video/launch-maker').then((mod) => mod.LaunchMaker), { ssr: false, loading: () => <div className="bf-skeleton h-64 rounded-2xl bg-overlay" /> });
 const ArticleMaker = dynamic(() => import('@/components/article/article-maker').then((mod) => mod.ArticleMaker), { ssr: false, loading: () => <div className="bf-skeleton h-64 rounded-2xl bg-overlay" /> });
 import { emptyDraft, markResume, writeDraft } from '@/components/carousel/carousel-shared';
 import { CREATIONS } from '@/lib/creation-catalog.js';
@@ -23,7 +24,7 @@ import type { Format } from '@/lib/format-catalog.js';
 import type { PostType } from '@/lib/post-types.js';
 
 // The image makers are cards of their own (image-ad, image-quote, ...): the same maker as in the chat, outside it.
-type Kind = 'carousel' | 'deck' | 'article' | 'link' | `video-${VideoFormat}` | PostType | `image-${ImageKind}`;
+type Kind = 'carousel' | 'deck' | 'article' | 'link' | 'video-launch' | `video-${VideoFormat}` | PostType | `image-${ImageKind}`;
 export type StudioKind = Kind;
 
 // What a card that is not built yet looks like: the kind of thing it will make, shown blurred.
@@ -37,6 +38,7 @@ type Card = { id: Kind; name: string; line: string; visual: React.ReactNode; gro
 const CARDS: Card[] = [
   { id: 'carousel', name: 'Carousel', line: 'Swipeable slides from one sentence', visual: <CarouselVisual />, group: 'Images' },
   ...IMAGE_KIND_IDS.map((kind: ImageKind) => ({ id: `image-${kind}` as Kind, name: IMAGE_CARD_NAME[kind], line: IMAGE_KINDS[kind].hint, visual: <ImageSampleVisual kind={kind} />, group: 'Images' })),
+  { id: 'video-launch', name: 'Launch video', line: 'Paste your website: a narrated launch video in its own colours', visual: <VideoVisual />, group: 'Video' },
   { id: 'video-short', name: 'Short vertical video', line: 'A clip under a minute, with an optional voice-over', visual: <VideoVisual />, group: 'Video' },
   { id: 'video-long', name: 'Long video', line: 'A widescreen video from the same idea', visual: <VideoVisual />, group: 'Video' },
   { id: 'video-square', name: 'Video carousel', line: 'Square slides that play one after another', visual: <VideoVisual />, group: 'Video' },
@@ -141,7 +143,7 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
           <span className="text-muted" aria-hidden="true">/</span>
           <h2 className="font-serif text-xl text-foreground">{current.name}</h2>
         </div>
-        {current.id === 'carousel' || current.id === 'deck' ? <CarouselMaker /> : current.id === 'article' ? <ArticleMaker /> : current.id.startsWith('video-') ? <VideoMaker key={current.id} initialFormat={current.id.slice(6) as VideoFormat} /> : current.id.startsWith('image-') ? <ImageChatCard key={current.id} kind={current.id.slice(6) as ImageKind} topic={initialTopic || carried} userText={null} storageKey={imageKey(current.id)} restore={!carried} standalone onSend={async () => null} onClose={() => show(null)} /> : <PostComposer key={current.id} type={(current.id === 'link' ? 'update' : current.id) as PostType} signedIn={signedIn} initialTopic={embedded && current.id === initialKind ? initialTopic : ''} onSignIn={() => openLogin({ reason: 'signin', next: embedded ? window.location.pathname + window.location.search : `/create?make=${current.id}` })} />}
+        {current.id === 'carousel' || current.id === 'deck' ? <CarouselMaker /> : current.id === 'article' ? <ArticleMaker /> : current.id === 'video-launch' ? <LaunchMaker /> : current.id.startsWith('video-') ? <VideoMaker key={current.id} initialFormat={current.id.slice(6) as VideoFormat} /> : current.id.startsWith('image-') ? <ImageChatCard key={current.id} kind={current.id.slice(6) as ImageKind} topic={initialTopic || carried} userText={null} storageKey={imageKey(current.id)} restore={!carried} standalone onSend={async () => null} onClose={() => show(null)} /> : <PostComposer key={current.id} type={(current.id === 'link' ? 'update' : current.id) as PostType} signedIn={signedIn} initialTopic={embedded && current.id === initialKind ? initialTopic : ''} onSignIn={() => openLogin({ reason: 'signin', next: embedded ? window.location.pathname + window.location.search : `/create?make=${current.id}` })} />}
       </div>
     );
   }

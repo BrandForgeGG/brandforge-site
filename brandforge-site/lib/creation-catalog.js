@@ -30,6 +30,7 @@ const CREATIONS = [
   C(112, 'text', 'Quiz', 'A question with one right answer and a short explanation.', 'live', { kind: 'post', type: 'quiz' }),
   C(113, 'text', 'Thread', 'A story told over several linked posts.', 'live', { kind: 'post', type: 'thread' }),
   C(114, 'text', 'Link post', 'A link with your own comment to send people to a page.', 'live', { kind: 'post', type: 'update' }),
+  C(119, 'video', 'Launch video', 'Paste your website: a narrated launch video in its own colours.', 'live', { kind: 'video', format: 'launch' }),
   C(120, 'video', 'Short vertical video', 'A clip under a minute, with captions and your brand.', 'live', { kind: 'video', format: 'short' }),
   C(121, 'video', 'Long video', 'A widescreen video from the same idea.', 'live', { kind: 'video', format: 'long' }),
   C(122, 'video', 'Video carousel', 'Several short clips swiped together.', 'live', { kind: 'video', format: 'square' }),

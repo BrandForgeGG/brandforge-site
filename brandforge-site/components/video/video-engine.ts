@@ -203,7 +203,13 @@ export function resample(samples: Float32Array, from: number, to: number): Float
 
 /** Renders every frame and returns an MP4. onProgress gets 0..1. */
 export async function encodeVideo(opts: { w: number; h: number; scenes: VideoScene[]; look: Look; brand: VideoBrand; art: HTMLCanvasElement | SceneArt; voice: VoiceTrack; onProgress?: (share: number) => void; signal?: AbortSignal }): Promise<Blob> {
-  const { w, h, scenes, look, brand, art, voice } = opts;
+  const { scenes, look, brand, art } = opts;
+  return encodeFrames({ ...opts, seconds: totalSeconds(scenes), draw: (ctx, t) => drawFrame(ctx, opts.w, opts.h, scenes, t, look, brand, art) });
+}
+
+/** Renders any drawing, frame by frame, into an MP4 (with the voice track when there is one). onProgress gets 0..1. */
+export async function encodeFrames(opts: { w: number; h: number; seconds: number; draw: (ctx: CanvasRenderingContext2D, t: number) => void; voice: VoiceTrack; onProgress?: (share: number) => void; signal?: AbortSignal }): Promise<Blob> {
+  const { w, h, voice } = opts;
   const video = await pickVideoCodec(w, h);
   if (!video) throw new Error('This browser cannot make MP4 video. Try a recent Chrome, Edge or Safari.');
   const AUDIO_RATE = 48_000;
@@ -226,11 +232,11 @@ export async function encodeVideo(opts: { w: number; h: number; scenes: VideoSce
   canvas.height = h;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Could not draw the video.');
-  const frames = Math.max(1, Math.round(totalSeconds(scenes) * FPS));
+  const frames = Math.max(1, Math.round(opts.seconds * FPS));
   for (let i = 0; i < frames; i++) {
     if (opts.signal?.aborted) throw new Error('Stopped.');
     if (failure) throw failure;
-    drawFrame(ctx, w, h, scenes, i / FPS, look, brand, art);
+    opts.draw(ctx, i / FPS);
     const frame = new VideoFrame(canvas, { timestamp: Math.round((i * 1_000_000) / FPS), duration: Math.round(1_000_000 / FPS) });
     encoder.encode(frame, { keyFrame: i % (FPS * 2) === 0 });
     frame.close();

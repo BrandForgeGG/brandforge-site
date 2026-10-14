@@ -16,6 +16,7 @@ const ROADMAP = [
   { status: 'live', title: 'Trade', body: 'Anyone lists a gig, product or request. Terms are agreed in a private chat and paid by milestone from escrow.' },
   { status: 'live', title: 'Community', body: 'Share what you made on Create and Distribute and see what others are making.', since: '2026-10-13' },
   { status: 'live', title: 'Video and every format', body: 'Short and long videos with a free voice-over, story covers, infographics, offers, events, pins, slide decks and articles.', since: '2026-10-14' },
+  { status: 'live', title: 'Launch videos from a website', body: 'Paste a site and get a narrated launch video in its own colours, with a look at the real site and its pictures. Free.', since: '2026-10-15' },
   { status: 'live', title: 'Scheduled posting with links', body: 'Posts go out at their time and each one links back to the real post on its network.', since: '2026-10-14' },
   { status: 'building', title: 'Instagram, Facebook and Threads', body: 'Built. Waiting for the Meta app to be set up, then for Meta to review it before everyone can connect.' },
   { status: 'building', title: 'X', body: 'Paused: X charges for every post and BrandForge cannot afford it yet. Donations turn it back on.' },

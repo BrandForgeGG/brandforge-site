@@ -1,4 +1,5 @@
-Fonts used by the carousel tool, both under the SIL Open Font License 1.1:
+Fonts used by the carousel and video tools, all under the SIL Open Font License 1.1:
 - Anton (Vernon Adams), via @fontsource/anton
-- Inter (Rasmus Andersson), via @fontsource/inter
+- Inter (Rasmus Andersson), via @fontsource/inter and Google Fonts (variable latin)
+- Fraunces (Undercase Type), via Google Fonts (variable latin)
 License text: https://openfontlicense.org

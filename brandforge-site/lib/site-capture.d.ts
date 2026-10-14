@@ -1,0 +1,21 @@
+export type BrandColors = { bg: string; text: string; accent: string; dark: boolean };
+export type SitePicture = { url: string; label: string };
+export type SiteRead = {
+  url: string;
+  host: string;
+  name: string;
+  title: string;
+  description: string;
+  headings: string[];
+  text: string;
+  colors: BrandColors;
+  pictures: SitePicture[];
+};
+export function readSite(html: string, url: string, css?: string): SiteRead;
+export function brandColors(html: string, css?: string): BrandColors;
+export function headings(html: string, max?: number): string[];
+export function pictures(html: string, base: string, max?: number): SitePicture[];
+export function normalizeHex(value: string): string;
+export function luminance(hex: string): number;
+export function contrast(a: string, b: string): number;
+export function saturation(hex: string): number;
