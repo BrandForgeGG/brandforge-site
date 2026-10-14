@@ -5,6 +5,7 @@ import { fetchAuthed } from '@/lib/browser-auth';
 import { trackEvent } from '@/lib/funnel-client';
 import { useChannels } from '@/components/integrations/use-channels';
 import { isLocked } from '@/lib/locked-channels.js';
+import { extensionOf, fitForUpload } from '@/components/community/fit-for-upload';
 import { postFiles, type PostBrand } from '@/components/distribute/render-post';
 import type { PlannedDay, PlannedPost } from '@/lib/distribute-plan.js';
 
@@ -84,7 +85,8 @@ export function usePublisher(signedIn: boolean | null) {
       const body = new FormData();
       body.append('caption', post.caption);
       body.append('channelIds', JSON.stringify(picked));
-      files.slice(0, 10).forEach((file, i) => body.append(`slide${i}`, file.blob, file.name));
+      const fitted = await fitForUpload(files.slice(0, 10).map((file) => file.blob));
+      fitted.forEach((blob, i) => body.append(`slide${i}`, blob, `slide-${i + 1}.${extensionOf(blob)}`));
       return body;
     },
     [picked],

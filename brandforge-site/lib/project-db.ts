@@ -6197,10 +6197,10 @@ export async function downloadScheduledImage(path: string): Promise<Buffer | nul
 export type CommunityKind = 'create' | 'distribute';
 export type CommunityPostRow = { id: string; user_id: string; kind: CommunityKind; format: string; title: string; caption: string; image_urls: string[]; image_paths: string[]; created_at: string };
 
-export async function uploadCommunityImage(path: string, bytes: Buffer): Promise<string | null> {
+export async function uploadCommunityImage(path: string, bytes: Buffer, contentType: 'image/png' | 'image/jpeg' = 'image/png'): Promise<string | null> {
   const admin = createSupabaseAdminClient();
   if (!admin) return null;
-  const { error } = await admin.storage.from('creations').upload(path, bytes, { contentType: 'image/png', upsert: false });
+  const { error } = await admin.storage.from('creations').upload(path, bytes, { contentType, upsert: false });
   if (error) {
     console.error('uploadCommunityImage error:', error.message);
     return null;

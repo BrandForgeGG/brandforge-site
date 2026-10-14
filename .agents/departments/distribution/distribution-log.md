@@ -1209,3 +1209,9 @@ we do not have.
 **Change:** new Explore page (sidebar and sitemap): where BrandForge is going, "Happening now" (real member activity: new Trade listings and community shares, newest first) and a three-column roadmap (Live / Building now / Needs to happen) kept honest in lib/roadmap.js. Sidebar: chat search removed; page rows bigger (39px, 15px labels). Opening a chat no longer flashes: the loading frame keeps the sidebar and composer in place, and a new chat goes straight to its loading skeleton instead of an empty frame.
 
 **Distribution move:** Explore is the link to share when people ask "what is BrandForge working on": "Here is what is live, what we are building and what is next: brandforge.gg/explore".
+
+### 2026-10-14 — Sharing and posting big carousels works
+
+**Change:** "Could not share that." on Create was the hosting limit: a carousel as full-quality PNG is over 4.5 MB, so the request was refused before reaching BrandForge. Pictures are now sent as they are when they fit, and re-encoded as high-quality JPEG only when the set is too big. The same fix covers Post now and Schedule in Distribute. Errors now say the reason (too big, or the status).
+
+**Distribution move:** none public; tell the person who hit it to try again.

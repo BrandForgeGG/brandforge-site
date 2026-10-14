@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { fetchAuthed, getSessionUser } from '@/lib/browser-auth';
 import { trackEvent } from '@/lib/funnel-client';
 import { useLogin } from '@/components/login-dialog';
+import { extensionOf, fitForUpload } from '@/components/community/fit-for-upload';
 
 export const COMMUNITY_SHARED = 'bf:community-shared';
 
@@ -23,17 +24,17 @@ export function ShareButton({ kind, format, title, caption, getImages, className
     }
     setState('busy');
     try {
-      const images = (await getImages()).slice(0, 10);
+      const images = await fitForUpload((await getImages()).slice(0, 10));
       if (images.length === 0) throw new Error('There is no picture to share yet.');
       const body = new FormData();
       body.append('kind', kind);
       body.append('format', format);
       body.append('title', title.slice(0, 120));
       body.append('caption', (caption ?? '').slice(0, 2200));
-      images.forEach((blob, i) => body.append(`image${i}`, blob, `${i + 1}.png`));
+      images.forEach((blob, i) => body.append(`image${i}`, blob, `${i + 1}.${extensionOf(blob)}`));
       const res = await fetchAuthed('/api/community', { method: 'POST', body });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) throw new Error(data.error || 'Could not share that.');
+      if (!res.ok) throw new Error(data.error || (res.status === 413 ? 'Those pictures are too big to send. Try again with fewer slides.' : `Could not share that (${res.status}). Try again.`));
       setState('done');
       trackEvent('community_shared', { source: kind });
       window.dispatchEvent(new CustomEvent(COMMUNITY_SHARED, { detail: kind }));

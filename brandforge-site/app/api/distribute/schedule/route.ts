@@ -69,12 +69,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `Picture ${i + 1} is too large.` }, { status: 413 });
       }
       const bytes = Buffer.from(await file.arrayBuffer());
-      if (!sniff(bytes)) {
+      const type = sniff(bytes);
+      if (type !== 'image/png' && type !== 'image/jpeg') {
         await removeScheduledImages(paths);
         return NextResponse.json({ error: `Picture ${i + 1} is not an image.` }, { status: 400 });
       }
-      const path = `scheduled/${auth.user.id}/${id}/slide-${i + 1}.png`;
-      if (!(await uploadScheduledImage(path, bytes))) {
+      const path = `scheduled/${auth.user.id}/${id}/slide-${i + 1}.${type === 'image/jpeg' ? 'jpg' : 'png'}`;
+      if (!(await uploadScheduledImage(path, bytes, type))) {
         await removeScheduledImages(paths);
         return NextResponse.json({ error: 'Could not store the pictures. Try again.' }, { status: 500 });
       }

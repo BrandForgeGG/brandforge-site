@@ -71,12 +71,13 @@ export async function POST(request: NextRequest) {
     const urls: string[] = [];
     for (const [i, file] of files.entries()) {
       const bytes = Buffer.from(await file.arrayBuffer());
-      if (file.size > MAX_FILE || !sniff(bytes)) {
+      const type = sniff(bytes);
+      if (file.size > MAX_FILE || (type !== 'image/png' && type !== 'image/jpeg')) {
         await removeScheduledImages(paths);
         return NextResponse.json({ error: `Picture ${i + 1} is not a picture under 2 MB.` }, { status: 400 });
       }
-      const path = `community/${user.id}/${id}/${i + 1}.png`;
-      const url = await uploadCommunityImage(path, bytes);
+      const path = `community/${user.id}/${id}/${i + 1}.${type === 'image/jpeg' ? 'jpg' : 'png'}`;
+      const url = await uploadCommunityImage(path, bytes, type);
       if (!url) {
         await removeScheduledImages(paths);
         return NextResponse.json({ error: 'Could not store the pictures. Try again.' }, { status: 500 });
