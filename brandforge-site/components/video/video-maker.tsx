@@ -9,10 +9,12 @@ import { THEMES } from '@/lib/carousel-render.js';
 import { VIDEO_FORMATS, fitToVoice, totalSeconds, type VideoFormat, type VideoScene, planToScenes } from '@/lib/video-scenes.js';
 import { canEncode, drawFrame, encodeVideo, lookOf, makeArt } from '@/components/video/video-engine';
 import { VOICES, layTrack, speakScenes, type VoiceId } from '@/components/video/voice';
+import { YouTubePost } from '@/components/video/youtube-post';
 
 const field = 'w-full rounded-xl border border-line bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none';
 const chip = 'rounded-full border px-3 py-1.5 text-xs transition';
 const LOOKS = Object.keys(THEMES);
+const NEWLINE = String.fromCharCode(10);
 
 // The video maker on Create: say what the video is about, get scenes written for you (edit every word), watch the
 // preview, add a free voice-over if you like, then make the MP4. Every frame is drawn and encoded in your own browser.
@@ -30,7 +32,7 @@ export function VideoMaker({ initialFormat = 'short' }: { initialFormat?: VideoF
   const [withVoice, setWithVoice] = useState(false);
   const [voice, setVoice] = useState<VoiceId>('af_heart');
   const [progress, setProgress] = useState(0);
-  const [result, setResult] = useState<{ url: string; name: string; seconds: number; voiced: boolean } | null>(null);
+  const [result, setResult] = useState<{ url: string; name: string; seconds: number; voiced: boolean; blob: Blob } | null>(null);
   const [fontsReady, setFontsReady] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stopRef = useRef<AbortController | null>(null);
@@ -140,7 +142,7 @@ export function VideoMaker({ initialFormat = 'short' }: { initialFormat?: VideoF
       setProgress(0);
       const blob = await encodeVideo({ w: f.w, h: f.h, scenes: timed, look, brand: { name: brand.trim(), handle: handle.trim() }, art, voice: track, onProgress: setProgress, signal: controller.signal });
       if (result) URL.revokeObjectURL(result.url);
-      setResult({ url: URL.createObjectURL(blob), name: `brandforge-${format}-video.mp4`, seconds: totalSeconds(timed), voiced: Boolean(track) });
+      setResult({ url: URL.createObjectURL(blob), name: `brandforge-${format}-video.mp4`, seconds: totalSeconds(timed), voiced: Boolean(track), blob });
       trackEvent('carousel_downloaded', { source: `video-${format}` });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not make the video.');
@@ -237,6 +239,7 @@ export function VideoMaker({ initialFormat = 'short' }: { initialFormat?: VideoF
                 <p className="text-sm text-foreground">Your video is ready: {Math.round(result.seconds)} seconds{result.voiced ? ', with voice-over' : ''}.</p>
                 <video src={result.url} controls playsInline className="mt-2 max-h-72 w-auto max-w-full rounded-lg" />
                 <a href={result.url} download={result.name} className="mt-2 inline-block rounded-lg bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90">Download MP4</a>
+                <YouTubePost blob={result.blob} defaultTitle={scenes[0]?.heading ?? ''} defaultDescription={[...scenes.map((scene) => [scene.heading, ...scene.lines].join(': ')), handle.trim()].filter(Boolean).join(NEWLINE)} vertical={f.h > f.w} seconds={result.seconds} />
               </div>
             ) : null}
           </div>

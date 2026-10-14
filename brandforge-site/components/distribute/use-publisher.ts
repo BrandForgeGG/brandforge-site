@@ -22,7 +22,8 @@ function localISO(day: PlannedDay, post: PlannedPost): string {
 // then handed to the server, which sends them at the planned time.
 export function usePublisher(signedIn: boolean | null) {
   const { channels: linked, loading, reload } = useChannels(Boolean(signedIn));
-  const channels = linked.filter((channel) => !isLocked(channel.kind));
+  // YouTube takes videos, which are posted from the video maker; Distribute posts pictures.
+  const channels = linked.filter((channel) => !isLocked(channel.kind) && channel.kind !== 'youtube');
   const [picked, setPicked] = useState<string[]>([]);
   const [items, setItems] = useState<ScheduledItem[]>([]);
   const [ready, setReady] = useState(true);

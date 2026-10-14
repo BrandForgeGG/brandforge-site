@@ -5542,7 +5542,7 @@ export async function setCalendarAutoPost(on: boolean): Promise<boolean> {
 
 
 // ---- Channels a person has linked to post carousels to (migration 0033: carousel_channels) ----
-export type CarouselChannelRow = { id: string; kind: 'telegram' | 'discord' | 'bluesky' | 'slack' | 'tumblr' | 'mastodon' | 'linkedin' | 'x' | 'facebook' | 'instagram' | 'threads'; label: string; secret: string | null; meta: Record<string, unknown>; created_at: string };
+export type CarouselChannelRow = { id: string; kind: 'telegram' | 'discord' | 'bluesky' | 'slack' | 'tumblr' | 'mastodon' | 'linkedin' | 'x' | 'facebook' | 'instagram' | 'threads' | 'youtube'; label: string; secret: string | null; meta: Record<string, unknown>; created_at: string };
 
 export async function listCarouselChannels(userId: string): Promise<CarouselChannelRow[]> {
   const admin = createSupabaseAdminClient();
@@ -6333,4 +6333,30 @@ export async function getActivityRows(perKind = 12): Promise<Record<string, Reco
       .filter((row) => [person(row.payer_id), person(row.payee_id)].every((p) => !p || p.role !== 'admin'))
       .map((row) => ({ at: later(row.payer_signed_at, row.payee_signed_at), actor: person(row.payer_id) })),
   };
+}
+
+// ---- Videos on their way to YouTube (bucket "videos", migration 0050) ----
+export async function createVideoUploadUrl(path: string): Promise<{ token: string } | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data, error } = await admin.storage.from('videos').createSignedUploadUrl(path);
+  if (error || !data) {
+    console.error('createVideoUploadUrl error:', error?.message);
+    return null;
+  }
+  return { token: data.token };
+}
+
+export async function downloadVideo(path: string): Promise<Buffer | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data, error } = await admin.storage.from('videos').download(path);
+  if (error || !data) return null;
+  return Buffer.from(await data.arrayBuffer());
+}
+
+export async function removeVideo(path: string): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return;
+  await admin.storage.from('videos').remove([path]).catch(() => undefined);
 }

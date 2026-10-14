@@ -10,7 +10,6 @@ import { donateUrl, lockedReason } from '@/lib/locked-channels.js';
 
 const COMING: { id: ServiceId; line: string }[] = [
   { id: 'tiktok', line: 'Photo posts and slideshows' },
-  { id: 'youtube', line: 'Community posts and Shorts' },
 ];
 
 const SAY: Record<ChannelKind, { line: string; add: string }> = {
@@ -25,6 +24,7 @@ const SAY: Record<ChannelKind, { line: string; add: string }> = {
   facebook: { line: 'Post pictures and updates to the Pages you run.', add: 'Connect with Meta' },
   instagram: { line: 'Post carousels and pictures to your business account.', add: 'Connect with Meta' },
   threads: { line: 'Post pictures, carousels and threads of replies.', add: 'Connect with Threads' },
+  youtube: { line: 'Post the videos you make in Create, as Shorts or full videos.', add: 'Connect with YouTube' },
 };
 
 function Pill({ on, children }: { on: boolean; children: React.ReactNode }) {
@@ -69,14 +69,14 @@ export function IntegrationsPanel() {
   }
 
   // Platforms that need a developer app made first stay "Coming soon" until their keys are in.
-  const ready = (kind: ChannelKind) => (kind === 'tumblr' ? tumblrReady : kind === 'linkedin' || kind === 'x' || kind === 'facebook' || kind === 'instagram' || kind === 'threads' ? Boolean(oauthReady[kind]) : true);
+  const ready = (kind: ChannelKind) => (kind === 'tumblr' ? tumblrReady : kind === 'linkedin' || kind === 'x' || kind === 'facebook' || kind === 'instagram' || kind === 'threads' || kind === 'youtube' ? Boolean(oauthReady[kind]) : true);
 
   const btn = 'rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-foreground transition hover:border-ember disabled:opacity-50';
 
   return (
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-2">
-        {(['telegram', 'discord', 'bluesky', 'mastodon', 'linkedin', 'x', 'facebook', 'instagram', 'threads', 'slack', 'tumblr'] as ChannelKind[]).map((kind) => {
+        {(['telegram', 'discord', 'bluesky', 'mastodon', 'linkedin', 'x', 'facebook', 'instagram', 'threads', 'youtube', 'slack', 'tumblr'] as ChannelKind[]).map((kind) => {
           const mine = channels.filter((c) => c.kind === kind);
           const live = kind === 'telegram' ? telegramLinked || mine.length > 0 : mine.length > 0;
           return (

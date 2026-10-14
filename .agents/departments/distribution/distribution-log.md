@@ -1245,3 +1245,9 @@ we do not have.
 **Change:** LinkedIn rejected every call because BrandForge sent API version 202506, which LinkedIn retired (it supports each version about a year; the oldest still live is 202511). Now 202609, supported until at least September 2027, with a note to move it forward yearly. The "LinkedIn refused a picture" error was the first call failing.
 
 **Distribution move:** once one picture post lands on LinkedIn, LinkedIn is a real channel in public copy and on Explore ("LinkedIn pictures" moves from Building to Live).
+
+### 2026-10-14 — YouTube: post videos as Shorts, now or on a schedule
+
+**Change:** YouTube connects from Settings (Google sign-in, upload-only rights plus the channel name). A finished video in Create gets a "Post to YouTube" panel: title, description, post now (vertical under three minutes posts as a Short) or a publish time that YouTube itself honours. The MP4 goes from the browser into a private storage bucket (videos skip the site's 4.5 MB request limit), the server hands it to YouTube with a resumable upload, then deletes the stored copy. The link lands in "Just published". Shows "Coming soon" until YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET are added. Until Google's YouTube API audit is passed, YouTube keeps uploads private; the app says so when it happens. Free quota: about 6 uploads a day.
+
+**Distribution move:** none public until the audit passes and one Short is public. Then: "Make a Short from one sentence and post it to YouTube without leaving BrandForge."

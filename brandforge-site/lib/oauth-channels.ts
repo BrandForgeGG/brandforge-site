@@ -7,18 +7,20 @@ import { stripMarkup, type Post } from '@/lib/post-types.js';
 // LinkedIn and X: the person approves BrandForge on the platform's own page; we keep an encrypted token, never a password.
 // Both need a developer app made once (free). Without its keys a platform's connect button says "Coming soon" and nothing
 // here runs. Redirect addresses to register: {origin}/api/integrations/oauth/linkedin/callback and .../x/callback.
-export type OAuthKind = 'linkedin' | 'x';
-export const OAUTH_KINDS: OAuthKind[] = ['linkedin', 'x'];
+export type OAuthKind = 'linkedin' | 'x' | 'youtube';
+export const OAUTH_KINDS: OAuthKind[] = ['linkedin', 'x', 'youtube'];
 
 const CFG = {
   linkedin: { idEnv: 'LINKEDIN_CLIENT_ID', secretEnv: 'LINKEDIN_CLIENT_SECRET', authorize: 'https://www.linkedin.com/oauth/v2/authorization', token: 'https://www.linkedin.com/oauth/v2/accessToken', scope: 'openid profile w_member_social', label: 'LinkedIn' },
+  // YouTube: Google's own sign-in, with upload rights only (plus reading the channel name). Refresh tokens need offline access.
+  youtube: { idEnv: 'YOUTUBE_CLIENT_ID', secretEnv: 'YOUTUBE_CLIENT_SECRET', authorize: 'https://accounts.google.com/o/oauth2/v2/auth', token: 'https://oauth2.googleapis.com/token', scope: 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly', label: 'YouTube' },
   x: { idEnv: 'X_CLIENT_ID', secretEnv: 'X_CLIENT_SECRET', authorize: 'https://x.com/i/oauth2/authorize', token: 'https://api.x.com/2/oauth2/token', scope: 'tweet.read tweet.write users.read media.write offline.access', label: 'X' },
 } as const;
 
 const env = (name: string) => String(process.env[name] ?? '').trim();
 
 export function isOAuthKind(value: string): value is OAuthKind {
-  return value === 'linkedin' || value === 'x';
+  return value === 'linkedin' || value === 'x' || value === 'youtube';
 }
 
 export function oauthConfigured(kind: OAuthKind): boolean {
@@ -40,6 +42,11 @@ export function oauthAuthorizeUrl(kind: OAuthKind, state: string, origin: string
   if (kind === 'x') {
     params.set('code_challenge', createHash('sha256').update(verifierFor(state)).digest('base64url'));
     params.set('code_challenge_method', 'S256');
+  }
+  if (kind === 'youtube') {
+    params.set('access_type', 'offline');
+    params.set('prompt', 'consent');
+    params.set('include_granted_scopes', 'true');
   }
   return `${cfg.authorize}?${params.toString()}`;
 }
@@ -82,6 +89,16 @@ export async function connectOAuth(kind: OAuthKind, code: string, state: string,
   const tokens = await tokenRequest(kind, form);
   if (!tokens) return { ok: false };
   try {
+    if (kind === 'youtube') {
+      const res = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true', { headers: { Authorization: `Bearer ${tokens.access}` }, signal: AbortSignal.timeout(15000) });
+      const data = (await res.json()) as { items?: { id: string; snippet?: { title?: string; customUrl?: string } }[] };
+      const channel = data.items?.[0];
+      if (!res.ok || !channel) {
+        console.error('[oauth] youtube channel request failed:', res.status, JSON.stringify(data).slice(0, 300));
+        return { ok: false };
+      }
+      return { ok: true, label: `YouTube: ${String(channel.snippet?.title ?? 'your channel').slice(0, 40)}`, secret: encryptSecret(JSON.stringify(tokens)), meta: { channelId: channel.id, handle: channel.snippet?.customUrl ?? '' } };
+    }
     if (kind === 'linkedin') {
       const res = await fetch('https://api.linkedin.com/v2/userinfo', { headers: { Authorization: `Bearer ${tokens.access}` }, signal: AbortSignal.timeout(15000) });
       const me = (await res.json()) as { sub?: string; name?: string };
@@ -102,6 +119,11 @@ export async function connectOAuth(kind: OAuthKind, code: string, state: string,
     console.error(`[oauth] ${kind} connect threw:`, cause instanceof Error ? cause.message : cause);
     return { ok: false };
   }
+}
+
+/** A fresh access token for a linked account (refreshed and saved when it has expired), or null when it must be linked again. */
+export async function oauthAccessToken(kind: OAuthKind, channel: CarouselChannelRow): Promise<string | null> {
+  return accessToken(kind, channel);
 }
 
 async function accessToken(kind: OAuthKind, channel: CarouselChannelRow): Promise<string | null> {
@@ -204,6 +226,7 @@ function xFit(text: string): string {
 
 /** A carousel or picture: up to four pictures a tweet (more slides become replies), or one LinkedIn post with all of them. */
 export async function postCarouselToOAuth(kind: OAuthKind, channel: CarouselChannelRow, images: Buffer[], caption: string): Promise<PublishResult> {
+  if (kind === 'youtube') return { ok: false, note: 'YouTube takes videos. Make one in Create, then post it from there.' };
   const token = await accessToken(kind, channel);
   if (!token) return AGAIN(CFG[kind].label);
   try {
@@ -239,6 +262,7 @@ export async function postCarouselToOAuth(kind: OAuthKind, channel: CarouselChan
 
 /** An update, poll, quiz or thread. X gets real polls and linked threads; LinkedIn gets one post. */
 export async function postToOAuth(kind: OAuthKind, channel: CarouselChannelRow, post: Post): Promise<PublishResult> {
+  if (kind === 'youtube') return { ok: false, note: 'YouTube takes videos. Make one in Create, then post it from there.' };
   const token = await accessToken(kind, channel);
   if (!token) return AGAIN(CFG[kind].label);
   try {

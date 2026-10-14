@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     channels: channels.map((c) => ({ id: c.id, kind: c.kind, label: c.label })),
     telegramLinked: Boolean(targets.telegramChatId),
     tumblrReady: tumblrConfigured(),
-    oauthReady: { linkedin: oauthConfigured('linkedin'), x: oauthConfigured('x'), facebook: metaConfigured(), instagram: metaConfigured(), threads: threadsConfigured() },
+    oauthReady: { linkedin: oauthConfigured('linkedin'), x: oauthConfigured('x'), facebook: metaConfigured(), instagram: metaConfigured(), threads: threadsConfigured(), youtube: oauthConfigured('youtube') },
   });
 }
 

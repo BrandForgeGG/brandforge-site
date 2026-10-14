@@ -82,10 +82,10 @@ export function ChannelLinkForm({ kind, telegramLinked, onLinked }: { kind: Chan
           <a href="/api/integrations/meta/start" className={btnPrimary + ' inline-block'}>Connect with Meta</a>
         </>
       ) : null}
-      {kind === 'linkedin' || kind === 'x' ? (
+      {kind === 'linkedin' || kind === 'x' || kind === 'youtube' ? (
         <>
-          <p className="text-xs leading-relaxed text-muted">You approve BrandForge on {kind === 'x' ? 'X' : 'LinkedIn'}&apos;s own page. We never see your password, and you can revoke access in your {kind === 'x' ? 'X' : 'LinkedIn'} settings at any time.{kind === 'linkedin' ? ' The sign-in lasts about 60 days, then you connect again.' : ''}</p>
-          <a href={`/api/integrations/oauth/${kind}/start`} className={btnPrimary + ' inline-block'}>Connect with {kind === 'x' ? 'X' : 'LinkedIn'}</a>
+          <p className="text-xs leading-relaxed text-muted">You approve BrandForge on {kind === 'x' ? 'X' : kind === 'youtube' ? 'Google' : 'LinkedIn'}&apos;s own page. We never see your password, and you can revoke access in your {kind === 'x' ? 'X' : kind === 'youtube' ? 'Google account' : 'LinkedIn'} settings at any time.{kind === 'linkedin' ? ' The sign-in lasts about 60 days, then you connect again.' : ''}{kind === 'youtube' ? ' BrandForge can only upload videos and read your channel name.' : ''}</p>
+          <a href={`/api/integrations/oauth/${kind}/start`} className={btnPrimary + ' inline-block'}>Connect with {kind === 'x' ? 'X' : kind === 'youtube' ? 'YouTube' : 'LinkedIn'}</a>
         </>
       ) : null}
       {kind === 'tumblr' ? (
@@ -124,7 +124,7 @@ export function ChannelLinkForm({ kind, telegramLinked, onLinked }: { kind: Chan
           </label>
         </>
       ) : null}
-      {kind !== 'tumblr' && kind !== 'linkedin' && kind !== 'x' && kind !== 'facebook' && kind !== 'instagram' && kind !== 'threads' ? (
+      {kind !== 'tumblr' && kind !== 'linkedin' && kind !== 'x' && kind !== 'youtube' && kind !== 'facebook' && kind !== 'instagram' && kind !== 'threads' ? (
         <button type="button" className={btnPrimary} disabled={busy} onClick={() => void link()}>
           {busy ? 'Checking…' : 'Check and connect'}
         </button>
