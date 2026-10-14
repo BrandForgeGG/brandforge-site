@@ -5,6 +5,7 @@ import { publishPostToChannel } from '@/lib/post-publish';
 import { normalizePost } from '@/lib/post-types.js';
 import { screenText } from '@/lib/content-policy.js';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { recordLinks } from '@/lib/publish-links';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -31,8 +32,9 @@ export async function POST(request: NextRequest) {
     const chosen = mine.filter((c) => ids.includes(c.id));
     if (chosen.length === 0) return NextResponse.json({ error: 'Pick a channel to post to.' }, { status: 400 });
 
-    const results: Record<string, { ok: boolean; note?: string }> = {};
+    const results: Record<string, { ok: boolean; note?: string; ref?: string; url?: string }> = {};
     for (const channel of chosen) results[channel.id] = await publishPostToChannel(channel, post);
+    await recordLinks(user.id, chosen, results, post.type === 'update' ? post.text : post.type === 'thread' ? post.parts[0] : post.question);
     void recordFunnelEvent('carousel_published', { signedIn: true, source: 'organic', properties: { status: Object.values(results).every((r) => r.ok) ? 'ok' : 'partial', source: post.type } }).catch(() => undefined);
     return NextResponse.json({ results });
   } catch (error) {

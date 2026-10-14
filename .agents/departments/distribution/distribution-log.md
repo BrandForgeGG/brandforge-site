@@ -1215,3 +1215,9 @@ we do not have.
 **Change:** "Could not share that." on Create was the hosting limit: a carousel as full-quality PNG is over 4.5 MB, so the request was refused before reaching BrandForge. Pictures are now sent as they are when they fit, and re-encoded as high-quality JPEG only when the set is too big. The same fix covers Post now and Schedule in Distribute. Errors now say the reason (too big, or the status).
 
 **Distribution move:** none public; tell the person who hit it to try again.
+
+### 2026-10-14 — Create and Distribute open on the community; real post links; Explore numbers
+
+**Change:** Create opens on "Latest creations" with the formats folded behind "Choose a format"; "Pick up where you left off" is gone from Create. Distribute opens on "Just published" (real links to posts members sent through BrandForge: Bluesky, Mastodon, Telegram channels, Tumblr, LinkedIn, Facebook, Instagram, Threads) and the community posts, with the week maker behind "Start a week". Explore shows members (35 today), online now, hours spent on BrandForge, average time per member and your own time; time comes from a once-a-minute heartbeat of visible tabs, only for visitors who accepted measurement (privacy policy updated).
+
+**Distribution move:** once a few posts are live, screenshot "Just published" for Discord: "Posts going out from BrandForge right now". Quote the members number from Explore, never round it up.

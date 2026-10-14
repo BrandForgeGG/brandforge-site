@@ -44,6 +44,11 @@ function visitorId(): string {
   }
 }
 
+/** The same random, session-scoped id the funnel uses, for the time-on-site heartbeat. */
+export function usageVisitorId(): string {
+  return visitorId();
+}
+
 export function trackEvent(event: string, properties?: Record<string, unknown>) {
   if (typeof window === 'undefined') return;
   // Counting visits waits for a yes to the cookie choice (components/cookie-consent.tsx).

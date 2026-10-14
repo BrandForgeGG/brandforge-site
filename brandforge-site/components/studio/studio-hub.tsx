@@ -11,7 +11,7 @@ import { ImageSampleVisual } from '@/components/studio/image-sample-visual';
 import { CommunityFeed } from '@/components/community/community-feed';
 import { KINDS as IMAGE_KINDS, KIND_IDS as IMAGE_KIND_IDS, type ImageKind } from '@/lib/image-kinds.js';
 import { CarouselVisual, DocumentVisual, ImageVisual, OfferVisual, UpdateVisual, VideoVisual } from '@/components/studio/card-visuals';
-import { emptyDraft, markResume, writeDraft, type Draft } from '@/components/carousel/carousel-shared';
+import { emptyDraft, markResume, writeDraft } from '@/components/carousel/carousel-shared';
 import { CREATIONS } from '@/lib/creation-catalog.js';
 import type { Format } from '@/lib/format-catalog.js';
 import type { PostType } from '@/lib/post-types.js';
@@ -30,7 +30,6 @@ const CARDS: { id: Kind; name: string; line: string; visual: React.ReactNode }[]
   ...IMAGE_KIND_IDS.map((kind: ImageKind) => ({ id: `image-${kind}` as Kind, name: IMAGE_CARD_NAME[kind], line: IMAGE_KINDS[kind].hint, visual: <ImageSampleVisual kind={kind} /> })),
 ];
 
-type Saved = { id: string; title: string; type: string; theme: string; plan: Draft['plan']; brand: Draft['brand']; captions: Record<string, string> };
 
 // The one page for making things: pick a card, make it, download it, and post or schedule it in Distribute.
 // The card you opened is in the address (?make=) so a link can open straight to a poll.
@@ -39,7 +38,8 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
   const [open, setOpen] = useState<Kind | null>(embedded ? initialKind : null);
   const [ready, setReady] = useState(false);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
-  const [saved, setSaved] = useState<Saved[]>([]);
+  // The formats stay folded away until someone wants to make something; the page opens on what members are making.
+  const [picking, setPicking] = useState(false);
   // A topic carried in the address (from Distribute's "Make the picture"): the maker opens already on it.
   const [carried, setCarried] = useState('');
   const [voted, setVoted] = useState<Record<number, boolean>>({});
@@ -71,9 +71,6 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
       .then(async (user) => {
         if (!live) return;
         setSignedIn(Boolean(user));
-        if (!user) return;
-        const res = await fetch('/api/carousel/drafts').catch(() => null);
-        if (res && res.ok && live) setSaved((((await res.json()) as { carousels: Saved[] }).carousels ?? []).slice(0, 4));
       })
       .catch(() => live && setSignedIn(false));
     return () => {
@@ -94,12 +91,6 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
       /* the page still works without the address */
     }
     window.scrollTo({ top: 0 });
-  }
-
-  function openSaved(row: Saved) {
-    writeDraft({ ...emptyDraft(), id: row.id, plan: row.plan, type: row.type, theme: row.theme as Draft['theme'], brand: row.brand, captions: row.captions ?? {}, seed: row.id.slice(0, 6) });
-    markResume();
-    show('carousel');
   }
 
   function vote(creation: Format) {
@@ -136,7 +127,20 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
   }
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
+      {embedded ? null : (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel p-4 sm:p-5">
+          <div className="min-w-0">
+            <p className="font-serif text-lg text-foreground">Make something</p>
+            <p className="text-sm text-muted">A carousel, an ad, a quote, a tip, a poll and more, from one sentence.</p>
+          </div>
+          <button type="button" aria-expanded={picking} onClick={() => setPicking((value) => !value)} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">
+            {picking ? 'Close' : 'Choose a format'}
+          </button>
+        </div>
+      )}
+      {embedded || picking ? (
+      <div className="space-y-10">
       <section aria-label="What do you want to make?">
         <h2 className="font-serif text-2xl text-foreground sm:text-3xl">What do you want to make?</h2>
         <ul className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-3">
@@ -151,21 +155,6 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
           ))}
         </ul>
       </section>
-
-      {saved.length > 0 ? (
-        <section aria-label="Your saved carousels">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Pick up where you left off</p>
-          <ul className="mt-2 flex flex-wrap gap-2">
-            {saved.map((row) => (
-              <li key={row.id}>
-                <button type="button" onClick={() => openSaved(row)} className="max-w-[16rem] truncate rounded-full border border-line px-3.5 py-1.5 text-sm text-foreground transition hover:border-ember">
-                  {row.title || 'Untitled carousel'}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
 
       <details aria-label="Coming soon" className="group">
         <summary className="cursor-pointer text-sm text-muted transition hover:text-foreground">More formats are coming. Tell us which you want.</summary>
@@ -187,7 +176,9 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
           ))}
         </ul>
       </details>
-      {embedded ? null : <CommunityFeed kind="create" title="From the community" />}
+      </div>
+      ) : null}
+      {embedded ? null : <CommunityFeed kind="create" title="Latest creations" />}
     </div>
   );
 }

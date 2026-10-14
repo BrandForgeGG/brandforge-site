@@ -86,7 +86,11 @@ async function createPost(channel: CarouselChannelRow, body: BodyInit, headers: 
   const blog = String(channel.meta.blog ?? '');
   try {
     const res = await fetch(`${API}/blog/${encodeURIComponent(blog)}/posts`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, ...headers }, body, signal: AbortSignal.timeout(45000) });
-    if (res.ok) return { ok: true };
+    if (res.ok) {
+      const data = (await res.json().catch(() => ({}))) as { response?: { id_string?: string; id?: number | string } };
+      const id = data.response?.id_string ?? data.response?.id;
+      return { ok: true, ...(id ? { ref: String(id) } : {}) };
+    }
     return { ok: false, note: `Tumblr said: ${res.status}` };
   } catch {
     return { ok: false, note: 'Could not reach Tumblr.' };

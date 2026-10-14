@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { DIRECTION, ROADMAP, STATUS_LABEL, type RoadmapStatus } from '@/lib/roadmap.js';
 import { donateUrl } from '@/lib/locked-channels.js';
+import { UsageStats } from '@/components/explore/usage-stats';
 
 type Activity = { id: string; what: string; title: string; who: string; at: string; href: string; image?: string };
 
@@ -54,6 +55,7 @@ export function ExploreHub() {
 
   return (
     <div className="max-w-5xl space-y-10">
+      <UsageStats />
       <section aria-label="Where we are going">
         <h2 className="font-serif text-2xl text-foreground sm:text-3xl">Where we are going</h2>
         <ul className="mt-5 grid gap-3 sm:grid-cols-3">

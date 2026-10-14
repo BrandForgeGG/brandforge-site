@@ -154,7 +154,10 @@ async function linkedinPost(token: string, author: string, commentary: string, i
     body: JSON.stringify({ author, commentary: commentary.slice(0, 3000), visibility: 'PUBLIC', distribution: { feedDistribution: 'MAIN_FEED', targetEntities: [], thirdPartyDistributionChannels: [] }, lifecycleState: 'PUBLISHED', isReshareDisabledByAuthor: false, ...(content ? { content } : {}) }),
     signal: AbortSignal.timeout(30000),
   });
-  if (res.ok) return { ok: true };
+  if (res.ok) {
+    const urn = res.headers.get('x-restli-id') ?? res.headers.get('x-linkedin-id') ?? '';
+    return { ok: true, ...(urn ? { ref: urn } : {}) };
+  }
   console.error('[oauth] linkedin post failed:', res.status, (await res.text().catch(() => '')).slice(0, 300));
   return { ok: false, note: res.status === 401 ? 'LinkedIn needs you to connect again.' : `LinkedIn said: ${res.status}` };
 }

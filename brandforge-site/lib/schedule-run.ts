@@ -1,6 +1,7 @@
 import { claimDueScheduledPosts, downloadScheduledImage, finishScheduledPost, listCarouselChannels, removeScheduledImages } from '@/lib/project-db';
 import { publishToChannel } from '@/lib/carousel-channels';
 import { MAX_ATTEMPTS, outcomeOf } from '@/lib/schedule.js';
+import { recordLinks } from '@/lib/publish-links';
 
 // The sender: takes the posts that are due, sends each to the channels its owner chose, and records what happened. A post
 // whose channels all failed is tried again on a later run (up to three tries); one that went out has its pictures deleted.
@@ -14,7 +15,7 @@ export async function runDueScheduledPosts(): Promise<{ ran: number; done: numbe
       const bytes = await downloadScheduledImage(path);
       if (bytes) images.push(bytes);
     }
-    const results: Record<string, { ok: boolean; note?: string }> = {};
+    const results: Record<string, { ok: boolean; note?: string; ref?: string; url?: string }> = {};
     if (images.length === 0) {
       for (const id of row.channel_ids) results[id] = { ok: false, note: 'The pictures are gone.' };
     } else if (channels.length === 0) {
@@ -28,6 +29,7 @@ export async function runDueScheduledPosts(): Promise<{ ran: number; done: numbe
         }
       }
     }
+    if (channels.length > 0) await recordLinks(row.user_id, channels, results, row.caption);
     const outcome = outcomeOf(results);
     const attempts = row.attempts + 1;
     const again = outcome === 'failed' && attempts < MAX_ATTEMPTS && images.length > 0 && channels.length > 0;

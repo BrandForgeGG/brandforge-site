@@ -88,6 +88,11 @@ function failure(data: unknown, status: number): PublishResult {
   return { ok: false, note: `Threads said: ${String(error?.message ?? status).slice(0, 160)}` };
 }
 
+async function permalink(tokens: Tokens, id: string): Promise<string | undefined> {
+  const res = await json<{ permalink?: string }>(`${API}/v1.0/${id}?${new URLSearchParams({ fields: 'permalink', access_token: tokens.access })}`).catch(() => null);
+  return res?.data.permalink;
+}
+
 function fit(text: string): string {
   const plain = stripMarkup(text);
   return [...plain].length <= MAX_TEXT ? plain : `${[...plain].slice(0, MAX_TEXT - 1).join('').trimEnd()}…`;
@@ -154,7 +159,9 @@ export async function postCarouselToThreads(channel: CarouselChannelRow, images:
       creation = parent.id;
     }
     const done = await publish(tokens, creation);
-    return done.id ? { ok: true } : (done.fail ?? { ok: false, note: 'Threads refused the post.' });
+    if (!done.id) return done.fail ?? { ok: false, note: 'Threads refused the post.' };
+    const url = await permalink(tokens, done.id);
+    return { ok: true, ...(url ? { url } : {}) };
   } catch {
     return { ok: false, note: 'Could not reach Threads.' };
   } finally {
@@ -171,16 +178,20 @@ export async function postToThreads(channel: CarouselChannelRow, post: Post): Pr
       const first = await textPost(tokens, `${post.question}\n\n${post.options.map((o: string, i: number) => `${i + 1}. ${o}`).join('\n')}\n\nReply with your number.`);
       if (!first.id) return first.fail ?? { ok: false, note: 'Threads refused the post.' };
       if (post.type === 'quiz') await textPost(tokens, `Answer: ${post.options[post.correct]}${post.explanation ? `. ${post.explanation}` : ''}`, first.id);
-      return { ok: true };
+      const url = await permalink(tokens, first.id);
+      return { ok: true, ...(url ? { url } : {}) };
     }
     const parts = post.type === 'thread' ? post.parts.map((part: string, i: number) => `${part}\n\n${i + 1}/${post.parts.length}`) : [post.text];
     let parent: string | undefined;
+    let first: string | undefined;
     for (const part of parts) {
       const made = await textPost(tokens, part, parent);
       if (!made.id) return made.fail ?? { ok: false, note: 'Threads refused the post.' };
       parent = made.id;
+      first = first ?? made.id;
     }
-    return { ok: true };
+    const url = first ? await permalink(tokens, first) : undefined;
+    return { ok: true, ...(url ? { url } : {}) };
   } catch {
     return { ok: false, note: 'Could not reach Threads.' };
   }

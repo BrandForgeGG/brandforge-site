@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { usageVisitorId } from '@/lib/funnel-client';
 import { Analytics } from '@vercel/analytics/next';
 import { CONSENT_EVENT, consentCookie, readConsent } from '@/lib/consent.js';
 
@@ -55,6 +56,20 @@ export function CookieConsent() {
     }
     window.dispatchEvent(new Event(CONSENT_EVENT));
   }, []);
+
+  // Time on site: once a minute while this tab is open and visible, only after a yes to measurement.
+  useEffect(() => {
+    if (state !== 'all') return;
+    const beat = () => {
+      if (document.visibilityState !== 'visible') return;
+      const visitorId = usageVisitorId();
+      if (!visitorId) return;
+      void fetch('/api/usage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitorId }), keepalive: true }).catch(() => undefined);
+    };
+    beat();
+    const timer = window.setInterval(beat, 60_000);
+    return () => window.clearInterval(timer);
+  }, [state]);
 
   return (
     <>

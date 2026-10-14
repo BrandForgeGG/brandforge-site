@@ -149,7 +149,7 @@ async function postCarouselToBluesky(handle: string, password: string, images: B
       root = root ?? created;
       parent = created;
     }
-    return { ok: true };
+    return { ok: true, ...(root ? { ref: root.uri } : {}) };
   } catch {
     return { ok: false, note: 'Could not reach Bluesky.' };
   }

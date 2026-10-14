@@ -3,7 +3,9 @@ import { announceChatId } from '@/lib/telegram-announce.js';
 // Sends a finished carousel (PNG images) to a channel. The same helpers serve BrandForge's own weekly
 // calendar and, later, the channels people link themselves. Every send reports plainly what happened
 // and never throws.
-export type PublishResult = { ok: boolean; note?: string };
+// `ref` is the id the network gave the post and `url` its public address when the network says it; lib/post-links.js
+// turns them into the link Distribute lists.
+export type PublishResult = { ok: boolean; note?: string; ref?: string; url?: string };
 
 const BLOB = (bytes: Buffer, type = 'image/png') => new Blob([new Uint8Array(bytes)], { type });
 
@@ -18,7 +20,11 @@ export async function postCarouselToTelegram(chatId: string, images: Buffer[], c
   photos.forEach((bytes, i) => form.append(`slide${i}`, BLOB(bytes), `slide-${i + 1}.png`));
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMediaGroup`, { method: 'POST', body: form, signal: AbortSignal.timeout(50000) });
-    if (res.ok) return { ok: true };
+    if (res.ok) {
+      const data = (await res.json().catch(() => ({}))) as { result?: { message_id?: number }[] };
+      const id = data.result?.[0]?.message_id;
+      return { ok: true, ...(id ? { ref: String(id) } : {}) };
+    }
     const data = (await res.json().catch(() => ({}))) as { description?: string };
     return { ok: false, note: `Telegram said: ${String(data.description ?? res.status).slice(0, 160)}` };
   } catch {

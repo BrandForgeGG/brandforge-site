@@ -38,7 +38,7 @@ const SECTIONS: LegalSection[] = [
     title: '4. Cookies',
     body: [
       'Necessary cookies keep you signed in (Supabase session cookies), keep a guest chat yours (a session cookie) and remember your choice here (bf_consent, six months). They need no consent.',
-      'Measurement is off until you accept: Vercel Analytics counts page views, and our own first-party funnel counts the steps people take (a random id in your browser, never your account or email). Choose Essential only and neither runs. Change your mind any time with the Cookies link in the footer. There are no advertising or cross-site tracking cookies.',
+      'Measurement is off until you accept: Vercel Analytics counts page views, our own first-party funnel counts the steps people take, and a once-a-minute heartbeat counts how long an open, visible tab stays on the site (a random id in your browser; when you are signed in the time is added to your account so you can see it on Explore). Choose Essential only and neither runs. Change your mind any time with the Cookies link in the footer. There are no advertising or cross-site tracking cookies.',
     ],
   },
   {
@@ -66,7 +66,7 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacy Policy"
-      updated="October 12, 2026"
+      updated="October 14, 2026"
       intro="BrandForge is built around conversations, so this policy explains plainly what those conversations contain, who can see them, and how to make them go away."
       sections={SECTIONS}
     />

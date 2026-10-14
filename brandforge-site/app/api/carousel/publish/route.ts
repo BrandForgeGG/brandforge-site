@@ -4,6 +4,7 @@ import { listCarouselChannels, recordFunnelEvent } from '@/lib/project-db';
 import { publishToChannel } from '@/lib/carousel-channels';
 import { sniff } from '@/lib/carousel-fetch.js';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { recordLinks } from '@/lib/publish-links';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -44,8 +45,9 @@ export async function POST(request: NextRequest) {
     const chosen = mine.filter((c) => ids.includes(c.id));
     if (chosen.length === 0) return NextResponse.json({ error: 'Pick a channel to post to.' }, { status: 400 });
 
-    const results: Record<string, { ok: boolean; note?: string }> = {};
+    const results: Record<string, { ok: boolean; note?: string; ref?: string; url?: string }> = {};
     for (const channel of chosen) results[channel.id] = await publishToChannel(channel, images, caption);
+    await recordLinks(user.id, chosen, results, caption);
     void recordFunnelEvent('carousel_published', { signedIn: true, source: 'organic', properties: { status: Object.values(results).every((r) => r.ok) ? 'ok' : 'partial' } }).catch(() => undefined);
     return NextResponse.json({ results });
   } catch (error) {

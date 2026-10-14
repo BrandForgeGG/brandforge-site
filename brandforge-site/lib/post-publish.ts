@@ -24,7 +24,11 @@ async function telegram(chatId: string, method: string, body: Record<string, unk
   if (!chatId) return { ok: false, note: 'No Telegram channel is set.' };
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: chatId, ...body }), signal: AbortSignal.timeout(20000) });
-    if (res.ok) return { ok: true };
+    if (res.ok) {
+      const data = (await res.json().catch(() => ({}))) as { result?: { message_id?: number } };
+      const id = data.result?.message_id;
+      return { ok: true, ...(id ? { ref: String(id) } : {}) };
+    }
     const data = (await res.json().catch(() => ({}))) as { description?: string };
     return { ok: false, note: `Telegram said: ${String(data.description ?? res.status).slice(0, 160)}` };
   } catch {
@@ -111,7 +115,7 @@ export async function postToBluesky(handle: string, password: string, post: Post
       root = root ?? created;
       parent = created;
     }
-    return { ok: true };
+    return { ok: true, ...(root ? { ref: root.uri } : {}) };
   } catch {
     return { ok: false, note: 'Could not reach Bluesky.' };
   }

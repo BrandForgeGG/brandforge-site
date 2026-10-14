@@ -36,10 +36,11 @@ export async function linkMastodon(instanceRaw: string, tokenRaw: string): Promi
   }
 }
 
-async function status(instance: string, token: string, body: Record<string, unknown>): Promise<{ id?: string; error?: string }> {
+async function status(instance: string, token: string, body: Record<string, unknown>): Promise<{ id?: string; url?: string; error?: string }> {
   const res = await call(instance, token, '/api/v1/statuses', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(body) });
   if (!res.ok) return { error: `Mastodon said: ${res.status}` };
-  return { id: ((await res.json()) as { id?: string }).id };
+  const made = (await res.json()) as { id?: string; url?: string };
+  return { id: made.id, url: made.url };
 }
 
 async function upload(instance: string, token: string, bytes: Buffer, name: string): Promise<string | null> {
@@ -75,6 +76,7 @@ export async function postCarouselToMastodon(channel: CarouselChannelRow, secret
   if (!creds) return { ok: false, note: 'The saved login could not be read. Link this channel again.' };
   try {
     let parent: string | undefined;
+    let first: string | undefined;
     for (let start = 0; start < images.length; start += 4) {
       const ids: string[] = [];
       for (const [i, png] of images.slice(start, start + 4).entries()) {
@@ -86,8 +88,9 @@ export async function postCarouselToMastodon(channel: CarouselChannelRow, secret
       const made = await status(creds.instance, creds.token, { status: text, media_ids: ids, visibility: 'public', ...(parent ? { in_reply_to_id: parent } : {}) });
       if (!made.id) return { ok: false, note: made.error ?? 'Mastodon refused the post.' };
       parent = made.id;
+      first = first ?? made.url;
     }
-    return { ok: true };
+    return { ok: true, ...(first ? { url: first } : {}) };
   } catch {
     return { ok: false, note: 'Could not reach that Mastodon server.' };
   }
@@ -102,16 +105,18 @@ export async function postToMastodon(channel: CarouselChannelRow, secret: string
       const made = await status(creds.instance, creds.token, { status: fit(post.question), visibility: 'public', poll: { options: post.options.map((o: string) => o.slice(0, 50)), expires_in: 86400, multiple: false } });
       if (!made.id) return { ok: false, note: made.error ?? 'Mastodon refused the poll.' };
       if (post.type === 'quiz') await status(creds.instance, creds.token, { status: fit(`Answer: ${post.options[post.correct]}${post.explanation ? `. ${post.explanation}` : ''}`), in_reply_to_id: made.id, visibility: 'public' });
-      return { ok: true };
+      return { ok: true, ...(made.url ? { url: made.url } : {}) };
     }
     const parts = post.type === 'thread' ? post.parts.map((part: string, i: number) => `${part}\n\n${i + 1}/${post.parts.length}`) : [post.text];
     let parent: string | undefined;
+    let first: string | undefined;
     for (const part of parts) {
       const made = await status(creds.instance, creds.token, { status: fit(part), visibility: 'public', ...(parent ? { in_reply_to_id: parent } : {}) });
       if (!made.id) return { ok: false, note: made.error ?? 'Mastodon refused the post.' };
       parent = made.id;
+      first = first ?? made.url;
     }
-    return { ok: true };
+    return { ok: true, ...(first ? { url: first } : {}) };
   } catch {
     return { ok: false, note: 'Could not reach that Mastodon server.' };
   }

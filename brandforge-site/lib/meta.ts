@@ -80,8 +80,8 @@ async function facebookPhotos(channel: CarouselChannelRow, token: string, images
     form.append('source', blob(images[0]), 'post.png');
     form.append('message', message);
     form.append('access_token', token);
-    const res = await graph(`/${page}/photos`, { method: 'POST', body: form });
-    return res.ok ? { ok: true } : failure('Facebook', res.data, res.status);
+    const res = await graph<{ id?: string; post_id?: string }>(`/${page}/photos`, { method: 'POST', body: form });
+    return res.ok ? { ok: true, ...(res.data.post_id || res.data.id ? { ref: String(res.data.post_id ?? res.data.id) } : {}) } : failure('Facebook', res.data, res.status);
   }
   const ids: string[] = [];
   for (const png of images.slice(0, 10)) {
@@ -95,8 +95,8 @@ async function facebookPhotos(channel: CarouselChannelRow, token: string, images
   }
   const body = new URLSearchParams({ message, access_token: token });
   ids.forEach((id, i) => body.append(`attached_media[${i}]`, JSON.stringify({ media_fbid: id })));
-  const res = await graph(`/${page}/feed`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString() });
-  return res.ok ? { ok: true } : failure('Facebook', res.data, res.status);
+  const res = await graph<{ id?: string }>(`/${page}/feed`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString() });
+  return res.ok ? { ok: true, ...(res.data.id ? { ref: String(res.data.id) } : {}) } : failure('Facebook', res.data, res.status);
 }
 
 // ---------------- Instagram ----------------
@@ -164,8 +164,10 @@ async function instagramPhotos(channel: CarouselChannelRow, token: string, image
       creation = parent.data.id;
     }
     if (!(await waitFinished(creation, token))) return { ok: false, note: 'Instagram could not process the post. Pictures must be between 4:5 and 1.91:1.' };
-    const published = await graph(`/${ig}/media_publish`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ creation_id: creation, access_token: token }).toString() });
-    return published.ok ? { ok: true } : failure('Instagram', published.data, published.status);
+    const published = await graph<{ id?: string }>(`/${ig}/media_publish`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ creation_id: creation, access_token: token }).toString() });
+    if (!published.ok) return failure('Instagram', published.data, published.status);
+    const link = published.data.id ? await graph<{ permalink?: string }>(`/${published.data.id}?${new URLSearchParams({ fields: 'permalink', access_token: token })}`).catch(() => null) : null;
+    return { ok: true, ...(link?.data.permalink ? { url: link.data.permalink } : {}) };
   } catch {
     return { ok: false, note: 'Could not reach Instagram.' };
   } finally {
@@ -198,8 +200,8 @@ export async function postToMeta(kind: MetaKind, channel: CarouselChannelRow, po
         ? post.parts.map((part: string) => stripMarkup(part)).join('\n\n')
         : `${post.question}\n\n${post.options.map((o: string, i: number) => `${i + 1}. ${o}`).join('\n')}\n\nComment your number.`;
   try {
-    const res = await graph(`/${page}/feed`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ message: message.slice(0, 5000), access_token: token }).toString() });
-    return res.ok ? { ok: true } : failure('Facebook', res.data, res.status);
+    const res = await graph<{ id?: string }>(`/${page}/feed`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ message: message.slice(0, 5000), access_token: token }).toString() });
+    return res.ok ? { ok: true, ...(res.data.id ? { ref: String(res.data.id) } : {}) } : failure('Facebook', res.data, res.status);
   } catch {
     return { ok: false, note: 'Could not reach Facebook.' };
   }

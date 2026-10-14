@@ -6244,3 +6244,44 @@ export async function removeCommunityPost(userId: string, id: string, isAdmin: b
   const { error } = await admin.from('community_posts').update({ hidden: true }).eq('id', id);
   return error ? null : [];
 }
+
+// ---- Published links and time on site (migration 0049: published_posts, usage_days) ----
+export type PublishedPostRow = { id: string; user_id: string; network: string; url: string; caption: string; created_at: string };
+
+/** Keeps the public links a send produced. Best-effort: a failure here never fails the post itself. */
+export async function recordPublishedPosts(userId: string, items: { network: string; url: string; caption: string }[]): Promise<void> {
+  const rows = items.filter((item) => /^https:\/\//.test(item.url)).map((item) => ({ user_id: userId, network: item.network.slice(0, 20), url: item.url.slice(0, 500), caption: item.caption.replace(/\s+/g, ' ').trim().slice(0, 280) }));
+  if (rows.length === 0) return;
+  const admin = createSupabaseAdminClient();
+  if (!admin) return;
+  const { error } = await admin.from('published_posts').insert(rows);
+  if (error) console.error('recordPublishedPosts error:', error.message);
+}
+
+export async function listPublishedPosts(limit = 24): Promise<PublishedPostRow[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const { data, error } = await admin.from('published_posts').select('id, user_id, network, url, caption, created_at').eq('hidden', false).order('created_at', { ascending: false }).limit(Math.min(48, Math.max(1, limit)));
+  if (error) return [];
+  return (data ?? []) as PublishedPostRow[];
+}
+
+export async function usageBeat(visitorId: string, userId: string | null): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return;
+  const { error } = await admin.rpc('usage_beat', { p_visitor: visitorId, p_user: userId });
+  if (error) console.error('usageBeat error:', error.message);
+}
+
+export type UsageSummary = { registered: number; online: number; total_seconds: number; member_seconds: number; members_counted: number; since: string | null; mine: number | null };
+
+export async function usageSummary(userId: string | null): Promise<UsageSummary | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data, error } = await admin.rpc('usage_summary', { p_user: userId });
+  if (error) {
+    console.error('usageSummary error:', error.message);
+    return null;
+  }
+  return data as UsageSummary;
+}
