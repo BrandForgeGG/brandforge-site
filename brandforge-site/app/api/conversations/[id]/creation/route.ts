@@ -49,7 +49,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!messageId) return NextResponse.json({ error: 'Could not add it to the chat. Try again.' }, { status: 500 });
   if (!(await getConversationLink(id))) {
     if (image) {
-      const label = { ad: 'An ad', quote: 'A quote', tip: 'A tip', announcement: 'An announcement', question: 'A poll' }[image.kind];
+      const label = { ad: 'An ad', quote: 'A quote', tip: 'A tip', announcement: 'An announcement', question: 'A poll', cover: 'A story cover', infographic: 'An infographic', offer: 'An offer', event: 'An event', pin: 'A pin' }[image.kind];
       await linkConversation(id, { kind: 'creation', title: image.copy.headline.replace(/\*/g, ''), summary: `${label} about: ${image.topic}` });
     } else if (carousel) {
       await linkConversation(id, { kind: 'creation', title: carousel.plan.cover.headline.replace(/\*/g, ''), summary: `A carousel about: ${carousel.topic}` });

@@ -15,6 +15,11 @@ const SAMPLES: Record<ImageKind, { format: ImageFormat; theme: string; copy: Ima
   tip: { format: 'square', theme: 'paper', copy: { ...base, kicker: 'Quick tip', headline: 'Write the *hook* first', sub: 'The first line decides who reads the rest.' } },
   announcement: { format: 'square', theme: 'sunrise', copy: { ...base, kicker: 'New', headline: 'We just *launched*', sub: 'Here is what changed.', button: 'See it' } },
   question: { format: 'square', theme: 'emerald', copy: { ...base, kicker: 'Poll', headline: 'Morning or *evening*?', options: ['Morning', 'Evening'] } },
+  cover: { format: 'story', theme: 'rose', copy: { ...base, kicker: 'New episode', headline: 'The *one* thing nobody tells you', sub: 'Watch to the end.' } },
+  infographic: { format: 'portrait', theme: 'paper', copy: { ...base, kicker: 'How to', headline: 'Write a post in *3 steps*', options: ['Start with the hook', 'Say one useful thing', 'Ask for one action'] } },
+  offer: { format: 'portrait', theme: 'sunrise', copy: { ...base, kicker: 'Offer', headline: 'Your first month, *on us*', sub: 'Use the code at checkout.', button: 'Claim it' } },
+  event: { format: 'square', theme: 'violet', copy: { ...base, kicker: 'Event', headline: 'Live: build in *public*', sub: 'Your date, time and place here.', button: 'Save your seat' } },
+  pin: { format: 'pin', theme: 'crystal', copy: { ...base, kicker: 'Guide', headline: 'A week of posts in *one hour*', sub: 'The simple plan we use.', button: 'Read it' } },
 };
 
 export function ImageSampleVisual({ kind }: { kind: ImageKind }) {

@@ -1,0 +1,10 @@
+export type VideoFormat = 'short' | 'long' | 'square';
+export type VideoScene = { kind: 'title' | 'point' | 'end'; heading: string; lines: string[]; voice: string; seconds: number };
+export const VIDEO_FORMATS: Record<VideoFormat, { label: string; note: string; w: number; h: number; maxScenes: number; maxSeconds: number }>;
+export const VIDEO_FORMAT_IDS: VideoFormat[];
+export const FPS: number;
+export function readSeconds(text: string): number;
+export function planToScenes(plan: unknown, format: VideoFormat): VideoScene[];
+export function fitToVoice(scenes: VideoScene[], voiceSeconds: number[]): VideoScene[];
+export function totalSeconds(scenes: VideoScene[]): number;
+export function sceneAt(scenes: VideoScene[], t: number): { index: number; local: number; start: number };

@@ -5,7 +5,7 @@ import { trackEvent } from '@/lib/funnel-client';
 import { getSessionUser } from '@/lib/browser-auth';
 import { useLogin } from '@/components/login-dialog';
 import { STYLES as COVER_STYLES } from '@/lib/carousel-cover.js';
-import { FORMATS, FORMAT_IDS, KINDS, KIND_IDS, imageCaption, type ImageCopy, type ImageFormat, type ImageKind } from '@/lib/image-kinds.js';
+import { FORMATS, FORMAT_IDS, KINDS, KIND_IDS, defaultFormat, imageCaption, type ImageCopy, type ImageFormat, type ImageKind } from '@/lib/image-kinds.js';
 import { THEME_LIST, downscale, loadFonts, loadImage, readDraft, type Brand, type Theme } from '@/components/carousel/carousel-shared';
 import { imageFileName, renderImage, saveBlob } from '@/components/image/image-shared';
 import { ShareButton } from '@/components/community/share-button';
@@ -23,7 +23,7 @@ export const imageKey = (conversationId: string | null) => `bf:chat-image:${conv
 
 function freshDraft(kind: ImageKind, topic: string): ImageDraft {
   const saved = readDraft();
-  return { kind, format: kind === 'ad' ? 'portrait' : 'square', topic: topic.slice(0, 500), button: '', theme: saved.theme, coverStyle: saved.coverStyle, brand: saved.brand, copy: null, picture: null, seed: 'start' };
+  return { kind, format: defaultFormat(kind), topic: topic.slice(0, 500), button: '', theme: saved.theme, coverStyle: saved.coverStyle, brand: saved.brand, copy: null, picture: null, seed: 'start' };
 }
 
 function readSaved(key: string): SavedImage | null {
@@ -97,6 +97,11 @@ const kindIcon: Record<ImageKind, string> = {
   tip: 'M10 3.5a4.5 4.5 0 00-2 8.5v1.5h4V12a4.5 4.5 0 00-2-8.5zM8.5 16h3',
   announcement: 'M4 9v3h3l5 3.5v-10L7 9zM15 8.5a3 3 0 010 4',
   question: 'M5 5h10v7H9l-3 3v-3H5z',
+  cover: 'M7 3h6a1 1 0 011 1v12a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1zM8.5 13.5h3',
+  infographic: 'M5 5h1M8 5h7M5 10h1M8 10h7M5 15h1M8 15h7',
+  offer: 'M4 10l6-6h6v6l-6 6zM13 7h.01',
+  event: 'M4 6h12v10H4zM4 9h12M7.5 4v3M12.5 4v3',
+  pin: 'M10 3a4 4 0 014 4c0 3-4 8-4 8s-4-5-4-8a4 4 0 014-4zM10 7h.01',
 };
 
 // The image makers as a conversation, same as the carousel: the AI asks what it is about, you tap the kind,
@@ -326,7 +331,7 @@ export function ImageChatCard({ kind: startKind, topic, userText, storageKey, re
               <p className="mt-4 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Kind</p>
               <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Kind of image">
                 {KIND_IDS.map((id: ImageKind) => (
-                  <button key={id} type="button" onClick={() => patch({ kind: id, format: id === 'ad' && draft.format === 'square' ? 'portrait' : draft.format })} aria-pressed={draft.kind === id} data-tip={KINDS[id].hint} className={`${chip} inline-flex items-center gap-1.5 ${draft.kind === id ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>
+                  <button key={id} type="button" onClick={() => patch({ kind: id, format: defaultFormat(id) })} aria-pressed={draft.kind === id} data-tip={KINDS[id].hint} className={`${chip} inline-flex items-center gap-1.5 ${draft.kind === id ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>
                     <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={kindIcon[id]} /></svg>
                     {KINDS[id].label}
                   </button>

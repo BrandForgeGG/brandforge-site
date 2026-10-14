@@ -4,9 +4,10 @@ const { KIND_IDS, FORMATS, buildImagePrompt, normalizeImageCopy, sanitizeImage, 
 
 const good = { kicker: 'New', headline: 'Stop posting *without* a hook', sub: 'The first line decides if anyone reads the rest.', button: 'Try it free', options: [], scene: 'A desk lamp lighting one handwritten page' };
 
-test('the five makers and four sizes exist', () => {
-  assert.deepEqual(KIND_IDS, ['ad', 'quote', 'tip', 'announcement', 'question']);
-  assert.deepEqual(Object.keys(FORMATS), ['square', 'portrait', 'story', 'wide']);
+test('the ten makers and five sizes exist', () => {
+  assert.deepEqual(KIND_IDS, ['ad', 'quote', 'tip', 'announcement', 'question', 'cover', 'infographic', 'offer', 'event', 'pin']);
+  assert.deepEqual(Object.keys(FORMATS), ['square', 'portrait', 'story', 'wide', 'pin']);
+  assert.equal(FORMATS.pin.h / FORMATS.pin.w, 1.5);
   assert.equal(FORMATS.story.h / FORMATS.story.w, 1920 / 1080);
 });
 
@@ -54,4 +55,27 @@ test('captions read well per kind', () => {
   assert.match(imageCaption(poll), /A\) Tea\nB\) Coffee/);
   const quote = sanitizeImage({ kind: 'quote', copy: { headline: 'Done beats perfect' } });
   assert.equal(imageCaption(quote, 'brandforge.gg'), '"Done beats perfect"\n\nbrandforge.gg');
+});
+
+test('each kind opens at the size it is posted at', () => {
+  const { defaultFormat } = require('./image-kinds.js');
+  assert.equal(defaultFormat('cover'), 'story');
+  assert.equal(defaultFormat('pin'), 'pin');
+  assert.equal(defaultFormat('infographic'), 'portrait');
+  assert.equal(defaultFormat('quote'), 'square');
+});
+
+test('an infographic keeps 3 to 5 points and has no sub line', () => {
+  const { normalizeImageCopy } = require('./image-kinds.js');
+  const ok = normalizeImageCopy({ headline: 'Write a *post*', sub: 'drop me', options: ['One', 'Two', 'Three', 'Four', 'Five', 'Six'] }, 'infographic');
+  assert.equal(ok.ok, true);
+  assert.equal(ok.copy.options.length, 5);
+  assert.equal(ok.copy.sub, '');
+  assert.equal(normalizeImageCopy({ headline: 'Too few points', options: ['One', 'Two'] }, 'infographic').ok, false);
+});
+
+test('offers, events and pins get a button; covers do not', () => {
+  const { normalizeImageCopy } = require('./image-kinds.js');
+  for (const kind of ['offer', 'event', 'pin']) assert.ok(normalizeImageCopy({ headline: 'Something good here' }, kind).copy.button.length > 0, kind);
+  assert.equal(normalizeImageCopy({ headline: 'Something good here', button: 'Tap' }, 'cover').copy.button, '');
 });

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { zipStore } from '@/lib/zip-store.js';
+import { imagesToPdf } from '@/lib/pdf-images.js';
 import { trackEvent } from '@/lib/funnel-client';
 import { getSessionUser } from '@/lib/browser-auth';
 import { STYLES as COVER_STYLES } from '@/lib/carousel-cover.js';
@@ -255,6 +256,26 @@ export function CarouselMaker() {
     }
   }
 
+  // The same slides as one PDF: a slide deck, which LinkedIn and others show as a swipeable document.
+  async function downloadPdf() {
+    setBusy(true);
+    try {
+      const pages: { jpeg: Uint8Array; width: number; height: number }[] = [];
+      for (let i = 0; i < total; i++) {
+        const canvas = document.createElement('canvas');
+        renderSlide(canvas, i, draft, pictures);
+        const jpeg = await new Promise<Blob | null>((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.92));
+        if (jpeg) pages.push({ jpeg: new Uint8Array(await jpeg.arrayBuffer()), width: canvas.width, height: canvas.height });
+      }
+      if (pages.length > 0) {
+        saveFile(new Blob([imagesToPdf(pages) as BlobPart], { type: 'application/pdf' }), 'brandforge-slide-deck.pdf');
+        trackEvent('carousel_downloaded', { source: 'pdf' });
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function saveToAccount() {
     if (!plan) return;
     setBusy(true);
@@ -416,6 +437,7 @@ export function CarouselMaker() {
               {signedIn === null ? null : signedIn ? (
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button type="button" className={btnPrimary} disabled={busy || !fontsReady} onClick={() => void downloadAll()}>Download all (ZIP)</button>
+                  <button type="button" className={btn} disabled={busy || !fontsReady} onClick={() => void downloadPdf()}>Slide deck (PDF)</button>
                   <button type="button" className={btn} disabled={busy || !fontsReady} onClick={() => void downloadOne()}>This slide (PNG)</button>
                   <button type="button" className={btn} disabled={coverBusy} onClick={() => newCover()}>{coverBusy ? 'Painting…' : 'New cover art'}</button>
                   <button type="button" className={btn} disabled={busy} onClick={() => void saveToAccount()}>Save</button>

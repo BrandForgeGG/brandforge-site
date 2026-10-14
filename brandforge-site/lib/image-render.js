@@ -255,7 +255,8 @@ function drawQuestion(ctx, spec, options, art, w, h, k, m) {
 
   brandMark(ctx, theme, options, m, m + 40 * k, 50 * k, 'left');
 
-  const answers = (copy.options || []).slice(0, 4);
+  const numbered = spec.kind === 'infographic';
+  const answers = (copy.options || []).slice(0, numbered ? 5 : 4);
   const cols = wide ? 2 : 1;
   const rows = Math.ceil(answers.length / cols);
   const gap = 22 * k;
@@ -305,21 +306,21 @@ function drawQuestion(ctx, spec, options, art, w, h, k, m) {
     ctx.font = `700 ${Math.round(rowH * 0.34)}px ${BODY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText(String.fromCharCode(65 + i), cx + rowH / 2, cy + rowH / 2 + rowH * 0.12);
+    ctx.fillText(numbered ? String(i + 1) : String.fromCharCode(65 + i), cx + rowH / 2, cy + rowH / 2 + rowH * 0.12);
     ctx.textAlign = 'left';
     ctx.fillStyle = theme.text;
     ctx.font = `600 ${Math.round(rowH * 0.36)}px ${BODY}`;
-    let label = cleanText(answer, 40);
+    let label = cleanText(answer, numbered ? 60 : 40);
     while (label.length > 3 && ctx.measureText(label).width > colW - rowH * 1.3) label = label.slice(0, -2);
     ctx.fillText(label, cx + rowH * 1.05, cy + rowH / 2 + rowH * 0.13);
   });
   ctx.font = `600 ${Math.round(30 * k)}px ${BODY}`;
   ctx.fillStyle = theme.muted;
-  ctx.fillText('Vote in the comments', m, y + listH + 52 * k);
+  ctx.fillText(numbered ? 'Save this for later' : 'Vote in the comments', m, y + listH + 52 * k);
   handleLine(ctx, theme, options, w, h, m, k);
 }
 
-const DRAWERS = { ad: drawAd, announcement: drawAnnouncement, quote: drawQuote, tip: drawTip, question: drawQuestion };
+const DRAWERS = { ad: drawAd, announcement: drawAnnouncement, quote: drawQuote, tip: drawTip, question: drawQuestion, infographic: drawQuestion, cover: drawAnnouncement, offer: drawAd, event: drawAnnouncement, pin: drawAd };
 
 /**
  * Draws one image onto a context that is already sized to sizeOf(spec.format).
