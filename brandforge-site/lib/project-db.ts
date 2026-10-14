@@ -6285,3 +6285,52 @@ export async function usageSummary(userId: string | null): Promise<UsageSummary 
   }
   return data as UsageSummary;
 }
+
+// ---- "Happening now" on Explore (lib/activity-feed.js decides what each line may say) ----
+type ActivityPerson = { email: string | null; role: string | null; username: string | null };
+
+/** The latest of everything people do, as raw rows with who did it, for buildActivity to filter and word. */
+export async function getActivityRows(perKind = 12): Promise<Record<string, Record<string, unknown>[]>> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return {};
+  const n = Math.min(30, Math.max(1, perKind));
+  const pick = async <T,>(query: PromiseLike<{ data: T[] | null; error: unknown }>): Promise<T[]> => {
+    const { data, error } = await query;
+    return error ? [] : (data ?? []);
+  };
+  const [members, chats, carousels, shared, published, listings, applications, contracts] = await Promise.all([
+    pick(admin.from('profiles').select('id, email, role, username, created_at').order('created_at', { ascending: false }).limit(n)),
+    pick(admin.from('conversations').select('user_id, source, created_at').order('created_at', { ascending: false }).limit(n)),
+    pick(admin.from('carousels').select('user_id, created_at').order('created_at', { ascending: false }).limit(n)),
+    pick(admin.from('community_posts').select('user_id, kind, title, image_urls, created_at').eq('hidden', false).order('created_at', { ascending: false }).limit(n)),
+    pick(admin.from('published_posts').select('user_id, network, url, created_at').eq('hidden', false).order('created_at', { ascending: false }).limit(n)),
+    pick(admin.from('trade_listings').select('owner_id, kind, title, created_at').order('created_at', { ascending: false }).limit(n)),
+    pick(admin.from('operator_applications').select('user_id, email, specialty, created_at').order('created_at', { ascending: false }).limit(n)),
+    pick(admin.from('peer_contracts').select('payer_id, payee_id, payer_signed_at, payee_signed_at').not('payer_signed_at', 'is', null).not('payee_signed_at', 'is', null).order('updated_at', { ascending: false }).limit(n)),
+  ]);
+  type Row = Record<string, unknown>;
+  const ids = new Set<string>();
+  for (const row of [...chats, ...carousels, ...shared, ...published, ...applications] as Row[]) if (row.user_id) ids.add(String(row.user_id));
+  for (const row of listings as Row[]) if (row.owner_id) ids.add(String(row.owner_id));
+  for (const row of contracts as Row[]) for (const key of ['payer_id', 'payee_id']) if (row[key]) ids.add(String(row[key]));
+  const people = new Map<string, ActivityPerson>();
+  if (ids.size > 0) {
+    const rows = await pick(admin.from('profiles').select('id, email, role, username').in('id', [...ids].slice(0, 200)));
+    for (const row of rows as Row[]) people.set(String(row.id), { email: (row.email as string) ?? null, role: (row.role as string) ?? null, username: (row.username as string) ?? null });
+  }
+  const names = await getProfileDisplayNames([...ids]);
+  const person = (id: unknown) => (id ? people.get(String(id)) ?? null : null);
+  const later = (a: unknown, b: unknown) => (String(a) > String(b) ? String(a) : String(b));
+  return {
+    joined: (members as Row[]).map((row) => ({ at: row.created_at, actor: { email: row.email, role: row.role, username: row.username } })),
+    chat: (chats as Row[]).map((row) => ({ at: row.created_at, actor: { ...(person(row.user_id) ?? {}), source: row.source ?? null } })),
+    carousel: (carousels as Row[]).map((row) => ({ at: row.created_at, actor: person(row.user_id) })),
+    shared: (shared as Row[]).map((row) => ({ at: row.created_at, actor: person(row.user_id), name: names.get(String(row.user_id)), title: row.title, image: Array.isArray(row.image_urls) ? row.image_urls[0] : undefined, distribute: row.kind === 'distribute' })),
+    published: (published as Row[]).map((row) => ({ at: row.created_at, actor: person(row.user_id), name: names.get(String(row.user_id)), network: row.network, url: row.url })),
+    listing: (listings as Row[]).map((row) => ({ at: row.created_at, actor: person(row.owner_id), name: names.get(String(row.owner_id)), title: row.title, request: row.kind === 'request' })),
+    applied: (applications as Row[]).map((row) => ({ at: row.created_at, actor: { email: row.email, role: person(row.user_id)?.role === 'admin' ? 'admin' : null }, specialty: row.specialty })),
+    contract: (contracts as Row[])
+      .filter((row) => [person(row.payer_id), person(row.payee_id)].every((p) => !p || p.role !== 'admin'))
+      .map((row) => ({ at: later(row.payer_signed_at, row.payee_signed_at), actor: person(row.payer_id) })),
+  };
+}

@@ -1221,3 +1221,9 @@ we do not have.
 **Change:** Create opens on "Latest creations" with the formats folded behind "Choose a format"; "Pick up where you left off" is gone from Create. Distribute opens on "Just published" (real links to posts members sent through BrandForge: Bluesky, Mastodon, Telegram channels, Tumblr, LinkedIn, Facebook, Instagram, Threads) and the community posts, with the week maker behind "Start a week". Explore shows members (35 today), online now, hours spent on BrandForge, average time per member and your own time; time comes from a once-a-minute heartbeat of visible tabs, only for visitors who accepted measurement (privacy policy updated).
 
 **Distribution move:** once a few posts are live, screenshot "Just published" for Discord: "Posts going out from BrandForge right now". Quote the members number from Explore, never round it up.
+
+### 2026-10-14 — "Happening now" shows everything
+
+**Change:** Explore's live feed now covers every kind of activity, newest first, refreshed every 30 seconds: new members, new chats, carousels made, community shares, published posts (linking to the post), Trade listings, applications to the team (craft only) and signed contracts. Public-safe wording: chats never show titles or words, applications never show names, money never appears, and usernames are not shown (one live username was a slur and the content filter did not catch it). Only real people count: staff, throwaway test accounts and test chats are left out.
+
+**Distribution move:** point people at brandforge.gg/explore as proof the place is alive; screenshot the feed for Discord once a day.

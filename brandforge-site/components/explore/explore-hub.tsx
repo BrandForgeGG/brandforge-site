@@ -6,7 +6,19 @@ import { DIRECTION, ROADMAP, STATUS_LABEL, type RoadmapStatus } from '@/lib/road
 import { donateUrl } from '@/lib/locked-channels.js';
 import { UsageStats } from '@/components/explore/usage-stats';
 
-type Activity = { id: string; what: string; title: string; who: string; at: string; href: string; image?: string };
+type Activity = { kind: string; at: string; who: string; text: string; href: string; image?: string; external?: boolean };
+
+// What each kind of line is, in one word and one colour.
+const KIND_LABEL: Record<string, { label: string; tone: string }> = {
+  joined: { label: 'New member', tone: 'bg-trust/15 text-success' },
+  chat: { label: 'Chat', tone: 'bg-overlay text-foreground' },
+  carousel: { label: 'Create', tone: 'bg-ember/15 text-ember' },
+  shared: { label: 'Shared', tone: 'bg-ember/15 text-ember' },
+  published: { label: 'Published', tone: 'bg-trust/15 text-success' },
+  listing: { label: 'Trade', tone: 'bg-overlay text-foreground' },
+  applied: { label: 'Team', tone: 'bg-overlay text-foreground' },
+  contract: { label: 'Contract', tone: 'bg-trust/15 text-success' },
+};
 
 const TONE: Record<RoadmapStatus, string> = {
   live: 'bg-trust/15 text-success',
@@ -30,26 +42,16 @@ export function ExploreHub() {
 
   useEffect(() => {
     let alive = true;
-    const read = async <T,>(url: string): Promise<T | null> => {
-      const res = await fetch(url).catch(() => null);
-      return res && res.ok ? ((await res.json().catch(() => null)) as T | null) : null;
+    const load = async () => {
+      const res = await fetch('/api/activity').catch(() => null);
+      const data = res && res.ok ? ((await res.json().catch(() => null)) as { items?: Activity[] } | null) : null;
+      if (alive) setActivity(data?.items ?? []);
     };
-    void Promise.all([
-      read<{ listings?: { id: string; title: string; ownerName: string; createdAt: string; kind: string; official?: boolean }[] }>('/api/trade'),
-      read<{ posts?: { id: string; title: string; ownerName: string; createdAt: string; images: string[] }[] }>('/api/community?kind=create'),
-      read<{ posts?: { id: string; title: string; ownerName: string; createdAt: string; images: string[] }[] }>('/api/community?kind=distribute'),
-    ]).then(([trade, made, posted]) => {
-      if (!alive) return;
-      const items: Activity[] = [
-        ...(trade?.listings ?? []).filter((row) => !row.official).map((row) => ({ id: `t-${row.id}`, what: row.kind === 'request' ? 'needs' : 'offers', title: row.title, who: row.ownerName, at: row.createdAt, href: '/trade' })),
-        ...(made?.posts ?? []).map((row) => ({ id: `c-${row.id}`, what: 'made', title: row.title || 'a creation', who: row.ownerName, at: row.createdAt, href: '/create', image: row.images[0] })),
-        ...(posted?.posts ?? []).map((row) => ({ id: `d-${row.id}`, what: 'is posting', title: row.title || 'a post', who: row.ownerName, at: row.createdAt, href: '/distribute', image: row.images[0] })),
-      ];
-      items.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
-      setActivity(items.slice(0, 12));
-    });
+    void load();
+    const timer = window.setInterval(() => void load(), 30_000);
     return () => {
       alive = false;
+      window.clearInterval(timer);
     };
   }, []);
 
@@ -73,7 +75,7 @@ export function ExploreHub() {
           <h2 className="font-serif text-xl text-foreground sm:text-2xl">Happening now</h2>
           <span className="flex items-center gap-1.5 text-xs text-muted">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success motion-reduce:animate-none" aria-hidden="true" />
-            From members, live
+            Live, from real members
           </span>
         </div>
         {activity === null ? (
@@ -86,26 +88,39 @@ export function ExploreHub() {
           <p className="mt-3 rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">Quiet right now. List something in Trade or share what you made, and it shows up here.</p>
         ) : (
           <ul className="mt-4 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-panel">
-            {activity.map((item) => (
-              <li key={item.id}>
-                <Link href={item.href} className="flex items-center gap-3 px-4 py-3 transition hover:bg-overlay">
+            {activity.map((item, i) => {
+              const tag = KIND_LABEL[item.kind] ?? { label: item.kind, tone: 'bg-overlay text-muted' };
+              const body = (
+                <>
                   {item.image ? (
                     // eslint-disable-next-line @next/next/no-img-element -- member pictures from our own public bucket
                     <img src={item.image} alt="" loading="lazy" decoding="async" className="h-10 w-10 shrink-0 rounded-lg border border-line object-cover" />
                   ) : (
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-overlay text-xs font-semibold text-muted" aria-hidden="true">
-                      {item.who.slice(0, 1).toUpperCase()}
+                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[10px] font-semibold uppercase ${tag.tone}`} aria-hidden="true">
+                      {tag.label.slice(0, 2)}
                     </span>
                   )}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm text-foreground">
-                      <span className="font-medium">{item.who}</span> <span className="text-muted">{item.what}</span> {item.title}
+                      <span className="font-medium">{item.who}</span> <span className="text-muted">{item.text}</span>
                     </span>
-                    <span className="block text-xs text-muted">{ago(item.at)}</span>
+                    <span className="mt-0.5 flex items-center gap-2 text-xs text-muted">
+                      <span className={`rounded-full px-1.5 py-px text-[10px] font-semibold ${tag.tone}`}>{tag.label}</span>
+                      {ago(item.at)}
+                    </span>
                   </span>
-                </Link>
-              </li>
-            ))}
+                </>
+              );
+              return (
+                <li key={`${item.kind}-${item.at}-${i}`}>
+                  {item.external ? (
+                    <a href={item.href} target="_blank" rel="noopener noreferrer nofollow" className="flex items-center gap-3 px-4 py-3 transition hover:bg-overlay">{body}</a>
+                  ) : (
+                    <Link href={item.href} className="flex items-center gap-3 px-4 py-3 transition hover:bg-overlay">{body}</Link>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
