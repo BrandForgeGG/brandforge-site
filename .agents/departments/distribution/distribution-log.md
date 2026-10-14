@@ -1239,3 +1239,9 @@ we do not have.
 **Change:** Create now makes everything it lists, grouped Images / Video / Text / Documents. New image makers: Story or Reel cover (9:16), Infographic (3 to 5 numbered points), Offer card, Event card and Pin (2:3). Video: short vertical, long widescreen and video carousel, written as scenes by the same AI planner as carousels, each scene editable, previewed live, and encoded to MP4 (H.264, AAC) entirely in the person's browser, free. Optional voice-over from Kokoro, an open-source speech model that runs in the browser (downloads once, English voices). Slide deck: any carousel downloads as one PDF document. Article: a long-form piece (title, sections, closing) to copy or download as Markdown or a web page. Link post opens the update writer. Only Premiere stays "coming" (it is a platform feature we cannot publish through the APIs).
 
 **Distribution move:** make one short video about BrandForge itself with the new maker (with voice-over) and post it as the launch clip: "Type one sentence. Get a video with a voice-over. Free, made in your browser."
+
+### 2026-10-14 — LinkedIn posting fixed (API version)
+
+**Change:** LinkedIn rejected every call because BrandForge sent API version 202506, which LinkedIn retired (it supports each version about a year; the oldest still live is 202511). Now 202609, supported until at least September 2027, with a note to move it forward yearly. The "LinkedIn refused a picture" error was the first call failing.
+
+**Distribution move:** once one picture post lands on LinkedIn, LinkedIn is a real channel in public copy and on Explore ("LinkedIn pictures" moves from Building to Live).

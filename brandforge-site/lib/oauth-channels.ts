@@ -128,7 +128,9 @@ const AGAIN = (label: string): PublishResult => ({ ok: false, note: `${label} ne
 // ---------------- LinkedIn ----------------
 
 const LI = 'https://api.linkedin.com/rest';
-const LI_HEADERS = { 'LinkedIn-Version': '202506', 'X-Restli-Protocol-Version': '2.0.0' };
+// LinkedIn retires each API version about a year after release; a retired version makes every call fail. 202609 is
+// supported until at least September 2027: move it forward once a year (versions: learn.microsoft.com/linkedin/marketing/versioning).
+const LI_HEADERS = { 'LinkedIn-Version': '202609', 'X-Restli-Protocol-Version': '2.0.0' };
 
 async function linkedinUpload(token: string, owner: string, png: Buffer): Promise<string | null> {
   const init = await fetch(`${LI}/images?action=initializeUpload`, { method: 'POST', headers: { ...LI_HEADERS, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ initializeUploadRequest: { owner } }), signal: AbortSignal.timeout(20000) });
