@@ -50,6 +50,7 @@ export function CryptoCheckout({ purpose, refId, title, onClose, onPaid }: { pur
   const [hash, setHash] = useState('');
   const [check, setCheck] = useState<Check | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const paidRef = useRef(false);
 
   useEffect(() => {
     let live = true;
@@ -110,7 +111,10 @@ export function CryptoCheckout({ purpose, refId, title, onClose, onPaid }: { pur
       const data = (await res.json().catch(() => ({}))) as Check & { error?: string };
       if (!res.ok) throw new Error(data.error || 'The payment could not be checked.');
       setCheck(data);
-      if (data.status === 'paid') onPaid?.(data);
+      if (data.status === 'paid' && !paidRef.current) {
+        paidRef.current = true;
+        onPaid?.(data);
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'The payment could not be checked.');
     } finally {
@@ -118,7 +122,46 @@ export function CryptoCheckout({ purpose, refId, title, onClose, onPaid }: { pur
     }
   }
 
-  // While the network confirms it, check again on its own every few seconds.
+  // Watch for the payment while this is open: the server looks on-chain for this invoice's exact amount every 10
+  // seconds, so most people never need to paste anything. It stops once paid or an hour after the invoice expires.
+  const cursorRef = useRef<number | null>(null);
+  const [watching, setWatching] = useState<string | null>(null);
+  useEffect(() => {
+    if (!invoice || paidRef.current) return;
+    cursorRef.current = null;
+    let live = true;
+    let timer = 0;
+    const look = async () => {
+      if (!live || paidRef.current || Date.now() > Date.parse(invoice.expiresAt) + 3_600_000) return;
+      try {
+        const res = await fetchAuthed(`/api/crypto/invoice/${invoice.id}?watch=1${cursorRef.current ? `&cursor=${cursorRef.current}` : ''}`);
+        const data = (await res.json().catch(() => ({}))) as Check & { cursor?: number | null };
+        if (!live) return;
+        if (typeof data.cursor === 'number') cursorRef.current = data.cursor;
+        if (data.status === 'waiting') setWatching(data.note);
+        else if (data.status) {
+          setWatching(null);
+          setCheck(data);
+          if (data.status === 'paid') {
+            paidRef.current = true;
+            onPaid?.(data);
+            return;
+          }
+        }
+      } catch {
+        /* the next look tries again */
+      }
+      if (live) timer = window.setTimeout(() => void look(), 10_000);
+    };
+    timer = window.setTimeout(() => void look(), 4000);
+    return () => {
+      live = false;
+      window.clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one watcher per invoice
+  }, [invoice]);
+
+  // While the network confirms a pasted transaction, check again on its own every few seconds.
   useEffect(() => {
     if (check?.status !== 'confirming') return;
     const timer = window.setTimeout(() => void runCheck(), 8000);
@@ -153,7 +196,7 @@ export function CryptoCheckout({ purpose, refId, title, onClose, onPaid }: { pur
         {paid ? (
           <div className="mt-6 rounded-2xl border border-success/30 bg-success/10 p-4">
             <p className="text-sm font-semibold text-foreground">{check?.note}</p>
-            {check?.done ? <p className="mt-1 text-xs text-muted">Paid through {new Date(check.done).toLocaleDateString()}.</p> : null}
+            {check?.done ? <p className="mt-1 text-xs text-muted">Paid through {new Date(check.done).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}.</p> : null}
             <button type="button" onClick={onClose} className="mt-3 rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-on-ember">Done</button>
           </div>
         ) : (
@@ -213,8 +256,20 @@ export function CryptoCheckout({ purpose, refId, title, onClose, onPaid }: { pur
                 </div>
 
                 <div className="border-t border-line pt-4">
-                  <label htmlFor="crypto-tx" className="text-sm text-foreground">After sending, paste the transaction ID</label>
-                  <p className="text-xs text-muted">In Trust Wallet: open the transfer in your history, then copy its transaction hash.</p>
+                  {!check || check.status === 'missing' ? (
+                    <p className="flex items-center gap-2 text-sm text-foreground" aria-live="polite">
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-ember" aria-hidden="true" />
+                      {watching ?? 'Watching for your payment. This screen updates by itself when it arrives.'}
+                    </p>
+                  ) : (
+                    <p className={`text-sm ${check.status === 'confirming' ? 'text-foreground' : 'text-danger'}`} aria-live="polite">
+                      {check.status === 'confirming' ? <span className="mr-1.5 inline-block h-2 w-2 animate-pulse rounded-full bg-ember align-middle" aria-hidden="true" /> : null}
+                      {check.note}
+                    </p>
+                  )}
+                  <details className="mt-3" open={hash ? true : undefined}>
+                  <summary className="cursor-pointer text-xs text-muted hover:text-foreground">Paid a different amount, or it is taking long? Paste the transaction ID</summary>
+                  <p className="mt-2 text-xs text-muted">In Trust Wallet: open the transfer in your history, then copy its transaction hash.</p>
                   <div className="mt-2 flex gap-2">
                     <input
                       id="crypto-tx"
@@ -231,12 +286,7 @@ export function CryptoCheckout({ purpose, refId, title, onClose, onPaid }: { pur
                       {busy ? 'Checking…' : 'Check'}
                     </button>
                   </div>
-                  {check ? (
-                    <p className={`mt-2 text-sm ${check.status === 'confirming' ? 'text-foreground' : 'text-danger'}`} aria-live="polite">
-                      {check.status === 'confirming' ? <span className="mr-1.5 inline-block h-2 w-2 animate-pulse rounded-full bg-ember align-middle" aria-hidden="true" /> : null}
-                      {check.note}
-                    </p>
-                  ) : null}
+                  </details>
                 </div>
                 <p className="text-xs text-muted">This amount holds until {new Date(invoice.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. A payment sent later still counts if it matches.</p>
               </div>

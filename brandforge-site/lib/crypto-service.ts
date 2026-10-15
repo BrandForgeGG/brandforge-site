@@ -1,12 +1,13 @@
 import { randomInt } from 'node:crypto';
-import { NETWORKS, addressFor, amountFor, enabledNetworks, judgePayment, normalizeTxHash, paymentUri, trustLink, type NetworkId, type PaymentStatus } from '@/lib/crypto-chains.js';
-import { readChainTx } from '@/lib/crypto-verify';
+import { NETWORKS, addressFor, amountFor, enabledNetworks, judgePayment, normalizeTxHash, paymentUri, toUnits, trustLink, type NetworkId, type PaymentStatus } from '@/lib/crypto-chains.js';
+import { findPayment, readChainTx } from '@/lib/crypto-verify';
 import { getPaidPlan } from '@/lib/plans.js';
 import { canSubmitFunding } from '@/lib/money-authz.js';
 import { applyAction } from '@/lib/peer-contract.js';
 import {
   claimCryptoInvoice,
   createCryptoInvoice,
+  findOpenCryptoInvoice,
   cryptoTxUsed,
   extendCryptoPlan,
   getAgreementById,
@@ -22,6 +23,7 @@ import {
 import { completeAgreementFunding } from '@/lib/funding-complete';
 import { announce } from '@/lib/peer-contract-service';
 import { postOpsEvent } from '@/lib/ops-events';
+import { sendStageEmail } from '@/lib/email';
 
 // Crypto checkout, the server part. A payment is priced here from the record it pays for (never from what the browser
 // says), converted to dollars at today's ECB rate, and given a small tag so it can be told apart. Once the member sends
@@ -123,6 +125,9 @@ export async function openInvoice(userId: string, purpose: Purpose, refId: strin
   if (!(cryptoNetworks() as string[]).includes(networkId)) return { ok: false, status: 400, error: 'That network is not available for payments yet.' };
   const priced = await priceFor(purpose, refId, userId);
   if (!priced.ok) return priced;
+  // Reopening the checkout keeps the same payment (and the same amount) while it is still open.
+  const existing = await findOpenCryptoInvoice(userId, purpose, refId, networkId);
+  if (existing && existing.price_cents === priced.cents) return { ok: true, invoice: invoiceView(existing), title: priced.title };
   let rate: number;
   try {
     rate = await usdRate(priced.currency);
@@ -149,7 +154,7 @@ export async function openInvoice(userId: string, purpose: Purpose, refId: strin
 export type CheckResult = { status: PaymentStatus | 'taken' | 'invalid'; note: string; done?: string };
 
 /** Reads a transaction for an invoice and, when it pays in full and is confirmed, delivers what was bought. */
-export async function checkInvoice(row: CryptoInvoiceRow, rawHash: string, userId: string, userName: string): Promise<CheckResult> {
+export async function checkInvoice(row: CryptoInvoiceRow, rawHash: string, userId: string, userName: string, email: string | null = null): Promise<CheckResult> {
   const network = NETWORKS[row.network as NetworkId];
   const hash = normalizeTxHash(rawHash, network);
   if (!hash) return { status: 'invalid', note: 'That does not look like a transaction hash. In Trust Wallet, open the transfer and copy its transaction ID.' };
@@ -169,6 +174,19 @@ export async function checkInvoice(row: CryptoInvoiceRow, rawHash: string, userI
   if (claimed === 'taken') return { status: 'taken', note: 'That transaction has already been used for another payment.' };
   if (claimed !== 'ok') return { status: 'invalid', note: 'This payment could not be recorded. Try again in a moment.' };
 
+  const result = await deliver(row, hash, userId, userName);
+  // A receipt by email for every completed payment (best effort: a failed email never undoes a payment).
+  if (email && row.purpose !== 'test') {
+    const title = row.purpose === 'plan' ? `${getPaidPlan(row.ref_id)?.name ?? 'Plan'}, 30 days` : row.purpose === 'agreement' ? 'Project escrow' : 'Contract funding';
+    const until = result.done ? new Date(result.done).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    await sendStageEmail('crypto_receipt', email, { title, amount: `${row.amount} ${network.symbol}`, network: network.label.replace(/^\S+ on /, ''), txUrl: `${network.explorer}${hash}`, until }).catch(() => undefined);
+  }
+  return result;
+}
+
+/** Hands over what was paid for: the plan's days, the escrow, or the contract funding. */
+async function deliver(row: CryptoInvoiceRow, hash: string, userId: string, userName: string): Promise<CheckResult> {
+  const network = NETWORKS[row.network as NetworkId];
   const label = `${network.symbol} (${network.short})`;
   if (row.purpose === 'test') {
     await postOpsEvent('plan_requested', { title: `Crypto test payment received: ${row.amount} ${label}` });
@@ -197,4 +215,18 @@ export async function checkInvoice(row: CryptoInvoiceRow, rawHash: string, userI
   const saved = await savePeerContract(row.ref_id, verified.contract, found.row.updated_at);
   if (saved.ok) await announce(saved.row, 'funded', { id: userId, name: userName });
   return { status: 'paid', note: 'Payment received. The contract is funded.' };
+}
+
+/**
+ * Watches for an invoice's payment so the member does not have to paste anything: when a transfer of exactly the tagged
+ * amount reaches our address, it is checked like a pasted one and delivered. `cursor` lets each look read only new blocks.
+ */
+export async function watchInvoice(row: CryptoInvoiceRow, userId: string, userName: string, cursor: number | null, email: string | null = null): Promise<CheckResult & { cursor: number | null }> {
+  if (row.status === 'paid') return { status: 'paid', note: 'This payment is already complete.', cursor };
+  const network = NETWORKS[row.network as NetworkId];
+  const found = await findPayment(network.id, row.address, Date.parse(row.created_at), toUnits(row.amount, network.decimals), cursor);
+  if (!found.hash) return { status: 'waiting' as PaymentStatus, note: 'Waiting for your payment. This updates by itself when it arrives.', cursor: found.cursor };
+  // Keep watching from before this block while it confirms, so the same transfer is seen again on the next look.
+  const result = await checkInvoice(row, found.hash, userId, userName, email);
+  return { ...result, cursor: result.status === 'confirming' ? cursor : found.cursor };
 }

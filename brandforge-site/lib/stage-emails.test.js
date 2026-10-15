@@ -221,3 +221,11 @@ test('chat_unclaimed asks the team to claim the chat', () => {
   assert.match(built.text, /claim it/);
   assert.equal(buildStageEmail('chat_unclaimed', { name: 'Omar', message: '' }), null);
 });
+
+test('crypto receipt names the amount, network and transaction', () => {
+  const email = buildStageEmail('crypto_receipt', { title: 'Pro plan, 30 days', amount: '21.3075 USDT', network: 'BNB Smart Chain', txUrl: 'https://bscscan.com/tx/0xabc', until: 'November 14' });
+  assert.equal(email.subject, 'Payment received: Pro plan, 30 days');
+  assert.match(email.text, /21\.3075 USDT on BNB Smart Chain/);
+  assert.match(email.text, /paid through November 14/);
+  assert.match(email.html, /bscscan\.com\/tx\/0xabc/);
+});

@@ -6639,3 +6639,34 @@ export async function extendCryptoPlan(userId: string, plan: string, days = 30):
   }
   return end;
 }
+
+/** An open, unexpired invoice this person already has for the same thing on the same network (reused on reopen). */
+export async function findOpenCryptoInvoice(userId: string, purpose: string, refId: string, network: string): Promise<CryptoInvoiceRow | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data } = await admin
+    .from('crypto_invoices')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('purpose', purpose)
+    .eq('ref_id', refId)
+    .eq('network', network)
+    .eq('status', 'open')
+    .gt('expires_at', new Date(Date.now() + 10 * 60_000).toISOString())
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as CryptoInvoiceRow | null) ?? null;
+}
+
+/** Recent crypto invoices for the admin money view (newest first). */
+export async function listCryptoInvoices(limit = 30): Promise<(CryptoInvoiceRow & { name: string })[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const { data } = await admin.from('crypto_invoices').select('*').order('created_at', { ascending: false }).limit(limit);
+  const rows = (data ?? []) as CryptoInvoiceRow[];
+  const ids = [...new Set(rows.map((row) => row.user_id))];
+  const { data: profiles } = ids.length ? await admin.from('profiles').select('id, username, display_name').in('id', ids) : { data: [] };
+  const names = new Map(((profiles ?? []) as { id: string; username: string | null; display_name: string | null }[]).map((p) => [p.id, p.username || p.display_name || 'member']));
+  return rows.map((row) => ({ ...row, name: names.get(row.user_id) ?? 'member' }));
+}

@@ -176,16 +176,28 @@ function FunnelPanel({ funnel, range, onRange }: { funnel: Overview['funnel']; r
 }
 
 /** Staff only: a 1-dollar payment through the whole crypto checkout, to prove it works end to end. Nothing is bought. */
+type CryptoPayment = { id: string; name: string; purpose: string; amount: string; network: string; price: { cents: number; currency: string }; status: string; txUrl: string | null; createdAt: string; paidAt: string | null };
+
+const PURPOSE_LABEL: Record<string, string> = { plan: 'Plan', agreement: 'Escrow', peer: 'Contract', test: 'Test' };
+
 function CryptoTest() {
   const [networks, setNetworks] = useState<string[] | null>(null);
   const [open, setOpen] = useState(false);
+  const [payments, setPayments] = useState<CryptoPayment[]>([]);
+  const loadPayments = useCallback(() => {
+    void fetchAuthed('/api/admin/crypto')
+      .then((res) => (res.ok ? res.json() : { payments: [] }))
+      .then((data: { payments?: CryptoPayment[] }) => setPayments(data.payments ?? []))
+      .catch(() => undefined);
+  }, []);
   useEffect(() => {
     let live = true;
     void readCryptoNetworks().then((list) => live && setNetworks(list.map((n) => n.short)));
+    loadPayments();
     return () => {
       live = false;
     };
-  }, []);
+  }, [loadPayments]);
   return (
     <Section title="Crypto payments" note={networks === null ? '' : networks.length ? networks.join(', ') : 'Off'}>
       {networks && networks.length === 0 ? (
@@ -196,7 +208,22 @@ function CryptoTest() {
           <button type="button" onClick={() => setOpen(true)} className="rounded-lg border border-line px-3 py-1.5 text-sm text-foreground transition hover:border-ember">Run a 1 dollar test</button>
         </div>
       )}
-      {open ? <CryptoCheckout purpose="test" refId="test" title="Test payment, 1 dollar" onClose={() => setOpen(false)} /> : null}
+      {open ? <CryptoCheckout purpose="test" refId="test" title="Test payment, 1 dollar" onClose={() => { setOpen(false); loadPayments(); }} onPaid={() => loadPayments()} /> : null}
+      {payments.length > 0 ? (
+        <ul className="mt-4 divide-y divide-line">
+          {payments.map((p) => (
+            <li key={p.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2.5 text-sm">
+              <span className="min-w-0">
+                <span className="text-foreground">{p.amount}</span> <span className="text-muted">· {p.network} · {PURPOSE_LABEL[p.purpose] ?? p.purpose} · {p.name}</span>
+              </span>
+              <span className="flex items-center gap-3 text-xs">
+                <span className={p.status === 'paid' ? 'text-success' : 'text-muted'}>{p.status === 'paid' ? `Paid ${new Date(p.paidAt ?? p.createdAt).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : p.status === 'expired' ? 'Not paid' : 'Waiting'}</span>
+                {p.txUrl ? <a href={p.txUrl} target="_blank" rel="noreferrer" className="text-ember underline-offset-2 hover:underline">Transaction</a> : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </Section>
   );
 }

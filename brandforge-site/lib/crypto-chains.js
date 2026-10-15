@@ -23,6 +23,10 @@ const NETWORKS = {
     feeNote: 'The network fee is a few cents, paid in BNB.',
     explorer: 'https://bscscan.com/tx/',
     rpc: ['https://bsc-dataseed.bnbchain.org', 'https://bsc-rpc.publicnode.com', 'https://bsc-dataseed1.defibit.io'],
+    // Searching past blocks for incoming transfers: only some free nodes allow it.
+    logRpc: ['https://bsc-rpc.publicnode.com'],
+    blockSeconds: 0.75,
+    maxLogSpan: 4000,
   },
   'tron-usdt': {
     id: 'tron-usdt',
@@ -37,6 +41,9 @@ const NETWORKS = {
     feeNote: 'The network fee is paid in TRX, usually about 1 to 2 dollars.',
     explorer: 'https://tronscan.org/#/transaction/',
     rpc: ['https://api.trongrid.io'],
+    logRpc: [],
+    blockSeconds: 3,
+    maxLogSpan: 0,
   },
   'base-usdc': {
     id: 'base-usdc',
@@ -52,6 +59,9 @@ const NETWORKS = {
     feeNote: 'The network fee is under a cent, paid in ETH on Base.',
     explorer: 'https://basescan.org/tx/',
     rpc: ['https://mainnet.base.org', 'https://base-rpc.publicnode.com'],
+    logRpc: ['https://base-rpc.publicnode.com'],
+    blockSeconds: 2,
+    maxLogSpan: 4000,
   },
 };
 const NETWORK_IDS = Object.keys(NETWORKS);
@@ -171,6 +181,15 @@ function transfersTo(logs, tokenHex, toHex) {
   return total;
 }
 
+/**
+ * The first transfer in a list that pays exactly `units` (the tagged amount picks out this invoice's payment).
+ * transfers: [{ hash, units: bigint }]. Returns its hash, or null.
+ */
+function exactMatch(transfers, units) {
+  for (const t of Array.isArray(transfers) ? transfers : []) if (t && t.units === units) return t.hash;
+  return null;
+}
+
 /** The 20-byte hex (no 0x) of an address on a network: EVM as is, Tron decoded from base58. */
 function hexOf(networkId, address) {
   const network = NETWORKS[networkId];
@@ -213,4 +232,5 @@ module.exports = {
   transfersTo,
   hexOf,
   judgePayment,
+  exactMatch,
 };

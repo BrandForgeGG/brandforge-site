@@ -1,4 +1,4 @@
-import { NETWORKS, hexOf, transfersTo, type NetworkId } from '@/lib/crypto-chains.js';
+import { NETWORKS, TRANSFER_TOPIC, exactMatch, hexOf, transfersTo, type NetworkId } from '@/lib/crypto-chains.js';
 
 // Reads one transaction from the chain it was sent on: whether it succeeded, how much of our stablecoin it sent to our
 // address, how many blocks have confirmed it and when it happened. Free public endpoints only (each network has more
@@ -82,4 +82,36 @@ export async function readChainTx(networkId: NetworkId, hash: string, ourAddress
   const toHex = hexOf(networkId, ourAddress);
   if (!toHex) throw new Error('No receiving address is set for this network.');
   return NETWORKS[networkId].kind === 'tron' ? tronTx(hash, toHex) : evmTx(networkId, hash, toHex);
+}
+
+/**
+ * Looks for this invoice's payment without the member pasting anything: a transfer of exactly `units` of our token to our
+ * address, sent after `sinceMs`. `cursor` is where the last look stopped (a block number on EVM chains), so each look
+ * only reads new blocks. Returns the transaction hash when found, and the cursor for the next look.
+ */
+export async function findPayment(networkId: NetworkId, ourAddress: string, sinceMs: number, units: bigint, cursor: number | null): Promise<{ hash: string | null; cursor: number | null }> {
+  const network = NETWORKS[networkId];
+  const toHex = hexOf(networkId, ourAddress);
+  if (!toHex) return { hash: null, cursor };
+  if (network.kind === 'tron') {
+    const headers: Record<string, string> = {};
+    const key = String(process.env.TRONGRID_API_KEY ?? '').trim();
+    if (key) headers['TRON-PRO-API-KEY'] = key;
+    const url = `${network.rpc[0]}/v1/accounts/${encodeURIComponent(ourAddress)}/transactions/trc20?only_to=true&only_confirmed=false&limit=50&contract_address=${network.token}&min_timestamp=${Math.max(0, sinceMs - 120_000)}`;
+    const res = await fetch(url, { headers, signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return { hash: null, cursor };
+    const data = (await res.json()) as { data?: { transaction_id?: string; value?: string; to?: string }[] };
+    const list = (data.data ?? []).filter((t) => t.to === ourAddress && /^\d+$/.test(String(t.value))).map((t) => ({ hash: String(t.transaction_id), units: BigInt(String(t.value)) }));
+    return { hash: exactMatch(list, units), cursor };
+  }
+  const latest = Number(BigInt(await rpc<string>(network.logRpc.length ? network.logRpc : network.rpc, 'eth_blockNumber', [])));
+  // First look: back to just before the invoice opened (with a margin), never more than one search span.
+  const start = cursor !== null ? Math.max(0, cursor - 5) : latest - Math.min(network.maxLogSpan, Math.ceil((Date.now() - sinceMs) / 1000 / network.blockSeconds) + 200);
+  const from = Math.max(start, latest - network.maxLogSpan);
+  type Log = { transactionHash: string; data: string };
+  const logs = await rpc<Log[]>(network.logRpc, 'eth_getLogs', [
+    { fromBlock: `0x${from.toString(16)}`, toBlock: `0x${latest.toString(16)}`, address: network.token, topics: [`0x${TRANSFER_TOPIC}`, null, `0x${toHex.padStart(64, '0')}`] },
+  ]);
+  const list = (logs ?? []).filter((log) => /^0x[0-9a-fA-F]{1,64}$/.test(log.data)).map((log) => ({ hash: log.transactionHash, units: BigInt(log.data) }));
+  return { hash: exactMatch(list, units), cursor: latest };
 }

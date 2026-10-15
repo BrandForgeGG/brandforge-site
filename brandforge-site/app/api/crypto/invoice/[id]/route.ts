@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getCryptoInvoice, getProfileDisplayName } from '@/lib/project-db';
-import { checkInvoice, invoiceView } from '@/lib/crypto-service';
+import { checkInvoice, invoiceView, watchInvoice } from '@/lib/crypto-service';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
@@ -17,10 +17,24 @@ async function own(request: NextRequest, id: string) {
   return { user, row } as const;
 }
 
+// GET -> { invoice }. With ?watch=1 (and the cursor from the last answer), also looks on-chain for this invoice's exact
+// amount, so the checkout updates by itself when the payment lands.
 export async function GET(request: NextRequest, { params }: Ctx) {
   const found = await own(request, (await params).id);
   if ('error' in found) return found.error;
-  return NextResponse.json({ invoice: invoiceView(found.row) });
+  const url = new URL(request.url);
+  if (url.searchParams.get('watch') !== '1') return NextResponse.json({ invoice: invoiceView(found.row) });
+  if (!checkRateLimit(`crypto-watch:${found.user.id}`, { limit: 600, windowMs: 3_600_000 }).allowed) {
+    return NextResponse.json({ status: 'waiting', note: 'Waiting for your payment.', cursor: null });
+  }
+  const raw = Number(url.searchParams.get('cursor'));
+  const cursor = Number.isFinite(raw) && raw > 0 ? raw : null;
+  try {
+    return NextResponse.json(await watchInvoice(found.row, found.user.id, await getProfileDisplayName(found.user.id), cursor, found.user.email ?? null));
+  } catch (error) {
+    console.warn('[crypto] watch failed:', error instanceof Error ? error.message : error);
+    return NextResponse.json({ status: 'waiting', note: 'Waiting for your payment.', cursor });
+  }
 }
 
 // POST { txHash } -> { status, note }. Reads the transaction on its chain; when it pays this invoice in full and is
@@ -33,7 +47,7 @@ export async function POST(request: NextRequest, { params }: Ctx) {
   }
   const body = (await request.json().catch(() => ({}))) as { txHash?: unknown };
   try {
-    const result = await checkInvoice(found.row, String(body.txHash ?? ''), found.user.id, await getProfileDisplayName(found.user.id));
+    const result = await checkInvoice(found.row, String(body.txHash ?? ''), found.user.id, await getProfileDisplayName(found.user.id), found.user.email ?? null);
     return NextResponse.json(result);
   } catch (error) {
     console.error('[crypto] check failed:', error instanceof Error ? error.message : error);

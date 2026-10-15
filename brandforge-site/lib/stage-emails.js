@@ -215,6 +215,24 @@ function buildCore(event, details = {}) {
       };
     }
 
+    case 'crypto_receipt': {
+      // A receipt for a crypto payment: what it paid for, how much, on which network, and the transaction to look up.
+      const amount = line(details.amount, 40);
+      const network = line(details.network, 60);
+      const what = title || 'your payment';
+      const tx = typeof details.txUrl === 'string' && /^https:\/\/\S+$/.test(details.txUrl) ? details.txUrl : '';
+      const until = line(details.until, 40);
+      const paragraphs = [
+        `We received ${amount || 'your payment'}${network ? ` on ${network}` : ''} for ${what}. It is confirmed on-chain.`,
+        until ? `Your plan is paid through ${until}. Crypto payments do not renew by themselves; add 30 days from Settings whenever you like.` : 'Thank you. Keep this email as your receipt.',
+      ];
+      return {
+        subject: `Payment received: ${what}`,
+        text: `${paragraphs.join('\n\n')}${tx ? `\n\nTransaction: ${tx}` : ''}`,
+        html: card('Receipt', 'Payment received', paragraphs, tx ? 'View the transaction' : null, tx, undefined, undefined, { facts: [['Amount', amount], ['Network', network], ['For', what]] }),
+      };
+    }
+
     case 'peer_update': {
       const message = line(details.message, 220);
       if (!message) return null;

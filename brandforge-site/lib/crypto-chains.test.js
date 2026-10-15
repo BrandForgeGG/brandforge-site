@@ -65,3 +65,10 @@ test('transaction hashes are normalized per network', () => {
   assert.equal(c.normalizeTxHash(`0x${h}`, c.NETWORKS['tron-usdt']), 'a'.repeat(64));
   assert.equal(c.normalizeTxHash('nope', c.NETWORKS['bsc-usdt']), null);
 });
+
+test('the tagged amount picks out exactly one payment', () => {
+  const list = [{ hash: 'a', units: 21307400n }, { hash: 'b', units: 21307500n }, { hash: 'c', units: 21307500n }];
+  assert.equal(c.exactMatch(list, 21307500n), 'b');
+  assert.equal(c.exactMatch(list, 21300000n), null);
+  assert.equal(c.exactMatch(null, 1n), null);
+});

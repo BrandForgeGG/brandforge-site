@@ -13,8 +13,11 @@ export type Network = {
   feeNote: string;
   explorer: string;
   rpc: string[];
+  logRpc: string[];
+  blockSeconds: number;
+  maxLogSpan: number;
 };
-export type PaymentStatus = 'paid' | 'confirming' | 'failed' | 'wrong' | 'short' | 'early' | 'missing';
+export type PaymentStatus = 'paid' | 'confirming' | 'failed' | 'wrong' | 'short' | 'early' | 'missing' | 'waiting';
 export const NETWORKS: Record<NetworkId, Network>;
 export const NETWORK_IDS: NetworkId[];
 export const TRANSFER_TOPIC: string;
@@ -35,3 +38,4 @@ export function judgePayment(
   tx: { found: boolean; success: boolean; units: bigint; confirmations: number; time: number | null } | null,
   invoice: { network: string; amount: string; createdAt: string }
 ): { status: PaymentStatus; note: string };
+export function exactMatch(transfers: { hash: string; units: bigint }[], units: bigint): string | null;
