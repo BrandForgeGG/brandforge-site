@@ -6570,6 +6570,7 @@ export type CryptoInvoiceRow = {
   price_cents: number;
   currency: string;
   rate: number;
+  coin_price?: number | null;
   address: string;
   status: 'open' | 'paid' | 'expired';
   tx_hash: string | null;

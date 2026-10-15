@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { fetchAuthed } from "@/lib/browser-auth";
 import { formatMoney } from "@/lib/peer-contract.js";
 import type { PeerView } from "@/lib/peer-contract-view";
-import { CryptoCheckout, readCryptoNetworks } from "@/components/crypto-checkout";
+import { CoinStack, CryptoCheckout, readCryptoNetworks } from "@/components/crypto-checkout";
 
 const DEPOSIT_WALLET = process.env.NEXT_PUBLIC_DEPOSIT_WALLET_ADDRESS ?? "";
 
@@ -300,9 +300,9 @@ export function PeerContractCard({ contractId }: { contractId: string }) {
           {cryptoOn ? (
             <>
               <button type="button" disabled={busy} onClick={() => setPaying(true)} className="mt-2 w-full rounded-lg bg-ember px-3 py-2 text-xs font-semibold text-on-ember disabled:opacity-60">
-                Pay {view.totalLabel} with Trust Wallet
+                <span className="inline-flex items-center justify-center gap-2"><CoinStack size={16} /> Pay {view.totalLabel} with crypto</span>
               </button>
-              <p className="mt-1 text-[11px] text-muted">USDT or USDC, confirmed on-chain, and the work can start by itself. Or send another way below.</p>
+              <p className="mt-1 text-[11px] text-muted">Stablecoins or coins from Trust Wallet, confirmed on-chain, and the work can start by itself. Or send another way below.</p>
               {paying ? <CryptoCheckout purpose="peer" refId={contractId} title={`Fund: ${view.title}`} onClose={() => { setPaying(false); void load(); }} onPaid={() => void load()} /> : null}
             </>
           ) : null}

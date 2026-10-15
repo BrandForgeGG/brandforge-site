@@ -1,0 +1,1 @@
+Coin icons: cryptocurrency-icons 0.18.1 (CC0-1.0), https://github.com/spothq/cryptocurrency-icons. base.svg drawn for BrandForge.

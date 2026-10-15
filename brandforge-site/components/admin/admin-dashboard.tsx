@@ -192,7 +192,7 @@ function CryptoTest() {
   }, []);
   useEffect(() => {
     let live = true;
-    void readCryptoNetworks().then((list) => live && setNetworks(list.map((n) => n.short)));
+    void readCryptoNetworks().then((list) => live && setNetworks([...new Set(list.map((n) => n.coin))]));
     loadPayments();
     return () => {
       live = false;
@@ -201,10 +201,10 @@ function CryptoTest() {
   return (
     <Section title="Crypto payments" note={networks === null ? '' : networks.length ? networks.join(', ') : 'Off'}>
       {networks && networks.length === 0 ? (
-        <p className="text-sm text-muted">Off. Set NEXT_PUBLIC_CRYPTO_EVM_ADDRESS (BNB Chain and Base) and NEXT_PUBLIC_CRYPTO_TRON_ADDRESS (Tron) in Vercel to switch them on.</p>
+        <p className="text-sm text-muted">Off. Set the receiving addresses in Vercel (NEXT_PUBLIC_CRYPTO_EVM_ADDRESS, _TRON_, _SOL_, _BTC_, _LTC_) to switch them on.</p>
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-muted">Members pay plans, escrow and contracts in USDT or USDC from Trust Wallet, checked on-chain. Send yourself a 1 dollar test to see it work.</p>
+          <p className="text-sm text-muted">Members pay plans, escrow and contracts in stablecoins or coins from Trust Wallet, checked on-chain. Send yourself a 1 dollar test to see it work.</p>
           <button type="button" onClick={() => setOpen(true)} className="rounded-lg border border-line px-3 py-1.5 text-sm text-foreground transition hover:border-ember">Run a 1 dollar test</button>
         </div>
       )}

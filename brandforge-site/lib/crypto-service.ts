@@ -1,5 +1,5 @@
 import { randomInt } from 'node:crypto';
-import { NETWORKS, addressFor, amountFor, enabledNetworks, judgePayment, normalizeTxHash, paymentUri, toUnits, trustLink, type NetworkId, type PaymentStatus } from '@/lib/crypto-chains.js';
+import { addressFor, amountFor, assetOf, chainOf, enabledAssets, judgePayment, normalizeTxHash, paymentUri, publicAsset, toUnits, trustLink, type Asset, type AssetId, type PaymentStatus, type PublicAsset } from '@/lib/crypto-chains.js';
 import { findPayment, readChainTx } from '@/lib/crypto-verify';
 import { getPaidPlan } from '@/lib/plans.js';
 import { canSubmitFunding } from '@/lib/money-authz.js';
@@ -31,7 +31,34 @@ import { sendStageEmail } from '@/lib/email';
 // contract moves on by itself: no one has to check by hand.
 
 export type Purpose = 'plan' | 'agreement' | 'peer' | 'test';
+// Stablecoin amounts hold for an hour; coins that move hold their price for 30 minutes.
 const INVOICE_MINUTES = 60;
+const VOLATILE_MINUTES = 30;
+
+const coinPrices = new Map<string, { at: number; usd: number }>();
+
+/** Dollars per coin right now: CoinGecko, with Binance as a backup; kept for a minute. */
+export async function coinPrice(asset: Asset): Promise<number> {
+  if (asset.stable || !asset.coingecko) return 1;
+  const hit = coinPrices.get(asset.coingecko);
+  if (hit && Date.now() - hit.at < 60_000) return hit.usd;
+  let usd = NaN;
+  try {
+    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${asset.coingecko}&vs_currencies=usd`, { signal: AbortSignal.timeout(5000) });
+    const data = (await res.json().catch(() => null)) as Record<string, { usd?: number }> | null;
+    usd = Number(data?.[asset.coingecko]?.usd);
+  } catch {
+    /* falls back to Binance */
+  }
+  if (!Number.isFinite(usd) || usd <= 0) {
+    const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${asset.binance}`, { signal: AbortSignal.timeout(5000) });
+    const data = (await res.json().catch(() => null)) as { price?: string } | null;
+    usd = Number(data?.price);
+  }
+  if (!Number.isFinite(usd) || usd <= 0) throw new Error('price unavailable');
+  coinPrices.set(asset.coingecko, { at: Date.now(), usd });
+  return usd;
+}
 
 const rates = new Map<string, { at: number; rate: number }>();
 
@@ -83,69 +110,67 @@ export async function priceFor(purpose: Purpose, refId: string, userId: string):
 
 export type InvoiceView = {
   id: string;
-  network: NetworkId;
-  networkLabel: string;
-  symbol: string;
+  asset: PublicAsset;
   amount: string;
   address: string;
   trustLink: string;
   uri: string;
-  feeNote: string;
   explorer: string;
   expiresAt: string;
   status: CryptoInvoiceRow['status'];
-  price: { cents: number; currency: string; rate: number };
+  price: { cents: number; currency: string; rate: number; coinPrice: number | null };
 };
 
 export function invoiceView(row: CryptoInvoiceRow): InvoiceView {
-  const network = NETWORKS[row.network as NetworkId];
+  const asset = assetOf(row.network) as Asset;
+  const chain = chainOf(asset)!;
   return {
     id: row.id,
-    network: network.id,
-    networkLabel: network.label,
-    symbol: network.symbol,
+    asset: publicAsset(asset.id),
     amount: row.amount,
     address: row.address,
-    trustLink: trustLink(network.id, row.address, row.amount),
-    uri: paymentUri(network.id, row.address, row.amount),
-    feeNote: network.feeNote,
-    explorer: network.explorer,
+    trustLink: trustLink(asset.id, row.address, row.amount),
+    uri: paymentUri(asset.id, row.address, row.amount),
+    explorer: chain.explorer,
     expiresAt: row.expires_at,
     status: row.status,
-    price: { cents: row.price_cents, currency: row.currency, rate: Number(row.rate) },
+    price: { cents: row.price_cents, currency: row.currency, rate: Number(row.rate), coinPrice: row.coin_price ? Number(row.coin_price) : null },
   };
 }
 
-export function cryptoNetworks(): NetworkId[] {
-  return enabledNetworks(process.env as Record<string, string | undefined>);
+export function cryptoAssets(): AssetId[] {
+  return enabledAssets(process.env as Record<string, string | undefined>);
 }
 
-/** Prices a payment and opens an invoice for it on one network. */
-export async function openInvoice(userId: string, purpose: Purpose, refId: string, networkId: string): Promise<{ ok: true; invoice: InvoiceView; title: string } | { ok: false; status: number; error: string }> {
-  if (!(cryptoNetworks() as string[]).includes(networkId)) return { ok: false, status: 400, error: 'That network is not available for payments yet.' };
+/** Prices a payment and opens an invoice for it in one coin on one chain. */
+export async function openInvoice(userId: string, purpose: Purpose, refId: string, assetId: string): Promise<{ ok: true; invoice: InvoiceView; title: string } | { ok: false; status: number; error: string }> {
+  const asset = assetOf(assetId);
+  if (!asset || !(cryptoAssets() as string[]).includes(asset.id)) return { ok: false, status: 400, error: 'That coin is not available for payments yet.' };
   const priced = await priceFor(purpose, refId, userId);
   if (!priced.ok) return priced;
   // Reopening the checkout keeps the same payment (and the same amount) while it is still open.
-  const existing = await findOpenCryptoInvoice(userId, purpose, refId, networkId);
+  const existing = await findOpenCryptoInvoice(userId, purpose, refId, asset.id);
   if (existing && existing.price_cents === priced.cents) return { ok: true, invoice: invoiceView(existing), title: priced.title };
   let rate: number;
+  let price: number;
   try {
-    rate = await usdRate(priced.currency);
+    [rate, price] = await Promise.all([usdRate(priced.currency), coinPrice(asset)]);
   } catch {
-    return { ok: false, status: 503, error: 'Today’s exchange rate could not be read. Try again in a minute.' };
+    return { ok: false, status: 503, error: 'Today’s prices could not be read. Try again in a minute, or pay with USDT or USDC.' };
   }
-  const address = addressFor(networkId, process.env as Record<string, string | undefined>);
+  const address = addressFor(asset.id, process.env as Record<string, string | undefined>);
   const row = await createCryptoInvoice({
     user_id: userId,
     purpose,
     ref_id: refId,
-    network: networkId,
-    amount: amountFor(priced.cents, rate, randomInt(1, 100)),
+    network: asset.id,
+    amount: amountFor(priced.cents, rate, randomInt(1, 100), asset.places, price),
     price_cents: priced.cents,
     currency: priced.currency,
     rate,
+    coin_price: asset.stable ? null : price,
     address,
-    expires_at: new Date(Date.now() + INVOICE_MINUTES * 60_000).toISOString(),
+    expires_at: new Date(Date.now() + (asset.stable ? INVOICE_MINUTES : VOLATILE_MINUTES) * 60_000).toISOString(),
   });
   if (!row) return { ok: false, status: 500, error: 'The payment could not be started. Try again.' };
   return { ok: true, invoice: invoiceView(row), title: priced.title };
@@ -155,14 +180,15 @@ export type CheckResult = { status: PaymentStatus | 'taken' | 'invalid'; note: s
 
 /** Reads a transaction for an invoice and, when it pays in full and is confirmed, delivers what was bought. */
 export async function checkInvoice(row: CryptoInvoiceRow, rawHash: string, userId: string, userName: string, email: string | null = null): Promise<CheckResult> {
-  const network = NETWORKS[row.network as NetworkId];
-  const hash = normalizeTxHash(rawHash, network);
+  const asset = assetOf(row.network) as Asset;
+  const chain = chainOf(asset)!;
+  const hash = normalizeTxHash(rawHash, chain);
   if (!hash) return { status: 'invalid', note: 'That does not look like a transaction hash. In Trust Wallet, open the transfer and copy its transaction ID.' };
   if (row.status === 'paid') return { status: 'paid', note: 'This payment is already complete.' };
   if (await cryptoTxUsed(hash)) return { status: 'taken', note: 'That transaction has already been used for another payment.' };
 
-  const tx = await readChainTx(network.id, hash, row.address);
-  const verdict = judgePayment(tx, { network: network.id, amount: row.amount, createdAt: row.created_at });
+  const tx = await readChainTx(asset.id, hash, row.address);
+  const verdict = judgePayment(tx, { network: asset.id, amount: row.amount, createdAt: row.created_at });
   if (verdict.status !== 'paid') return verdict;
 
   // Still check the thing can take the payment before binding the transaction to it.
@@ -179,15 +205,15 @@ export async function checkInvoice(row: CryptoInvoiceRow, rawHash: string, userI
   if (email && row.purpose !== 'test') {
     const title = row.purpose === 'plan' ? `${getPaidPlan(row.ref_id)?.name ?? 'Plan'}, 30 days` : row.purpose === 'agreement' ? 'Project escrow' : 'Contract funding';
     const until = result.done ? new Date(result.done).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-    await sendStageEmail('crypto_receipt', email, { title, amount: `${row.amount} ${network.symbol}`, network: network.label.replace(/^\S+ on /, ''), txUrl: `${network.explorer}${hash}`, until }).catch(() => undefined);
+    await sendStageEmail('crypto_receipt', email, { title, amount: `${row.amount} ${asset.coin}`, network: chain.name, txUrl: `${chain.explorer}${hash}`, until }).catch(() => undefined);
   }
   return result;
 }
 
 /** Hands over what was paid for: the plan's days, the escrow, or the contract funding. */
 async function deliver(row: CryptoInvoiceRow, hash: string, userId: string, userName: string): Promise<CheckResult> {
-  const network = NETWORKS[row.network as NetworkId];
-  const label = `${network.symbol} (${network.short})`;
+  const asset = assetOf(row.network) as Asset;
+  const label = `${asset.coin} (${chainOf(asset)!.name})`;
   if (row.purpose === 'test') {
     await postOpsEvent('plan_requested', { title: `Crypto test payment received: ${row.amount} ${label}` });
     return { status: 'paid', note: 'Test payment received and confirmed on-chain. Crypto checkout works.' };
@@ -223,8 +249,8 @@ async function deliver(row: CryptoInvoiceRow, hash: string, userId: string, user
  */
 export async function watchInvoice(row: CryptoInvoiceRow, userId: string, userName: string, cursor: number | null, email: string | null = null): Promise<CheckResult & { cursor: number | null }> {
   if (row.status === 'paid') return { status: 'paid', note: 'This payment is already complete.', cursor };
-  const network = NETWORKS[row.network as NetworkId];
-  const found = await findPayment(network.id, row.address, Date.parse(row.created_at), toUnits(row.amount, network.decimals), cursor);
+  const asset = assetOf(row.network) as Asset;
+  const found = await findPayment(asset.id, row.address, Date.parse(row.created_at), toUnits(row.amount, asset.decimals), cursor);
   if (!found.hash) return { status: 'waiting' as PaymentStatus, note: 'Waiting for your payment. This updates by itself when it arrives.', cursor: found.cursor };
   // Keep watching from before this block while it confirms, so the same transfer is seen again on the next look.
   const result = await checkInvoice(row, found.hash, userId, userName, email);

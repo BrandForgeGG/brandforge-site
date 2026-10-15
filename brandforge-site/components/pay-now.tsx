@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { fetchAuthed, getSessionUser } from '@/lib/browser-auth';
-import { CryptoCheckout } from '@/components/crypto-checkout';
+import { CoinStack, CryptoCheckout } from '@/components/crypto-checkout';
 import { trackEvent } from '@/lib/funnel-client';
 import { useLogin } from '@/components/login-dialog';
 
@@ -79,11 +79,12 @@ export function PayNow({ planId, planName, primary = false }: { planId: string; 
           </button>
         ) : null}
         {status.crypto ? (
-          <button type="button" onClick={() => void payCrypto()} className={`${base} ${primary && !status.card ? 'bg-ember text-on-ember hover:opacity-90' : 'border border-line text-foreground hover:border-ember'}`}>
-            Pay with crypto · Trust Wallet
+          <button type="button" onClick={() => void payCrypto()} className={`${base} flex items-center justify-center gap-2 ${primary && !status.card ? 'bg-ember text-on-ember shadow-[0_8px_20px_-10px_var(--ember)] hover:-translate-y-px hover:opacity-95' : 'border border-line text-foreground hover:border-ember'}`}>
+            <CoinStack size={18} />
+            Get {planName} with crypto
           </button>
         ) : null}
-        {status.crypto ? <p className="text-center text-[11px] leading-snug text-muted">USDT or USDC. Each payment adds 30 days.</p> : null}
+        {status.crypto ? <p className="text-center text-[11px] leading-snug text-muted">USDT, USDC, BTC, ETH, SOL and more, from Trust Wallet. Each payment adds 30 days.</p> : null}
         {error ? <p role="alert" className="mt-1.5 text-xs text-danger">{error}</p> : null}
         {crypto ? <CryptoCheckout purpose="plan" refId={planId} title={`${planName}, 30 days`} onClose={() => setCrypto(false)} onPaid={() => { statusRead = null; }} /> : null}
       </div>

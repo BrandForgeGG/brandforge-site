@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAdminAccount, listCryptoInvoices } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
-import { NETWORKS, type NetworkId } from '@/lib/crypto-chains.js';
+import { assetOf, chainOf } from '@/lib/crypto-chains.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,17 +13,18 @@ export async function GET(request: NextRequest) {
   const rows = await listCryptoInvoices(40);
   return NextResponse.json({
     payments: rows.map((row) => {
-      const network = NETWORKS[row.network as NetworkId];
+      const asset = assetOf(row.network);
+      const chain = chainOf(asset);
       return {
         id: row.id,
         name: row.name,
         purpose: row.purpose,
         ref: row.ref_id,
-        amount: `${row.amount} ${network?.symbol ?? ''}`.trim(),
-        network: network?.short ?? row.network,
+        amount: `${row.amount} ${asset?.coin ?? ''}`.trim(),
+        network: asset && chain ? `${asset.coin} · ${chain.name}` : row.network,
         price: { cents: row.price_cents, currency: row.currency },
         status: row.status === 'open' && Date.parse(row.expires_at) < Date.now() ? 'expired' : row.status,
-        txUrl: row.tx_hash && network ? `${network.explorer}${row.tx_hash}` : null,
+        txUrl: row.tx_hash && chain ? `${chain.explorer}${row.tx_hash}` : null,
         createdAt: row.created_at,
         paidAt: row.paid_at,
       };

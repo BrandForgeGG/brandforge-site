@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { embedActions, showsFundingForm } from "@/lib/embed-actions.js";
-import { CryptoCheckout, readCryptoNetworks } from "@/components/crypto-checkout";
+import { CoinStack, CryptoCheckout, readCryptoNetworks } from "@/components/crypto-checkout";
 import { avatarLabel, avatarTone, initialsFor } from "@/lib/identity-display";
 import { isDirectlyReadable } from "@/lib/file-context";
 import { RichContent } from "@/components/rich-content";
@@ -144,9 +144,9 @@ export function FundingForm({
           disabled={disabled}
           className="w-full rounded-lg bg-ember px-3 py-2 text-xs font-semibold text-on-ember disabled:opacity-60"
         >
-          Pay with Trust Wallet (USDT or USDC)
+          <span className="inline-flex items-center justify-center gap-2"><CoinStack size={16} /> Fund the project with crypto</span>
         </button>
-        <p className="mt-1 text-[11px] text-muted">Confirmed on-chain in about a minute, then the project starts by itself.</p>
+        <p className="mt-1 text-[11px] text-muted">USDT, USDC, BTC, ETH, SOL and more, from Trust Wallet. Confirmed on-chain, then the project starts by itself.</p>
         {crypto ? (
           <CryptoCheckout purpose="agreement" refId={agreementId} title="Fund the project" onClose={() => setCrypto(false)} />
         ) : null}
