@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { fetchAuthed } from '@/lib/browser-auth';
+import { fetchAuthed, getSessionUser } from '@/lib/browser-auth';
+import { CryptoCheckout } from '@/components/crypto-checkout';
 import { trackEvent } from '@/lib/funnel-client';
 import { useLogin } from '@/components/login-dialog';
 
@@ -15,14 +16,25 @@ function readStatus(): Promise<Status> {
   return statusRead;
 }
 
-// "Pay now" for a monthly plan. It works once card and crypto payments are both connected; until then it shows locked,
-// says why in one line, and lets the person say they want it (recorded as interest; nothing is charged or collected).
+// "Pay now" for a monthly plan: by card when Stripe is connected, with crypto (stablecoins from Trust Wallet or any wallet,
+// 30 days per payment) when a receiving address is set. With neither it shows locked, says why in one line, and lets the
+// person say they want it (recorded as interest; nothing is charged or collected).
 export function PayNow({ planId, planName, primary = false }: { planId: string; planName: string; primary?: boolean }) {
   const { openLogin } = useLogin();
   const [status, setStatus] = useState<Status | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [noted, setNoted] = useState(false);
+  const [crypto, setCrypto] = useState(false);
+
+  async function payCrypto() {
+    if (!(await getSessionUser().catch(() => null))) {
+      openLogin({ reason: 'signin', next: '/pricing' });
+      return;
+    }
+    trackEvent('plan_interest', { source: `crypto-${planId}` });
+    setCrypto(true);
+  }
 
   useEffect(() => {
     let live = true;
@@ -60,11 +72,20 @@ export function PayNow({ planId, planName, primary = false }: { planId: string; 
 
   if (status.open) {
     return (
-      <div>
-        <button type="button" onClick={() => void pay()} disabled={busy} className={`${base} ${primary ? 'bg-ember text-on-ember hover:opacity-90' : 'border border-line text-foreground hover:border-ember'} disabled:opacity-60`}>
-          {busy ? 'Opening payment…' : `Pay now · ${planName}`}
-        </button>
+      <div className="space-y-1.5">
+        {status.card ? (
+          <button type="button" onClick={() => void pay()} disabled={busy} className={`${base} ${primary ? 'bg-ember text-on-ember hover:opacity-90' : 'border border-line text-foreground hover:border-ember'} disabled:opacity-60`}>
+            {busy ? 'Opening payment…' : `Pay by card · ${planName}`}
+          </button>
+        ) : null}
+        {status.crypto ? (
+          <button type="button" onClick={() => void payCrypto()} className={`${base} ${primary && !status.card ? 'bg-ember text-on-ember hover:opacity-90' : 'border border-line text-foreground hover:border-ember'}`}>
+            Pay with crypto · Trust Wallet
+          </button>
+        ) : null}
+        {status.crypto ? <p className="text-center text-[11px] leading-snug text-muted">USDT or USDC. Each payment adds 30 days.</p> : null}
         {error ? <p role="alert" className="mt-1.5 text-xs text-danger">{error}</p> : null}
+        {crypto ? <CryptoCheckout purpose="plan" refId={planId} title={`${planName}, 30 days`} onClose={() => setCrypto(false)} onPaid={() => { statusRead = null; }} /> : null}
       </div>
     );
   }

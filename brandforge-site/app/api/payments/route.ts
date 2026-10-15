@@ -3,7 +3,6 @@ import {
   getAgreementById,
   getConversationOwnerId,
   submitAgreementFunding,
-  verifyAgreementFunding,
   rejectAgreementFunding,
   releasePaymentToOperator,
   addMessage,
@@ -23,6 +22,7 @@ import { notify } from '@/lib/notify';
 import { notifyFounder } from '@/lib/stage-notify';
 import { postOpsEvent } from '@/lib/ops-events';
 import { canSubmitFunding } from '@/lib/money-authz.js';
+import { completeAgreementFunding } from '@/lib/funding-complete';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 const PAYMENTS_RATE_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 };
@@ -190,35 +190,11 @@ export async function PATCH(request: NextRequest) {
           );
         }
 
-        const result = await verifyAgreementFunding(agreementId);
-        if (!result) {
+        // The same steps as the automatic on-chain check (lib/funding-complete.ts).
+        const done = await completeAgreementFunding(agreement, 'staff');
+        if (!done) {
           return NextResponse.json({ error: 'Failed to verify funding' }, { status: 500 });
         }
-
-        await systemMessage(
-          result.conversationId,
-          'Payment verified on-chain. The project is funded and delivery starts now. BrandForge holds the funds and releases each milestone payment after the founder approves the delivered work.',
-          { type: 'funding', id: agreementId, status: 'funded' }
-        );
-
-        // Verified means the money actually arrived on-chain.
-        await recordFunnelEvent('funding_verified', {
-          signedIn: true,
-          properties: { total_amount: agreement.total_amount, stage: 'deliver' },
-        });
-
-        await notify('payment_verified', { conversationId: agreement.conversation_id });
-
-        await notifyFounder(agreement.conversation_id, 'funding_verified', {});
-
-        // Verified money is the moment the public feed may claim funding: the
-        // staff embed carries the amount, the public line stays outcome-only.
-        await postOpsEvent('escrow_funded', {
-          totalAmount: agreement.total_amount,
-          currency: agreement.currency,
-          conversationId: agreement.conversation_id,
-        });
-        await announceReal('contract_funded', {}, [{ conversationId: agreement.conversation_id }]);
 
         return NextResponse.json({ success: true });
       }

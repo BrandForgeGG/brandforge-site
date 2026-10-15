@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { embedActions, showsFundingForm } from "@/lib/embed-actions.js";
+import { CryptoCheckout, readCryptoNetworks } from "@/components/crypto-checkout";
 import { avatarLabel, avatarTone, initialsFor } from "@/lib/identity-display";
 import { isDirectlyReadable } from "@/lib/file-context";
 import { RichContent } from "@/components/rich-content";
@@ -115,13 +116,42 @@ export function FundingForm({
   messageId,
   disabled,
   onSubmit,
+  agreementId,
 }: {
   messageId: string;
   disabled?: boolean;
   onSubmit: (txHash: string) => void;
+  agreementId?: string;
 }) {
   const [txHash, setTxHash] = useState("");
+  // Paying with crypto is checked on-chain and funds the project by itself; pasting a hash below still goes to staff.
+  const [crypto, setCrypto] = useState(false);
+  const [cryptoOn, setCryptoOn] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void readCryptoNetworks().then((list) => live && setCryptoOn(list.length > 0));
+    return () => {
+      live = false;
+    };
+  }, []);
   return (
+    <>
+    {agreementId && cryptoOn ? (
+      <div className="mt-3">
+        <button
+          type="button"
+          onClick={() => setCrypto(true)}
+          disabled={disabled}
+          className="w-full rounded-lg bg-ember px-3 py-2 text-xs font-semibold text-on-ember disabled:opacity-60"
+        >
+          Pay with Trust Wallet (USDT or USDC)
+        </button>
+        <p className="mt-1 text-[11px] text-muted">Confirmed on-chain in about a minute, then the project starts by itself.</p>
+        {crypto ? (
+          <CryptoCheckout purpose="agreement" refId={agreementId} title="Fund the project" onClose={() => setCrypto(false)} />
+        ) : null}
+      </div>
+    ) : null}
     <form
       className="mt-3 flex w-full flex-wrap gap-2"
       onSubmit={(event) => {
@@ -151,6 +181,7 @@ export function FundingForm({
         Submit for verification
       </button>
     </form>
+    </>
   );
 }
 
@@ -434,6 +465,7 @@ function SystemEmbedCard({
             onSubmit={(txHash) =>
               onEmbedAction?.(embed, "submit_funding", txHash)
             }
+            agreementId={"agreementId" in embed ? String(embed.agreementId ?? "") || undefined : undefined}
           />
         ) : null}
 

@@ -8,6 +8,7 @@ import type { PeerView } from '@/lib/peer-contract-view';
 import type { AdminChatRow, AdminOverview } from '@/lib/project-db';
 import { AdminMembers } from '@/components/admin/admin-members';
 import { AdminEmails } from '@/components/admin/admin-emails';
+import { CryptoCheckout, readCryptoNetworks } from '@/components/crypto-checkout';
 
 type FunnelEvent = { event: string; count: number; previous: number | null };
 type Range = '24h' | '7d' | '30d' | 'all';
@@ -170,6 +171,32 @@ function FunnelPanel({ funnel, range, onRange }: { funnel: Overview['funnel']; r
           ) : null}
         </>
       )}
+    </Section>
+  );
+}
+
+/** Staff only: a 1-dollar payment through the whole crypto checkout, to prove it works end to end. Nothing is bought. */
+function CryptoTest() {
+  const [networks, setNetworks] = useState<string[] | null>(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void readCryptoNetworks().then((list) => live && setNetworks(list.map((n) => n.short)));
+    return () => {
+      live = false;
+    };
+  }, []);
+  return (
+    <Section title="Crypto payments" note={networks === null ? '' : networks.length ? networks.join(', ') : 'Off'}>
+      {networks && networks.length === 0 ? (
+        <p className="text-sm text-muted">Off. Set NEXT_PUBLIC_CRYPTO_EVM_ADDRESS (BNB Chain and Base) and NEXT_PUBLIC_CRYPTO_TRON_ADDRESS (Tron) in Vercel to switch them on.</p>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted">Members pay plans, escrow and contracts in USDT or USDC from Trust Wallet, checked on-chain. Send yourself a 1 dollar test to see it work.</p>
+          <button type="button" onClick={() => setOpen(true)} className="rounded-lg border border-line px-3 py-1.5 text-sm text-foreground transition hover:border-ember">Run a 1 dollar test</button>
+        </div>
+      )}
+      {open ? <CryptoCheckout purpose="test" refId="test" title="Test payment, 1 dollar" onClose={() => setOpen(false)} /> : null}
     </Section>
   );
 }
@@ -390,6 +417,8 @@ export function AdminDashboard() {
       ) : null}
 
       {tab === 'money' ? (
+      <>
+      <CryptoTest />
       <Section title="Contracts" note={contractTodo === 0 ? 'Nothing to do' : `${contractTodo} to do`}>
         {contractTodo === 0 ? <p className="text-sm text-muted">No deposits to check, disputes to decide or payouts to send.</p> : (
           <ul className="divide-y divide-line">
@@ -420,7 +449,7 @@ export function AdminDashboard() {
           </ul>
         )}
       </Section>
-
+      </>
       ) : null}
 
       {tab === 'chats' ? (

@@ -6557,3 +6557,85 @@ export async function storeVoice(key: string, bytes: Uint8Array): Promise<void> 
   const { error } = await admin.storage.from('voice').upload(`${key}.wav`, bytes, { contentType: 'audio/wav', upsert: true });
   if (error) console.warn('storeVoice error:', error.message);
 }
+// ---- Crypto payments (migration 0057: crypto_invoices) ----
+// An invoice is priced by the server and paid on-chain; claiming it binds one transaction to it for good (tx_hash is
+// unique). Service role only, like every money table.
+export type CryptoInvoiceRow = {
+  id: string;
+  user_id: string;
+  purpose: 'plan' | 'agreement' | 'peer' | 'test';
+  ref_id: string;
+  network: string;
+  amount: string;
+  price_cents: number;
+  currency: string;
+  rate: number;
+  address: string;
+  status: 'open' | 'paid' | 'expired';
+  tx_hash: string | null;
+  created_at: string;
+  expires_at: string;
+  paid_at: string | null;
+};
+
+export async function createCryptoInvoice(input: Omit<CryptoInvoiceRow, 'id' | 'status' | 'tx_hash' | 'created_at' | 'paid_at'>): Promise<CryptoInvoiceRow | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data, error } = await admin.from('crypto_invoices').insert(input).select('*').single();
+  if (error) {
+    console.error('createCryptoInvoice error:', error.message);
+    return null;
+  }
+  return data as CryptoInvoiceRow;
+}
+
+export async function getCryptoInvoice(id: string): Promise<CryptoInvoiceRow | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data } = await admin.from('crypto_invoices').select('*').eq('id', id).maybeSingle();
+  return (data as CryptoInvoiceRow | null) ?? null;
+}
+
+/** Binds a transaction to an open invoice. 'taken' when that transaction already paid another invoice. */
+export async function claimCryptoInvoice(id: string, txHash: string): Promise<'ok' | 'taken' | 'closed' | 'failed'> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return 'failed';
+  const { data, error } = await admin
+    .from('crypto_invoices')
+    .update({ tx_hash: txHash, status: 'paid', paid_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('status', 'open')
+    .select('id');
+  if (error) return /duplicate key|unique/i.test(error.message) ? 'taken' : 'failed';
+  return data && data.length ? 'ok' : 'closed';
+}
+
+/** Whether a transaction has already paid any invoice. */
+export async function cryptoTxUsed(txHash: string): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const { data } = await admin.from('crypto_invoices').select('id').eq('tx_hash', txHash).limit(1);
+  return Boolean(data && data.length);
+}
+
+/**
+ * A plan paid in crypto: 30 more days from today, or from the end of the time already paid for, whichever is later.
+ * Stored as a subscription row the AI tier and Settings already read; crypto rows have no card customer.
+ */
+export async function extendCryptoPlan(userId: string, plan: string, days = 30): Promise<string | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const key = `crypto:${userId}`;
+  const { data } = await admin.from('subscriptions').select('current_period_end, plan').eq('stripe_subscription_id', key).maybeSingle();
+  const current = data as { current_period_end: string | null; plan: string } | null;
+  const from = Math.max(Date.now(), current?.current_period_end && current.plan === plan ? Date.parse(current.current_period_end) : 0);
+  const end = new Date(from + days * 86_400_000).toISOString();
+  const { error } = await admin
+    .from('subscriptions')
+    .upsert({ stripe_subscription_id: key, user_id: userId, plan, status: 'active', current_period_end: end, updated_at: new Date().toISOString() }, { onConflict: 'stripe_subscription_id' });
+  if (error) {
+    console.error('extendCryptoPlan error:', error.message);
+    return null;
+  }
+  return end;
+}

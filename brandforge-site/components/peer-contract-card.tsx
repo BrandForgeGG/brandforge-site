@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { fetchAuthed } from "@/lib/browser-auth";
 import { formatMoney } from "@/lib/peer-contract.js";
 import type { PeerView } from "@/lib/peer-contract-view";
+import { CryptoCheckout, readCryptoNetworks } from "@/components/crypto-checkout";
 
 const DEPOSIT_WALLET = process.env.NEXT_PUBLIC_DEPOSIT_WALLET_ADDRESS ?? "";
 
@@ -41,6 +42,16 @@ export function PeerContractCard({ contractId }: { contractId: string }) {
   const [note, setNote] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [tx, setTx] = useState("");
+  // Crypto from Trust Wallet is checked on-chain and funds the contract by itself.
+  const [paying, setPaying] = useState(false);
+  const [cryptoOn, setCryptoOn] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void readCryptoNetworks().then((list) => live && setCryptoOn(list.length > 0));
+    return () => {
+      live = false;
+    };
+  }, []);
   const [proof, setProof] = useState<Record<number, string>>({});
   const [reason, setReason] = useState<Record<number, string>>({});
 
@@ -286,6 +297,15 @@ export function PeerContractCard({ contractId }: { contractId: string }) {
       {view.status === "active" && view.fundingStatus === "none" && side === "payer" ? (
         <div className="mt-3 rounded-xl border border-line p-3">
           <p className="text-xs text-foreground">Fund the contract to start the work.</p>
+          {cryptoOn ? (
+            <>
+              <button type="button" disabled={busy} onClick={() => setPaying(true)} className="mt-2 w-full rounded-lg bg-ember px-3 py-2 text-xs font-semibold text-on-ember disabled:opacity-60">
+                Pay {view.totalLabel} with Trust Wallet
+              </button>
+              <p className="mt-1 text-[11px] text-muted">USDT or USDC, confirmed on-chain, and the work can start by itself. Or send another way below.</p>
+              {paying ? <CryptoCheckout purpose="peer" refId={contractId} title={`Fund: ${view.title}`} onClose={() => { setPaying(false); void load(); }} onPaid={() => void load()} /> : null}
+            </>
+          ) : null}
           {DEPOSIT_WALLET ? (
             <p className="mt-1 break-all text-[11px] text-muted">
               Send {view.totalLabel} to <span className="select-all text-foreground">{DEPOSIT_WALLET}</span>, then paste the transaction reference.

@@ -10,8 +10,9 @@ export const dynamic = 'force-dynamic';
 
 // POST { plan }: start a card payment for a monthly plan (Pro or a team plan). Needs a signed-in account (the plan belongs to someone).
 export async function POST(request: NextRequest) {
-  // Pay now stays locked until card and crypto payments are both connected.
-  if (!paymentStatus().open) return NextResponse.json({ error: 'Payments open soon. Ask for the plan in the chat and we will start you today.', code: 'locked' }, { status: 503 });
+  // Card checkout needs the card keys; crypto has its own checkout (/api/crypto/invoice).
+  const status = paymentStatus();
+  if (!status.open || !status.card) return NextResponse.json({ error: status.crypto ? 'Card payments are not connected yet. Pay with crypto instead.' : 'Payments open soon. Ask for the plan in the chat and we will start you today.', code: 'locked' }, { status: 503 });
   const user = await getAuthenticatedUser(request).catch(() => null);
   if (!user) return NextResponse.json({ error: 'Sign in to subscribe.', code: 'auth' }, { status: 401 });
   if (!checkRateLimit(`checkout:${user.id}`, { limit: 10, windowMs: 60 * 60 * 1000 }).allowed) return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 });
