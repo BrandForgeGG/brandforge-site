@@ -12,7 +12,8 @@ const field = 'w-full rounded-xl border border-line bg-background px-3 py-2.5 te
 // Posting a finished video to YouTube: pick the channel, check the title and description, post now or pick a time
 // (YouTube itself publishes it then). The file goes from this browser into private storage, the server hands it to YouTube,
 // and the stored copy is deleted.
-export function YouTubePost({ blob, defaultTitle, defaultDescription, vertical, seconds, onPosted }: { blob: Blob; defaultTitle: string; defaultDescription: string; vertical: boolean; seconds: number; onPosted?: () => void }) {
+// With keptPath (a video already kept with its chat), nothing is uploaded again and the kept copy stays.
+export function YouTubePost({ blob, keptPath, defaultTitle, defaultDescription, vertical, seconds, onPosted }: { blob?: Blob; keptPath?: string; defaultTitle: string; defaultDescription: string; vertical: boolean; seconds: number; onPosted?: (url?: string) => void }) {
   const { channels, loading } = useChannels(true);
   const youtube = channels.filter((channel) => channel.kind === 'youtube');
   const [picked, setPicked] = useState<string[]>([]);
@@ -27,24 +28,29 @@ export function YouTubePost({ blob, defaultTitle, defaultDescription, vertical, 
     if (busy || chosen.length === 0) return;
     setOutcome(null);
     try {
-      setBusy('Uploading the video…');
-      const slot = await fetchAuthed('/api/video/upload-url', { method: 'POST' });
-      const slotData = (await slot.json().catch(() => ({}))) as { path?: string; token?: string; error?: string };
-      if (!slot.ok || !slotData.path || !slotData.token) throw new Error(slotData.error || 'Could not prepare the upload.');
-      const { error: uploadError } = await supabase.storage.from('videos').uploadToSignedUrl(slotData.path, slotData.token, blob, { contentType: 'video/mp4' });
-      if (uploadError) throw new Error('The video did not upload. Check your connection and try again.');
+      let path = keptPath ?? '';
+      if (!path) {
+        if (!blob) throw new Error('There is no video to post yet.');
+        setBusy('Uploading the video…');
+        const slot = await fetchAuthed('/api/video/upload-url', { method: 'POST' });
+        const slotData = (await slot.json().catch(() => ({}))) as { path?: string; token?: string; error?: string };
+        if (!slot.ok || !slotData.path || !slotData.token) throw new Error(slotData.error || 'Could not prepare the upload.');
+        const { error: uploadError } = await supabase.storage.from('videos').uploadToSignedUrl(slotData.path, slotData.token, blob, { contentType: 'video/mp4' });
+        if (uploadError) throw new Error('The video did not upload. Check your connection and try again.');
+        path = slotData.path;
+      }
       setBusy('Sending it to YouTube…');
       const res = await fetchAuthed('/api/video/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: slotData.path, channelIds: chosen, title, description, publishAt: when ? new Date(when).toISOString() : null, vertical, seconds }),
+        body: JSON.stringify({ path, channelIds: chosen, title, description, publishAt: when ? new Date(when).toISOString() : null, vertical, seconds }),
       });
       const data = (await res.json().catch(() => ({}))) as { results?: Record<string, { ok: boolean; note?: string; url?: string }>; error?: string };
       if (!res.ok || !data.results) throw new Error(data.error || 'Could not post the video.');
       const results = Object.values(data.results);
       const good = results.find((result) => result.ok);
       if (good) {
-        onPosted?.();
+        onPosted?.(good.url);
         setOutcome({ ok: true, text: when ? `Uploaded. YouTube publishes it on ${new Date(when).toLocaleString()}.${good.note ? ` ${good.note}` : ''}` : `Posted to YouTube.${good.note ? ` ${good.note}` : ''}`, url: good.url });
         trackEvent('carousel_published', { status: when ? 'youtube-scheduled' : 'youtube' });
       } else {

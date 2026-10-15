@@ -4,6 +4,7 @@ import { downloadVideo, listCarouselChannels, recordPublishedPosts, removeVideo 
 import { uploadToYouTube } from '@/lib/youtube';
 import { screenText } from '@/lib/content-policy.js';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { isKeptPath } from '@/lib/video-embed.js';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,7 +21,9 @@ export async function POST(request: NextRequest) {
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
     const path = String(body.path ?? '');
     // Only a file in this person's own folder, named the way the upload address names it.
-    if (!new RegExp(`^${user.id}/[0-9a-f-]{36}\\.mp4$`).test(path)) return NextResponse.json({ error: 'Unknown video.' }, { status: 400 });
+    // A kept file (the video's copy in its chat) is sent as is and stays; a one-off upload is removed once sent.
+    const kept = isKeptPath(path, user.id);
+    if (!kept && !new RegExp(`^${user.id}/[0-9a-f-]{36}\\.mp4$`).test(path)) return NextResponse.json({ error: 'Unknown video.' }, { status: 400 });
     const title = String(body.title ?? '').slice(0, 100);
     const description = String(body.description ?? '').slice(0, 4900);
     const screened = screenText(`${title}\n${description}`);
@@ -34,7 +37,7 @@ export async function POST(request: NextRequest) {
     const publishAt = typeof body.publishAt === 'string' && !Number.isNaN(Date.parse(body.publishAt)) ? body.publishAt : null;
     const results: Record<string, { ok: boolean; note?: string; url?: string }> = {};
     for (const channel of chosen) results[channel.id] = await uploadToYouTube(channel, { bytes, title, description, publishAt, vertical: Boolean(body.vertical), seconds: Number(body.seconds) || 0 });
-    await removeVideo(path);
+    if (!kept) await removeVideo(path);
     await recordPublishedPosts(user.id, chosen.filter((channel) => results[channel.id]?.ok && results[channel.id]?.url).map((channel) => ({ network: 'youtube', url: results[channel.id].url as string, caption: title }))).catch(() => undefined);
     return NextResponse.json({ results });
   } catch (error) {

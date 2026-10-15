@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { trackEvent } from '@/lib/funnel-client';
 import { articleMarkdown, articleText, wordCount, type Article } from '@/lib/article.js';
 import { useAutosave, useDraft } from '@/components/drafts/use-draft';
+import { postArticleToChat, type ChatTarget } from '@/components/chat/post-creation';
 
 type ArticleState = { topic: string; audience: string; length: 'short' | 'normal' | 'long'; article: Article | null };
 
@@ -25,7 +26,8 @@ function escape(text: string): string {
 
 // Article on Create: a topic in, a long-form piece out (title, sections, closing), to copy into LinkedIn, a blog or a
 // newsletter, or to download as Markdown or a web page.
-export function ArticleMaker({ draftId, onDraftId }: { draftId?: string; onDraftId?: (id: string) => void } = {}) {
+// In a chat (chat set), each written article is saved into that chat as a new version.
+export function ArticleMaker({ draftId, onDraftId, chat }: { draftId?: string; onDraftId?: (id: string) => void; chat?: ChatTarget } = {}) {
   const [topic, setTopic] = useState('');
   const [audience, setAudience] = useState('');
   const [length, setLength] = useState<'short' | 'normal' | 'long'>('normal');
@@ -38,7 +40,8 @@ export function ArticleMaker({ draftId, onDraftId }: { draftId?: string; onDraft
   // Reopening a draft gives back the topic and the article as it was.
   useEffect(() => {
     let live = true;
-    void draft.load().then((saved) => {
+    const opening: Promise<{ state?: unknown } | null> = chat?.initialState ? Promise.resolve({ state: chat.initialState }) : draft.load();
+    void opening.then((saved) => {
       const s = saved?.state as ArticleState | null | undefined;
       if (!live || !s) return;
       setTopic(s.topic);
@@ -49,7 +52,7 @@ export function ArticleMaker({ draftId, onDraftId }: { draftId?: string; onDraft
     return () => {
       live = false;
     };
-  }, [draft]);
+  }, [draft, chat?.initialState]);
 
   // Once written, the article is kept as a draft, so a refresh never loses it.
   const draftState: ArticleState = { topic, audience, length, article };
@@ -69,6 +72,11 @@ export function ArticleMaker({ draftId, onDraftId }: { draftId?: string; onDraft
       if (!res.ok || !data.article) throw new Error(data.error || 'The article could not be written. Try again.');
       setArticle(data.article);
       trackEvent('create_interest', { status: 'article' });
+      if (chat) {
+        await postArticleToChat(chat.conversationId, { article: data.article, topic: topic.trim(), audience: audience.trim(), length });
+        await draft.remove();
+        chat.onPosted();
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'The article could not be written.');
     } finally {

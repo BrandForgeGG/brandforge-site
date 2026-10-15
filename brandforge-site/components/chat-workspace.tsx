@@ -29,6 +29,8 @@ import { ImageChatCard, SavedImageCard, clearSavedImage, imageKey, seedImageCard
 import type { ImageKind } from "@/lib/image-kinds.js";
 import { RoleBadge } from "@/components/role-badge";
 import { detectMakeIntent } from "@/lib/make-intent";
+import { MakerChatCard, OPEN_MAKER_EVENT, clearMakerSeed, isMakerKind, readMakerSeed, seedMakerCard, type MakerKind } from "@/components/chat/maker-chat-card";
+import { CreationChatContext } from "@/components/chat/creation-context";
 import { getRetainer } from "@/lib/plans.js";
 import { PeerContractForm } from "@/components/peer-contract-card";
 import { extractOutline } from "@/lib/deliverable-outline";
@@ -285,6 +287,8 @@ export function ChatWorkspace() {
   // The command tag in the message box (Make a carousel, Plan my idea, ...), or none.
   const [activeCommand, setActiveCommand] = useState<ChatCommand | null>(null);
   const carouselKey = useRef(0);
+  // A video or article maker working in this chat (opened by asking for one, from Create, or by Edit on a version).
+  const [makerChat, setMakerChat] = useState<{ kind: MakerKind; state?: unknown; key: number } | null>(null);
   // What this chat is the main assistant for (a listing, something made here), if anything.
   const [goalLink, setGoalLink] = useState<{ conversationId: string; kind: string; title: string } | null>(null);
   const [carouselChat, setCarouselChat] = useState<{ topic: string; userText: string | null; key: number } | null>(null);
@@ -1351,6 +1355,21 @@ export function ChatWorkspace() {
 
   // The carousel is sent: it joins the chat as a message with its own date. A brand-new chat is started with it.
   // Returns an error message for the card to show, or null when it went through.
+  // A chat started from Create opens with its maker waiting; Edit on a version reopens the maker on that version.
+  useEffect(() => {
+    const seeded = readMakerSeed(conversationId);
+    setMakerChat(seeded ? { kind: seeded, key: ++carouselKey.current } : null);
+  }, [conversationId]);
+  useEffect(() => {
+    const open = (event: Event) => {
+      const detail = (event as CustomEvent<{ kind?: unknown; state?: unknown }>).detail;
+      if (!detail || !isMakerKind(detail.kind)) return;
+      setMakerChat({ kind: detail.kind, state: detail.state, key: ++carouselKey.current });
+      window.setTimeout(() => scrollToBottom(true), 50);
+    };
+    window.addEventListener(OPEN_MAKER_EVENT, open);
+    return () => window.removeEventListener(OPEN_MAKER_EVENT, open);
+  }, [scrollToBottom]);
   const sendCarousel = useCallback(async (payload: CarouselSend | ImageSend): Promise<string | null> => {
     try {
       const request = railMeta.userId ? fetchAuthed : fetch;
@@ -1447,6 +1466,49 @@ export function ChatWorkspace() {
   }, [conversationId, railMeta.userId, refreshMessages, router, scrollToBottom]);
 
 
+  // Opens a video or article maker in the chat. In a brand-new chat, the words start the chat and the maker waits in it.
+  const openMakerInChat = useCallback(async (words: string, kind: MakerKind) => {
+    const typed = words.trim();
+    if (!conversationId) {
+      try {
+        const started = await (railMeta.userId ? fetchAuthed : fetch)("/api/conversations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ initialMessage: typed, ...(railMeta.userId ? {} : { guest: true }) }),
+        });
+        const startedData = await started.json().catch(() => ({}));
+        if (started.ok && startedData.conversationId) {
+          try {
+            window.sessionStorage.setItem(`bf:no-auto-answer:${startedData.conversationId}`, "1");
+          } catch {
+            /* storage blocked: the AI may answer the first message as well */
+          }
+          seedMakerCard(startedData.conversationId as string, kind);
+          router.push(`/chat?conversationId=${startedData.conversationId}`);
+          return;
+        }
+      } catch {
+        /* fall through: nothing to open without a chat */
+      }
+      setError("Could not start the chat. Try again.");
+      return;
+    }
+    if (typed) {
+      try {
+        const response = await (railMeta.userId ? fetchAuthed : fetch)(`/api/conversations/${conversationId}/say`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: typed }),
+        });
+        if (response.ok) await refreshMessages(conversationId);
+      } catch {
+        /* the maker still opens */
+      }
+    }
+    seedMakerCard(conversationId, kind);
+    setMakerChat({ kind, key: ++carouselKey.current });
+    window.setTimeout(() => scrollToBottom(true), 50);
+  }, [conversationId, railMeta.userId, refreshMessages, router, scrollToBottom]);
   const handleSend = useCallback(
     async (suggestion?: string) => {
       const checkedText = validateMessageInput((suggestion ?? input).trim());
@@ -1502,9 +1564,15 @@ export function ChatWorkspace() {
       }
       // Asking for a carousel in plain words opens the maker as a card too, instead of sending it to the AI.
       const wantsCarousel = !attachment && suggestion === undefined ? detectMakeIntent(text) : null;
-      if (wantsCarousel) {
+      if (wantsCarousel && isMakerKind(wantsCarousel.kind)) {
         setInput("");
-        await openCarouselCard(text, wantsCarousel.topic, wantsCarousel.kind === "carousel" ? undefined : wantsCarousel.kind);
+        await openMakerInChat(text, wantsCarousel.kind);
+        trackEvent("next_step_clicked", { source: `${wantsCarousel.kind}_chat_intent` });
+        return;
+      }
+      if (wantsCarousel && !isMakerKind(wantsCarousel.kind)) {
+        setInput("");
+        await openCarouselCard(text, wantsCarousel.topic, wantsCarousel.kind === "carousel" ? undefined : (wantsCarousel.kind as ImageKind));
         trackEvent("next_step_clicked", { source: wantsCarousel.kind === "carousel" ? "carousel_chat_intent" : "image_chat_intent" });
         return;
       }
@@ -1730,6 +1798,7 @@ export function ChatWorkspace() {
       activeCommand,
       activePlan,
       openCarouselCard,
+      openMakerInChat,
       aiAccess,
       aiEnabled,
       isChatOwner,
@@ -2834,6 +2903,7 @@ return (
                   </button>
                 </div>
               ) : null}
+            <CreationChatContext.Provider value={{ conversationId, isOwner: isChatOwner, onChanged: () => { if (conversationId) void refreshMessages(conversationId); } }}>
             <ChatTranscript
                messages={messages}
               conversationId={conversationId}
@@ -2923,12 +2993,30 @@ return (
                 requestAnimationFrame(() => composerRef.current?.focus());
               }}
             />
+            </CreationChatContext.Provider>
             </>
           )}
           {carouselChat ? (
             <CarouselChatCard key={carouselChat.key} topic={carouselChat.topic} userText={carouselChat.userText} storageKey={cardKey(conversationId)} restore={false} onSend={sendCarousel} onClose={() => setCarouselChat(null)} />
           ) : conversationId ? (
             <SavedCardOrFallback storageKey={cardKey(conversationId)} hide={false} fallback={null} onSend={sendCarousel} />
+          ) : null}
+          {makerChat && conversationId ? (
+            <MakerChatCard
+              key={makerChat.key}
+              conversationId={conversationId}
+              kind={makerChat.kind}
+              state={makerChat.state}
+              onPosted={() => {
+                clearMakerSeed(conversationId);
+                setMakerChat(null);
+                void refreshMessages(conversationId).then(() => scrollToBottom(true));
+              }}
+              onClose={() => {
+                clearMakerSeed(conversationId);
+                setMakerChat(null);
+              }}
+            />
           ) : null}
           {imageChat ? (
             <ImageChatCard key={imageChat.key} kind={imageChat.kind} topic={imageChat.topic} userText={imageChat.userText} storageKey={imageKey(conversationId)} restore={false} onSend={sendCarousel} onClose={() => setImageChat(null)} />

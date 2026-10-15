@@ -3,7 +3,12 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { trackEvent } from '@/lib/funnel-client';
-import { getSessionUser } from '@/lib/browser-auth';
+import { fetchAuthed, getSessionUser } from '@/lib/browser-auth';
+import { useRouter } from 'next/navigation';
+import { isMakerKind, seedMakerCard } from '@/components/chat/maker-chat-card';
+import { seedCarouselCard } from '@/components/chat/carousel-chat-card';
+import { seedImageCard } from '@/components/chat/image-chat-card';
+import { CreationsList } from '@/components/studio/creations-list';
 import { useLogin } from '@/components/login-dialog';
 import { CarouselMaker } from '@/components/carousel/carousel-maker';
 import { PostComposer } from '@/components/carousel/post-composer';
@@ -63,6 +68,9 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
   const [building, setBuilding] = useState(embedded);
   // The draft the maker was opened on (from the list, or from the address after a refresh).
   const [openedDraft, setOpenedDraft] = useState<string | null>(null);
+  const router = useRouter();
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   // The formats stay folded away until someone wants to make something; the page opens on what members are making.
@@ -142,6 +150,39 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
     }
   }
 
+  // Carousels, pictures, videos and articles are made in a chat of their own: the chat is the creation's draft and
+  // history, where every version lands and can be changed. Create starts that chat with the maker already open in it.
+  const madeInChat = (kind: Kind) => kind === 'carousel' || kind.startsWith('image-') || isMakerKind(kind);
+  async function startInChat(card: Card) {
+    if (starting) return;
+    setStarting(true);
+    setStartError(null);
+    try {
+      const signed = Boolean(await getSessionUser().catch(() => null));
+      const res = await (signed ? fetchAuthed : fetch)('/api/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initialMessage: `Make a ${card.name.toLowerCase()}`, ...(signed ? {} : { guest: true }) }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { conversationId?: string; error?: string };
+      if (!res.ok || !data.conversationId) throw new Error(data.error || 'Could not start the chat. Try again.');
+      const id = data.conversationId;
+      try {
+        window.sessionStorage.setItem(`bf:no-auto-answer:${id}`, '1');
+      } catch {
+        /* the AI may answer the first line as well */
+      }
+      if (isMakerKind(card.id)) seedMakerCard(id, card.id);
+      else if (card.id === 'carousel') seedCarouselCard(id, carried);
+      else seedImageCard(id, carried, card.id.slice(6) as ImageKind);
+      trackEvent('next_step_clicked', { source: `create-${card.id}` });
+      router.push(`/chat?conversationId=${id}`);
+    } catch (cause) {
+      setStartError(cause instanceof Error ? cause.message : 'Could not start the chat. Try again.');
+      setStarting(false);
+    }
+  }
+
   const labelOf = (kind: string) => CARDS.find((card) => card.id === kind)?.name ?? 'Draft';
 
   function vote(creation: Format) {
@@ -181,11 +222,13 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
                 <p className="font-serif text-lg text-foreground">{current.name}</p>
                 <p className="text-sm text-muted">{current.line}</p>
               </div>
-              <button type="button" onClick={() => setBuilding(true)} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">
-                Start making
+              <button type="button" onClick={() => (madeInChat(current.id) ? void startInChat(current) : setBuilding(true))} disabled={starting} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
+                {starting ? 'Opening a chat…' : 'Start making'}
               </button>
             </div>
-            <DraftsList kind={current.id} labelOf={labelOf} onOpen={(draft) => show(draft.kind as Kind, { draft: draft.id, build: true })} title="Your drafts" />
+            {startError ? <p role="alert" className="text-sm text-danger">{startError}</p> : null}
+            {madeInChat(current.id) ? <CreationsList card={current.id} title={`Your ${current.name.toLowerCase()}s`} /> : null}
+            <DraftsList kind={current.id} labelOf={labelOf} onOpen={(draft) => show(draft.kind as Kind, { draft: draft.id, build: true })} title="On this device" />
           </div>
         )}
       </div>
@@ -205,7 +248,8 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
           </button>
         </div>
       )}
-      {embedded ? null : <DraftsList labelOf={labelOf} onOpen={(draft) => show(draft.kind as Kind, { draft: draft.id, build: true })} />}
+      {embedded ? null : <CreationsList />}
+      {embedded ? null : <DraftsList labelOf={labelOf} onOpen={(draft) => show(draft.kind as Kind, { draft: draft.id, build: true })} title="On this device" />}
       {embedded || picking ? (
       <div className="space-y-10">
       <section aria-label="What do you want to make?">

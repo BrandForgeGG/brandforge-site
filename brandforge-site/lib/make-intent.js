@@ -5,6 +5,12 @@
 // or "quote/tip/poll" followed by an image word, so "write a quote for the client" or "create a poll for my
 // newsletter readers" never open a maker by accident.
 const KINDS = [
+  // Videos and articles open their maker in the chat too.
+  ['video-launch', /\b(?:launch|promo|product)\s+(?:videos?|films?|trailers?)\b|\bpromo\s+clips?\b/i],
+  ['video-long', /\b(?:long|youtube|widescreen|explainer)\s+videos?\b/i],
+  ['video-square', /\bvideo\s+carousels?\b|\bsquare\s+videos?\b/i],
+  ['video-short', /\b(?:videos?|reels?|shorts|tiktoks?)\b/i],
+  ['article', /\b(?:articles?|blog\s+posts?)\b/i],
   ['carousel', /\b(carousels?|slides?|slideshow)\b/i],
   ['ad', /\b(?:ads?|adverts?|advertisements?)\b/i],
   ['quote', /\bquote\s+(?:cards?|images?|graphics?|posts?)\b/i],

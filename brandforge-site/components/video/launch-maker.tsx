@@ -11,6 +11,7 @@ import { drawLaunchFrame, loadLaunchFonts, type LaunchLook, type LaunchMedia } f
 import { VOICES, clipsFor, layTrack, playClips, type Clip, type VoiceId } from '@/components/video/voice';
 import { YouTubePost } from '@/components/video/youtube-post';
 import { posterOf } from '@/components/drafts/drafts-store';
+import { postVideoToChat, type ChatTarget } from '@/components/chat/post-creation';
 import { useAutosave, useDraft } from '@/components/drafts/use-draft';
 
 const field = 'w-full rounded-xl border border-line bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none';
@@ -54,7 +55,8 @@ function startsOf(scenes: { seconds: number }[]): number[] {
 // The launch video maker on Create: paste a website (or describe the product), and a launch story is written from the
 // page's own words, drawn in the site's own colours with a scrolling look at the real site and its real pictures, voiced,
 // and made into an MP4 in your browser. Free; signing in is only needed to download or post it.
-export function LaunchMaker({ draftId, onDraftId }: { draftId?: string; onDraftId?: (id: string) => void } = {}) {
+// In a chat (chat set), the finished MP4 is saved into that chat as a new version instead of shown here.
+export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; onDraftId?: (id: string) => void; chat?: ChatTarget } = {}) {
   const { openLogin } = useLogin();
   const draft = useDraft('video-launch', draftId, onDraftId);
   const [url, setUrl] = useState('');
@@ -91,7 +93,9 @@ export function LaunchMaker({ draftId, onDraftId }: { draftId?: string; onDraftI
   // Reopening a draft: its words, settings and (when it was made) the finished MP4.
   useEffect(() => {
     let live = true;
-    void draft.load().then((saved) => {
+    // Reopened from a version in the chat: that version's words and settings. Otherwise the work in progress, if any.
+    const opening: Promise<{ state?: unknown; video?: Blob; seconds?: number } | null> = chat?.initialState ? Promise.resolve({ state: chat.initialState }) : draft.load();
+    void opening.then((saved) => {
       if (!live || !saved) return;
       const s = saved.state as LaunchState | null;
       if (s) {
@@ -109,7 +113,7 @@ export function LaunchMaker({ draftId, onDraftId }: { draftId?: string; onDraftI
     return () => {
       live = false;
     };
-  }, [draft]);
+  }, [draft, chat?.initialState]);
 
   // Keep the draft up to date while working; an edit after the MP4 was made drops the old MP4 from the draft.
   const draftState: LaunchState = { url, about, shape, withVoice, voice, scenes, site, look };
@@ -236,7 +240,7 @@ export function LaunchMaker({ draftId, onDraftId }: { draftId?: string; onDraftI
   async function make() {
     if (scenes.length === 0 || busy) return;
     if (!(await getSessionUser().catch(() => null))) {
-      openLogin({ reason: 'carousel', next: '/create?make=video-launch' });
+      openLogin({ reason: 'carousel', next: chat ? `/chat?conversationId=${chat.conversationId}` : '/create?make=video-launch' });
       return;
     }
     if (!canEncode()) {
@@ -256,6 +260,16 @@ export function LaunchMaker({ draftId, onDraftId }: { draftId?: string; onDraftI
       setBusy('Making the video…');
       setProgress(0);
       const blob = await encodeFrames({ w: f.w, h: f.h, seconds, draw: (ctx, t) => drawLaunchFrame(ctx, f.w, f.h, timed, t, look, media), voice: track, onProgress: setProgress, signal: controller.signal });
+      if (chat) {
+        // In a chat, the video becomes its newest version there (the chat is its draft).
+        setBusy('Saving it to the chat…');
+        const poster = canvasRef.current ? await posterOf(canvasRef.current) : null;
+        await postVideoToChat(chat.conversationId, { blob, poster, maker: 'launch', title: scenes[0]?.heading || media.name || 'Launch video', state: draftState, seconds, vertical: f.h > f.w });
+        await draft.remove();
+        trackEvent('carousel_downloaded', { source: 'video-launch' });
+        chat.onPosted();
+        return;
+      }
       if (result) URL.revokeObjectURL(result.url);
       setResult({ url: URL.createObjectURL(blob), name: `${slugOf(media.name)}-launch-video.mp4`, seconds, voiced: Boolean(track), blob });
       // The finished MP4 goes into the draft, so a refresh keeps it until it is published.
@@ -354,7 +368,7 @@ export function LaunchMaker({ draftId, onDraftId }: { draftId?: string; onDraftI
 
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" onClick={() => void make()} disabled={Boolean(busy) || !fontsReady || Boolean(loadingPictures) || (withVoice && voiceState.status === 'working')} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
-                {busy === 'Making the video…' ? `Making the video, ${Math.round(progress * 100)}%` : loadingPictures ? 'Waiting for the pictures…' : withVoice && voiceState.status === 'working' ? 'Waiting for the voice…' : 'Make the MP4'}
+                {busy === 'Making the video…' ? `Making the video, ${Math.round(progress * 100)}%` : loadingPictures ? 'Waiting for the pictures…' : withVoice && voiceState.status === 'working' ? 'Waiting for the voice…' : chat ? 'Make the video' : 'Make the MP4'}
               </button>
               {busy ? <button type="button" onClick={() => stopRef.current?.abort()} className="px-2 py-2 text-xs text-muted hover:text-foreground">Stop</button> : null}
             </div>
@@ -363,7 +377,7 @@ export function LaunchMaker({ draftId, onDraftId }: { draftId?: string; onDraftI
                 <p className="text-sm text-foreground">Your launch video is ready: {Math.round(result.seconds)} seconds{result.voiced ? ', with voice-over' : ''}.</p>
                 <video src={result.url} controls playsInline className="mt-2 max-h-72 w-auto max-w-full rounded-lg" />
                 <a href={result.url} download={result.name} className="mt-2 inline-block rounded-lg bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90">Download MP4</a>
-                <YouTubePost blob={result.blob} defaultTitle={`${media.name ? `${media.name}: ` : ''}${scenes[0]?.heading ?? ''}`.slice(0, 100)} defaultDescription={[...scenes.map((scene) => scene.voice), site?.url ?? ''].filter(Boolean).join(NEWLINE)} vertical={f.h > f.w} seconds={result.seconds} onPosted={() => void draft.remove()} />
+                <YouTubePost blob={result.blob} defaultTitle={`${media.name ? `${media.name}: ` : ''}${scenes[0]?.heading ?? ''}`.slice(0, 100)} defaultDescription={[...scenes.map((scene) => scene.voice), site?.url ?? ''].filter(Boolean).join(NEWLINE)} vertical={f.h > f.w} seconds={result.seconds} />
               </div>
             ) : null}
           </div>

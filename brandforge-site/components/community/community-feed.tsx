@@ -5,9 +5,9 @@ import { createPortal } from 'react-dom';
 import { fetchAuthed } from '@/lib/browser-auth';
 import { COMMUNITY_SHARED } from '@/components/community/share-button';
 
-type Post = { id: string; format: string; title: string; caption: string; images: string[]; createdAt: string; ownerName: string; ownerAvatar: string | null; canRemove: boolean };
+type Post = { id: string; format: string; title: string; caption: string; images: string[]; video?: string | null; createdAt: string; ownerName: string; ownerAvatar: string | null; canRemove: boolean };
 
-const FORMAT_LABEL: Record<string, string> = { carousel: 'Carousel', ad: 'Ad', quote: 'Quote', tip: 'Tip', announcement: 'Announcement', poll: 'Poll', question: 'Poll' };
+const FORMAT_LABEL: Record<string, string> = { 'video-launch': 'Launch video', 'video-short': 'Short video', 'video-long': 'Video', 'video-square': 'Video carousel', article: 'Article', carousel: 'Carousel', ad: 'Ad', quote: 'Quote', tip: 'Tip', announcement: 'Announcement', poll: 'Poll', question: 'Poll' };
 
 function relativeTime(value: string): string {
   const then = new Date(value).getTime();
@@ -104,7 +104,13 @@ export function CommunityFeed({ kind, title }: { kind: 'create' | 'distribute'; 
                   <span className="relative block aspect-square overflow-hidden bg-overlay">
                     {/* eslint-disable-next-line @next/next/no-img-element -- member pictures from our own public bucket */}
                     <img src={post.images[0]} alt={post.title || 'Shared creation'} loading="lazy" decoding="async" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" />
-                    {post.images.length > 1 ? <span className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white">1/{post.images.length}</span> : null}
+                    {post.video ? (
+                      <span className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
+                        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-black/55 backdrop-blur-sm transition group-hover:scale-105">
+                          <svg viewBox="0 0 20 20" className="h-4 w-4 translate-x-px fill-white"><path d="M6 3.5v13l11-6.5z" /></svg>
+                        </span>
+                      </span>
+                    ) : post.images.length > 1 ? <span className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white">1/{post.images.length}</span> : null}
                   </span>
                   <span className="block p-2.5">
                     <span className="block truncate text-sm text-foreground">{post.title || FORMAT_LABEL[post.format] || 'Creation'}</span>
@@ -144,7 +150,10 @@ export function CommunityFeed({ kind, title }: { kind: 'create' | 'distribute'; 
                   </button>
                 </div>
                 {open.title ? <p className="mt-2 font-serif text-lg text-foreground">{open.title}</p> : null}
-                <div className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
+                {open.video ? (
+                  <video src={open.video} poster={open.images[0]} controls playsInline preload="metadata" className="mt-3 max-h-[64dvh] w-full rounded-xl border border-line bg-black object-contain" />
+                ) : null}
+                <div className={`mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 ${open.video ? 'hidden' : ''}`}>
                   {open.images.map((src, i) => (
                     // eslint-disable-next-line @next/next/no-img-element -- member pictures from our own public bucket
                     <img key={src} src={src} alt={`${open.title || 'Creation'}, picture ${i + 1}`} className="max-h-[60dvh] w-auto max-w-full shrink-0 snap-center rounded-xl border border-line object-contain" />

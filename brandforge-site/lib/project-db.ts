@@ -6037,7 +6037,7 @@ export async function deleteTradeListing(id: string, ownerId: string): Promise<{
 // Stores the cover picture (if any), writes the message with the creation inside it, and returns the message id.
 type CreationCover = { bytes: Buffer; contentType: 'image/jpeg' | 'image/png' | 'image/webp' };
 
-async function postCreationMessage(conversationId: string, type: 'carousel' | 'image', content: string, fields: Record<string, unknown>, cover: CreationCover | null): Promise<string | null> {
+async function postCreationMessage(conversationId: string, type: 'carousel' | 'image' | 'video' | 'article', content: string, fields: Record<string, unknown>, cover: CreationCover | null): Promise<string | null> {
   const admin = createSupabaseAdminClient();
   if (!admin) return null;
   let coverUrl: string | undefined;
@@ -6080,6 +6080,123 @@ export async function postImageMessage(conversationId: string, fields: Record<st
   const copy = fields.copy as { headline: string };
   const label = ({ ad: 'an ad', quote: 'a quote', tip: 'a tip', announcement: 'an announcement', question: 'a poll' } as Record<string, string>)[String(fields.kind)] ?? 'an image';
   return postCreationMessage(conversationId, 'image', `Made ${label}: ${copy.headline.replace(/\*/g, '')}`, fields, cover);
+}
+
+// A video (launch, short, long or square) or an article as a message: the chat is its draft, each version a message.
+export async function postVideoMessage(conversationId: string, fields: Record<string, unknown>, cover: CreationCover | null): Promise<string | null> {
+  return postCreationMessage(conversationId, 'video', `Made a video: ${String(fields.title ?? 'Video')}`, fields, cover);
+}
+
+export async function postArticleMessage(conversationId: string, fields: Record<string, unknown>): Promise<string | null> {
+  return postCreationMessage(conversationId, 'article', `Wrote an article: ${String(fields.title ?? 'Article')}`, fields, null);
+}
+
+/** Marks a creation message (posted to YouTube, shared to the community). Only fields given are changed. */
+export async function markCreationMessage(conversationId: string, messageId: string, patch: { youtubeUrl?: string; shared?: boolean }): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const { data } = await admin.from('messages').select('artifact_data').eq('id', messageId).eq('conversation_id', conversationId).maybeSingle();
+  const current = (data as { artifact_data: Record<string, unknown> | null } | null)?.artifact_data;
+  if (!current || (current.type !== 'video' && current.type !== 'article' && current.type !== 'carousel' && current.type !== 'image')) return false;
+  const { error } = await admin.from('messages').update({ artifact_data: { ...current, ...patch } }).eq('id', messageId).eq('conversation_id', conversationId);
+  return !error;
+}
+
+/** Whether this chat has a video message using this stored file (so only its own chat can play it). */
+export async function conversationHasVideo(conversationId: string, path: string): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const { data } = await admin.from('messages').select('id').eq('conversation_id', conversationId).eq('artifact_data->>videoPath', path).limit(1);
+  return Array.isArray(data) && data.length > 0;
+}
+
+/** A short-lived link to play or download a kept video. */
+export async function signedVideoUrl(path: string, seconds = 3600): Promise<string | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data, error } = await admin.storage.from('videos').createSignedUrl(path, seconds);
+  return error || !data ? null : data.signedUrl;
+}
+
+/** Keeps a person's newest kept videos and removes the older files (their chats keep the words and the poster). */
+export async function pruneKeptVideos(userId: string, keep = 8): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return;
+  const { data } = await admin.storage.from('videos').list(`${userId}/kept`, { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+  const old = (data ?? []).slice(keep).map((file) => `${userId}/kept/${file.name}`);
+  if (old.length) await admin.storage.from('videos').remove(old).catch(() => undefined);
+}
+
+// ---- Community videos (bucket "community-videos", migration 0052) ----
+export async function createCommunityVideoUploadUrl(path: string): Promise<{ token: string } | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data, error } = await admin.storage.from('community-videos').createSignedUploadUrl(path);
+  if (error || !data) {
+    console.error('createCommunityVideoUploadUrl error:', error?.message);
+    return null;
+  }
+  return { token: data.token };
+}
+
+/** The public address of an uploaded community video, or null when the file is not there. */
+export async function communityVideoUrl(path: string): Promise<string | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const slash = path.lastIndexOf('/');
+  const { data } = await admin.storage.from('community-videos').list(path.slice(0, slash), { search: path.slice(slash + 1), limit: 1 });
+  if (!data || data.length === 0) return null;
+  return admin.storage.from('community-videos').getPublicUrl(path).data.publicUrl;
+}
+
+export async function removeCommunityVideo(path: string): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return;
+  await admin.storage.from('community-videos').remove([path]).catch(() => undefined);
+}
+
+export type CreationChat = { conversationId: string; title: string; type: string; maker: string | null; coverUrl: string | null; hasVideo: boolean; youtubeUrl: string | null; shared: boolean; updatedAt: string };
+
+/** A person's creation chats (each one is a creation's draft), newest first, with what its latest version looks like. */
+export async function listCreationChats(userId: string, limit = 24): Promise<CreationChat[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const { data: chats } = await admin.from('conversations').select('id, updated_at').eq('user_id', userId).order('updated_at', { ascending: false }).limit(200);
+  const ids = ((chats ?? []) as { id: string; updated_at: string }[]).map((row) => row.id);
+  if (ids.length === 0) return [];
+  const { data: links } = await admin.from('conversation_links').select('conversation_id, title').eq('kind', 'creation').in('conversation_id', ids);
+  const linked = new Map(((links ?? []) as { conversation_id: string; title: string }[]).map((row) => [row.conversation_id, row.title]));
+  const ordered = ids.filter((id) => linked.has(id)).slice(0, Math.min(48, limit));
+  if (ordered.length === 0) return [];
+  const { data: rows } = await admin
+    .from('messages')
+    .select('conversation_id, artifact_data, created_at')
+    .in('conversation_id', ordered)
+    .in('artifact_data->>type', ['carousel', 'image', 'video', 'article'])
+    .order('created_at', { ascending: false })
+    .limit(400);
+  const latest = new Map<string, { artifact_data: Record<string, unknown>; created_at: string }>();
+  for (const row of (rows ?? []) as { conversation_id: string; artifact_data: Record<string, unknown>; created_at: string }[]) {
+    if (!latest.has(row.conversation_id)) latest.set(row.conversation_id, row);
+  }
+  return ordered
+    .filter((id) => latest.has(id))
+    .map((id) => {
+      const row = latest.get(id)!;
+      const art = row.artifact_data;
+      const title = String(art.title ?? (art.plan as { cover?: { headline?: string } } | undefined)?.cover?.headline ?? (art.copy as { headline?: string } | undefined)?.headline ?? linked.get(id) ?? '').replace(/\*/g, '').slice(0, 140);
+      return {
+        conversationId: id,
+        title,
+        type: String(art.type),
+        maker: typeof art.maker === 'string' ? art.maker : null,
+        coverUrl: typeof art.coverUrl === 'string' ? art.coverUrl : null,
+        hasVideo: typeof art.videoPath === 'string',
+        youtubeUrl: typeof art.youtubeUrl === 'string' ? art.youtubeUrl : null,
+        shared: art.shared === true,
+        updatedAt: row.created_at,
+      };
+    });
 }
 
 // ---- Monthly plans paid by card (migration 0041: subscriptions) ----
@@ -6195,7 +6312,7 @@ export async function downloadScheduledImage(path: string): Promise<Buffer | nul
 // ---- Community posts (migration 0048: community_posts) ----
 // What people chose to share from Create and Distribute. Public to read through the API; only the owner or an admin removes.
 export type CommunityKind = 'create' | 'distribute';
-export type CommunityPostRow = { id: string; user_id: string; kind: CommunityKind; format: string; title: string; caption: string; image_urls: string[]; image_paths: string[]; created_at: string };
+export type CommunityPostRow = { id: string; user_id: string; kind: CommunityKind; format: string; title: string; caption: string; image_urls: string[]; image_paths: string[]; video_url: string | null; created_at: string };
 
 export async function uploadCommunityImage(path: string, bytes: Buffer, contentType: 'image/png' | 'image/jpeg' = 'image/png'): Promise<string | null> {
   const admin = createSupabaseAdminClient();
@@ -6208,10 +6325,10 @@ export async function uploadCommunityImage(path: string, bytes: Buffer, contentT
   return admin.storage.from('creations').getPublicUrl(path).data.publicUrl;
 }
 
-export async function createCommunityPost(userId: string, input: { id: string; kind: CommunityKind; format: string; title: string; caption: string; imageUrls: string[]; imagePaths: string[] }): Promise<boolean> {
+export async function createCommunityPost(userId: string, input: { id: string; kind: CommunityKind; format: string; title: string; caption: string; imageUrls: string[]; imagePaths: string[]; videoUrl?: string | null; videoPath?: string | null }): Promise<boolean> {
   const admin = createSupabaseAdminClient();
   if (!admin) return false;
-  const { error } = await admin.from('community_posts').insert({ id: input.id, user_id: userId, kind: input.kind, format: input.format, title: input.title, caption: input.caption, image_urls: input.imageUrls, image_paths: input.imagePaths });
+  const { error } = await admin.from('community_posts').insert({ id: input.id, user_id: userId, kind: input.kind, format: input.format, title: input.title, caption: input.caption, image_urls: input.imageUrls, image_paths: input.imagePaths, ...(input.videoUrl ? { video_url: input.videoUrl, video_path: input.videoPath ?? null } : {}) });
   if (error) console.error('createCommunityPost error:', error.message);
   return !error;
 }
@@ -6219,7 +6336,7 @@ export async function createCommunityPost(userId: string, input: { id: string; k
 export async function listCommunityPosts(kind: CommunityKind, limit = 24, before?: string): Promise<CommunityPostRow[]> {
   const admin = createSupabaseAdminClient();
   if (!admin) return [];
-  let query = admin.from('community_posts').select('id, user_id, kind, format, title, caption, image_urls, image_paths, created_at').eq('kind', kind).eq('hidden', false).order('created_at', { ascending: false }).limit(Math.min(48, Math.max(1, limit)));
+  let query = admin.from('community_posts').select('id, user_id, kind, format, title, caption, image_urls, image_paths, video_url, created_at').eq('kind', kind).eq('hidden', false).order('created_at', { ascending: false }).limit(Math.min(48, Math.max(1, limit)));
   if (before) query = query.lt('created_at', before);
   const { data, error } = await query;
   if (error) {
@@ -6233,11 +6350,13 @@ export async function listCommunityPosts(kind: CommunityKind, limit = 24, before
 export async function removeCommunityPost(userId: string, id: string, isAdmin: boolean): Promise<string[] | null> {
   const admin = createSupabaseAdminClient();
   if (!admin) return null;
-  const { data: row } = await admin.from('community_posts').select('user_id, image_paths').eq('id', id).maybeSingle();
+  const { data: row } = await admin.from('community_posts').select('user_id, image_paths, video_path').eq('id', id).maybeSingle();
   if (!row) return null;
   const owned = (row as { user_id: string }).user_id === userId;
   if (owned) {
     const { error } = await admin.from('community_posts').delete().eq('id', id);
+    const videoPath = (row as { video_path: string | null }).video_path;
+    if (!error && videoPath) await removeCommunityVideo(videoPath);
     return error ? null : ((row as { image_paths: string[] }).image_paths ?? []);
   }
   if (!isAdmin) return null;

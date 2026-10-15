@@ -11,6 +11,7 @@ import { canEncode, drawFrame, encodeVideo, lookOf, makeArt, type SceneArt } fro
 import { VOICES, clipsFor, layTrack, playClips, type Clip, type VoiceId } from '@/components/video/voice';
 import { YouTubePost } from '@/components/video/youtube-post';
 import { posterOf } from '@/components/drafts/drafts-store';
+import { postVideoToChat, type ChatTarget } from '@/components/chat/post-creation';
 import { useAutosave, useDraft } from '@/components/drafts/use-draft';
 
 const field = 'w-full rounded-xl border border-line bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none';
@@ -48,7 +49,8 @@ function startsOf(scenes: VideoScene[]): number[] {
 // every word), watch and hear the preview, then make the MP4. The voice is recorded as soon as the scenes exist (and again
 // after an edit), so the preview plays with it and the MP4 uses exactly what was heard. Frames are drawn and encoded in
 // your own browser; the voice comes from our server.
-export function VideoMaker({ initialFormat = 'short', draftId, onDraftId }: { initialFormat?: VideoFormat; draftId?: string; onDraftId?: (id: string) => void }) {
+// In a chat (chat set), the finished MP4 is saved into that chat as a new version instead of shown here.
+export function VideoMaker({ initialFormat = 'short', draftId, onDraftId, chat }: { initialFormat?: VideoFormat; draftId?: string; onDraftId?: (id: string) => void; chat?: ChatTarget }) {
   const { openLogin } = useLogin();
   const draft = useDraft(`video-${initialFormat}`, draftId, onDraftId);
   // Pictures a reopened draft already had, for the scenes they were painted for (so they are not painted again).
@@ -134,7 +136,10 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId }: { in
   // Reopening a draft: its words, settings, pictures and (when it was made) the finished MP4.
   useEffect(() => {
     let live = true;
-    void draft.load().then(async (saved) => {
+    void draft.load().then(async (stored) => {
+      // Reopened from a version in the chat: that version's words and settings (pictures kept on this device are reused
+      // when the scenes still match). Otherwise the work in progress, if any.
+      const saved = chat?.initialState ? { ...(stored ?? {}), state: chat.initialState, video: undefined } : stored;
       if (!live || !saved) return;
       const s = saved.state as VideoState | null;
       const bitmaps = await Promise.all((saved.images ?? []).map((blob) => (blob ? createImageBitmap(blob).catch(() => null) : Promise.resolve(null))));
@@ -156,7 +161,7 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId }: { in
     return () => {
       live = false;
     };
-  }, [draft, initialFormat]);
+  }, [draft, initialFormat, chat?.initialState]);
 
   // Keep the draft up to date while working; an edit after the MP4 was made drops the old MP4 from the draft.
   const draftState: VideoState = { format, topic, brand, handle, theme, withVoice, voice, withPictures, scenes };
@@ -284,7 +289,7 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId }: { in
   async function make() {
     if (!sceneArt || scenes.length === 0 || busy) return;
     if (!(await getSessionUser().catch(() => null))) {
-      openLogin({ reason: 'carousel', next: `/create?make=video-${format}` });
+      openLogin({ reason: 'carousel', next: chat ? `/chat?conversationId=${chat.conversationId}` : `/create?make=video-${format}` });
       return;
     }
     if (!canEncode()) {
@@ -304,6 +309,16 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId }: { in
       setBusy('Making the video…');
       setProgress(0);
       const blob = await encodeVideo({ w: f.w, h: f.h, scenes: timed, look, brand: { name: brand.trim(), handle: handle.trim() }, art: sceneArt, voice: track, onProgress: setProgress, signal: controller.signal });
+      if (chat) {
+        // In a chat, the video becomes its newest version there (the chat is its draft).
+        setBusy('Saving it to the chat…');
+        const poster = canvasRef.current ? await posterOf(canvasRef.current) : null;
+        await postVideoToChat(chat.conversationId, { blob, poster, maker: format, title: scenes[0]?.heading || topic.slice(0, 60) || 'Video', state: draftState, seconds, vertical: f.h > f.w });
+        await draft.save({ video: undefined, poster: undefined, seconds: undefined });
+        trackEvent('carousel_downloaded', { source: `video-${format}` });
+        chat.onPosted();
+        return;
+      }
       if (result) URL.revokeObjectURL(result.url);
       setResult({ url: URL.createObjectURL(blob), name: `brandforge-${format}-video.mp4`, seconds, voiced: Boolean(track), blob });
       // The finished MP4 goes into the draft, so a refresh keeps it until it is published.
@@ -414,7 +429,7 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId }: { in
 
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" onClick={() => void make()} disabled={Boolean(busy) || !fontsReady || (withVoice && voiceState.status === 'working') || (withPictures && Boolean(painting))} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
-                {busy === 'Making the video…' ? `Making the video, ${Math.round(progress * 100)}%` : withPictures && painting ? 'Waiting for the pictures…' : withVoice && voiceState.status === 'working' ? 'Waiting for the voice…' : 'Make the MP4'}
+                {busy === 'Making the video…' ? `Making the video, ${Math.round(progress * 100)}%` : withPictures && painting ? 'Waiting for the pictures…' : withVoice && voiceState.status === 'working' ? 'Waiting for the voice…' : chat ? 'Make the video' : 'Make the MP4'}
               </button>
               {busy ? <button type="button" onClick={() => stopRef.current?.abort()} className="px-2 py-2 text-xs text-muted hover:text-foreground">Stop</button> : null}
             </div>
@@ -423,7 +438,7 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId }: { in
                 <p className="text-sm text-foreground">Your video is ready: {Math.round(result.seconds)} seconds{result.voiced ? ', with voice-over' : ''}.</p>
                 <video src={result.url} controls playsInline className="mt-2 max-h-72 w-auto max-w-full rounded-lg" />
                 <a href={result.url} download={result.name} className="mt-2 inline-block rounded-lg bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90">Download MP4</a>
-                <YouTubePost blob={result.blob} defaultTitle={scenes[0]?.heading ?? ''} defaultDescription={[...scenes.map((scene) => [scene.heading, ...scene.lines].join(': ')), handle.trim()].filter(Boolean).join(NEWLINE)} vertical={f.h > f.w} seconds={result.seconds} onPosted={() => void draft.remove()} />
+                <YouTubePost blob={result.blob} defaultTitle={scenes[0]?.heading ?? ''} defaultDescription={[...scenes.map((scene) => [scene.heading, ...scene.lines].join(': ')), handle.trim()].filter(Boolean).join(NEWLINE)} vertical={f.h > f.w} seconds={result.seconds} />
               </div>
             ) : null}
           </div>

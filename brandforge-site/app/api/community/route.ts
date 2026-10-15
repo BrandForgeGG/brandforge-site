@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
-import { createCommunityPost, getAvatarUrls, getProfileDisplayNames, isAdminAccount, listCommunityPosts, removeCommunityPost, removeScheduledImages, uploadCommunityImage, type CommunityKind } from '@/lib/project-db';
+import { communityVideoUrl, createCommunityPost, getAvatarUrls, getProfileDisplayNames, isAdminAccount, listCommunityPosts, removeCommunityPost, removeScheduledImages, uploadCommunityImage, type CommunityKind } from '@/lib/project-db';
 import { sniff } from '@/lib/carousel-fetch.js';
 import { screenText } from '@/lib/content-policy.js';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
         title: row.title,
         caption: row.caption,
         images: row.image_urls,
+        video: row.video_url ?? null,
         createdAt: row.created_at,
         ownerName: names.get(row.user_id) ?? 'A member',
         ownerAvatar: avatars.get(row.user_id) ?? null,
@@ -66,6 +67,15 @@ export async function POST(request: NextRequest) {
     }
     if (files.length === 0) return NextResponse.json({ error: 'There is no picture to share.' }, { status: 400 });
 
+    // A shared video was uploaded first (see /api/community/video-slot); the pictures are its poster.
+    const videoPath = String(form.get('videoPath') ?? '');
+    let videoUrl: string | null = null;
+    if (videoPath) {
+      if (!new RegExp(`^community/${user.id}/[0-9a-f-]{36}\\.mp4$`).test(videoPath)) return NextResponse.json({ error: 'Unknown video.' }, { status: 400 });
+      videoUrl = await communityVideoUrl(videoPath);
+      if (!videoUrl) return NextResponse.json({ error: 'The video upload did not arrive. Try again.' }, { status: 400 });
+    }
+
     const id = crypto.randomUUID();
     const paths: string[] = [];
     const urls: string[] = [];
@@ -85,7 +95,7 @@ export async function POST(request: NextRequest) {
       paths.push(path);
       urls.push(url);
     }
-    if (!(await createCommunityPost(user.id, { id, kind, format, title, caption, imageUrls: urls, imagePaths: paths }))) {
+    if (!(await createCommunityPost(user.id, { id, kind, format, title, caption, imageUrls: urls, imagePaths: paths, videoUrl, videoPath: videoUrl ? videoPath : null }))) {
       await removeScheduledImages(paths);
       return NextResponse.json({ error: 'Could not share that. Try again.' }, { status: 500 });
     }

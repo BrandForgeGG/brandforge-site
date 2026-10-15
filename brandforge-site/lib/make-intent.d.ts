@@ -1,1 +1,1 @@
-export declare function detectMakeIntent(text: string | null | undefined): { kind: 'carousel' | 'ad' | 'quote' | 'tip' | 'announcement' | 'question'; topic: string } | null;
+export declare function detectMakeIntent(text: string | null | undefined): { kind: 'video-launch' | 'video-long' | 'video-square' | 'video-short' | 'article' | 'carousel' | 'ad' | 'quote' | 'tip' | 'announcement' | 'question'; topic: string } | null;

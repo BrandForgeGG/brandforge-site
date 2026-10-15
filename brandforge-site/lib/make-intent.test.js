@@ -32,3 +32,15 @@ test('the image makers: ads, announcements, and quote, tip or poll images', () =
   assert.equal(detectMakeIntent('write a tip to my team about the deadline'), null);
   assert.equal(detectMakeIntent('please add the new page'), null);
 });
+
+test('videos and articles open their makers', () => {
+  assert.deepEqual(detectMakeIntent('make a launch video for brandforge.gg'), { kind: 'video-launch', topic: 'brandforge.gg' });
+  assert.equal(detectMakeIntent('create a promo video about our app').kind, 'video-launch');
+  assert.equal(detectMakeIntent('make a youtube video about remote work').kind, 'video-long');
+  assert.equal(detectMakeIntent('make a video about morning routines').kind, 'video-short');
+  assert.equal(detectMakeIntent('create a reel about our new menu').kind, 'video-short');
+  assert.equal(detectMakeIntent('make a video carousel about hiring').kind, 'video-square');
+  assert.equal(detectMakeIntent('write an article about pricing your work').kind, 'article');
+  assert.equal(detectMakeIntent('write a blog post on cold email').kind, 'article');
+  assert.equal(detectMakeIntent('what makes a good video'), null);
+});

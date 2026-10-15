@@ -5,12 +5,14 @@ import { fetchAuthed, getSessionUser } from '@/lib/browser-auth';
 import { trackEvent } from '@/lib/funnel-client';
 import { useLogin } from '@/components/login-dialog';
 import { extensionOf, fitForUpload } from '@/components/community/fit-for-upload';
+import { supabase } from '@/lib/supabase';
 
 export const COMMUNITY_SHARED = 'bf:community-shared';
 
 // "Share to the community": puts one finished creation in the public feed on Create or Distribute. Only what someone shares
 // on purpose is shown to others. Guests are asked to sign in first; the work stays where it is.
-export function ShareButton({ kind, format, title, caption, getImages, className }: { kind: 'create' | 'distribute'; format: string; title: string; caption?: string; getImages: () => Promise<Blob[]>; className?: string }) {
+// With getVideo, the video is shared too (the pictures are its poster).
+export function ShareButton({ kind, format, title, caption, getImages, getVideo, onShared, className }: { kind: 'create' | 'distribute'; format: string; title: string; caption?: string; getImages: () => Promise<Blob[]>; getVideo?: () => Promise<Blob | null>; onShared?: () => void; className?: string }) {
   const { openLogin } = useLogin();
   const [state, setState] = useState<'idle' | 'busy' | 'done'>('idle');
   const [error, setError] = useState('');
@@ -32,10 +34,21 @@ export function ShareButton({ kind, format, title, caption, getImages, className
       body.append('title', title.slice(0, 120));
       body.append('caption', (caption ?? '').slice(0, 2200));
       images.forEach((blob, i) => body.append(`image${i}`, blob, `${i + 1}.${extensionOf(blob)}`));
+      const video = getVideo ? await getVideo() : null;
+      if (video) {
+        // Videos go straight into storage (too big for one request), then the post points at them.
+        const slot = await fetchAuthed('/api/community/video-slot', { method: 'POST' });
+        const slotData = (await slot.json().catch(() => ({}))) as { path?: string; token?: string; error?: string };
+        if (!slot.ok || !slotData.path || !slotData.token) throw new Error(slotData.error || 'Could not prepare the upload.');
+        const { error: uploadError } = await supabase.storage.from('community-videos').uploadToSignedUrl(slotData.path, slotData.token, video, { contentType: 'video/mp4' });
+        if (uploadError) throw new Error('The video did not upload. Check your connection and try again.');
+        body.append('videoPath', slotData.path);
+      }
       const res = await fetchAuthed('/api/community', { method: 'POST', body });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(data.error || (res.status === 413 ? 'Those pictures are too big to send. Try again with fewer slides.' : `Could not share that (${res.status}). Try again.`));
       setState('done');
+      onShared?.();
       trackEvent('community_shared', { source: kind });
       window.dispatchEvent(new CustomEvent(COMMUNITY_SHARED, { detail: kind }));
     } catch (cause) {

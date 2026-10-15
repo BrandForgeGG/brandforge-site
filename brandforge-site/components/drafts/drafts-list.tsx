@@ -30,7 +30,8 @@ export function DraftsList({ kind, labelOf, onOpen, title = 'Your drafts' }: { k
           if (old.posterUrl) URL.revokeObjectURL(old.posterUrl);
           if (old.videoUrl) URL.revokeObjectURL(old.videoUrl);
         }
-        shown = list.map((draft) => ({ ...draft, posterUrl: draft.poster ? URL.createObjectURL(draft.poster) : null, videoUrl: draft.video ? URL.createObjectURL(draft.video) : null }));
+        // Work in progress inside a chat belongs to that chat, not to this list.
+        shown = list.filter((draft) => !draft.id.startsWith('chat-')).map((draft) => ({ ...draft, posterUrl: draft.poster ? URL.createObjectURL(draft.poster) : null, videoUrl: draft.video ? URL.createObjectURL(draft.video) : null }));
         setDrafts(shown);
       });
     load();

@@ -127,6 +127,15 @@ function parseChatEmbed(artifactData) {
     const fields = require('./image-kinds').sanitizeImage(artifactData);
     return fields ? { type, id, ...fields } : null;
   }
+  if (type === 'video' && id) {
+    // A video made in this chat (launch, short, long or square): its words, settings, file and where it went.
+    const fields = require('./video-embed').sanitizeVideo(artifactData);
+    return fields ? { type, id, ...fields } : null;
+  }
+  if (type === 'article' && id) {
+    const fields = require('./video-embed').sanitizeArticle(artifactData);
+    return fields ? { type, id, ...fields } : null;
+  }
   if (type === 'agreement' && id) return { type, agreementId: id, status };
   if (type === 'peer_contract' && id) return { type, contractId: id, status };
   if (type === 'funding' && id) {
