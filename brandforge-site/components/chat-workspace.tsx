@@ -289,7 +289,7 @@ export function ChatWorkspace() {
   const [activeCommand, setActiveCommand] = useState<ChatCommand | null>(null);
   const carouselKey = useRef(0);
   // A video or article maker working in this chat (opened by asking for one, from Create, or by Edit on a version).
-  const [makerChat, setMakerChat] = useState<{ kind: MakerKind; state?: unknown; key: number } | null>(null);
+  const [makerChat, setMakerChat] = useState<{ kind: MakerKind; state?: unknown; key: number; hidden?: boolean } | null>(null);
   // For the team: whether this person may talk in this chat (claimed chats: the claimer and the people they added).
   const [staffCanTalk, setStaffCanTalk] = useState(true);
   // What this chat is the main assistant for (a listing, something made here), if anything.
@@ -910,7 +910,7 @@ export function ChatWorkspace() {
     const refresh = () => {
       if (document.visibilityState === "visible") void loadRecents().catch(() => undefined);
     };
-    const timer = window.setInterval(refresh, 30000);
+    const timer = window.setInterval(refresh, 120_000);
     document.addEventListener("visibilitychange", refresh);
     return () => {
       window.clearInterval(timer);
@@ -925,7 +925,7 @@ export function ChatWorkspace() {
     const timer = window.setInterval(() => {
       if (document.visibilityState !== "visible" || isStreaming) return;
       void refreshMessages(conversationId);
-    }, 6000);
+    }, 30_000);
     return () => window.clearInterval(timer);
   }, [conversationId, isStreaming, refreshMessages]);
 
@@ -3027,6 +3027,9 @@ return (
                 setMakerChat(null);
                 void refreshMessages(conversationId).then(() => scrollToBottom(true));
               }}
+              hidden={Boolean(makerChat.hidden)}
+              onHide={() => setMakerChat((current) => (current ? { ...current, hidden: true } : current))}
+              onShow={() => setMakerChat((current) => (current ? { ...current, hidden: false } : current))}
               onClose={() => {
                 clearMakerSeed(conversationId);
                 setMakerChat(null);

@@ -6540,3 +6540,17 @@ export async function addTeammateParticipant(conversationId: string, userId: str
   }
   return true;
 }
+
+// ---- Voice cache (bucket "voice", migration 0055): each spoken line is made once and served from storage after ----
+export function voiceCacheUrl(key: string): string | null {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  return admin.storage.from('voice').getPublicUrl(`${key}.wav`).data.publicUrl;
+}
+
+export async function storeVoice(key: string, bytes: Uint8Array): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return;
+  const { error } = await admin.storage.from('voice').upload(`${key}.wav`, bytes, { contentType: 'audio/wav', upsert: true });
+  if (error) console.warn('storeVoice error:', error.message);
+}

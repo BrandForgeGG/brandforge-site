@@ -48,7 +48,9 @@ export function ExploreHub() {
       if (alive) setActivity(data?.items ?? []);
     };
     void load();
-    const timer = window.setInterval(() => void load(), 30_000);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void load();
+    }, 120_000);
     return () => {
       alive = false;
       window.clearInterval(timer);

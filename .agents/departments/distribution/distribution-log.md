@@ -1313,3 +1313,11 @@ we do not have.
 
 **Distribution move:** reply to the team member who asked: "Chats are now claimable like tickets: claim it, add who you need, hand it back. Nobody else can talk over you."
 
+
+
+## 2026-10-15 â€” Staying inside the free hosting plan; makers no longer vanish
+
+**Change:** Vercel warned the free plan is near its limit. Biggest costs found and cut: an open chat checked AI access every 5 s (~720 calls an hour per open tab, now every 60 s and only while visible); messages were re-fetched every 6 s on top of live updates (now 30 s); the chat list every 30 s (now 120 s); the rail flags every 60 s (now 10 min); the time-on-site heartbeat every 60 s (now 5 min, migration 0054 counts up to 5.5 min per beat and "online now" is the last 6 min); ticket bar, contracts, Explore and publishing panels slowed and paused in background tabs. Voice-over is the heaviest server work (Kokoro on CPU): every spoken line is now made once and kept in a public "voice" bucket (migration 0055) named by a hash of the voice and words, so the same line again is a redirect to storage with no CPU. The admin dashboard's Content tab (the content calendar, which generated posts and pictures) is removed. The earlier launch-video loop (hundreds of picture requests a minute) was the other big drain and is already fixed. In chats, closing a maker no longer throws it away: Hide folds it to one line with everything kept, Open brings it back, Discard removes it.
+
+**Distribution move:** none (internal cost work); the maker fix goes in the next changelog line: "Hide a maker in a chat and pick it up later, exactly where you left it."
+

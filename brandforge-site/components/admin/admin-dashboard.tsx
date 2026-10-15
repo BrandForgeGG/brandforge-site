@@ -6,14 +6,13 @@ import { fetchAuthed } from '@/lib/browser-auth';
 import { formatMoney } from '@/lib/peer-contract.js';
 import type { PeerView } from '@/lib/peer-contract-view';
 import type { AdminChatRow, AdminOverview } from '@/lib/project-db';
-import { AdminCalendar } from '@/components/admin/admin-calendar';
 import { AdminMembers } from '@/components/admin/admin-members';
 import { AdminEmails } from '@/components/admin/admin-emails';
 
 type FunnelEvent = { event: string; count: number; previous: number | null };
 type Range = '24h' | '7d' | '30d' | 'all';
-type Tab = 'overview' | 'people' | 'money' | 'chats' | 'content';
-const TABS: [Tab, string][] = [['overview', 'Overview'], ['people', 'People'], ['money', 'Money'], ['chats', 'Chats'], ['content', 'Content']];
+type Tab = 'overview' | 'people' | 'money' | 'chats';
+const TABS: [Tab, string][] = [['overview', 'Overview'], ['people', 'People'], ['money', 'Money'], ['chats', 'Chats']];
 type Overview = AdminOverview & { funnel: { range: Range; window: { since?: string }; events: FunnelEvent[] } | null };
 
 
@@ -231,7 +230,9 @@ export function AdminDashboard() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on mount, then every 30s
     void load();
-    const timer = window.setInterval(() => void load(), 30000);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void load();
+    }, 300_000);
     return () => window.clearInterval(timer);
   }, [load]);
 
@@ -485,7 +486,6 @@ export function AdminDashboard() {
 
       ) : null}
 
-      {tab === 'content' ? <AdminCalendar /> : null}
     </div>
   );
 }

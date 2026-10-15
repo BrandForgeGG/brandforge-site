@@ -26,7 +26,9 @@ export function useAiAccess(conversationId: string, enabled: boolean) {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- load access when the chat changes
     setAccess(null);
     void reload();
-    const timer = window.setInterval(() => void reload(), 5000);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void reload();
+    }, 60_000);
     return () => {
       live.current = false;
       window.clearInterval(timer);

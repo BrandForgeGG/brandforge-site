@@ -38,7 +38,9 @@ export function TicketBar({ conversationId, onCanTalk }: { conversationId: strin
         .catch(() => undefined);
     load();
     // Someone else may claim it while this is open.
-    const timer = window.setInterval(load, 30_000);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') load();
+    }, 120_000);
     return () => {
       live = false;
       window.clearInterval(timer);

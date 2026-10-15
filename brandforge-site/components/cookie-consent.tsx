@@ -67,7 +67,7 @@ export function CookieConsent() {
       void fetch('/api/usage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitorId }), keepalive: true }).catch(() => undefined);
     };
     beat();
-    const timer = window.setInterval(beat, 60_000);
+    const timer = window.setInterval(beat, 300_000);
     return () => window.clearInterval(timer);
   }, [state]);
 

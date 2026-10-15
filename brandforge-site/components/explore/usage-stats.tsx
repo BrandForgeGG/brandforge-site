@@ -42,7 +42,9 @@ export function UsageStats() {
       setUsage((await res.json()) as Usage);
     };
     void load();
-    const timer = window.setInterval(() => void load(), 60_000);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void load();
+    }, 300_000);
     return () => {
       alive = false;
       window.clearInterval(timer);

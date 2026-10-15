@@ -52,23 +52,38 @@ const LaunchMaker = dynamic(() => import('@/components/video/launch-maker').then
 const VideoMaker = dynamic(() => import('@/components/video/video-maker').then((mod) => mod.VideoMaker), { ssr: false, loading });
 const ArticleMaker = dynamic(() => import('@/components/article/article-maker').then((mod) => mod.ArticleMaker), { ssr: false, loading });
 
-export function MakerChatCard({ conversationId, kind, state, onPosted, onClose }: { conversationId: string; kind: MakerKind; state?: unknown; onPosted: () => void; onClose: () => void }) {
+// Hide folds the maker into one line and keeps everything in it (words, pictures, voice); Open brings it back as it was.
+// Discard removes it from the chat.
+export function MakerChatCard({ conversationId, kind, state, hidden = false, onPosted, onHide, onShow, onClose }: { conversationId: string; kind: MakerKind; state?: unknown; hidden?: boolean; onPosted: () => void; onHide: () => void; onShow: () => void; onClose: () => void }) {
   // Work in progress is kept on this device under the chat, so a refresh in the middle loses nothing.
   const draftId = `chat-${conversationId}-${kind}`;
   const chat = { conversationId, initialState: state, onPosted };
   return (
     <section aria-label={MAKER_LABEL[kind]} className="rounded-2xl border border-line bg-panel/60 p-3 sm:p-4">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="font-serif text-lg text-foreground">{state ? `Edit your ${MAKER_LABEL[kind].toLowerCase()}` : MAKER_LABEL[kind]}</p>
-        <button type="button" onClick={onClose} className="rounded-lg px-2 py-1 text-xs text-muted transition hover:text-foreground">Close</button>
+      <div className={`flex items-center justify-between gap-2 ${hidden ? '' : 'mb-3'}`}>
+        <button type="button" onClick={hidden ? onShow : onHide} className="min-w-0 text-left" aria-expanded={!hidden}>
+          <span className="block truncate font-serif text-lg text-foreground">{state ? `Edit your ${MAKER_LABEL[kind].toLowerCase()}` : MAKER_LABEL[kind]}</span>
+          {hidden ? <span className="block text-xs text-muted">Still here, with everything you made. Open it to carry on.</span> : null}
+        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          {hidden ? (
+            <button type="button" onClick={onShow} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember transition hover:opacity-90">Open</button>
+          ) : (
+            <button type="button" onClick={onHide} className="rounded-lg px-2 py-1 text-xs text-muted transition hover:text-foreground">Hide</button>
+          )}
+          <button type="button" onClick={onClose} className="rounded-lg px-2 py-1 text-xs text-muted transition hover:text-danger">Discard</button>
+        </div>
       </div>
-      {kind === 'video-launch' ? (
-        <LaunchMaker draftId={draftId} chat={chat} />
-      ) : kind === 'article' ? (
-        <ArticleMaker draftId={draftId} chat={chat} />
-      ) : (
-        <VideoMaker initialFormat={kind.slice(6) as VideoFormat} draftId={draftId} chat={chat} />
-      )}
+      {/* Kept mounted while hidden, so nothing in it is lost. */}
+      <div className={hidden ? 'hidden' : ''}>
+        {kind === 'video-launch' ? (
+          <LaunchMaker draftId={draftId} chat={chat} />
+        ) : kind === 'article' ? (
+          <ArticleMaker draftId={draftId} chat={chat} />
+        ) : (
+          <VideoMaker initialFormat={kind.slice(6) as VideoFormat} draftId={draftId} chat={chat} />
+        )}
+      </div>
     </section>
   );
 }

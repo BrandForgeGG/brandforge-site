@@ -263,7 +263,7 @@ onMobileClose,
     const timer = window.setInterval(() => {
       if (document.hidden) return;
       void loadSelfRecents();
-    }, 30000);
+    }, 120_000);
     return () => window.clearInterval(timer);
   }, [recentsProp, loadSelfRecents]);
 
@@ -291,7 +291,7 @@ onMobileClose,
     const timer = window.setInterval(() => {
       if (document.hidden) return;
       void loadCounts();
-    }, 60000);
+    }, 600_000);
     return () => window.clearInterval(timer);
   }, [loadCounts]);
 

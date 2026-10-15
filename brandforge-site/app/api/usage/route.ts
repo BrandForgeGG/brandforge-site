@@ -7,7 +7,7 @@ import { analyticsAllowed } from '@/lib/consent.js';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// POST { visitorId }: one heartbeat from an open, visible tab (about once a minute). Counted only for visitors who accepted
+// POST { visitorId }: one heartbeat from an open, visible tab (about every five minutes). Counted only for visitors who accepted
 // measurement in the cookie choice; the database caps each beat so a forgotten tab is not counted as hours.
 export async function POST(request: NextRequest) {
   if (!analyticsAllowed(request.headers.get('cookie') ?? '')) return NextResponse.json({ counted: false });
