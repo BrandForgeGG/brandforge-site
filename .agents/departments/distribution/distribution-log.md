@@ -1393,3 +1393,9 @@ we do not have.
 **Change:** the founder set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET in Vercel production (Secret type; values never passed through the chat or the repo). Redeployed. Live: /api/billing/config reports card and crypto both on, /pricing shows "Pay by card" next to "Get … with crypto" on all four paid plans, and the webhook refuses unsigned calls (400 "Bad signature"). No Stripe products are needed: checkout builds each plan's monthly price from lib/plans.js. A restricted live key pasted into the chat was not used; the founder was asked to roll it. Still open: a signed-in click on "Pay by card" to confirm the Stripe page opens (only the founder can sign in), and the Customer portal activated in Stripe for "Change card or cancel".
 
 **Distribution move:** pricing copy is live as is. Announcement, once the first real card checkout opens: "Pro is now available by card or crypto: pick what suits you."
+
+## 2026-10-16 — Card checkout: the real reason when Stripe refuses
+
+**Change:** the first live "Pay by card" said "That plan cannot be paid by card". The server log showed Stripe's real reason: secret_key_required, because STRIPE_SECRET_KEY held the publishable key (pk_live) instead of the secret key (sk_live). The founder is swapping it in Vercel. The checkout route now checks the plan first ("cannot be paid by card" is only for a plan that does not exist). A Stripe refusal is now an honest 502: "Card payment could not start right now. Try again in a moment, or pay with crypto."
+
+**Distribution move:** none; an internal fix with no marketing angle.
