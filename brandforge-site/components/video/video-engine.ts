@@ -164,20 +164,29 @@ export function canEncode(): boolean {
   return typeof window !== 'undefined' && typeof (window as unknown as { VideoEncoder?: unknown }).VideoEncoder === 'function';
 }
 
-async function pickVideoCodec(w: number, h: number): Promise<{ codec: string; muxer: 'avc' | 'vp9' } | null> {
+type VideoCodec = { codec: string; muxer: 'avc' | 'vp9'; hardware: HardwareAcceleration };
+
+// Every way this browser says it can encode the video, best first. The same codecs are offered again on the software
+// encoder, because a hardware encoder can accept a job and then fail partway (common on laptops and phones).
+async function videoCodecs(w: number, h: number): Promise<VideoCodec[]> {
   const tries: { codec: string; muxer: 'avc' | 'vp9' }[] = [
     { codec: 'avc1.640028', muxer: 'avc' },
     { codec: 'avc1.4d0028', muxer: 'avc' },
     { codec: 'avc1.42002a', muxer: 'avc' },
     { codec: 'vp09.00.40.08', muxer: 'vp9' },
   ];
-  for (const option of tries) {
-    const support = await VideoEncoder.isConfigSupported({ codec: option.codec, width: w, height: h, bitrate: 6_000_000, framerate: FPS }).catch(() => null);
-    if (support?.supported) return option;
+  const out: VideoCodec[] = [];
+  for (const hardware of ['no-preference', 'prefer-software'] as HardwareAcceleration[]) {
+    for (const option of tries) {
+      const support = await VideoEncoder.isConfigSupported({ codec: option.codec, width: w, height: h, bitrate: 6_000_000, framerate: FPS, hardwareAcceleration: hardware }).catch(() => null);
+      if (support?.supported) {
+        out.push({ ...option, hardware });
+        break;
+      }
+    }
   }
-  return null;
+  return out;
 }
-
 async function pickAudioCodec(sampleRate: number): Promise<{ codec: string; muxer: 'aac' | 'opus' } | null> {
   if (typeof (window as unknown as { AudioEncoder?: unknown }).AudioEncoder !== 'function') return null;
   for (const option of [{ codec: 'mp4a.40.2', muxer: 'aac' as const }, { codec: 'opus', muxer: 'opus' as const }]) {
@@ -209,9 +218,23 @@ export async function encodeVideo(opts: { w: number; h: number; scenes: VideoSce
 
 /** Renders any drawing, frame by frame, into an MP4 (with the voice track when there is one). onProgress gets 0..1. */
 export async function encodeFrames(opts: { w: number; h: number; seconds: number; draw: (ctx: CanvasRenderingContext2D, t: number) => void; voice: VoiceTrack; onProgress?: (share: number) => void; signal?: AbortSignal }): Promise<Blob> {
+  const codecs = await videoCodecs(opts.w, opts.h);
+  if (codecs.length === 0) throw new Error('This browser cannot make MP4 video. Try a recent Chrome, Edge or Safari.');
+  let last: unknown = null;
+  for (const codec of codecs) {
+    try {
+      return await encodeWith(codec, opts);
+    } catch (error) {
+      if (opts.signal?.aborted) throw new Error('Stopped.');
+      last = error;
+      console.warn('[video] encoder failed, trying the next one:', codec.codec, codec.hardware, error instanceof Error ? error.message : error);
+    }
+  }
+  throw new Error(`This browser could not finish the video${last instanceof Error ? ` (${last.message})` : ''}. Try again in Chrome or Edge on a computer, or make a shorter video.`);
+}
+
+async function encodeWith(video: VideoCodec, opts: { w: number; h: number; seconds: number; draw: (ctx: CanvasRenderingContext2D, t: number) => void; voice: VoiceTrack; onProgress?: (share: number) => void; signal?: AbortSignal }): Promise<Blob> {
   const { w, h, voice } = opts;
-  const video = await pickVideoCodec(w, h);
-  if (!video) throw new Error('This browser cannot make MP4 video. Try a recent Chrome, Edge or Safari.');
   const AUDIO_RATE = 48_000;
   const audio = voice ? await pickAudioCodec(AUDIO_RATE) : null;
 
@@ -225,44 +248,69 @@ export async function encodeFrames(opts: { w: number; h: number; seconds: number
 
   let failure: Error | null = null;
   const encoder = new VideoEncoder({ output: (chunk, meta) => muxer.addVideoChunk(chunk, meta), error: (error) => (failure = error as Error) });
-  encoder.configure({ codec: video.codec, width: w, height: h, bitrate: 6_000_000, framerate: FPS });
+  const shut = () => {
+    if (encoder.state !== 'closed') encoder.close();
+  };
+  try {
+    encoder.configure({ codec: video.codec, width: w, height: h, bitrate: 6_000_000, framerate: FPS, hardwareAcceleration: video.hardware });
 
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Could not draw the video.');
-  const frames = Math.max(1, Math.round(opts.seconds * FPS));
-  for (let i = 0; i < frames; i++) {
-    if (opts.signal?.aborted) throw new Error('Stopped.');
-    if (failure) throw failure;
-    opts.draw(ctx, i / FPS);
-    const frame = new VideoFrame(canvas, { timestamp: Math.round((i * 1_000_000) / FPS), duration: Math.round(1_000_000 / FPS) });
-    encoder.encode(frame, { keyFrame: i % (FPS * 2) === 0 });
-    frame.close();
-    // Let the encoder drain so memory stays flat, and keep the page responsive.
-    if (encoder.encodeQueueSize > 8) await new Promise((resolve) => setTimeout(resolve, 0));
-    if (i % 15 === 0) {
-      opts.onProgress?.(i / frames * (audio ? 0.9 : 1));
-      await new Promise((resolve) => setTimeout(resolve, 0));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not draw the video.');
+    const frames = Math.max(1, Math.round(opts.seconds * FPS));
+    for (let i = 0; i < frames; i++) {
+      if (opts.signal?.aborted) throw new Error('Stopped.');
+      if (failure) throw failure;
+      opts.draw(ctx, i / FPS);
+      const frame = new VideoFrame(canvas, { timestamp: Math.round((i * 1_000_000) / FPS), duration: Math.round(1_000_000 / FPS) });
+      try {
+        encoder.encode(frame, { keyFrame: i % (FPS * 2) === 0 });
+      } finally {
+        frame.close();
+      }
+      // Wait for the encoder to catch up before drawing more. Each waiting frame is a full copy of the picture, so
+      // letting them pile up (a slow encoder, a phone) runs the tab out of memory.
+      let waited = 0;
+      while (encoder.encodeQueueSize > 2 && !failure) {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        waited += 5;
+        if (waited > 30_000) throw new Error('the encoder stopped responding');
+      }
+      if (i % 15 === 0) {
+        opts.onProgress?.((i / frames) * (audio ? 0.9 : 1));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
     }
+    if (failure) throw failure;
+    await encoder.flush();
+    if (failure) throw failure;
+  } finally {
+    shut();
   }
-  await encoder.flush();
-  encoder.close();
 
   if (audio && voice) {
     const samples = resample(voice.samples, voice.sampleRate, AUDIO_RATE);
     const audioEncoder = new AudioEncoder({ output: (chunk, meta) => muxer.addAudioChunk(chunk, meta), error: (error) => (failure = error as Error) });
-    audioEncoder.configure({ codec: audio.codec, sampleRate: AUDIO_RATE, numberOfChannels: 1, bitrate: 128_000 });
-    const block = 4800;
-    for (let start = 0; start < samples.length; start += block) {
-      const part = samples.subarray(start, Math.min(samples.length, start + block));
-      const data = new AudioData({ format: 'f32', sampleRate: AUDIO_RATE, numberOfFrames: part.length, numberOfChannels: 1, timestamp: Math.round((start * 1_000_000) / AUDIO_RATE), data: part.slice() });
-      audioEncoder.encode(data);
-      data.close();
+    try {
+      audioEncoder.configure({ codec: audio.codec, sampleRate: AUDIO_RATE, numberOfChannels: 1, bitrate: 128_000 });
+      const block = 4800;
+      for (let start = 0; start < samples.length; start += block) {
+        if (failure) throw failure;
+        const part = samples.subarray(start, Math.min(samples.length, start + block));
+        const data = new AudioData({ format: 'f32', sampleRate: AUDIO_RATE, numberOfFrames: part.length, numberOfChannels: 1, timestamp: Math.round((start * 1_000_000) / AUDIO_RATE), data: part.slice() });
+        try {
+          audioEncoder.encode(data);
+        } finally {
+          data.close();
+        }
+        if (audioEncoder.encodeQueueSize > 20) await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+      await audioEncoder.flush();
+    } finally {
+      if (audioEncoder.state !== 'closed') audioEncoder.close();
     }
-    await audioEncoder.flush();
-    audioEncoder.close();
   }
   if (failure) throw failure;
   muxer.finalize();
