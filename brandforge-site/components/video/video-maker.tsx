@@ -7,9 +7,10 @@ import { useLogin } from '@/components/login-dialog';
 import { loadFonts } from '@/components/carousel/carousel-shared';
 import { THEMES } from '@/lib/carousel-render.js';
 import { VIDEO_FORMATS, fitToVoice, totalSeconds, type VideoFormat, type VideoScene, planToScenes } from '@/lib/video-scenes.js';
-import { canEncode, drawFrame, encodeVideo, lookOf, makeArt, type SceneArt } from '@/components/video/video-engine';
-import { VOICES, clipsFor, layTrack, playClips, type Clip, type VoiceId } from '@/components/video/voice';
-import { masterOrNull } from '@/components/video/music';
+import { canEncode, drawFrame, encodeFrames, encodeVideo, lookOf, makeArt, type SceneArt } from '@/components/video/video-engine';
+import { VOICES, audioContext, clipsFor, layTrack, playClips, type Clip, type VoiceId } from '@/components/video/voice';
+import { beatSeconds, masterOrNull, mixWithMusic, playBed } from '@/components/video/music';
+import { drawKineticFrame, loadKineticFonts, shortToKinetic } from '@/components/video/kinetic-engine';
 import { YouTubePost } from '@/components/video/youtube-post';
 import { posterOf } from '@/components/drafts/drafts-store';
 import { postVideoToChat, type ChatTarget } from '@/components/chat/post-creation';
@@ -17,7 +18,9 @@ import { useAutosave, useDraft } from '@/components/drafts/use-draft';
 
 const field = 'w-full rounded-xl border border-line bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none';
 const chip = 'rounded-full border px-3 py-1.5 text-xs transition';
-const LOOKS = Object.keys(THEMES);
+// Kinetic first: motion design that cuts on the beat, with an upbeat music bed. The rest are the carousel looks.
+const LOOKS = ['kinetic', ...Object.keys(THEMES)];
+const KINETIC_LOOK = { bg: '#0f0e0d', text: '#f4f1ec', accent: '#ff6a2b', dark: true };
 const NEWLINE = String.fromCharCode(10);
 
 const ASPECT: Record<VideoFormat, 'story' | 'wide' | 'square'> = { short: 'story', long: 'wide', square: 'square' };
@@ -60,7 +63,7 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId, chat }
   const [topic, setTopic] = useState('');
   const [brand, setBrand] = useState('');
   const [handle, setHandle] = useState('');
-  const [theme, setTheme] = useState('forge');
+  const [theme, setTheme] = useState('kinetic');
   const [scenes, setScenes] = useState<VideoScene[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -89,6 +92,21 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId, chat }
   const voiceText = scenes.map((scene) => scene.voice).join('|');
   const headings = scenes.map((scene) => scene.heading).join('|');
   const sceneArt = useMemo<SceneArt | null>(() => (art ? (i: number) => (withPictures && pictures[i]) || art : null), [art, withPictures, pictures]);
+  // One function draws any frame in the chosen look, for the preview and the MP4 alike. Kinetic flashes the painted
+  // pictures full-bleed between its word cards.
+  const isKinetic = theme === 'kinetic';
+  const kinetic = useMemo(() => {
+    if (!isKinetic) return null;
+    const cards = shortToKinetic(timed, { name: brand.trim(), host: handle.trim() });
+    return withPictures ? cards.map((scene, i) => (pictures[i] && scene.cards[0]?.kind !== 'close' ? { ...scene, cards: [scene.cards[0], { kind: 'picture' as const, image: pictures[i] as ImageBitmap, label: '' }, ...scene.cards.slice(1)] } : scene)) : cards;
+  }, [isKinetic, timed, brand, handle, withPictures, pictures]);
+  const drawAt = useMemo(
+    () => (ctx: CanvasRenderingContext2D, t: number) => {
+      if (kinetic) drawKineticFrame(ctx, f.w, f.h, kinetic, t, KINETIC_LOOK, { name: brand.trim(), host: handle.trim() }, beatSeconds('upbeat'));
+      else if (sceneArt) drawFrame(ctx, f.w, f.h, timed, t, look, { name: brand.trim(), handle: handle.trim() }, sceneArt);
+    },
+    [kinetic, f.w, f.h, brand, handle, sceneArt, timed, look]
+  );
 
   // Paint the scene pictures once the scenes exist (three at a time), and again when the headings or the shape change.
   useEffect(() => {
@@ -131,7 +149,7 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId, chat }
   }, [withPictures, headings, format]);
 
   useEffect(() => {
-    void loadFonts().then(() => setFontsReady(true));
+    void Promise.all([loadFonts(), loadKineticFonts()]).then(() => setFontsReady(true));
   }, []);
 
   // Reopening a draft: its words, settings, pictures and (when it was made) the finished MP4.
@@ -227,12 +245,12 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId, chat }
     canvas.height = f.h;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    const brandInfo = { name: brand.trim(), handle: handle.trim() };
     if (!playing) {
-      drawFrame(ctx, f.w, f.h, timed, 0.9, look, brandInfo, sceneArt);
+      drawAt(ctx, kinetic ? 0 : 0.9);
       return;
     }
     const stopVoice = voiced && clips ? playClips(clips, startsOf(timed)) : () => undefined;
+    const stopMusic = kinetic ? playBed(audioContext(), seconds, 'upbeat') : () => undefined;
     const start = performance.now() + 50;
     let frame = 0;
     const tick = () => {
@@ -241,15 +259,16 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId, chat }
         setPlaying(false);
         return;
       }
-      drawFrame(ctx, f.w, f.h, timed, t, look, brandInfo, sceneArt);
+      drawAt(ctx, t);
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(frame);
       stopVoice();
+      stopMusic();
     };
-  }, [timed, playing, sceneArt, fontsReady, f.w, f.h, look, brand, handle, seconds, voiced, clips]);
+  }, [timed, playing, sceneArt, fontsReady, f.w, f.h, seconds, voiced, clips, drawAt, kinetic]);
 
   useEffect(() => () => {
     if (result) URL.revokeObjectURL(result.url);
@@ -306,10 +325,14 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId, chat }
     const controller = new AbortController();
     stopRef.current = controller;
     try {
-      const track = voiced && clips ? masterOrNull(layTrack(clips, startsOf(timed), seconds)) : null;
+      const words = voiced && clips ? layTrack(clips, startsOf(timed), seconds) : null;
+      // Kinetic carries the upbeat bed under the voice (ducked); the other looks keep the voice alone.
+      const track = kinetic ? mixWithMusic(words, seconds, 'upbeat') : masterOrNull(words);
       setBusy('Making the video…');
       setProgress(0);
-      const blob = await encodeVideo({ w: f.w, h: f.h, scenes: timed, look, brand: { name: brand.trim(), handle: handle.trim() }, art: sceneArt, voice: track, onProgress: setProgress, signal: controller.signal });
+      const blob = kinetic
+        ? await encodeFrames({ w: f.w, h: f.h, seconds, draw: drawAt, voice: track, onProgress: setProgress, signal: controller.signal })
+        : await encodeVideo({ w: f.w, h: f.h, scenes: timed, look, brand: { name: brand.trim(), handle: handle.trim() }, art: sceneArt, voice: track, onProgress: setProgress, signal: controller.signal });
       if (chat) {
         // In a chat, the video becomes its newest version there (the chat is its draft).
         setBusy('Saving it to the chat…');
@@ -409,7 +432,7 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId, chat }
             <div className="flex flex-wrap gap-1.5" role="group" aria-label="Look">
               {LOOKS.map((id) => (
                 <button key={id} type="button" aria-pressed={theme === id} onClick={() => { setTheme(id); setResult(null); }} className={`${chip} ${theme === id ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>
-                  {(THEMES as Record<string, { label: string }>)[id].label}
+                  {id === 'kinetic' ? 'Kinetic' : (THEMES as Record<string, { label: string }>)[id].label}
                 </button>
               ))}
             </div>

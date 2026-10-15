@@ -22,11 +22,16 @@ const PROGRESSION = [
 const TAU = Math.PI * 2;
 const hz = (root: number, semitones: number) => root * Math.pow(2, semitones / 12);
 
+/** The beat length in seconds of a music style (the Kinetic look cuts on it; no music keeps the upbeat grid). */
+export function beatSeconds(style: MusicStyle): number {
+  return 60 / (style === 'warm' ? 80 : 112);
+}
+
 /** The bed as mono samples at `rate`, `seconds` long. */
 export function makeBed(seconds: number, rate: number, style: Exclude<MusicStyle, 'none'>): Float32Array {
   const n = Math.max(1, Math.ceil(seconds * rate));
   const out = new Float32Array(n);
-  const bpm = style === 'upbeat' ? 112 : 80;
+  const bpm = 60 / beatSeconds(style);
   const beat = 60 / bpm;
   const bar = beat * 4;
   const root = 130.81; // C3

@@ -25,7 +25,9 @@ export async function POST(request: NextRequest) {
   const cached = voiceCacheUrl(key);
   if (cached) {
     const head = await fetch(cached, { method: 'HEAD', signal: AbortSignal.timeout(3000) }).catch(() => null);
-    if (head && head.ok) return NextResponse.redirect(cached, 307);
+    // 303, not 307: a 307 makes the browser repeat the POST at the storage address, which refuses it. 303 turns it into
+    // a plain GET of the stored file.
+    if (head && head.ok) return NextResponse.redirect(cached, 303);
   }
 
   const user = await getAuthenticatedUser(request).catch(() => null);

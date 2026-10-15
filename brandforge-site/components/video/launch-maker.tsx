@@ -9,7 +9,8 @@ import type { LaunchScene } from '@/lib/launch-video.js';
 import { canEncode, encodeFrames } from '@/components/video/video-engine';
 import { drawLaunchFrame, loadLaunchFonts, type LaunchLook, type LaunchMedia } from '@/components/video/launch-engine';
 import { VOICES, audioContext, clipsFor, layTrack, playClips, type Clip, type VoiceId } from '@/components/video/voice';
-import { MUSIC_STYLES, mixWithMusic, playBed, type MusicStyle } from '@/components/video/music';
+import { MUSIC_STYLES, beatSeconds, mixWithMusic, playBed, type MusicStyle } from '@/components/video/music';
+import { drawKineticFrame, launchToKinetic, loadKineticFonts } from '@/components/video/kinetic-engine';
 import { TONE_IDS, type LaunchShare, type LaunchTone } from '@/lib/launch-video.js';
 import { YouTubePost } from '@/components/video/youtube-post';
 import { LaunchProgress } from '@/components/video/launch-progress';
@@ -35,7 +36,14 @@ const KIND_LABEL: Record<LaunchScene['kind'], string> = { hook: 'Opening', probl
 const DEFAULT_LOOK: LaunchLook = { bg: '#0f0e0d', text: '#f4f1ec', accent: '#ff6a2b', dark: true };
 
 /** What a launch video draft keeps, to reopen it as it was. */
-type LaunchState = { url: string; about: string; shape: Shape; withVoice: boolean; voice: VoiceId; scenes: LaunchScene[]; site: SiteInfo | null; look: LaunchLook; tone?: LaunchTone; music?: MusicStyle; share?: LaunchShare | null; reference?: Reference | null };
+type LaunchState = { url: string; about: string; shape: Shape; withVoice: boolean; voice: VoiceId; scenes: LaunchScene[]; site: SiteInfo | null; look: LaunchLook; tone?: LaunchTone; music?: MusicStyle; share?: LaunchShare | null; reference?: Reference | null; motion?: Motion };
+
+/** How the video moves: calm scenes, or Kinetic motion design that cuts on the beat. */
+type Motion = 'clean' | 'kinetic';
+const MOTIONS: { id: Motion; label: string; note: string }[] = [
+  { id: 'kinetic', label: 'Kinetic', note: 'big words cut on the beat' },
+  { id: 'clean', label: 'Clean', note: 'calm scenes' },
+];
 
 /** A video the member likes, as the format to follow ("Make one like this"). */
 type Reference = { name: string; format: ReferenceFormat };
@@ -95,7 +103,8 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
   const [voice, setVoice] = useState<VoiceId>('af_heart');
   // How it sounds and reads: the tone the story is written in, the music under it, and the post that goes with it.
   const [tone, setTone] = useState<LaunchTone>('bold');
-  const [music, setMusic] = useState<MusicStyle>('warm');
+  const [music, setMusic] = useState<MusicStyle>('upbeat');
+  const [motion, setMotion] = useState<Motion>('kinetic');
   const [share, setShare] = useState<LaunchShare | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   // "Make one like this": the format of a video the member likes, and what the study of it is doing right now.
@@ -115,13 +124,20 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
   const timed = useMemo(() => (voiced && clips ? fitToVoice(scenes, clips.map((clip) => clip.seconds + 0.3)) : scenes), [voiced, clips, scenes]);
   const seconds = totalSeconds(timed);
   const voiceText = scenes.map((scene) => scene.voice).join('|');
+  // One function draws any frame in the chosen look, for the preview and the MP4 alike.
+  const kinetic = useMemo(() => (motion === 'kinetic' ? launchToKinetic(timed, media) : null), [motion, timed, media]);
+  const drawAt = useMemo(
+    () => (ctx: CanvasRenderingContext2D, t: number) =>
+      kinetic ? drawKineticFrame(ctx, f.w, f.h, kinetic, t, look, { name: media.name, host: media.host }, beatSeconds(music)) : drawLaunchFrame(ctx, f.w, f.h, timed, t, look, media),
+    [kinetic, f.w, f.h, look, media, music, timed]
+  );
   const writing = busy === 'writing';
   const written = scenes.length > 0;
   // The preview opens once the story, the pictures and the voice are in; the screenshot is allowed to arrive later.
   const assetsReady = written && !writing && picturesState !== 'loading' && (!withVoice || voiceState.status === 'ready' || voiceState.status === 'failed');
 
   useEffect(() => {
-    void loadLaunchFonts().then(() => setFontsReady(true));
+    void Promise.all([loadLaunchFonts(), loadKineticFonts()]).then(() => setFontsReady(true));
   }, []);
 
   // Reopening a draft: its words, settings and (when it was made) the finished MP4.
@@ -140,6 +156,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
         setVoice(s.voice);
         if (s.tone) setTone(s.tone);
         if (s.music) setMusic(s.music);
+        setMotion(s.motion ?? 'clean');
         setShare(s.share ?? null);
         setReference(s.reference ?? null);
         setScenes(s.scenes);
@@ -154,7 +171,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
   }, [draft, chat?.initialState]);
 
   // Keep the draft up to date while working; an edit after the MP4 was made drops the old MP4 from the draft.
-  const draftState: LaunchState = { url, about, shape, withVoice, voice, scenes, site, look, tone, music, share, reference };
+  const draftState: LaunchState = { url, about, shape, withVoice, voice, scenes, site, look, tone, music, share, reference, motion };
   useAutosave({ draftState, made: Boolean(result) }, scenes.length > 0, () =>
     void draft.save({ title: scenes[0]?.heading || site?.name || 'Launch video', state: draftState, ...(result ? {} : { video: undefined, poster: undefined, seconds: undefined }) })
   );
@@ -222,7 +239,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     if (!playing) {
-      drawLaunchFrame(ctx, f.w, f.h, timed, Math.min(2.4, timed[0].seconds - 0.4), look, media);
+      drawAt(ctx, kinetic ? 0 : Math.min(2.4, timed[0].seconds - 0.4));
       return;
     }
     const stopVoice = voiced && clips ? playClips(clips, startsOf(timed)) : () => undefined;
@@ -235,7 +252,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
         setPlaying(false);
         return;
       }
-      drawLaunchFrame(ctx, f.w, f.h, timed, t, look, media);
+      drawAt(ctx, t);
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
@@ -244,7 +261,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
       stopVoice();
       stopMusic();
     };
-  }, [timed, playing, fontsReady, f.w, f.h, look, media, seconds, voiced, clips, assetsReady, music]);
+  }, [timed, playing, fontsReady, f.w, f.h, seconds, voiced, clips, assetsReady, music, drawAt, kinetic]);
 
   useEffect(() => () => {
     if (result) URL.revokeObjectURL(result.url);
@@ -340,7 +357,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
       const track = mixWithMusic(voiced && clips ? layTrack(clips, startsOf(timed), seconds) : null, seconds, music);
       setBusy('Making the video…');
       setProgress(0);
-      const blob = await encodeFrames({ w: f.w, h: f.h, seconds, draw: (ctx, t) => drawLaunchFrame(ctx, f.w, f.h, timed, t, look, media), voice: track, onProgress: setProgress, signal: controller.signal });
+      const blob = await encodeFrames({ w: f.w, h: f.h, seconds, draw: drawAt, voice: track, onProgress: setProgress, signal: controller.signal });
       if (chat) {
         // In a chat, the video becomes its newest version there (the chat is its draft).
         setBusy('Saving it to the chat…');
@@ -432,6 +449,13 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
               </button>
             ))}
           </div>
+          <div className="mt-3 flex flex-wrap items-center gap-1.5" role="group" aria-label="Look">
+            {MOTIONS.map((option) => (
+              <button key={option.id} type="button" aria-pressed={motion === option.id} onClick={() => { setMotion(option.id); if (option.id === 'kinetic' && music === 'warm') setMusic('upbeat'); setResult(null); setPlaying(false); }} className={`${chip} ${motion === option.id ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>
+                {option.label} <span className="hidden text-muted sm:inline">· {option.note}</span>
+              </button>
+            ))}
+          </div>
           <div className="mt-3 flex flex-wrap items-center gap-1.5" role="group" aria-label="Tone">
             {TONE_IDS.map((id) => (
               <button key={id} type="button" aria-pressed={tone === id} onClick={() => setTone(id)} className={`${chip} ${tone === id ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>
@@ -467,7 +491,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-foreground">{site?.host || about.slice(0, 60) || 'Your launch'}</p>
             <p className="truncate text-xs text-muted">
-              {SHAPES[shape].label} · {withVoice ? voiceLabel : 'No voice'} · {timed.length} scenes · {Math.round(seconds)}s{reference ? ` · like “${reference.name}”` : ''}
+              {SHAPES[shape].label} · {motion === 'kinetic' ? 'Kinetic' : 'Clean'} · {withVoice ? voiceLabel : 'No voice'} · {timed.length} scenes · {Math.round(seconds)}s{reference ? ` · like “${reference.name}”` : ''}
             </p>
           </div>
           <button type="button" onClick={() => setEditingSetup(true)} className="shrink-0 rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">Change</button>
