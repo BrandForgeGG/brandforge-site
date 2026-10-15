@@ -10,6 +10,7 @@ import { PostComposer } from '@/components/carousel/post-composer';
 import { ImageChatCard, imageKey } from '@/components/chat/image-chat-card';
 import { ImageSampleVisual } from '@/components/studio/image-sample-visual';
 import { CommunityFeed } from '@/components/community/community-feed';
+import { DraftsList } from '@/components/drafts/drafts-list';
 import { KINDS as IMAGE_KINDS, KIND_IDS as IMAGE_KIND_IDS, type ImageKind } from '@/lib/image-kinds.js';
 import { CarouselVisual, DocumentVisual, ImageVisual, OfferVisual, PollVisual, QuizVisual, ThreadVisual, UpdateVisual, VideoVisual } from '@/components/studio/card-visuals';
 import type { VideoFormat } from '@/lib/video-scenes.js';
@@ -58,6 +59,10 @@ const CARD_GROUPS = ['Images', 'Video', 'Text', 'Documents'];
 export function StudioHub({ embedded = false, initialKind = null, initialTopic = '' }: { embedded?: boolean; initialKind?: Kind | null; initialTopic?: string } = {}) {
   const { openLogin } = useLogin();
   const [open, setOpen] = useState<Kind | null>(embedded ? initialKind : null);
+  // A format opens folded (its drafts and a start button); the maker shows once asked for. In the chat it opens at once.
+  const [building, setBuilding] = useState(embedded);
+  // The draft the maker was opened on (from the list, or from the address after a refresh).
+  const [openedDraft, setOpenedDraft] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   // The formats stay folded away until someone wants to make something; the page opens on what members are making.
@@ -86,7 +91,13 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
           markResume();
         }
       }
-      if (make && CARDS.some((card) => card.id === make)) setOpen(make as Kind);
+      if (make && CARDS.some((card) => card.id === make)) {
+        setOpen(make as Kind);
+        const draft = params.get('draft');
+        if (draft) setOpenedDraft(draft);
+        // A draft being worked on, or a topic handed over from Distribute, opens straight into the maker.
+        if (draft || topic) setBuilding(true);
+      }
     }
     setReady(true);
     void getSessionUser()
@@ -101,19 +112,37 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
     // eslint-disable-next-line react-hooks/exhaustive-deps -- this only reads where it was opened from, once
   }, []);
 
-  function show(kind: Kind | null) {
+  function show(kind: Kind | null, opts: { draft?: string; build?: boolean } = {}) {
     setOpen(kind);
+    setOpenedDraft(opts.draft ?? null);
+    setBuilding(embedded || Boolean(opts.build));
     if (embedded) return;
     try {
       const url = new URL(window.location.href);
       if (kind) url.searchParams.set('make', kind);
       else url.searchParams.delete('make');
+      if (opts.draft) url.searchParams.set('draft', opts.draft);
+      else url.searchParams.delete('draft');
       window.history.replaceState(null, '', url.toString());
     } catch {
       /* the page still works without the address */
     }
     window.scrollTo({ top: 0 });
   }
+
+  // A maker named its new draft: the address carries it, so a refresh reopens the same work.
+  function rememberDraft(id: string) {
+    if (embedded) return;
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('draft', id);
+      window.history.replaceState(null, '', url.toString());
+    } catch {
+      /* the draft is still in the list */
+    }
+  }
+
+  const labelOf = (kind: string) => CARDS.find((card) => card.id === kind)?.name ?? 'Draft';
 
   function vote(creation: Format) {
     if (voted[creation.n]) return;
@@ -143,7 +172,22 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
           <span className="text-muted" aria-hidden="true">/</span>
           <h2 className="font-serif text-xl text-foreground">{current.name}</h2>
         </div>
-        {current.id === 'carousel' || current.id === 'deck' ? <CarouselMaker /> : current.id === 'article' ? <ArticleMaker /> : current.id === 'video-launch' ? <LaunchMaker /> : current.id.startsWith('video-') ? <VideoMaker key={current.id} initialFormat={current.id.slice(6) as VideoFormat} /> : current.id.startsWith('image-') ? <ImageChatCard key={current.id} kind={current.id.slice(6) as ImageKind} topic={initialTopic || carried} userText={null} storageKey={imageKey(current.id)} restore={!carried} standalone onSend={async () => null} onClose={() => show(null)} /> : <PostComposer key={current.id} type={(current.id === 'link' ? 'update' : current.id) as PostType} signedIn={signedIn} initialTopic={embedded && current.id === initialKind ? initialTopic : ''} onSignIn={() => openLogin({ reason: 'signin', next: embedded ? window.location.pathname + window.location.search : `/create?make=${current.id}` })} />}
+        {building ? (
+          current.id === 'carousel' || current.id === 'deck' ? <CarouselMaker /> : current.id === 'article' ? <ArticleMaker key={openedDraft ?? 'new'} draftId={openedDraft ?? undefined} onDraftId={rememberDraft} /> : current.id === 'video-launch' ? <LaunchMaker key={openedDraft ?? 'new'} draftId={openedDraft ?? undefined} onDraftId={rememberDraft} /> : current.id.startsWith('video-') ? <VideoMaker key={`${current.id}:${openedDraft ?? 'new'}`} initialFormat={current.id.slice(6) as VideoFormat} draftId={openedDraft ?? undefined} onDraftId={rememberDraft} /> : current.id.startsWith('image-') ? <ImageChatCard key={current.id} kind={current.id.slice(6) as ImageKind} topic={initialTopic || carried} userText={null} storageKey={imageKey(current.id)} restore={!carried} standalone onSend={async () => null} onClose={() => show(null)} /> : <PostComposer key={current.id} type={(current.id === 'link' ? 'update' : current.id) as PostType} signedIn={signedIn} initialTopic={embedded && current.id === initialKind ? initialTopic : ''} onSignIn={() => openLogin({ reason: 'signin', next: embedded ? window.location.pathname + window.location.search : `/create?make=${current.id}` })} />
+        ) : (
+          <div className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel p-4 sm:p-5">
+              <div className="min-w-0">
+                <p className="font-serif text-lg text-foreground">{current.name}</p>
+                <p className="text-sm text-muted">{current.line}</p>
+              </div>
+              <button type="button" onClick={() => setBuilding(true)} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">
+                Start making
+              </button>
+            </div>
+            <DraftsList kind={current.id} labelOf={labelOf} onOpen={(draft) => show(draft.kind as Kind, { draft: draft.id, build: true })} title="Your drafts" />
+          </div>
+        )}
       </div>
     );
   }
@@ -161,6 +205,7 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
           </button>
         </div>
       )}
+      {embedded ? null : <DraftsList labelOf={labelOf} onOpen={(draft) => show(draft.kind as Kind, { draft: draft.id, build: true })} />}
       {embedded || picking ? (
       <div className="space-y-10">
       <section aria-label="What do you want to make?">

@@ -10,6 +10,8 @@ import { VIDEO_FORMATS, fitToVoice, totalSeconds, type VideoFormat, type VideoSc
 import { canEncode, drawFrame, encodeVideo, lookOf, makeArt, type SceneArt } from '@/components/video/video-engine';
 import { VOICES, clipsFor, layTrack, playClips, type Clip, type VoiceId } from '@/components/video/voice';
 import { YouTubePost } from '@/components/video/youtube-post';
+import { posterOf } from '@/components/drafts/drafts-store';
+import { useAutosave, useDraft } from '@/components/drafts/use-draft';
 
 const field = 'w-full rounded-xl border border-line bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none';
 const chip = 'rounded-full border px-3 py-1.5 text-xs transition';
@@ -17,6 +19,9 @@ const LOOKS = Object.keys(THEMES);
 const NEWLINE = String.fromCharCode(10);
 
 const ASPECT: Record<VideoFormat, 'story' | 'wide' | 'square'> = { short: 'story', long: 'wide', square: 'square' };
+
+/** What a video draft keeps, to reopen it as it was. */
+type VideoState = { format: VideoFormat; topic: string; brand: string; handle: string; theme: string; withVoice: boolean; voice: VoiceId; withPictures: boolean; scenes: VideoScene[] };
 
 /** One AI picture for a scene, shaped to the video. null when none could be painted (the drawn art stands in). */
 async function paintScene(topic: string, scene: VideoScene, index: number, format: VideoFormat): Promise<ImageBitmap | null> {
@@ -43,8 +48,11 @@ function startsOf(scenes: VideoScene[]): number[] {
 // every word), watch and hear the preview, then make the MP4. The voice is recorded as soon as the scenes exist (and again
 // after an edit), so the preview plays with it and the MP4 uses exactly what was heard. Frames are drawn and encoded in
 // your own browser; the voice comes from our server.
-export function VideoMaker({ initialFormat = 'short' }: { initialFormat?: VideoFormat }) {
+export function VideoMaker({ initialFormat = 'short', draftId, onDraftId }: { initialFormat?: VideoFormat; draftId?: string; onDraftId?: (id: string) => void }) {
   const { openLogin } = useLogin();
+  const draft = useDraft(`video-${initialFormat}`, draftId, onDraftId);
+  // Pictures a reopened draft already had, for the scenes they were painted for (so they are not painted again).
+  const restoredRef = useRef<{ headings: string; pictures: (ImageBitmap | null)[] } | null>(null);
   const [format, setFormat] = useState<VideoFormat>(initialFormat);
   const [topic, setTopic] = useState('');
   const [brand, setBrand] = useState('');
@@ -87,6 +95,12 @@ export function VideoMaker({ initialFormat = 'short' }: { initialFormat?: VideoF
       setPainting(null);
       return;
     }
+    const restored = restoredRef.current;
+    if (restored && restored.headings === headings && restored.pictures.length === scenes.length) {
+      setPictures(restored.pictures);
+      setPainting(null);
+      return;
+    }
     let live = true;
     const made: (ImageBitmap | null)[] = new Array(scenes.length).fill(null);
     setPictures([...made]);
@@ -116,6 +130,61 @@ export function VideoMaker({ initialFormat = 'short' }: { initialFormat?: VideoF
   useEffect(() => {
     void loadFonts().then(() => setFontsReady(true));
   }, []);
+
+  // Reopening a draft: its words, settings, pictures and (when it was made) the finished MP4.
+  useEffect(() => {
+    let live = true;
+    void draft.load().then(async (saved) => {
+      if (!live || !saved) return;
+      const s = saved.state as VideoState | null;
+      const bitmaps = await Promise.all((saved.images ?? []).map((blob) => (blob ? createImageBitmap(blob).catch(() => null) : Promise.resolve(null))));
+      if (!live) return;
+      if (s) {
+        if (bitmaps.some(Boolean)) restoredRef.current = { headings: s.scenes.map((scene) => scene.heading).join('|'), pictures: bitmaps };
+        setFormat(s.format);
+        setTopic(s.topic);
+        setBrand(s.brand);
+        setHandle(s.handle);
+        setTheme(s.theme);
+        setWithVoice(s.withVoice);
+        setVoice(s.voice);
+        setWithPictures(s.withPictures);
+        setScenes(s.scenes);
+      }
+      if (saved.video) setResult({ url: URL.createObjectURL(saved.video), name: `brandforge-${s?.format ?? initialFormat}-video.mp4`, seconds: saved.seconds ?? 0, voiced: Boolean(s?.withVoice), blob: saved.video });
+    });
+    return () => {
+      live = false;
+    };
+  }, [draft, initialFormat]);
+
+  // Keep the draft up to date while working; an edit after the MP4 was made drops the old MP4 from the draft.
+  const draftState: VideoState = { format, topic, brand, handle, theme, withVoice, voice, withPictures, scenes };
+  useAutosave({ draftState, made: Boolean(result) }, scenes.length > 0, () =>
+    void draft.save({ title: scenes[0]?.heading || topic.slice(0, 60) || 'Video', state: draftState, ...(result ? {} : { video: undefined, poster: undefined, seconds: undefined }) })
+  );
+
+  // Once every scene has its picture, keep them with the draft.
+  const picturesDone = withPictures && !painting && scenes.length > 0 && pictures.length === scenes.length && pictures.some(Boolean);
+  useEffect(() => {
+    if (!picturesDone) return;
+    let live = true;
+    void Promise.all(
+      pictures.map((picture) => {
+        if (!picture) return Promise.resolve(null);
+        const canvas = document.createElement('canvas');
+        canvas.width = picture.width;
+        canvas.height = picture.height;
+        canvas.getContext('2d')?.drawImage(picture, 0, 0);
+        return new Promise<Blob | null>((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.9));
+      })
+    ).then((images) => {
+      if (live) void draft.save({ images });
+    });
+    return () => {
+      live = false;
+    };
+  }, [picturesDone, pictures, draft]);
 
   // Record the voice once the scenes exist, and again shortly after the words or the voice change.
   useEffect(() => {
@@ -237,6 +306,9 @@ export function VideoMaker({ initialFormat = 'short' }: { initialFormat?: VideoF
       const blob = await encodeVideo({ w: f.w, h: f.h, scenes: timed, look, brand: { name: brand.trim(), handle: handle.trim() }, art: sceneArt, voice: track, onProgress: setProgress, signal: controller.signal });
       if (result) URL.revokeObjectURL(result.url);
       setResult({ url: URL.createObjectURL(blob), name: `brandforge-${format}-video.mp4`, seconds, voiced: Boolean(track), blob });
+      // The finished MP4 goes into the draft, so a refresh keeps it until it is published.
+      const poster = canvasRef.current ? await posterOf(canvasRef.current) : null;
+      void draft.save({ title: scenes[0]?.heading || topic.slice(0, 60) || 'Video', state: draftState, video: blob, poster: poster ?? undefined, seconds });
       trackEvent('carousel_downloaded', { source: `video-${format}` });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not make the video.');
@@ -351,7 +423,7 @@ export function VideoMaker({ initialFormat = 'short' }: { initialFormat?: VideoF
                 <p className="text-sm text-foreground">Your video is ready: {Math.round(result.seconds)} seconds{result.voiced ? ', with voice-over' : ''}.</p>
                 <video src={result.url} controls playsInline className="mt-2 max-h-72 w-auto max-w-full rounded-lg" />
                 <a href={result.url} download={result.name} className="mt-2 inline-block rounded-lg bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90">Download MP4</a>
-                <YouTubePost blob={result.blob} defaultTitle={scenes[0]?.heading ?? ''} defaultDescription={[...scenes.map((scene) => [scene.heading, ...scene.lines].join(': ')), handle.trim()].filter(Boolean).join(NEWLINE)} vertical={f.h > f.w} seconds={result.seconds} />
+                <YouTubePost blob={result.blob} defaultTitle={scenes[0]?.heading ?? ''} defaultDescription={[...scenes.map((scene) => [scene.heading, ...scene.lines].join(': ')), handle.trim()].filter(Boolean).join(NEWLINE)} vertical={f.h > f.w} seconds={result.seconds} onPosted={() => void draft.remove()} />
               </div>
             ) : null}
           </div>

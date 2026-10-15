@@ -12,7 +12,7 @@ const field = 'w-full rounded-xl border border-line bg-background px-3 py-2.5 te
 // Posting a finished video to YouTube: pick the channel, check the title and description, post now or pick a time
 // (YouTube itself publishes it then). The file goes from this browser into private storage, the server hands it to YouTube,
 // and the stored copy is deleted.
-export function YouTubePost({ blob, defaultTitle, defaultDescription, vertical, seconds }: { blob: Blob; defaultTitle: string; defaultDescription: string; vertical: boolean; seconds: number }) {
+export function YouTubePost({ blob, defaultTitle, defaultDescription, vertical, seconds, onPosted }: { blob: Blob; defaultTitle: string; defaultDescription: string; vertical: boolean; seconds: number; onPosted?: () => void }) {
   const { channels, loading } = useChannels(true);
   const youtube = channels.filter((channel) => channel.kind === 'youtube');
   const [picked, setPicked] = useState<string[]>([]);
@@ -44,6 +44,7 @@ export function YouTubePost({ blob, defaultTitle, defaultDescription, vertical, 
       const results = Object.values(data.results);
       const good = results.find((result) => result.ok);
       if (good) {
+        onPosted?.();
         setOutcome({ ok: true, text: when ? `Uploaded. YouTube publishes it on ${new Date(when).toLocaleString()}.${good.note ? ` ${good.note}` : ''}` : `Posted to YouTube.${good.note ? ` ${good.note}` : ''}`, url: good.url });
         trackEvent('carousel_published', { status: when ? 'youtube-scheduled' : 'youtube' });
       } else {

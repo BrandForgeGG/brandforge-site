@@ -13,4 +13,10 @@ export function clearAccountLocalState(): void {
   } catch {
     // Storage can be blocked; nothing was kept then.
   }
+  try {
+    // Drafts on Create (videos and articles not published yet) live in IndexedDB.
+    indexedDB.deleteDatabase('brandforge-drafts');
+  } catch {
+    // No IndexedDB; no drafts were kept.
+  }
 }

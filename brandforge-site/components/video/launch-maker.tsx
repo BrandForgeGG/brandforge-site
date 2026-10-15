@@ -10,6 +10,8 @@ import { canEncode, encodeFrames } from '@/components/video/video-engine';
 import { drawLaunchFrame, loadLaunchFonts, type LaunchLook, type LaunchMedia } from '@/components/video/launch-engine';
 import { VOICES, clipsFor, layTrack, playClips, type Clip, type VoiceId } from '@/components/video/voice';
 import { YouTubePost } from '@/components/video/youtube-post';
+import { posterOf } from '@/components/drafts/drafts-store';
+import { useAutosave, useDraft } from '@/components/drafts/use-draft';
 
 const field = 'w-full rounded-xl border border-line bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none';
 const chip = 'rounded-full border px-3 py-1.5 text-xs transition';
@@ -25,6 +27,13 @@ type SiteInfo = { name: string; host: string; url: string; colors: LaunchLook; s
 
 const KIND_LABEL: Record<LaunchScene['kind'], string> = { hook: 'Opening', problem: 'The problem', tour: 'Your site', features: 'What it does', steps: 'How it works', proof: 'Real pictures', cta: 'Close' };
 const DEFAULT_LOOK: LaunchLook = { bg: '#0f0e0d', text: '#f4f1ec', accent: '#ff6a2b', dark: true };
+
+/** What a launch video draft keeps, to reopen it as it was. */
+type LaunchState = { url: string; about: string; shape: Shape; withVoice: boolean; voice: VoiceId; scenes: LaunchScene[]; site: SiteInfo | null; look: LaunchLook };
+
+function slugOf(name: string): string {
+  return (name || 'launch').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'launch';
+}
 
 async function bitmap(src: string): Promise<ImageBitmap | null> {
   const res = await fetch(src).catch(() => null);
@@ -45,8 +54,9 @@ function startsOf(scenes: { seconds: number }[]): number[] {
 // The launch video maker on Create: paste a website (or describe the product), and a launch story is written from the
 // page's own words, drawn in the site's own colours with a scrolling look at the real site and its real pictures, voiced,
 // and made into an MP4 in your browser. Free; signing in is only needed to download or post it.
-export function LaunchMaker() {
+export function LaunchMaker({ draftId, onDraftId }: { draftId?: string; onDraftId?: (id: string) => void } = {}) {
   const { openLogin } = useLogin();
+  const draft = useDraft('video-launch', draftId, onDraftId);
   const [url, setUrl] = useState('');
   const [about, setAbout] = useState('');
   const [shape, setShape] = useState<Shape>('wide');
@@ -77,6 +87,35 @@ export function LaunchMaker() {
   useEffect(() => {
     void loadLaunchFonts().then(() => setFontsReady(true));
   }, []);
+
+  // Reopening a draft: its words, settings and (when it was made) the finished MP4.
+  useEffect(() => {
+    let live = true;
+    void draft.load().then((saved) => {
+      if (!live || !saved) return;
+      const s = saved.state as LaunchState | null;
+      if (s) {
+        setUrl(s.url);
+        setAbout(s.about);
+        setShape(s.shape);
+        setWithVoice(s.withVoice);
+        setVoice(s.voice);
+        setScenes(s.scenes);
+        setSite(s.site);
+        setLook(s.look);
+      }
+      if (saved.video) setResult({ url: URL.createObjectURL(saved.video), name: `${slugOf(s?.site?.name ?? '')}-launch-video.mp4`, seconds: saved.seconds ?? 0, voiced: Boolean(s?.withVoice), blob: saved.video });
+    });
+    return () => {
+      live = false;
+    };
+  }, [draft]);
+
+  // Keep the draft up to date while working; an edit after the MP4 was made drops the old MP4 from the draft.
+  const draftState: LaunchState = { url, about, shape, withVoice, voice, scenes, site, look };
+  useAutosave({ draftState, made: Boolean(result) }, scenes.length > 0, () =>
+    void draft.save({ title: scenes[0]?.heading || site?.name || 'Launch video', state: draftState, ...(result ? {} : { video: undefined, poster: undefined, seconds: undefined }) })
+  );
 
   // The site's pictures and a screenshot of it, loaded once the story is written.
   useEffect(() => {
@@ -218,8 +257,10 @@ export function LaunchMaker() {
       setProgress(0);
       const blob = await encodeFrames({ w: f.w, h: f.h, seconds, draw: (ctx, t) => drawLaunchFrame(ctx, f.w, f.h, timed, t, look, media), voice: track, onProgress: setProgress, signal: controller.signal });
       if (result) URL.revokeObjectURL(result.url);
-      const slug = (media.name || 'launch').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'launch';
-      setResult({ url: URL.createObjectURL(blob), name: `${slug}-launch-video.mp4`, seconds, voiced: Boolean(track), blob });
+      setResult({ url: URL.createObjectURL(blob), name: `${slugOf(media.name)}-launch-video.mp4`, seconds, voiced: Boolean(track), blob });
+      // The finished MP4 goes into the draft, so a refresh keeps it until it is published.
+      const poster = canvasRef.current ? await posterOf(canvasRef.current) : null;
+      void draft.save({ title: scenes[0]?.heading || media.name || 'Launch video', state: draftState, video: blob, poster: poster ?? undefined, seconds });
       trackEvent('carousel_downloaded', { source: 'video-launch' });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not make the video.');
@@ -322,7 +363,7 @@ export function LaunchMaker() {
                 <p className="text-sm text-foreground">Your launch video is ready: {Math.round(result.seconds)} seconds{result.voiced ? ', with voice-over' : ''}.</p>
                 <video src={result.url} controls playsInline className="mt-2 max-h-72 w-auto max-w-full rounded-lg" />
                 <a href={result.url} download={result.name} className="mt-2 inline-block rounded-lg bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90">Download MP4</a>
-                <YouTubePost blob={result.blob} defaultTitle={`${media.name ? `${media.name}: ` : ''}${scenes[0]?.heading ?? ''}`.slice(0, 100)} defaultDescription={[...scenes.map((scene) => scene.voice), site?.url ?? ''].filter(Boolean).join(NEWLINE)} vertical={f.h > f.w} seconds={result.seconds} />
+                <YouTubePost blob={result.blob} defaultTitle={`${media.name ? `${media.name}: ` : ''}${scenes[0]?.heading ?? ''}`.slice(0, 100)} defaultDescription={[...scenes.map((scene) => scene.voice), site?.url ?? ''].filter(Boolean).join(NEWLINE)} vertical={f.h > f.w} seconds={result.seconds} onPosted={() => void draft.remove()} />
               </div>
             ) : null}
           </div>
