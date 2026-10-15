@@ -10,6 +10,7 @@ import { clearAccountLocalState } from '@/lib/account-local';
 import { supabase } from '@/lib/supabase';
 import { PostVisual } from '@/components/distribute/post-visual';
 import { postFiles } from '@/components/distribute/render-post';
+import { NetworkVersions } from '@/components/distribute/network-versions';
 import { usePublisher, type ScheduledItem } from '@/components/distribute/use-publisher';
 import { ServiceTile } from '@/components/integrations/brand-icons';
 import { ShareButton } from '@/components/community/share-button';
@@ -637,6 +638,7 @@ export function DistributeHub() {
                     <ShareButton kind="distribute" format={pickedPost.format} title={pickedPost.topic} caption={pickedPost.caption} getImages={async () => (await postFiles(pickedPost, pickedBrand, pickedDay.date)).map((file) => file.blob)} />
                     <Link href={makeLink(pickedPost)} onClick={() => trackEvent('next_step_clicked', { source: 'distribute_make' })} className="px-2 py-1.5 text-xs text-muted bf-tap transition hover:text-foreground">Edit in the maker</Link>
                   </div>
+                  <NetworkVersions post={pickedPost} brand={pickedBrand} channels={publisher.channels} picked={publisher.picked} />
                 </div>
               </div>
             </section>

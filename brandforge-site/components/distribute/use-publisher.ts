@@ -6,7 +6,8 @@ import { trackEvent } from '@/lib/funnel-client';
 import { useChannels } from '@/components/integrations/use-channels';
 import { isLocked } from '@/lib/locked-channels.js';
 import { extensionOf, fitForUpload } from '@/components/community/fit-for-upload';
-import { postFiles, type PostBrand } from '@/components/distribute/render-post';
+import { isSinglePicture, postFiles, type PostBrand } from '@/components/distribute/render-post';
+import { versionsFor, type PictureShape } from '@/lib/network-formats.js';
 import type { PlannedDay, PlannedPost } from '@/lib/distribute-plan.js';
 
 export type ScheduledItem = { id: string; label: string; runAt: string; status: 'scheduled' | 'posting' | 'done' | 'partial' | 'failed' | 'cancelled'; channelIds: string[]; results: Record<string, { ok: boolean; note?: string }> };
@@ -81,28 +82,45 @@ export function usePublisher(signedIn: boolean | null) {
     });
   }
 
-  const form = useCallback(
-    async (day: PlannedDay, post: PlannedPost, brand: PostBrand): Promise<FormData | null> => {
-      const files = await postFiles(post, brand, day.date);
-      if (files.length === 0) return null;
-      const body = new FormData();
-      body.append('caption', post.caption);
-      body.append('channelIds', JSON.stringify(picked));
-      const fitted = await fitForUpload(files.slice(0, 10).map((file) => file.blob));
-      fitted.forEach((blob, i) => body.append(`slide${i}`, blob, `slide-${i + 1}.${extensionOf(blob)}`));
-      return body;
+  // One post, every network, each in its own format: a single picture is drawn at each network's best shape and the
+  // caption is fitted to each network's limits (lib/network-formats.js). Networks that end up with the same picture and
+  // caption share one request.
+  const forms = useCallback(
+    async (day: PlannedDay, post: PlannedPost, brand: PostBrand): Promise<FormData[]> => {
+      const kinds = Object.fromEntries(channels.map((c) => [c.id, c.kind]));
+      const versions = versionsFor(picked.filter((id) => kinds[id]), kinds, post.caption, isSinglePicture(post));
+      const drawn = new Map<string, Blob[]>();
+      const out: FormData[] = [];
+      for (const version of versions) {
+        const shape = version.shape === 'native' ? undefined : (version.shape as PictureShape);
+        const key = shape ?? 'native';
+        if (!drawn.has(key)) {
+          const files = await postFiles(post, brand, day.date, shape);
+          drawn.set(key, await fitForUpload(files.slice(0, 10).map((file) => file.blob)));
+        }
+        const blobs = drawn.get(key) ?? [];
+        if (blobs.length === 0) continue;
+        const body = new FormData();
+        body.append('caption', version.caption);
+        body.append('channelIds', JSON.stringify(version.channelIds));
+        blobs.forEach((blob, i) => body.append(`slide${i}`, blob, `slide-${i + 1}.${extensionOf(blob)}`));
+        out.push(body);
+      }
+      return out;
     },
-    [picked],
+    [picked, channels],
   );
 
   async function schedule(day: PlannedDay, post: PlannedPost, brand: PostBrand): Promise<boolean> {
-    const body = await form(day, post, brand);
-    if (!body) return false;
-    body.append('runAt', localISO(day, post));
-    body.append('label', post.id);
-    const res = await fetchAuthed('/api/distribute/schedule', { method: 'POST', body });
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
-    if (!res.ok) throw new Error(data.error || 'Could not schedule that.');
+    const bodies = await forms(day, post, brand);
+    if (bodies.length === 0) return false;
+    for (const body of bodies) {
+      body.append('runAt', localISO(day, post));
+      body.append('label', post.id);
+      const res = await fetchAuthed('/api/distribute/schedule', { method: 'POST', body });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(data.error || 'Could not schedule that.');
+    }
     return true;
   }
 
@@ -150,12 +168,16 @@ export function usePublisher(signedIn: boolean | null) {
     setBusy(post.id);
     setMessage(null);
     try {
-      const body = await form(day, post, brand);
-      if (!body) throw new Error('There is nothing to post.');
-      const res = await fetchAuthed('/api/carousel/publish', { method: 'POST', body });
-      const data = (await res.json().catch(() => ({}))) as { error?: string; results?: Record<string, { ok: boolean; note?: string }> };
-      if (!res.ok) throw new Error(data.error || 'Could not post.');
-      const results = Object.entries(data.results ?? {});
+      const bodies = await forms(day, post, brand);
+      if (bodies.length === 0) throw new Error('There is nothing to post.');
+      const all: Record<string, { ok: boolean; note?: string }> = {};
+      for (const body of bodies) {
+        const res = await fetchAuthed('/api/carousel/publish', { method: 'POST', body });
+        const data = (await res.json().catch(() => ({}))) as { error?: string; results?: Record<string, { ok: boolean; note?: string }> };
+        if (!res.ok) throw new Error(data.error || 'Could not post.');
+        Object.assign(all, data.results ?? {});
+      }
+      const results = Object.entries(all);
       const failed = results.filter(([, r]) => !r.ok);
       const name = (id: string) => channels.find((c) => c.id === id)?.label ?? 'a channel';
       if (failed.length === 0) setMessage({ text: `Posted to ${results.length === 1 ? name(results[0][0]) : `${results.length} channels`}.`, bad: false });

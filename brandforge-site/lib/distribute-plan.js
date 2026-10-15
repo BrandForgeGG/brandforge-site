@@ -246,9 +246,26 @@ function fallbackPost({ angle, format, closing }) {
 
 const FALLBACK_BUTTON = { try: 'Try it free', hire: 'Hire us', dm: 'Message us', follow: 'Follow us', save: 'Learn more', like: 'Learn more', comment: 'Learn more', share: 'Learn more' };
 
+// Words a headline must never end on ("…PUT THE PROMISE ON THE").
+const DANGLING = new Set(['a', 'an', 'the', 'and', 'or', 'but', 'of', 'to', 'in', 'on', 'for', 'with', 'at', 'by', 'from', 'your', 'our', 'their', 'its', 'is', 'are', 'that', 'this', 'not', 'because', 'when', 'if', 'so', 'as', 'than', 'into', 'about', 'what', 'who', 'which', 'while', 'without', 'each', 'every', 'de', 'la', 'el', 'y', 'en', 'un', 'una', 'le', 'les', 'et']);
+
+/** A headline of at most `words` words: whole sentences when they fit, otherwise cut where it still reads as a phrase. */
 function shortHeadline(text, words) {
-  const parts = clean(text, 160).replace(/[.?!]+$/, '').split(' ').filter(Boolean);
-  return parts.slice(0, words).join(' ');
+  const all = clean(text, 160);
+  const sentences = all.split(/(?<=[.?!])\s+/).filter(Boolean);
+  let kept = '';
+  for (const sentence of sentences) {
+    const next = kept ? `${kept} ${sentence}` : sentence;
+    if (next.split(' ').filter(Boolean).length > words) break;
+    kept = next;
+  }
+  if (kept) return kept.replace(/[.?!]+$/, '');
+  let parts = all.replace(/[.?!]+$/, '').split(' ').filter(Boolean).slice(0, words);
+  // A clause ends at a comma: stop there when it leaves a real phrase.
+  const clause = parts.slice(0, -1).map((word, i) => (/[,;:]$/.test(word) ? i : -1)).filter((i) => i >= 3).pop();
+  if (clause !== undefined) parts = parts.slice(0, clause + 1);
+  while (parts.length > 3 && DANGLING.has(parts[parts.length - 1].toLowerCase().replace(/[^\p{L}]/gu, ''))) parts.pop();
+  return parts.join(' ').replace(/[,;:–-]+$/, '');
 }
 
 /**

@@ -107,3 +107,11 @@ test('each post comes with a picture: the writer\'s words when usable, built fro
   const day = normalizeDay(JSON.stringify({ posts: [{ topic: 'Why sourdough takes two days', caption: 'Ever wondered why good bread takes time? The slow rise builds flavour.', visual: { kicker: 'QUICK TIP', headline: 'Give the dough *time*', sub: 'Slow rises build flavour.' } }] }), [{ closing: 'Save this.', format: 'tip' }]);
   assert.equal(day[0].visual.kind, 'tip');
 });
+
+test('fallback headlines keep whole sentences and never end on a dangling word', () => {
+  const { fallbackVisual } = require('./distribute-plan.js');
+  const head = (angle, format) => fallbackVisual({ angle, topic: '', format, cta: 'save' }).copy.headline;
+  assert.equal(head('Most launch videos lose people in the first second. Put the promise on the first frame, not the logo.', 'quote'), 'Most launch videos lose people in the first second');
+  assert.equal(head('One post can reach every network, each in its own size, without copying and pasting.', 'tip'), 'One post can reach every network');
+  assert.doesNotMatch(head('Stop guessing what to post this week because the plan writes itself for you', 'tip'), /\b(the|to|for|on|a)$/i);
+});
