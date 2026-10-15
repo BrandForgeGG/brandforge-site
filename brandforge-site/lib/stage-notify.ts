@@ -1,6 +1,6 @@
 import { notifyUser } from './notify';
 import { sendStageEmail } from './email';
-import { getFounderNotifyTargets, getMemberChatRecipients, getStaffNotifyTargets, getUserNotifyTargets } from './project-db';
+import { getConversationClaim, getFounderNotifyTargets, getMemberChatRecipients, getStaffNotifyTargets, getUserNotifyTargets } from './project-db';
 import { postOpsEvent } from './ops-events';
 import { resolveSiteUrl } from './auth-utils';
 
@@ -122,5 +122,52 @@ export async function notifyFounder(
       cause instanceof Error ? cause.message : cause
     );
     return null;
+  }
+}
+
+// A message in a chat nobody on the team has claimed (the AI is off by default, so a person has to answer): the whole team
+// hears about it, at most once every ten minutes per chat, until someone claims it. Claimed chats skip this: the claimer
+// and the teammates they added are members of the chat and hear through notifyChatMembers. Best-effort, never throws.
+const waitingPings = new Map<string, number>();
+
+export async function notifyTeamUnclaimed(conversationId: string, who: string, message: string, senderId: string | null): Promise<number> {
+  try {
+    if ((await getConversationClaim(conversationId)).claimedBy) return 0;
+    const last = waitingPings.get(conversationId) ?? 0;
+    if (Date.now() - last < PING_GAP_MS) return 0;
+    waitingPings.set(conversationId, Date.now());
+    if (waitingPings.size > 500) waitingPings.clear();
+    const chatUrl = `${resolveSiteUrl()}/chat?conversationId=${encodeURIComponent(conversationId)}`;
+    const details = { name: who, message, chatUrl, conversationId };
+    const targets = await getStaffNotifyTargets(senderId);
+    const now = Date.now();
+    while (mailLog.length && now - mailLog[0] > 3_600_000) mailLog.shift();
+    let reached = 0;
+    for (const target of targets) {
+      if (target.telegramChatId) {
+        await notifyUser(target.telegramChatId, 'chat_unclaimed', details);
+        reached += 1;
+      }
+      if (target.email && mailLog.length < MAIL_CAP_PER_HOUR) {
+        mailLog.push(now);
+        const email = await sendStageEmail('chat_unclaimed', target.email, details);
+        if (!email.ok && !email.skipped) console.warn('notifyTeamUnclaimed: email failed:', email.error);
+      }
+    }
+    return reached;
+  } catch (cause) {
+    console.error('notifyTeamUnclaimed failed:', cause instanceof Error ? cause.message : cause);
+    return 0;
+  }
+}
+
+// A claimer added a teammate to their chat: that teammate hears it on Telegram. Best-effort.
+export async function notifyTeammateAdded(userId: string, conversationId: string, byName: string, title: string): Promise<void> {
+  try {
+    const targets = await getUserNotifyTargets(userId);
+    const chatUrl = `${resolveSiteUrl()}/chat?conversationId=${encodeURIComponent(conversationId)}`;
+    if (targets.telegramChatId) await notifyUser(targets.telegramChatId, 'chat_added', { name: byName, title, chatUrl, conversationId });
+  } catch (cause) {
+    console.error('notifyTeammateAdded failed:', cause instanceof Error ? cause.message : cause);
   }
 }

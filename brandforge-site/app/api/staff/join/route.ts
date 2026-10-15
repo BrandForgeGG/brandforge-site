@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     if (!(await canOperatorParticipate(context))) {
       return NextResponse.json(
-        { error: 'Operators join a chat when their proposal is accepted.' },
+        { error: 'This chat is claimed by a teammate, or waiting for a proposal. Claim it if it is free, or ask whoever has it to add you.' },
         { status: 403 }
       );
     }

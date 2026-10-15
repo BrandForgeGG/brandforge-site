@@ -324,3 +324,11 @@ test('buildPersonalMessage tells a person the team joined and calls the team to 
   assert.match(opened, /Sara just opened a chat: "I need a booking site"/);
   assert.equal(buildPersonalMessage('chat_opened', { name: 'Sara', message: '' }), null);
 });
+
+test('an unclaimed chat tells the team someone is waiting, and an added teammate hears it', () => {
+  const waiting = buildPersonalMessage('chat_unclaimed', { name: 'Omar', message: 'Can someone help with my site?' });
+  assert.match(waiting, /Omar is waiting for an answer/);
+  assert.match(waiting, /Claim it to reply/);
+  assert.equal(buildPersonalMessage('chat_unclaimed', { name: 'Omar', message: '' }), null);
+  assert.match(buildPersonalMessage('chat_added', { name: 'Sara' }), /Sara added you to a chat/);
+});

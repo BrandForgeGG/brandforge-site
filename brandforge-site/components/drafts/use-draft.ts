@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { deleteDraft, getDraft, newDraftId, saveDraft, type Draft } from '@/components/drafts/drafts-store';
 
 /**
@@ -32,7 +32,8 @@ export function useDraft(kind: string, draftId: string | undefined, onDraftId?: 
     if (idRef.current) await deleteDraft(idRef.current);
   }, []);
 
-  return { load, save, remove };
+  // One stable object for the life of the maker: effects that depend on it run once, not on every render.
+  return useMemo(() => ({ load, save, remove }), [load, save, remove]);
 }
 
 /** Calls `save` a moment after the value stops changing (typing does not write on every key). */

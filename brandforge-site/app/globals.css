@@ -2238,3 +2238,37 @@ html[data-rail='collapsed'] .bf-rail-ph { width: 4rem; }
 @media (prefers-reduced-motion: reduce) {
   .bf-float, .bf-dot, .bf-type, .bf-coin { animation: none !important; }
 }
+
+/* The launch video wait: a slow drifting glow, a light sweep, words rising in, ticks popping, dots breathing. */
+@keyframes bf-drift-kf {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(45%, 25%) scale(1.15); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+.bf-drift { animation: bf-drift-kf 9s ease-in-out infinite; }
+@keyframes bf-sweep-kf {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.bf-sweep { animation: bf-sweep-kf 2.8s ease-in-out infinite; }
+@keyframes bf-rise-kf {
+  from { opacity: 0; transform: translateY(14px); filter: blur(4px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+.bf-rise { animation: bf-rise-kf 600ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes bf-pop-kf {
+  0% { transform: scale(0.4); opacity: 0; }
+  70% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.bf-pop { animation: bf-pop-kf 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes bf-dot-kf {
+  0%, 80%, 100% { opacity: 0.2; }
+  40% { opacity: 1; }
+}
+.bf-dots span { animation: bf-dot-kf 1.2s infinite; }
+.bf-dots span:nth-child(2) { animation-delay: 0.2s; }
+.bf-dots span:nth-child(3) { animation-delay: 0.4s; }
+@media (prefers-reduced-motion: reduce) {
+  .bf-drift, .bf-sweep, .bf-rise, .bf-pop, .bf-dots span { animation: none; }
+}

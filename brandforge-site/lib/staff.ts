@@ -4,6 +4,7 @@ import {
   addMessage,
   addParticipant,
   getConversation,
+  getConversationClaim,
   getParticipants,
   getProfileRole,
   hasAcceptedProposalFrom,
@@ -92,14 +93,23 @@ export async function requireStaffContext(
 // view and join every chat; operators may read the inbox and send proposals
 // first, then participate only after their own proposal was accepted (the accept
 // auto-invites them, so this mostly covers legacy and manual attempts).
+//
+// Claimed chats work like tickets: the team member who claimed one talks in it, and other team members talk only once
+// the claimer has added them (they are then in the chat as participants). Admins can always step in.
 export async function canOperatorParticipate(context: StaffContext): Promise<boolean> {
   if (context.profileRole === 'admin' || context.role === 'founder') {
     return true;
   }
 
-  const participants = await getParticipants(context.conversationId, true);
+  const [claim, participants] = await Promise.all([getConversationClaim(context.conversationId), getParticipants(context.conversationId, true)]);
+  if (claim.claimedBy === context.user.id) {
+    return true;
+  }
   if (participants.some((entry) => entry.user_id === context.user.id)) {
     return true;
+  }
+  if (claim.claimedBy) {
+    return false;
   }
 
   return hasAcceptedProposalFrom(context.conversationId, context.user.id);

@@ -293,6 +293,16 @@ function buildPersonalMessageText(event, details = {}) {
     case 'chat_message':
       return clip(details.message, 200) ? `BrandForge: ${clip(details.name, 60) || 'Someone'} wrote: ${clip(details.message, 200)}` : null;
 
+    // A message in a chat nobody on the team has claimed yet (the AI is off there, so a person needs to answer).
+    case 'chat_unclaimed':
+      return clip(details.message, 200)
+        ? `BrandForge: ${clip(details.name, 60) || 'Someone'} is waiting for an answer: "${clip(details.message, 200)}". Nobody has claimed this chat yet. Claim it to reply.`
+        : null;
+
+    // A teammate added you to a chat they claimed.
+    case 'chat_added':
+      return `BrandForge: ${clip(details.name, 60) || 'A teammate'} added you to a chat${clip(details.title) ? ` ("${clip(details.title)}")` : ''}. You can talk in it now.`;
+
     case 'telegram_linked':
       return 'BrandForge: your Telegram is linked. You will get a ping here whenever something needs you.';
 

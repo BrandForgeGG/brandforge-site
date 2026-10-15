@@ -31,6 +31,7 @@ import { RoleBadge } from "@/components/role-badge";
 import { detectMakeIntent } from "@/lib/make-intent";
 import { MakerChatCard, OPEN_MAKER_EVENT, clearMakerSeed, isMakerKind, readMakerSeed, seedMakerCard, type MakerKind } from "@/components/chat/maker-chat-card";
 import { CreationChatContext } from "@/components/chat/creation-context";
+import { TicketBar } from "@/components/chat/ticket-bar";
 import { getRetainer } from "@/lib/plans.js";
 import { PeerContractForm } from "@/components/peer-contract-card";
 import { extractOutline } from "@/lib/deliverable-outline";
@@ -289,6 +290,8 @@ export function ChatWorkspace() {
   const carouselKey = useRef(0);
   // A video or article maker working in this chat (opened by asking for one, from Create, or by Edit on a version).
   const [makerChat, setMakerChat] = useState<{ kind: MakerKind; state?: unknown; key: number } | null>(null);
+  // For the team: whether this person may talk in this chat (claimed chats: the claimer and the people they added).
+  const [staffCanTalk, setStaffCanTalk] = useState(true);
   // What this chat is the main assistant for (a listing, something made here), if anything.
   const [goalLink, setGoalLink] = useState<{ conversationId: string; kind: string; title: string } | null>(null);
   const [carouselChat, setCarouselChat] = useState<{ topic: string; userText: string | null; key: number } | null>(null);
@@ -949,8 +952,9 @@ export function ChatWorkspace() {
 
   // One turn: stream the answer, then reload from the database so the transcript and the
   // sidebar show persisted rows rather than client-side guesses.
+  // force: one AI turn even with the AI off in this chat (an action asked for it; the AI stays off afterwards).
   const runTurn = useCallback(
-    async (id: string, message?: string) => {
+    async (id: string, message?: string, force = false) => {
       // True while the reader is still looking at the conversation this turn belongs to.
       // Streamed rows, errors and scroll pulls must never land in a chat switched to mid-turn.
       const stillHere = () => conversationIdRef.current === id;
@@ -1011,6 +1015,7 @@ export function ChatWorkspace() {
           body: JSON.stringify({
             conversationId: id,
             ...(message ? { message } : {}),
+            ...(force ? { force: true } : {}),
           }),
         });
 
@@ -1531,6 +1536,7 @@ export function ChatWorkspace() {
       }
       // A command tag (or a typed /carousel, /plan, /trade, /image) decides what this message does.
       const typed = suggestion === undefined ? /^\/(carousel|image|plan|trade)\b\s*([\s\S]*)$/i.exec(text) : null;
+      let forceAi = false;
       const command: ChatCommand | null = typed ? (typed[1].toLowerCase() as ChatCommand) : suggestion === undefined ? activeCommand : null;
       if (command && !attachment) {
         const body = (typed ? typed[2] : text).trim();
@@ -1559,8 +1565,10 @@ export function ChatWorkspace() {
           requestAnimationFrame(() => composerRef.current?.focus());
           return;
         }
-        // Plan goes to the AI as an ordinary message, with the command put in words.
+        // Plan goes to the AI as an ordinary message, with the command put in words. It is an action, so it runs even
+        // with the AI off in this chat.
         text = `I have an idea: ${body}`;
+        forceAi = true;
       }
       // Asking for a carousel in plain words opens the maker as a card too, instead of sending it to the AI.
       const wantsCarousel = !attachment && suggestion === undefined ? detectMakeIntent(text) : null;
@@ -1703,6 +1711,11 @@ export function ChatWorkspace() {
       // triggering the AI, so the founder always sees a human voice in the same chat. Sending
       // without an open chat falls through to the creation path below - staff can start one too.
       if (railMeta.isStaff && conversationId && !isOwnConversation) {
+        if (!staffCanTalk) {
+          setError("A teammate has this chat. Ask them to add you to talk here.");
+          setInput(text);
+          return;
+        }
         setIsStreaming(true);
 
         try {
@@ -1773,8 +1786,9 @@ export function ChatWorkspace() {
         return;
       }
 
-      // The AI is paused: say it to the people in the chat and do not ask the AI anything.
-      if (!aiEnabled) {
+      // The AI is off (the default): say it to the people in the chat and do not ask the AI anything. The team hears about
+      // it; actions (a plan, the makers, /progress) still use the AI.
+      if (!aiEnabled && !forceAi) {
         try {
           const response = await (railMeta.userId ? fetchAuthed : fetch)(`/api/conversations/${conversationId}/say`, {
             method: "POST",
@@ -1792,13 +1806,14 @@ export function ChatWorkspace() {
         return;
       }
 
-      await runTurn(conversationId, text);
+      await runTurn(conversationId, text, forceAi);
     },
     [
       activeCommand,
       activePlan,
       openCarouselCard,
       openMakerInChat,
+      staffCanTalk,
       aiAccess,
       aiEnabled,
       isChatOwner,
@@ -3209,6 +3224,16 @@ return (
                 </button>
               </div>
             ) : null}
+            {/* AI off (the default): the person knows the team has the message, and can still ask the AI once. */}
+            {conversationId && !aiEnabled && !railMeta.isStaff && !isStreaming && messages.length > 0 && messages[messages.length - 1].sender === "user" ? (
+              <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-line bg-panel px-3 py-1.5 text-xs text-muted" role="status">
+                <span className="h-2 w-2 shrink-0 rounded-full bg-trust" aria-hidden="true" />
+                <span className="min-w-0 flex-1">The BrandForge team has your message and will answer here.</span>
+                <button type="button" onClick={() => void runTurn(conversationId, undefined, true)} className="rounded-lg border border-line px-2.5 py-1 text-xs text-foreground transition hover:border-ember">
+                  Ask the AI now
+                </button>
+              </div>
+            ) : null}
             {/* Soft lock: the brief already fired the handoff. Chat stays open — keep adding
                 context — but the next move belongs to the team, not another send-for-review. */}
             {state?.status === "READY_FOR_REVIEW" && !railMeta.isStaff ? (
@@ -3223,6 +3248,7 @@ return (
             {/* Staff send side of the proposal flow: brief is waiting, an operator
                 writes the offer here (POST /api/proposals). Admins see it in any chat;
                 operators see it while the brief waits, before their invite lands. */}
+            {railMeta.isStaff && !isOwnConversation && conversationId ? <TicketBar key={conversationId} conversationId={conversationId} onCanTalk={setStaffCanTalk} /> : null}
             {railMeta.isStaff &&
             !isOwnConversation &&
             state?.status === "READY_FOR_REVIEW" ? (

@@ -214,3 +214,10 @@ test('chat_opened calls the team to a new chat with the words that were written'
   assert.match(built.text, /I need a booking site for my salon/);
   assert.equal(buildStageEmail('chat_opened', { name: 'x', message: '' }), null);
 });
+
+test('chat_unclaimed asks the team to claim the chat', () => {
+  const built = buildStageEmail('chat_unclaimed', { name: 'Omar', message: 'Can someone help?', chatUrl: 'https://brandforge.gg/chat?conversationId=abc' });
+  assert.match(built.subject, /Omar is waiting for an answer/);
+  assert.match(built.text, /claim it/);
+  assert.equal(buildStageEmail('chat_unclaimed', { name: 'Omar', message: '' }), null);
+});

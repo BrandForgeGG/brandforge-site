@@ -10,6 +10,7 @@ import { canEncode, encodeFrames } from '@/components/video/video-engine';
 import { drawLaunchFrame, loadLaunchFonts, type LaunchLook, type LaunchMedia } from '@/components/video/launch-engine';
 import { VOICES, clipsFor, layTrack, playClips, type Clip, type VoiceId } from '@/components/video/voice';
 import { YouTubePost } from '@/components/video/youtube-post';
+import { LaunchProgress } from '@/components/video/launch-progress';
 import { posterOf } from '@/components/drafts/drafts-store';
 import { postVideoToChat, type ChatTarget } from '@/components/chat/post-creation';
 import { useAutosave, useDraft } from '@/components/drafts/use-draft';
@@ -34,6 +35,11 @@ type LaunchState = { url: string; about: string; shape: Shape; withVoice: boolea
 
 function slugOf(name: string): string {
   return (name || 'launch').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'launch';
+}
+
+/** The value, or null if it takes longer than ms. */
+function within<T>(promise: Promise<T | null>, ms: number): Promise<T | null> {
+  return Promise.race([promise, new Promise<null>((resolve) => window.setTimeout(() => resolve(null), ms))]);
 }
 
 async function bitmap(src: string): Promise<ImageBitmap | null> {
@@ -66,7 +72,12 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
   const [site, setSite] = useState<SiteInfo | null>(null);
   const [look, setLook] = useState<LaunchLook>(DEFAULT_LOOK);
   const [media, setMedia] = useState<LaunchMedia>({ name: '', host: '', shot: null, pictures: [] });
-  const [loadingPictures, setLoadingPictures] = useState<string | null>(null);
+  // What is still on its way, for the waiting screen: the site's pictures, its screenshot, and when writing began.
+  const [picturesState, setPicturesState] = useState<'idle' | 'loading' | 'done'>('idle');
+  const [shotState, setShotState] = useState<'idle' | 'loading' | 'done' | 'none'>('idle');
+  const [writeStarted, setWriteStarted] = useState<number | null>(null);
+  // The setup (site, words, shape, voice) folds away once the story is written; it opens again with Change.
+  const [editingSetup, setEditingSetup] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -85,6 +96,10 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
   const timed = useMemo(() => (voiced && clips ? fitToVoice(scenes, clips.map((clip) => clip.seconds + 0.3)) : scenes), [voiced, clips, scenes]);
   const seconds = totalSeconds(timed);
   const voiceText = scenes.map((scene) => scene.voice).join('|');
+  const writing = busy === 'writing';
+  const written = scenes.length > 0;
+  // The preview opens once the story, the pictures and the voice are in; the screenshot is allowed to arrive later.
+  const assetsReady = written && !writing && picturesState !== 'loading' && (!withVoice || voiceState.status === 'ready' || voiceState.status === 'failed');
 
   useEffect(() => {
     void loadLaunchFonts().then(() => setFontsReady(true));
@@ -121,23 +136,27 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
     void draft.save({ title: scenes[0]?.heading || site?.name || 'Launch video', state: draftState, ...(result ? {} : { video: undefined, poster: undefined, seconds: undefined }) })
   );
 
-  // The site's pictures and a screenshot of it, loaded once the story is written.
+  // The site's pictures, then a screenshot of it, loaded once the story is written. The pictures come first (a few
+  // seconds); the screenshot can take longer and never holds anything up: the tour shows a site picture until it lands.
   useEffect(() => {
     if (!site) return;
     let live = true;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the pictures follow the site that was read
     setMedia({ name: site.name, host: site.host, shot: null, pictures: [] });
-    setLoadingPictures('Taking a picture of your site…');
-    void Promise.all([
-      bitmap(site.shot),
-      Promise.all(site.pictures.map(async (picture) => ({ image: await bitmap(picture.src), label: picture.label }))),
-    ]).then(([shot, pictures]) => {
+    setPicturesState('loading');
+    setShotState('loading');
+    void Promise.all(site.pictures.map(async (picture) => ({ image: await within(bitmap(picture.src), 12_000), label: picture.label }))).then((pictures) => {
       if (!live) return;
       const usable = pictures.filter((p): p is { image: ImageBitmap; label: string } => Boolean(p.image && p.image.width >= 200 && p.image.height >= 120));
-      setMedia({ name: site.name, host: site.host, shot, pictures: usable });
-      setLoadingPictures(null);
+      setMedia((current) => ({ ...current, pictures: usable }));
+      setPicturesState('done');
       // Without real pictures there is nothing to show in the proof scene.
       if (usable.length < 2) setScenes((current) => current.filter((scene) => scene.kind !== 'proof'));
+    });
+    void within(bitmap(site.shot), 45_000).then((shot) => {
+      if (!live) return;
+      setMedia((current) => ({ ...current, shot }));
+      setShotState(shot ? 'done' : 'none');
     });
     return () => {
       live = false;
@@ -200,7 +219,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
       cancelAnimationFrame(frame);
       stopVoice();
     };
-  }, [timed, playing, fontsReady, f.w, f.h, look, media, seconds, voiced, clips]);
+  }, [timed, playing, fontsReady, f.w, f.h, look, media, seconds, voiced, clips, assetsReady]);
 
   useEffect(() => () => {
     if (result) URL.revokeObjectURL(result.url);
@@ -213,7 +232,8 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
     }
     setError(null);
     setPlaying(false);
-    setBusy(url.trim() ? 'Reading your site and writing the story…' : 'Writing the story…');
+    setBusy('writing');
+    setWriteStarted(Date.now());
     try {
       const res = await fetch('/api/create/launch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: url.trim(), about: about.trim() }) });
       const data = (await res.json().catch(() => ({}))) as { site?: SiteInfo | null; scenes?: LaunchScene[]; error?: string };
@@ -223,11 +243,17 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
       setLook(data.site?.colors ?? DEFAULT_LOOK);
       if (!data.site) setMedia({ name: '', host: '', shot: null, pictures: [] });
       setResult(null);
+      setEditingSetup(false);
+      if (!data.site) {
+        setPicturesState('done');
+        setShotState('none');
+      }
       trackEvent('create_interest', { status: 'video-launch' });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'The writer could not make the story.');
     } finally {
       setBusy(null);
+      setWriteStarted(null);
     }
   }
 
@@ -291,96 +317,142 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
     </label>
   );
 
+  const showSetup = !written || editingSetup;
+  const voiceLabel = VOICES.find((option) => option.id === voice)?.label ?? 'Voice';
+  const tall = f.h > f.w;
+  const making = busy === 'Making the video…' || busy === 'Saving it to the chat…';
+
   return (
-    <div className="space-y-6">
-      <section aria-label="What are you launching" className="rounded-2xl border border-line bg-panel p-4 sm:p-5">
-        <label htmlFor="launch-url" className="font-serif text-lg text-foreground">Your website</label>
-        <input id="launch-url" value={url} onChange={(event) => setUrl(event.target.value)} inputMode="url" maxLength={300} placeholder="yourproduct.com" className={`${field} mt-2 text-base`} />
-        <label htmlFor="launch-about" className="mt-3 block text-sm text-foreground">Anything to add <span className="text-muted">(optional, or use this alone if you have no site yet)</span></label>
-        <textarea id="launch-about" value={about} onChange={(event) => setAbout(event.target.value)} rows={2} maxLength={1200} placeholder="Who it is for, what is new, the one thing people should remember." className={`${field} mt-1.5`} />
-        <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label="Shape">
-          {(Object.keys(SHAPES) as Shape[]).map((id) => (
-            <button key={id} type="button" aria-pressed={shape === id} onClick={() => { setShape(id); setResult(null); }} className={`${chip} ${shape === id ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>
-              {SHAPES[id].label} <span className="text-muted">· {SHAPES[id].note}</span>
+    <div className="space-y-4">
+      {showSetup ? (
+        <section aria-label="What are you launching" className="rounded-2xl border border-line bg-panel p-4 sm:p-5">
+          <label htmlFor="launch-url" className="font-serif text-lg text-foreground">Your website</label>
+          <input id="launch-url" value={url} onChange={(event) => setUrl(event.target.value)} inputMode="url" maxLength={300} placeholder="yourproduct.com" className={`${field} mt-2 text-base`} />
+          <label htmlFor="launch-about" className="mt-3 block text-sm text-foreground">Anything to add <span className="text-muted">(optional, or use this alone if you have no site yet)</span></label>
+          <textarea id="launch-about" value={about} onChange={(event) => setAbout(event.target.value)} rows={2} maxLength={1200} placeholder="Who it is for, what is new, the one thing people should remember." className={`${field} mt-1.5`} />
+          <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label="Shape">
+            {(Object.keys(SHAPES) as Shape[]).map((id) => (
+              <button key={id} type="button" aria-pressed={shape === id} onClick={() => { setShape(id); setResult(null); }} className={`${chip} ${shape === id ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>
+                {SHAPES[id].label} <span className="hidden text-muted sm:inline">· {SHAPES[id].note}</span>
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-1.5" role="group" aria-label="Voice">
+            <button type="button" aria-pressed={!withVoice} onClick={() => { setWithVoice(false); setResult(null); setPlaying(false); }} className={`${chip} ${!withVoice ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>
+              No voice
             </button>
-          ))}
+            {VOICES.map((option) => (
+              <button key={option.id} type="button" aria-pressed={withVoice && voice === option.id} onClick={() => { setWithVoice(true); setVoice(option.id); setResult(null); setPlaying(false); }} className={`${chip} ${withVoice && voice === option.id ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => void write()} disabled={Boolean(busy)} className="w-full rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-60 sm:w-auto">
+              {writing ? 'Writing…' : written ? 'Write it again' : 'Write the launch video'}
+            </button>
+            {written && !writing ? (
+              <button type="button" onClick={() => setEditingSetup(false)} className="px-3 py-2 text-sm text-muted hover:text-foreground">Keep this one</button>
+            ) : null}
+          </div>
+          <p className="mt-2 text-xs text-muted">Written only from what your site says. Check every line before you post it.</p>
+          {error ? <p role="alert" className="mt-2 text-sm text-danger">{error}</p> : null}
+        </section>
+      ) : (
+        <div className="flex items-center gap-3 rounded-2xl border border-line bg-panel px-4 py-3">
+          <span className="flex shrink-0 -space-x-1.5" aria-hidden="true">
+            {[look.bg, look.text, look.accent].map((color, i) => (
+              <span key={i} className="h-5 w-5 rounded-full border-2 border-panel" style={{ background: color }} />
+            ))}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-foreground">{site?.host || about.slice(0, 60) || 'Your launch'}</p>
+            <p className="truncate text-xs text-muted">
+              {SHAPES[shape].label} · {withVoice ? voiceLabel : 'No voice'} · {timed.length} scenes · {Math.round(seconds)}s
+            </p>
+          </div>
+          <button type="button" onClick={() => setEditingSetup(true)} className="shrink-0 rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">Change</button>
         </div>
-        <div className="mt-3 rounded-xl border border-line bg-background p-3">
-          <label className="flex items-start gap-2 text-sm text-foreground">
-            <input type="checkbox" checked={withVoice} onChange={(event) => { setWithVoice(event.target.checked); setResult(null); setPlaying(false); }} className="mt-1" />
-            <span>
-              Voice-over
-              <span className="block text-xs text-muted">A natural voice narrates the launch, free. English voices.</span>
-            </span>
-          </label>
-          {withVoice ? (
-            <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Voice">
-              {VOICES.map((option) => (
-                <button key={option.id} type="button" aria-pressed={voice === option.id} onClick={() => { setVoice(option.id); setResult(null); setPlaying(false); }} className={`${chip} ${voice === option.id ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>
-                  {option.label}
-                </button>
-              ))}
+      )}
+
+      {writing || (written && !assetsReady) ? (
+        <LaunchProgress look={look} host={site?.host ?? (url.trim() ? url.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '') : '')} scenes={scenes} writing={writing} writeStarted={writeStarted} picturesState={picturesState} shotState={shotState} withVoice={withVoice} voiceState={voiceState} tall={tall} />
+      ) : null}
+
+      {assetsReady ? (
+        <div className="bf-rise space-y-4">
+          <div className="relative overflow-hidden rounded-3xl border border-line bg-[#0b0b0c]">
+            <canvas ref={canvasRef} className={tall ? 'mx-auto block h-[min(70vh,640px)] w-auto' : 'block h-auto w-full'} style={{ aspectRatio: `${f.w} / ${f.h}` }} />
+            {playing ? (
+              <button type="button" onClick={() => setPlaying(false)} className="absolute bottom-3 right-3 rounded-full bg-black/60 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-black/75">
+                Stop
+              </button>
+            ) : (
+              <button type="button" onClick={() => setPlaying(true)} aria-label={voiced ? 'Play the preview with voice' : 'Play the preview'} className="group absolute inset-0 flex items-center justify-center">
+                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/90 shadow-xl transition group-hover:scale-105 sm:h-20 sm:w-20">
+                  <svg viewBox="0 0 20 20" className="h-6 w-6 translate-x-0.5 fill-[#1d1b18] sm:h-7 sm:w-7" aria-hidden="true"><path d="M6 3.5v13l11-6.5z" /></svg>
+                </span>
+              </button>
+            )}
+          </div>
+          {shotState === 'loading' ? <p className="text-xs text-muted">The picture of your site is still on its way; the preview updates when it lands.</p> : null}
+          {withVoice && voiceState.status === 'failed' ? <p role="alert" className="text-xs text-danger">{voiceState.text}</p> : null}
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <button type="button" onClick={() => void make()} disabled={Boolean(busy) || !fontsReady || (withVoice && voiceState.status === 'working')} className="w-full rounded-xl bg-ember px-6 py-3 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-60 sm:w-auto">
+              {busy === 'Making the video…' ? `Making the video, ${Math.round(progress * 100)}%` : busy === 'Saving it to the chat…' ? 'Saving it to the chat…' : chat ? 'Make the video' : 'Make the MP4'}
+            </button>
+            {making ? <button type="button" onClick={() => stopRef.current?.abort()} className="px-2 py-2 text-xs text-muted hover:text-foreground">Stop</button> : null}
+            {chat && !making ? <p className="text-xs text-muted">It lands in this chat as a new version you can post or share.</p> : null}
+          </div>
+          {making ? (
+            <div className="h-1.5 overflow-hidden rounded-full bg-overlay" aria-hidden="true">
+              <div className="h-full rounded-full bg-ember transition-[width] duration-300" style={{ width: `${Math.max(4, progress * 100)}%` }} />
             </div>
           ) : null}
-        </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => void write()} disabled={Boolean(busy)} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-60">
-            {scenes.length > 0 ? 'Write it again' : 'Write the launch video'}
-          </button>
-          {busy ? <span role="status" className="text-sm text-muted">{busy}</span> : null}
-        </div>
-        <p className="mt-2 text-xs text-muted">Written only from what your site says. Check every line before you post it.</p>
-        {error ? <p role="alert" className="mt-2 text-sm text-danger">{error}</p> : null}
-      </section>
+          {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
 
-      {scenes.length > 0 ? (
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-          <div className="space-y-3">
-            <div className="flex items-center justify-center rounded-2xl border border-line bg-background p-3">
-              <canvas ref={canvasRef} className="max-h-[62vh] w-auto max-w-full rounded-lg shadow-lg" style={{ aspectRatio: `${f.w} / ${f.h}` }} />
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={() => setPlaying((value) => !value)} disabled={withVoice && voiceState.status === 'working'} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember disabled:opacity-60">
-                {playing ? 'Stop' : voiced ? 'Play with voice' : withVoice && voiceState.status === 'working' ? 'Recording the voice…' : 'Play the preview'}
-              </button>
-              <span className="text-xs text-muted">{timed.length} scenes, about {Math.round(seconds)} seconds</span>
-            </div>
-            {loadingPictures ? <p role="status" className="text-xs text-muted">{loadingPictures}</p> : null}
-            {withVoice && voiceState.text ? <p role={voiceState.status === 'failed' ? 'alert' : 'status'} className={`text-xs ${voiceState.status === 'failed' ? 'text-danger' : 'text-muted'}`}>{voiceState.text}</p> : null}
-            <div className="flex flex-wrap items-center gap-3" role="group" aria-label="Colours">
-              {colorInput('bg', 'Ground')}
-              {colorInput('text', 'Words')}
-              {colorInput('accent', 'Accent')}
-              {site ? <button type="button" onClick={() => setLook(site.colors)} className="text-xs text-muted underline-offset-2 hover:text-foreground hover:underline">Use the site&apos;s colours</button> : null}
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <ol className="space-y-2">
+          <details className="group rounded-2xl border border-line bg-panel">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm text-foreground">
+              <span>
+                Script <span className="text-muted">· {timed.length} scenes · edit any words</span>
+              </span>
+              <span className="text-muted transition group-open:rotate-180" aria-hidden="true">▾</span>
+            </summary>
+            <ol className="space-y-2 border-t border-line p-3">
               {timed.map((scene, i) => (
-                <li key={`${scene.kind}-${i}`} className="rounded-xl border border-line bg-panel p-3">
+                <li key={`${scene.kind}-${i}`} className="rounded-xl bg-background p-3">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{KIND_LABEL[scene.kind]} · {scene.seconds}s</p>
                   <input value={scenes[i].heading} onChange={(event) => editScene(i, { heading: event.target.value.slice(0, 70) })} aria-label={`${KIND_LABEL[scene.kind]} words on screen`} className={`${field} mt-1.5`} />
                   <textarea value={scenes[i].voice} onChange={(event) => editScene(i, { voice: event.target.value.replace(new RegExp(NEWLINE, 'g'), ' ').slice(0, 220) })} rows={2} aria-label={`${KIND_LABEL[scene.kind]} spoken words`} className={`${field} mt-1.5 text-[13px]`} />
                 </li>
               ))}
             </ol>
+          </details>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={() => void make()} disabled={Boolean(busy) || !fontsReady || Boolean(loadingPictures) || (withVoice && voiceState.status === 'working')} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-60">
-                {busy === 'Making the video…' ? `Making the video, ${Math.round(progress * 100)}%` : loadingPictures ? 'Waiting for the pictures…' : withVoice && voiceState.status === 'working' ? 'Waiting for the voice…' : chat ? 'Make the video' : 'Make the MP4'}
-              </button>
-              {busy ? <button type="button" onClick={() => stopRef.current?.abort()} className="px-2 py-2 text-xs text-muted hover:text-foreground">Stop</button> : null}
+          <details className="group rounded-2xl border border-line bg-panel">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm text-foreground">
+              <span>
+                Colours <span className="text-muted">· from your site</span>
+              </span>
+              <span className="text-muted transition group-open:rotate-180" aria-hidden="true">▾</span>
+            </summary>
+            <div className="flex flex-wrap items-center gap-3 border-t border-line p-4" role="group" aria-label="Colours">
+              {colorInput('bg', 'Ground')}
+              {colorInput('text', 'Words')}
+              {colorInput('accent', 'Accent')}
+              {site ? <button type="button" onClick={() => setLook(site.colors)} className="text-xs text-muted underline-offset-2 hover:text-foreground hover:underline">Use the site&apos;s colours</button> : null}
             </div>
-            {result ? (
-              <div className="rounded-xl border border-trust/30 bg-trust/10 p-3">
-                <p className="text-sm text-foreground">Your launch video is ready: {Math.round(result.seconds)} seconds{result.voiced ? ', with voice-over' : ''}.</p>
-                <video src={result.url} controls playsInline className="mt-2 max-h-72 w-auto max-w-full rounded-lg" />
-                <a href={result.url} download={result.name} className="mt-2 inline-block rounded-lg bg-ember px-4 py-2 text-sm font-semibold text-on-ember transition hover:opacity-90">Download MP4</a>
-                <YouTubePost blob={result.blob} defaultTitle={`${media.name ? `${media.name}: ` : ''}${scenes[0]?.heading ?? ''}`.slice(0, 100)} defaultDescription={[...scenes.map((scene) => scene.voice), site?.url ?? ''].filter(Boolean).join(NEWLINE)} vertical={f.h > f.w} seconds={result.seconds} />
-              </div>
-            ) : null}
-          </div>
+          </details>
+
+          {result ? (
+            <div className="rounded-2xl border border-trust/30 bg-trust/10 p-4">
+              <p className="text-sm text-foreground">Your launch video is ready: {Math.round(result.seconds)} seconds{result.voiced ? ', with voice-over' : ''}.</p>
+              <video src={result.url} controls playsInline className="mt-2 max-h-72 w-auto max-w-full rounded-lg" />
+              <a href={result.url} download={result.name} className="mt-2 inline-block rounded-lg bg-ember px-4 py-2 text-sm font-semibold text-on-ember transition hover:opacity-90">Download MP4</a>
+              <YouTubePost blob={result.blob} defaultTitle={`${media.name ? `${media.name}: ` : ''}${scenes[0]?.heading ?? ''}`.slice(0, 100)} defaultDescription={[...scenes.map((scene) => scene.voice), site?.url ?? ''].filter(Boolean).join(NEWLINE)} vertical={tall} seconds={result.seconds} />
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

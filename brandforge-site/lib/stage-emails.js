@@ -265,6 +265,19 @@ ${chatUrl || ''}`.trim(),
       };
     }
 
+    // A message in a chat nobody on the team has claimed yet.
+    case 'chat_unclaimed': {
+      const who = line(details.name) || 'Someone';
+      const message = line(details.message, 300);
+      if (!message) return null;
+      const paragraphs = [`${who} is waiting for an answer:`, `"${message}"`, 'Nobody has claimed this chat yet. Open it and claim it to reply.'];
+      return {
+        subject: `${who} is waiting for an answer`,
+        text: `${paragraphs.join('\n\n')}\n\n${chatUrl || ''}`.trim(),
+        html: card('Unclaimed chat', `${who} is waiting`, paragraphs, open, chatUrl),
+      };
+    }
+
     // A new message in a chat you are part of (sent at most once every few minutes per chat).
     case 'chat_message': {
       const who = line(details.name) || 'Someone';

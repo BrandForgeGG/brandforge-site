@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     if (!(await canOperatorParticipate(context))) {
       return NextResponse.json(
-        { error: 'You can post here once your proposal is accepted.' },
+        { error: 'This chat is claimed by a teammate. Ask them to add you, or claim a chat that is free.' },
         { status: 403 }
       );
     }

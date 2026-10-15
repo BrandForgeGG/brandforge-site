@@ -1,8 +1,8 @@
 import { after, NextRequest, NextResponse } from 'next/server';
 import { readChatSilently } from '@/lib/silent-reader';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
-import { notifyChatMembers } from '@/lib/stage-notify';
-import { addMessage, canAccessConversation, getConversationOwnerSession, getProfileDisplayName, isConversationAiEnabled, runAsGuestSession } from '@/lib/project-db';
+import { notifyChatMembers, notifyTeamUnclaimed } from '@/lib/stage-notify';
+import { addMessage, canAccessConversation, getConversationOwnerSession, getProfileDisplayName, getProfileRole, isConversationAiEnabled, runAsGuestSession } from '@/lib/project-db';
 import { resolveGuestSession } from '@/lib/guest-session';
 import { screenText } from '@/lib/content-policy.js';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -45,12 +45,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     });
   const messageId = guest ? await runAsGuestSession(guest.sessionId, write) : await write();
   if (!messageId) return NextResponse.json({ error: 'Your message could not be sent.' }, { status: 500 });
-  // Other members of this chat (a Trade chat, invited teammates) get a ping, at most once every ten minutes.
-  if (user) {
-    after(async () => {
-      await notifyChatMembers(id, { id: user.id, name: await getProfileDisplayName(user.id) }, message);
-    });
-  }
+  // Other members of this chat (a Trade chat, the teammate who claimed it and anyone they added) get a ping, at most once
+  // every ten minutes. While nobody on the team has claimed the chat, the whole team hears that someone is waiting.
+  after(async () => {
+    const name = user ? await getProfileDisplayName(user.id) : 'A guest';
+    await notifyChatMembers(id, { id: user?.id ?? 'guest', name }, message);
+    const role = user ? await getProfileRole(user.id).catch(() => null) : null;
+    if (role !== 'operator' && role !== 'admin') await notifyTeamUnclaimed(id, name, message, user?.id ?? null);
+  });
   // With the AI paused it does not answer, but it still reads this to keep the project panel up to date.
   if (!(await isConversationAiEnabled(id))) {
     after(async () => {

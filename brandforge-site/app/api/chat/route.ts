@@ -223,7 +223,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  let body: { conversationId?: string; message?: string } = {};
+  let body: { conversationId?: string; message?: string; force?: boolean } = {};
 
   try {
     body = await request.json();
@@ -399,7 +399,9 @@ export async function POST(request: NextRequest) {
     return data;
   });
   const aiEnabled = convData?.ai_enabled !== false;
-  if (!aiEnabled) {
+  // An action (a plan, Ask the AI now) asks for one answer even with the AI off; the AI stays off afterwards.
+  const forced = body.force === true;
+  if (!aiEnabled && !forced) {
     // The AI stays quiet in the chat but still reads along, so the project panel keeps filling in.
     await scope(() => readChatSilently(conversationId, { ownerId: user?.id, guest: Boolean(guest) })).catch(() => 0);
     return NextResponse.json(

@@ -6479,3 +6479,64 @@ export async function removeVideo(path: string): Promise<void> {
   if (!admin) return;
   await admin.storage.from('videos').remove([path]).catch(() => undefined);
 }
+
+// ---- Claimed chats (migration 0053): one team member owns a chat like a ticket ----
+export type ConversationClaim = { claimedBy: string | null; claimedAt: string | null };
+
+export async function getConversationClaim(conversationId: string): Promise<ConversationClaim> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { claimedBy: null, claimedAt: null };
+  const { data, error } = await admin.from('conversations').select('claimed_by, claimed_at').eq('id', conversationId).maybeSingle();
+  if (error || !data) return { claimedBy: null, claimedAt: null };
+  const row = data as { claimed_by: string | null; claimed_at: string | null };
+  return { claimedBy: row.claimed_by, claimedAt: row.claimed_at };
+}
+
+/** Claims a chat for this person only if nobody has it (two people pressing at once: one wins). */
+export async function claimConversation(conversationId: string, userId: string): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const { data, error } = await admin.from('conversations').update({ claimed_by: userId, claimed_at: new Date().toISOString() }).eq('id', conversationId).is('claimed_by', null).select('id');
+  return !error && Array.isArray(data) && data.length > 0;
+}
+
+/** Hands a chat back to the whole team. */
+export async function releaseConversation(conversationId: string): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const { error } = await admin.from('conversations').update({ claimed_by: null, claimed_at: null }).eq('id', conversationId);
+  return !error;
+}
+
+/** The team (operators and admins) by name, for the "add a teammate" list. */
+export async function listStaffMembers(): Promise<{ id: string; name: string; role: string }[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const { data } = await admin.from('profiles').select('id, role, display_name, username, full_name, email').in('role', ['operator', 'admin']).limit(100);
+  return ((data ?? []) as { id: string; role: string; display_name?: string | null; username?: string | null; full_name?: string | null; email?: string | null }[]).map((row) => ({
+    id: row.id,
+    role: row.role,
+    name: row.display_name || row.full_name || row.username || (row.email ? row.email.split('@')[0] : 'Team member'),
+  }));
+}
+
+/** Telegram and email for one person, for a direct ping. */
+export async function getNotifyTarget(userId: string): Promise<{ email: string | null; telegramChatId: string | null }> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { email: null, telegramChatId: null };
+  const { data } = await admin.from('profiles').select('email, telegram_chat_id').eq('id', userId).maybeSingle();
+  const row = data as { email: string | null; telegram_chat_id: string | number | null } | null;
+  return { email: row?.email ? String(row.email) : null, telegramChatId: row?.telegram_chat_id == null || row.telegram_chat_id === '' ? null : String(row.telegram_chat_id) };
+}
+
+/** Adds a teammate to a chat on the claimer's behalf (the server checked the claimer may). Existing members count as added. */
+export async function addTeammateParticipant(conversationId: string, userId: string, displayName: string): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const { error } = await admin.from('participants').insert({ conversation_id: conversationId, user_id: userId, role: 'operator', display_name: displayName });
+  if (error && error.code !== '23505') {
+    console.error('addTeammateParticipant error:', error.message);
+    return false;
+  }
+  return true;
+}

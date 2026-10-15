@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const sources = params.get('kind') === 'shot' ? screenshotSources(url) : [url];
   for (const source of sources) {
     try {
-      const { bytes, type } = await fetchImage(source, params.get('kind') === 'shot' ? 40000 : 12000);
+      const { bytes, type } = await fetchImage(source, params.get('kind') === 'shot' ? 25000 : 12000);
       // A screenshot service answers with a tiny placeholder while it works; that is not the page.
       if (params.get('kind') === 'shot' && bytes.byteLength < 12_000) continue;
       return new NextResponse(Buffer.from(bytes), { headers: { 'Content-Type': type, 'Cache-Control': 'public, max-age=86400' } });
