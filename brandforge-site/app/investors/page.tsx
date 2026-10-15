@@ -21,7 +21,7 @@ const LIVE = [
 const MONEY = [
   ['Monthly team plans', 'From €490 to €2,490 a month, with custom projects from €5,000. The first revenue line, because the team and the clients already exist.'],
   ['A flat 5% on contracts', 'Taken when a milestone is released. It grows with every deal that runs through Trade.'],
-  ['Software plans', 'Pro (€19) and Agency (€79) for people who publish on their own. They open as publishing channels are approved.'],
+  ['Software plans', 'Free to make and publish everything; Pro (€19 a month) puts the strongest AI models on every piece, with ten times the daily allowance. Pay now opens once card and crypto are connected.'],
 ];
 
 export default function InvestorsPage() {

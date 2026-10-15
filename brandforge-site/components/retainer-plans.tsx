@@ -1,60 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import { RETAINERS } from '@/lib/plans.js';
-import { fetchAuthed } from '@/lib/browser-auth';
 import { trackEvent } from '@/lib/funnel-client';
-import { useLogin } from '@/components/login-dialog';
+import { PayNow } from '@/components/pay-now';
 
-// The BrandForge team, by the month. Every plan starts in a chat (so the first question is answered by a person); when
-// card payment is switched on, a plan can also be paid for right here.
+// The BrandForge team, by the month. Every plan starts in a chat (so the first question is answered by a person); once
+// card and crypto payments are connected, a plan can also be paid for right here (Pay now).
 export function RetainerPlans() {
-  const { openLogin } = useLogin();
-  const [cardOpen, setCardOpen] = useState(false);
-  const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let live = true;
-    void fetch('/api/billing/config')
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data) => live && setCardOpen(Boolean(data?.checkout)))
-      .catch(() => undefined);
-    return () => {
-      live = false;
-    };
-  }, []);
-
-  async function payByCard(planId: string) {
-    setBusy(planId);
-    setError(null);
-    trackEvent('plan_interest', { source: `card-${planId}` });
-    try {
-      const response = await fetchAuthed('/api/billing/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan: planId }) });
-      const data = await response.json().catch(() => ({}));
-      if (response.status === 401) {
-        openLogin({ reason: 'signin', next: '/pricing' });
-        return;
-      }
-      if (!response.ok || !data.url) {
-        setError(data.error || 'Card payment could not start. Ask for the plan in the chat.');
-        return;
-      }
-      window.location.assign(data.url as string);
-    } catch {
-      setError('Connection problem. Try again.');
-    } finally {
-      setBusy(null);
-    }
-  }
-
   return (
     <section className="px-6 py-10" aria-labelledby="team-plans">
       <div className="mx-auto max-w-6xl">
         <h2 id="team-plans" className="text-center font-serif text-3xl text-foreground sm:text-4xl">Your own BrandForge team, by the month</h2>
         <p className="mx-auto mt-3 max-w-2xl text-center text-sm leading-relaxed text-muted">
-          A person on the team, with AI doing the first drafts, delivers the same things every month for a fixed price. Cancel any month. You talk to a human in your own chat.
+          Rather have people do it? A person on the BrandForge team, with AI doing the first drafts, delivers the same things every month for a fixed price, in your own chat. Every team plan includes the Pro AI. Cancel any month.
         </p>
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {RETAINERS.map((plan) => (
@@ -70,7 +29,7 @@ export function RetainerPlans() {
               <ul className="mt-4 flex-1 space-y-2">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex gap-2 text-xs leading-relaxed text-foreground">
-                    <span className="text-ember" aria-hidden="true">✓</span>
+                    <span className="text-ember" aria-hidden="true">&#10003;</span>
                     <span>{feature}</span>
                   </li>
                 ))}
@@ -82,15 +41,14 @@ export function RetainerPlans() {
               >
                 {plan.id === 'custom' ? 'Talk to us' : `Start with ${plan.name}`}
               </Link>
-              {cardOpen && plan.cents > 0 ? (
-                <button type="button" onClick={() => void payByCard(plan.id)} disabled={busy === plan.id} className="mt-2 text-xs text-muted underline-offset-2 transition hover:text-foreground hover:underline disabled:opacity-60">
-                  {busy === plan.id ? 'Opening payment…' : 'Pay by card now'}
-                </button>
+              {plan.cents > 0 ? (
+                <div className="mt-2">
+                  <PayNow planId={plan.id} planName={plan.name} />
+                </div>
               ) : null}
             </div>
           ))}
         </div>
-        {error ? <p role="alert" className="mt-4 text-center text-sm text-danger">{error}</p> : null}
         <p className="mt-5 text-center text-xs text-muted">Prices are in euros and exclude tax. Your first chat is free and has no obligation. You only pay once you agree what you get.</p>
       </div>
     </section>

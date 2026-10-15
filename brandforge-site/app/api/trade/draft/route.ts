@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { completeJson } from '@/lib/blueprint-llm';
-import { writerChain } from '@/lib/llm-providers';
 import { guessListing, validateListing } from '@/lib/trade.js';
 import { buildListingPrompt, extractUrls, isRichDescription, normalizeNotes } from '@/lib/trade-research.js';
 import { fetchPage, searchWeb } from '@/lib/research';
 import { screenText } from '@/lib/content-policy.js';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
+import { aiModels } from '@/lib/ai-tier';
+import { noteFailure } from '@/lib/model-router.js';
+import { withAiTier } from '@/lib/ai-tier';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-const MODELS = writerChain();
 const LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 };
 
 type Source = { url: string; title: string; ok: boolean };
@@ -20,7 +21,7 @@ type Source = { url: string; title: string; ok: boolean };
 // publish. A link is read first, and the listing is written from what the page says, with a short note of what was
 // found and what would make it stronger. If the writer is unavailable a plain first draft is made from the same
 // words, so this never dead-ends.
-export async function POST(request: NextRequest) {
+async function handle(request: NextRequest) {
   const user = await getAuthenticatedUser(request).catch(() => null);
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'anon';
   const rate = checkRateLimit(`trade-draft:${user?.id ?? ip}`, LIMIT);
@@ -76,9 +77,9 @@ export async function POST(request: NextRequest) {
   const prompt = buildListingPrompt({ text, pages, snippets });
   const apiKey = process.env.OPENROUTER_API_KEY || '';
   let thin: { draft: ReturnType<typeof toDraft>; notes: { found: string[]; tips: string[] } } | null = null;
-  for (const model of MODELS) {
+  for (const model of aiModels()) {
     try {
-      const completion = await completeJson({ apiKey, model, system: prompt.system, user: prompt.user, temperature: 0.5, maxTokens: model.endsWith(':free') ? 3000 : 1100, timeoutMs: model.endsWith(':free') ? 45000 : 25000 });
+      const completion = await completeJson({ apiKey, model, system: prompt.system, user: prompt.user, temperature: 0.5, maxTokens: model.includes(':') ? 3000 : 1100, timeoutMs: model.includes(':') ? 45000 : 25000 });
       const json = JSON.parse(completion.text.slice(completion.text.indexOf('{'), completion.text.lastIndexOf('}') + 1));
       const checked = validateListing({ ...json, budgetMin: json.budgetMin ?? '', budgetMax: json.budgetMax ?? '' });
       if (!checked.ok) continue;
@@ -90,6 +91,7 @@ export async function POST(request: NextRequest) {
       }
       return NextResponse.json({ draft: result.draft, source: 'ai', research: { sources, ...result.notes } });
     } catch {
+      noteFailure(model);
       // try the next writer
     }
   }
@@ -110,4 +112,9 @@ function toDraft(value: { kind: string; category: string; title: string; descrip
     budgetMin: value.budgetMinCents == null ? '' : String(value.budgetMinCents / 100),
     budgetMax: value.budgetMaxCents == null ? '' : String(value.budgetMaxCents / 100),
   };
+}
+
+// Runs in the asker's AI tier: paying accounts get the strongest models and a bigger daily allowance.
+export async function POST(request: NextRequest) {
+  return withAiTier(request, () => handle(request));
 }

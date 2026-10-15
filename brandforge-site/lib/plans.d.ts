@@ -1,10 +1,11 @@
 export type Plan = {
-  id: 'free' | 'pro' | 'agency';
+  id: 'free' | 'pro';
   name: string;
+  cents: number;
+  aiDaily: number;
   price: string;
   cadence: string;
   blurb: string;
-  limits: { workspaces: number; connectedAccounts: number; queuedPosts: number; whiteLabel: boolean; cmsSync: boolean };
   features: string[];
   highlight?: boolean;
 };
@@ -23,4 +24,5 @@ export const RETAINERS: Retainer[];
 export function getRetainer(id: string | null | undefined): Retainer | null;
 export const PLANS: Plan[];
 export function getPlan(id: string | null | undefined): Plan;
+export function getPaidPlan(id: string | null | undefined): Plan | Retainer | null;
 export function effectivePlan(id: string | null | undefined, paidThrough: string | null | undefined, now?: Date): Plan;

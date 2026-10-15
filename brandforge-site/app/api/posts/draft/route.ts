@@ -3,13 +3,14 @@ import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { makePostDraft } from '@/lib/post-draft';
 import { TYPES, type PostType } from '@/lib/post-types.js';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { withAiTier } from '@/lib/ai-tier';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 // POST { type, topic }: a first draft of an update, poll, quiz or thread. Signed-in only, rate limited.
-export async function POST(request: NextRequest) {
+async function handle(request: NextRequest) {
   const user = await getAuthenticatedUser(request).catch(() => null);
   if (!user) return NextResponse.json({ error: 'Sign in to write a post.' }, { status: 401 });
   const rate = checkRateLimit(`post-draft:${user.id}`, { limit: 30, windowMs: 60 * 60 * 1000 });
@@ -20,4 +21,9 @@ export async function POST(request: NextRequest) {
   const result = await makePostDraft(type, String(body.topic ?? ''));
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
   return NextResponse.json({ post: result.post });
+}
+
+// Runs in the asker's AI tier: paying accounts get the strongest models and a bigger daily allowance.
+export async function POST(request: NextRequest) {
+  return withAiTier(request, () => handle(request));
 }

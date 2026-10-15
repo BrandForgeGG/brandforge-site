@@ -1,4 +1,4 @@
-import { getRetainer } from '@/lib/plans.js';
+import { getPaidPlan } from '@/lib/plans.js';
 
 // Card subscriptions through Stripe, over plain HTTP so there is nothing extra to install. The whole thing is dormant
 // until STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are set: with no key, the pricing page offers the chat instead.
@@ -33,7 +33,7 @@ async function stripePost(path: string, params: URLSearchParams): Promise<Record
 
 // A monthly plan, paid by card. Returns the page Stripe hosts for the payment.
 export async function createCheckoutUrl(input: { planId: string; userId: string; email: string | null; origin: string }): Promise<string | null> {
-  const plan = getRetainer(input.planId);
+  const plan = getPaidPlan(input.planId);
   if (!plan || plan.cents <= 0) return null;
   const params = new URLSearchParams({
     mode: 'subscription',

@@ -1,10 +1,10 @@
 import { completeJson } from '@/lib/blueprint-llm';
-import { writerChain } from '@/lib/llm-providers';
 import { fetchPage } from '@/lib/research';
 import { screenText } from '@/lib/content-policy.js';
-import { budgetLimits, decideBudget } from '@/lib/ai-budget.js';
 import { getAiUsageToday } from '@/lib/project-db';
 import { extractUrls } from '@/lib/trade-research.js';
+import { aiBudget, aiModels } from '@/lib/ai-tier';
+import { noteFailure } from '@/lib/model-router.js';
 import {
   anglesFor,
   assembleWeek,
@@ -31,18 +31,18 @@ export type DistributePlan = { start: string; perDay: number; summary: string; v
 export type BriefResult = { ok: true; brief: DistributeBrief } | { ok: false; status: number; error: string };
 export type DistributeResult = { ok: true; plan: DistributePlan } | { ok: false; status: number; error: string };
 
-const MODELS = writerChain();
 
 async function ask(system: string, user: string, until: number, maxTokens: number): Promise<string | null> {
   const apiKey = String(process.env.OPENROUTER_API_KEY ?? '').trim();
-  for (const model of MODELS) {
+  for (const model of aiModels()) {
     const left = until - Date.now();
     if (left < 4000) return null;
-    const free = model.endsWith(':free');
+    const free = model.includes(':');
     try {
       const completion = await completeJson({ apiKey, model, system, user, temperature: 0.7, maxTokens: free ? maxTokens * 3 : maxTokens, timeoutMs: Math.min(free ? 40_000 : 22_000, left) });
       return completion.text;
     } catch (cause) {
+      noteFailure(model);
       console.warn('distribute model failed:', model, cause instanceof Error ? cause.message.slice(0, 120) : cause);
     }
   }
@@ -86,7 +86,7 @@ export async function makeBrief(input: DistributeInput): Promise<BriefResult> {
   if (!screened.ok) return { ok: false, status: 422, error: screened.message };
 
   const usage = await getAiUsageToday(null).catch(() => ({ userToday: 0, aiToday: 0 }));
-  const budget = decideBudget({ userToday: 0, aiToday: usage.aiToday }, budgetLimits(process.env));
+  const budget = aiBudget({ userToday: 0, aiToday: usage.aiToday });
   if (!budget.allowed) return { ok: false, status: 429, error: budget.message };
 
   const perDay = perDayOf(input.perDay);

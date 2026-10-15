@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { notifyChatMembers, notifyTeamChatOpened } from "@/lib/stage-notify";
 import { buildRoomBlock, labelForRoom } from "@/lib/chat-room.js";
-import { answerModel, getAIService, type Message as AIMessage } from "@/lib/ai-service";
+import { answerModel, canAffordPremium, getAIService, type Message as AIMessage } from "@/lib/ai-service";
 import { budgetLimits, decideBudget } from "@/lib/ai-budget.js";
+import { tierOf } from "@/lib/ai-tier";
+import { chainFor, limitsFor } from "@/lib/model-router.js";
 import { getActorName, getAuthenticatedUser } from "@/lib/supabase-server";
 import {
   addMessage,
@@ -306,10 +308,12 @@ export async function POST(request: NextRequest) {
   // Daily spend guard: a per-account cap, a once-a-day staff warning and a global ceiling.
   // Guests are already capped per session above; the global ceiling covers them too.
   {
-    const limits = budgetLimits(process.env);
+    // Paying accounts get ten times the allowance and are never stopped by the shared cap.
+    const tier = user ? await tierOf(user.id) : "free";
+    const limits = limitsFor(tier, budgetLimits(process.env));
     const usage = await getAiUsageToday(user?.id ?? null).catch(() => ({ userToday: 0, aiToday: 0 }));
     const isStaff = user ? await isAdminAccount(user.id).catch(() => false) : false;
-    const budget = decideBudget({ ...usage, isStaff }, limits);
+    const budget = decideBudget({ ...usage, isStaff, paid: tier === "pro" }, limits);
     if (budget.alert) {
       void raiseAiBudgetAlert(budget.alert, usage.aiToday).catch(() => undefined);
     }
@@ -510,7 +514,8 @@ export async function POST(request: NextRequest) {
             // founder watch text that a reload would erase (stream ≠ saved).
             onDiscard: () => send({ type: "discard" }),
           },
-          { model: await answerModel() },
+          // Paying accounts are answered by the strongest model; everyone else by the best one the credit allows.
+      { model: user && (await tierOf(user.id)) === "pro" && (await canAffordPremium()) ? chainFor("pro")[0] : await answerModel() },
         );
 
         const content = tidySourcing(answer.content.trim()).trim();

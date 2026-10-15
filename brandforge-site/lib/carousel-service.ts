@@ -1,10 +1,10 @@
 import { completeJson } from '@/lib/blueprint-llm';
-import { writerChain } from '@/lib/llm-providers';
 import { buildPlanPrompt, normalizePlan, TYPES, type CarouselPlan } from '@/lib/carousel-plan.js';
 import { fetchPage, searchWeb } from '@/lib/research';
 import { screenText } from '@/lib/content-policy.js';
-import { budgetLimits, decideBudget } from '@/lib/ai-budget.js';
 import { getAiUsageToday } from '@/lib/project-db';
+import { aiBudget, aiModels } from '@/lib/ai-tier';
+import { noteFailure } from '@/lib/model-router.js';
 
 // Writes the words for a carousel. One place for the website, the Telegram and Discord bots and the
 // weekly calendar, so they all get the same rules: facts only from what was given or found, a
@@ -24,7 +24,6 @@ export type PlanResult =
   | { ok: true; plan: CarouselPlan; source: { title: string; image: string | null; url: string | null } }
   | { ok: false; status: number; error: string };
 
-const MODELS = writerChain();
 
 async function newsSources(topic: string): Promise<{ text: string; title: string } | { error: string }> {
   const provider = process.env.SEARCH_PROVIDER || 'serper';
@@ -101,18 +100,19 @@ export async function makeCarouselPlan(input: PlanInput): Promise<PlanResult> {
   if (!screened.ok) return { ok: false, status: 422, error: screened.message };
 
   const usage = await getAiUsageToday(null).catch(() => ({ userToday: 0, aiToday: 0 }));
-  const budget = decideBudget({ userToday: 0, aiToday: usage.aiToday }, budgetLimits(process.env));
+  const budget = aiBudget({ userToday: 0, aiToday: usage.aiToday });
   if (!budget.allowed) return { ok: false, status: 429, error: budget.message };
 
   const prompt = buildPlanPrompt({ mode, type, topic, sourceText, sourceTitle, count: input.count, cta });
   let lastError = 'The writer is busy. Try again in a moment.';
-  for (const model of MODELS) {
+  for (const model of aiModels()) {
     try {
-      const completion = await completeJson({ apiKey, model, system: prompt.system, user: prompt.user, temperature: 0.6, maxTokens: model.endsWith(':free') ? 4000 : 1600, timeoutMs: model.endsWith(':free') ? 55000 : 30000 });
+      const completion = await completeJson({ apiKey, model, system: prompt.system, user: prompt.user, temperature: 0.6, maxTokens: model.includes(':') ? 4000 : 1600, timeoutMs: model.includes(':') ? 55000 : 30000 });
       const checked = normalizePlan(completion.text, { count: prompt.count, cta });
       if (checked.ok) return { ok: true, plan: checked.plan, source: { title: sourceTitle, image: sourceImage, url: sourceUrl } };
       lastError = checked.error;
     } catch (cause) {
+      noteFailure(model);
       console.warn('carousel plan model failed:', model, cause instanceof Error ? cause.message.slice(0, 160) : cause);
     }
   }

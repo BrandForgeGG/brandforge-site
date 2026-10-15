@@ -28,7 +28,7 @@ function utcDayStart(now = new Date()) {
 }
 
 /**
- * @param {{ userToday: number, aiToday: number, isStaff?: boolean }} usage
+ * @param {{ userToday: number, aiToday: number, isStaff?: boolean, paid?: boolean }} usage  paid: a paying account, never stopped by the shared cap
  * @returns {{ allowed: boolean, reason: null|'user_daily'|'global_cap', alert: null|'warn'|'cap', message: string }}
  */
 function decideBudget(usage, limits = DEFAULTS) {
@@ -36,7 +36,7 @@ function decideBudget(usage, limits = DEFAULTS) {
   const aiToday = Math.max(0, Number(usage.aiToday) || 0);
   const alert = aiToday >= limits.hardCap ? 'cap' : aiToday >= limits.alertAt ? 'warn' : null;
   if (usage.isStaff) return { allowed: true, reason: null, alert, message: '' };
-  if (aiToday >= limits.hardCap) {
+  if (aiToday >= limits.hardCap && !usage.paid) {
     return { allowed: false, reason: 'global_cap', alert, message: 'BrandForge AI is at capacity for today. Please come back tomorrow, or ask the team to continue by hand.' };
   }
   if (userToday >= limits.userDaily) {

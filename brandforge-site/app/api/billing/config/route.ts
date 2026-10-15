@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
-import { stripeConfigured } from '@/lib/stripe';
+import { paymentStatus } from '@/lib/payments-open';
 
 export const dynamic = 'force-dynamic';
 
-// Whether card payment is switched on. The pricing page shows "Pay by card" only when it is.
+// Whether Pay now is open. It opens only when card and crypto payments are both connected; until then the buttons show
+// as locked. `checkout` stays for older pages.
 export async function GET() {
-  return NextResponse.json({ checkout: stripeConfigured() });
+  const status = paymentStatus();
+  return NextResponse.json({ checkout: status.open, ...status });
 }

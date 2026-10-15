@@ -1,21 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { completeJson } from '@/lib/blueprint-llm';
-import { writerChain } from '@/lib/llm-providers';
 import { readSite, type SiteRead } from '@/lib/site-capture.js';
 import { buildLaunchPrompt, launchText, normalizeLaunch } from '@/lib/launch-video.js';
 import { screenText } from '@/lib/content-policy.js';
-import { budgetLimits, decideBudget } from '@/lib/ai-budget.js';
 import { getAiUsageToday } from '@/lib/project-db';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { fetchSiteHtml, fetchStylesheets, pictureRoute } from '@/lib/launch-fetch';
+import { aiBudget, aiModels } from '@/lib/ai-tier';
+import { noteFailure } from '@/lib/model-router.js';
+import { withAiTier } from '@/lib/ai-tier';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 const LIMIT = { limit: 8, windowMs: 60 * 60 * 1000 };
-const MODELS = writerChain();
 
 function siteUrl(raw: string): string | null {
   const text = raw.trim();
@@ -31,7 +31,7 @@ function siteUrl(raw: string): string | null {
 // POST { url?, about? } -> { site, scenes }. Free, like the other makers: the page is read safely, a writer turns it into a
 // launch story from the page's own facts, and the browser draws, voices and encodes the video. Pictures and the screenshot
 // come back as addresses on our picture route, so the browser can put them in the video.
-export async function POST(request: NextRequest) {
+async function handle(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser(request).catch(() => null);
     const rateKey = user ? `launch:u:${user.id}` : `launch:ip:${(request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown'}`;
@@ -63,14 +63,14 @@ export async function POST(request: NextRequest) {
     }
 
     const usage = await getAiUsageToday(null).catch(() => ({ userToday: 0, aiToday: 0 }));
-    const budget = decideBudget({ userToday: 0, aiToday: usage.aiToday }, budgetLimits(process.env));
+    const budget = aiBudget({ userToday: 0, aiToday: usage.aiToday });
     if (!budget.allowed) return NextResponse.json({ error: budget.message }, { status: 429 });
 
     const hasPictures = (site?.pictures.length ?? 0) >= 2;
     const prompt = buildLaunchPrompt({ site, about, hasPictures });
     const name = site?.name || '';
     let lastError = 'The writer is busy. Try again in a moment.';
-    for (const model of MODELS) {
+    for (const model of aiModels()) {
       try {
         // Fallback providers ("groq:" ...) and free models may think before answering, so they get room for both.
         const free = model.includes(':');
@@ -97,6 +97,7 @@ export async function POST(request: NextRequest) {
           scenes: checked.scenes,
         });
       } catch (cause) {
+        noteFailure(model);
         console.warn('launch model failed:', model, cause instanceof Error ? cause.message.slice(0, 160) : cause);
       }
     }
@@ -105,4 +106,9 @@ export async function POST(request: NextRequest) {
     console.error('Launch video error:', error);
     return NextResponse.json({ error: 'Something went wrong. Try again.' }, { status: 500 });
   }
+}
+
+// Runs in the asker's AI tier: paying accounts get the strongest models and a bigger daily allowance.
+export async function POST(request: NextRequest) {
+  return withAiTier(request, () => handle(request));
 }

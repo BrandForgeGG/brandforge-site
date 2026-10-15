@@ -1,40 +1,46 @@
 'use strict';
 
-// Software plans: a fixed monthly fee for more capacity. AI and media generation stay free on
-// every plan; plans only raise workspace limits and unlock team and channel features. Prices are
-// the launch test values - change them here and the pricing page follows.
+// Software plans. Every line here is something the product does today. Free makes and publishes everything; Pro puts the
+// strongest AI on every piece (lib/model-router.js and lib/ai-tier.ts read the plan on each request). Prices are launch
+// values: change them here and the pricing page, Settings and the card checkout follow.
 
 const PLANS = [
   {
     id: 'free',
     name: 'Free',
+    cents: 0,
     price: '€0',
     cadence: '',
-    blurb: 'Everything you need to try it with a team.',
-    limits: { workspaces: 1, connectedAccounts: 3, queuedPosts: 10, whiteLabel: false, cmsSync: false },
-    features: ['AI research, plans and copy', 'Carousels, ads, quotes and polls', 'A week of posts, written for you', '1 workspace', '3 connected accounts', 'Contracts with a flat fee on release'],
+    blurb: 'Make, publish and trade. No card needed.',
+    aiDaily: 150,
+    features: [
+      'A chat that plans, writes and researches with you',
+      'Carousels, pictures, videos with voice-over and articles',
+      'Launch videos made from your website',
+      'Post or schedule to LinkedIn, Bluesky, YouTube, Telegram and more',
+      'List and trade in the marketplace',
+      'Fast AI models, 150 AI messages a day',
+    ],
   },
   {
     id: 'pro',
     name: 'Pro',
+    cents: 1900,
     price: '€19',
     cadence: '/month',
-    blurb: 'For people who publish every week.',
-    limits: { workspaces: 5, connectedAccounts: 15, queuedPosts: 300, whiteLabel: false, cmsSync: true },
-    features: ['Everything in Free', '5 workspaces', '15 connected accounts', 'Bulk scheduling queue', 'Shopify, Webflow and WordPress publishing'],
+    blurb: 'The best AI on everything you make.',
+    aiDaily: 1500,
+    features: [
+      'Everything in Free',
+      'The strongest writing models first (Claude, GPT, Gemini), switched to whichever is answering',
+      'The best picture model on every picture, every video scene included',
+      '1,500 AI messages a day, ten times Free',
+      'Keeps working when the free daily capacity runs out',
+      'Cancel any time from Settings',
+    ],
     highlight: true,
   },
-  {
-    id: 'agency',
-    name: 'Agency',
-    price: '€79',
-    cadence: '/month',
-    blurb: 'For teams running several clients.',
-    limits: { workspaces: 50, connectedAccounts: 100, queuedPosts: 3000, whiteLabel: true, cmsSync: true },
-    features: ['Everything in Pro', '50 workspaces', '100 connected accounts', 'White-label client views', 'Priority review of disputes'],
-  },
 ];
-
 // The BrandForge team, monthly. A person on the team, with AI doing the first drafts, delivers the same things every
 // month for a fixed price. Prices are test values to be confirmed in conversation: change them here and the pricing
 // page, the chat and the card checkout all follow.
@@ -111,6 +117,12 @@ function getPlan(id) {
   return PLANS.find((plan) => plan.id === id) || PLANS[0];
 }
 
+/** Anything that can be paid for by card: a software plan or a team plan. */
+function getPaidPlan(id) {
+  const plan = PLANS.find((entry) => entry.id === id && entry.cents > 0) || RETAINERS.find((entry) => entry.id === id && entry.cents > 0);
+  return plan || null;
+}
+
 // Past-due accounts fall back to Free automatically: no late fees, no interest.
 function effectivePlan(id, paidThrough, now = new Date()) {
   if (!id || id === 'free') return PLANS[0];
@@ -118,4 +130,4 @@ function effectivePlan(id, paidThrough, now = new Date()) {
   return new Date(paidThrough).getTime() >= now.getTime() ? getPlan(id) : PLANS[0];
 }
 
-module.exports = { PLANS, RETAINERS, getPlan, getRetainer, effectivePlan };
+module.exports = { PLANS, RETAINERS, getPlan, getPaidPlan, getRetainer, effectivePlan };

@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { makeBrief } from '@/lib/distribute-service';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { recordFunnelEvent } from '@/lib/project-db';
+import { withAiTier } from '@/lib/ai-tier';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -18,7 +19,7 @@ function clientKey(request: NextRequest, userId: string | null): string {
 }
 
 // POST { text?, url?, fileText?, fileName?, perDay?, startDate?, brand? } -> { brief }
-export async function POST(request: NextRequest) {
+async function handle(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser(request).catch(() => null);
     const rate = checkRateLimit(clientKey(request, user?.id ?? null), LIMIT);
@@ -42,4 +43,9 @@ export async function POST(request: NextRequest) {
     console.error('Distribute brief error:', error);
     return NextResponse.json({ error: 'Something went wrong. Try again.' }, { status: 500 });
   }
+}
+
+// Runs in the asker's AI tier: paying accounts get the strongest models and a bigger daily allowance.
+export async function POST(request: NextRequest) {
+  return withAiTier(request, () => handle(request));
 }

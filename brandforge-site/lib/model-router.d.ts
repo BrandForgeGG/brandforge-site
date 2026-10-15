@@ -1,0 +1,10 @@
+export type AiTier = 'free' | 'pro';
+export const PRO_WRITERS_DEFAULT: string[];
+export const COOL_DOWN_MS: number;
+export function chainFor(tier: AiTier, env?: Record<string, string | undefined>): string[];
+export function writerModels(tier: AiTier, env?: Record<string, string | undefined>, now?: number): string[];
+export function noteFailure(model: string, now?: number): void;
+export function noteSuccess(model: string): void;
+export function imageQuality<Q extends string>(tier: AiTier, wanted: Q): Q | 'best';
+export function limitsFor<L extends { userDaily: number }>(tier: AiTier, limits: L): L;
+export function resetCooling(): void;

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { makeCoverImage } from '@/lib/carousel-cover-image';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { withAiTier } from '@/lib/ai-tier';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -9,7 +10,7 @@ export const maxDuration = 40;
 // POST /api/carousel/cover { scene, headline, style, variant }: one cover picture for a carousel,
 // painted from what the post is about. Free to try, so it is rate limited by address. A 204 means
 // "no picture right now": the maker keeps its drawn art and says nothing alarming.
-export async function POST(request: NextRequest) {
+async function handle(request: NextRequest) {
   const forwarded = request.headers.get('x-forwarded-for') ?? '';
   const rate = checkRateLimit(`carousel-cover:${forwarded.split(',')[0].trim() || 'unknown'}`, { limit: 60, windowMs: 60 * 60 * 1000 });
   if (!rate.allowed) return NextResponse.json({ error: 'That is a lot of cover art for one hour. Try again later, or pick the Drawn style.' }, { status: 429 });
@@ -26,4 +27,9 @@ export async function POST(request: NextRequest) {
   });
   if (!cover) return new NextResponse(null, { status: 204 });
   return new NextResponse(Buffer.from(cover.bytes), { headers: { 'Content-Type': cover.contentType, 'Cache-Control': 'no-store' } });
+}
+
+// Runs in the asker's AI tier: paying accounts always get the best picture model.
+export async function POST(request: NextRequest) {
+  return withAiTier(request, () => handle(request));
 }

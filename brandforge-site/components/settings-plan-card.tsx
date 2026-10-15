@@ -6,7 +6,7 @@ import { fetchAuthed } from '@/lib/browser-auth';
 
 type Plan = { id: string; name: string; price: string; status: string; renews: string | null };
 
-// "Your plan" in Settings: the monthly team plan paid by card, with Stripe's page for the card and cancelling.
+// "Your plan" in Settings: the monthly plan (Pro or a team plan), with Stripe's page for the card and cancelling.
 export function SettingsPlanCard() {
   const [plan, setPlan] = useState<Plan | null | undefined>(undefined);
   const [opening, setOpening] = useState(false);
@@ -42,6 +42,7 @@ export function SettingsPlanCard() {
           <p className="text-base text-foreground">
             {plan.name} <span className="text-muted">{plan.price}/month</span>
           </p>
+          <p className="mt-1 text-sm text-success">The strongest AI models are on for everything you make.</p>
           <p className="mt-1 text-sm text-muted">
             {plan.status === 'past_due' ? 'The last payment did not go through. Update your card to keep it.' : plan.renews ? `Renews ${new Date(plan.renews).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.` : 'Active.'}
           </p>
@@ -51,7 +52,7 @@ export function SettingsPlanCard() {
         </div>
       ) : (
         <p className="mt-3 text-sm text-muted">
-          No monthly plan yet. <Link href="/pricing" className="text-ember underline-offset-2 hover:underline">See the BrandForge team plans</Link>.
+          You are on Free. <Link href="/pricing" className="text-ember underline-offset-2 hover:underline">See Pro and the team plans</Link>.
         </p>
       )}
     </div>
