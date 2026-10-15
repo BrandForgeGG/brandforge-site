@@ -8,7 +8,7 @@ import { fitToVoice, totalSeconds } from '@/lib/video-scenes.js';
 import type { LaunchScene } from '@/lib/launch-video.js';
 import { canEncode, encodeFrames } from '@/components/video/video-engine';
 import { drawLaunchFrame, loadLaunchFonts, type LaunchLook, type LaunchMedia } from '@/components/video/launch-engine';
-import { VOICES, audioContext, clipsFor, layTrack, playClips, type Clip, type VoiceId } from '@/components/video/voice';
+import { VOICES, audioContext, clipsFor, layTrack, playClips, type Clip, type VoiceId, warmVoice } from '@/components/video/voice';
 import { MUSIC_STYLES, beatSeconds, mixWithMusic, playBed, type MusicStyle } from '@/components/video/music';
 import { drawKineticFrame, launchToKinetic, loadKineticFonts } from '@/components/video/kinetic-engine';
 import { TONE_IDS, type LaunchShare, type LaunchTone } from '@/lib/launch-video.js';
@@ -140,6 +140,11 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
     void Promise.all([loadLaunchFonts(), loadKineticFonts()]).then(() => setFontsReady(true));
   }, []);
 
+  // The voice model starts downloading as soon as the maker opens with the voice on, so it is ready when the words are.
+  useEffect(() => {
+    if (withVoice) warmVoice();
+  }, [withVoice]);
+
   // Reopening a draft: its words, settings and (when it was made) the finished MP4.
   useEffect(() => {
     let live = true;
@@ -215,7 +220,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
     setClips(null);
     setVoiceState({ status: 'working', text: 'Recording the voice-over…' });
     const timer = window.setTimeout(() => {
-      void clipsFor(scenes.map((scene) => scene.voice), voice, (done, total) => live && setVoiceState({ status: 'working', text: `Recording the voice-over, ${done} of ${total}…` }))
+      void clipsFor(scenes.map((scene) => scene.voice), voice, (done, total, note) => live && setVoiceState({ status: 'working', text: note ?? `Recording the voice-over, ${done} of ${total}…` }))
         .then((made) => {
           if (!live) return;
           setClips(made);

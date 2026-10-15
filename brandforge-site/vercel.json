@@ -1,5 +1,10 @@
 {
-  "regions": ["cdg1"],
+  "regions": [
+    "cdg1"
+  ],
+  "git": {
+    "deploymentEnabled": false
+  },
   "crons": [
     {
       "path": "/api/cron/publish",

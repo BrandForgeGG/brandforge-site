@@ -8,7 +8,7 @@ import { loadFonts } from '@/components/carousel/carousel-shared';
 import { THEMES } from '@/lib/carousel-render.js';
 import { VIDEO_FORMATS, fitToVoice, totalSeconds, type VideoFormat, type VideoScene, planToScenes } from '@/lib/video-scenes.js';
 import { canEncode, drawFrame, encodeFrames, encodeVideo, lookOf, makeArt, type SceneArt } from '@/components/video/video-engine';
-import { VOICES, audioContext, clipsFor, layTrack, playClips, type Clip, type VoiceId } from '@/components/video/voice';
+import { VOICES, audioContext, clipsFor, layTrack, playClips, type Clip, type VoiceId, warmVoice } from '@/components/video/voice';
 import { beatSeconds, masterOrNull, mixWithMusic, playBed } from '@/components/video/music';
 import { drawKineticFrame, loadKineticFonts, shortToKinetic } from '@/components/video/kinetic-engine';
 import { YouTubePost } from '@/components/video/youtube-post';
@@ -152,6 +152,11 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId, chat }
     void Promise.all([loadFonts(), loadKineticFonts()]).then(() => setFontsReady(true));
   }, []);
 
+  // The voice model starts downloading as soon as the maker opens with the voice on, so it is ready when the words are.
+  useEffect(() => {
+    if (withVoice) warmVoice();
+  }, [withVoice]);
+
   // Reopening a draft: its words, settings, pictures and (when it was made) the finished MP4.
   useEffect(() => {
     let live = true;
@@ -222,7 +227,7 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId, chat }
     setClips(null);
     setVoiceState({ status: 'working', text: 'Recording the voice-over…' });
     const timer = window.setTimeout(() => {
-      void clipsFor(scenes.map((scene) => scene.voice), voice, (done, total) => live && setVoiceState({ status: 'working', text: `Recording the voice-over, ${done} of ${total}…` }))
+      void clipsFor(scenes.map((scene) => scene.voice), voice, (done, total, note) => live && setVoiceState({ status: 'working', text: note ?? `Recording the voice-over, ${done} of ${total}…` }))
         .then((made) => {
           if (!live) return;
           setClips(made);

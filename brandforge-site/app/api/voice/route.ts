@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 
   const user = await getAuthenticatedUser(request).catch(() => null);
   const rateKey = user ? `voice:u:${user.id}` : `voice:ip:${(request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown'}`;
-  if (!checkRateLimit(rateKey, { limit: 120, windowMs: 60 * 60 * 1000 }).allowed) return NextResponse.json({ error: 'That is a lot of voice-overs for one hour. Try again later.' }, { status: 429 });
+  if (!checkRateLimit(rateKey, { limit: 40, windowMs: 60 * 60 * 1000 }).allowed) return NextResponse.json({ error: 'That is a lot of voice-overs for one hour. Try again later.' }, { status: 429 });
   try {
     const wav = await speak(text, voice);
     after(() => storeVoice(key, new Uint8Array(wav)));
