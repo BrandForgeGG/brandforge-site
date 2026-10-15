@@ -94,7 +94,7 @@ export function YouTubePost({ blob, keptPath, defaultTitle, defaultDescription, 
             Publish at (optional)
             <input type="datetime-local" value={when} onChange={(event) => setWhen(event.target.value)} className="rounded-lg border border-line bg-background px-2 py-1 text-xs text-foreground" />
           </label>
-          <button type="button" onClick={() => void post()} disabled={Boolean(busy) || title.trim().length < 3} className="rounded-lg bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
+          <button type="button" onClick={() => void post()} disabled={Boolean(busy) || title.trim().length < 3} className="rounded-lg bg-ember px-4 py-2 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-60">
             {busy ?? (when ? 'Schedule on YouTube' : vertical && seconds <= 180 ? 'Post as a Short' : 'Post to YouTube')}
           </button>
         </div>

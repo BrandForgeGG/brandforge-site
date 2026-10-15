@@ -222,7 +222,7 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
                 <p className="font-serif text-lg text-foreground">{current.name}</p>
                 <p className="text-sm text-muted">{current.line}</p>
               </div>
-              <button type="button" onClick={() => (madeInChat(current.id) ? void startInChat(current) : setBuilding(true))} disabled={starting} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
+              <button type="button" onClick={() => (madeInChat(current.id) ? void startInChat(current) : setBuilding(true))} disabled={starting} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-60">
                 {starting ? 'Opening a chat…' : 'Start making'}
               </button>
             </div>
@@ -243,7 +243,7 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
             <p className="font-serif text-lg text-foreground">Make something</p>
             <p className="text-sm text-muted">A carousel, an ad, a quote, a tip, a poll and more, from one sentence.</p>
           </div>
-          <button type="button" aria-expanded={picking} onClick={() => setPicking((value) => !value)} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">
+          <button type="button" aria-expanded={picking} onClick={() => setPicking((value) => !value)} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90">
             {picking ? 'Close' : 'Choose a format'}
           </button>
         </div>

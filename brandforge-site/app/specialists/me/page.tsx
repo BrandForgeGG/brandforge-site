@@ -114,7 +114,7 @@ export default function EditSpecialistProfilePage() {
         </label>
 
         <div className="flex items-center gap-3">
-          <button type="button" onClick={() => void save()} disabled={saving} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">{saving ? 'Saving…' : 'Save profile'}</button>
+          <button type="button" onClick={() => void save()} disabled={saving} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-60">{saving ? 'Saving…' : 'Save profile'}</button>
           {message ? <p role={message.kind === 'error' ? 'alert' : 'status'} className={message.kind === 'error' ? 'text-sm text-danger' : 'text-sm text-success'}>{message.text}</p> : null}
         </div>
       </div>

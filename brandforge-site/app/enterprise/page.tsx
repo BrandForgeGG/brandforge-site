@@ -32,7 +32,7 @@ export default function EnterprisePage() {
           For companies and high-value projects from €5,000: a scoped build or retainer from a BrandForge team, with AI doing the heavy first drafts and people owning the result.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <Link href="/chat?plan=custom" className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">Describe your project</Link>
+          <Link href="/chat?plan=custom" className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90">Describe your project</Link>
           <a href={COMMUNITY_LINKS.telegramManager.href} target="_blank" rel="noreferrer" className="rounded-xl border border-line px-5 py-2.5 text-sm text-foreground transition hover:border-ember">Message the project manager</a>
         </div>
 

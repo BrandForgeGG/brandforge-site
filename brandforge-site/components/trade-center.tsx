@@ -239,7 +239,7 @@ export function TradeCenter() {
               </p>
             ) : null}
           </div>
-          <button type="button" aria-expanded={makerOpen} onClick={() => { setMakerOpen(true); setPublished(null); }} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">Create a listing</button>
+          <button type="button" aria-expanded={makerOpen} onClick={() => { setMakerOpen(true); setPublished(null); }} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90">Create a listing</button>
         </div>
       ) : (
       <section aria-label="Publish a listing" className="rounded-2xl border border-line bg-panel p-4 sm:p-5">
@@ -289,7 +289,7 @@ export function TradeCenter() {
             ) : null}
             {error ? <p role="alert" className="mt-2 text-xs text-danger">{error}</p> : null}
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              <button type="button" onClick={() => void publish()} disabled={publishing} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
+              <button type="button" onClick={() => void publish()} disabled={publishing} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-60">
                 {publishing ? "Publishing…" : "Publish"}
               </button>
               <button type="button" onClick={() => { setDraft(null); setResearch(null); }} className="text-sm text-muted transition hover:text-foreground">
@@ -333,7 +333,7 @@ export function TradeCenter() {
               </p>
             ) : null}
             <div className="mt-3">
-              <button type="button" onClick={() => void makeDraft(text)} disabled={making || text.trim().length < 12} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
+              <button type="button" onClick={() => void makeDraft(text)} disabled={making || text.trim().length < 12} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-50">
                 {making ? (/https?:\/\/|\b[a-z0-9-]+\.(?:com|co\.uk|uk|io|app|dev|net|org|gg|ai)\b/i.test(text) ? "Reading your page and writing…" : "Writing your listing…") : "Make my listing"}
               </button>
             </div>
@@ -405,11 +405,11 @@ function Card({ listing: l, onContact, onEdit, onAssistant, onClose, onReopen, o
           {!l.official && l.createdAt ? <span className="ml-2 text-[11px] font-normal text-muted">{posted(l.createdAt)}</span> : null}
         </p>
         {l.mine ? (
-          <button type="button" onClick={() => onAssistant(l)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background">
+          <button type="button" onClick={() => onAssistant(l)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember">
             Assistant
           </button>
         ) : (
-          <button type="button" onClick={() => onContact(l)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background">
+          <button type="button" onClick={() => onContact(l)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember">
             {l.kind === "offer" ? "Hire" : "Offer to help"}
           </button>
         )}
@@ -520,7 +520,7 @@ function PostForm({ onClose, onPosted, listing }: { onClose: () => void; onPoste
         <button type="button" onClick={onClose} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground">
           Cancel
         </button>
-        <button type="button" disabled={busy || !category} onClick={() => void submit()} className="rounded-lg bg-ember px-4 py-1.5 text-xs font-semibold text-background disabled:opacity-60">
+        <button type="button" disabled={busy || !category} onClick={() => void submit()} className="rounded-lg bg-ember px-4 py-1.5 text-xs font-semibold text-on-ember disabled:opacity-60">
           Save changes
         </button>
       </div>
@@ -574,7 +574,7 @@ function ContactForm({ listing, onClose }: { listing: ListingView; onClose: () =
         <button type="button" onClick={onClose} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground">
           Cancel
         </button>
-        <button type="button" disabled={busy || message.trim().length < 10} onClick={() => void send()} className="rounded-lg bg-ember px-4 py-1.5 text-xs font-semibold text-background disabled:opacity-60">
+        <button type="button" disabled={busy || message.trim().length < 10} onClick={() => void send()} className="rounded-lg bg-ember px-4 py-1.5 text-xs font-semibold text-on-ember disabled:opacity-60">
           Send and open chat
         </button>
       </div>

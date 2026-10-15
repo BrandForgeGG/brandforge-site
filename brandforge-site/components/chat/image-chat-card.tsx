@@ -370,7 +370,7 @@ export function ImageChatCard({ kind: startKind, topic, userText, storageKey, re
 
               {error ? <p role="alert" className="mt-3 text-sm text-danger">{error}</p> : null}
               <div className="mt-5 flex items-center gap-3">
-                <button type="button" onClick={() => void make()} disabled={draft.topic.trim().length < 8} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
+                <button type="button" onClick={() => void make()} disabled={draft.topic.trim().length < 8} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-50">
                   Make my {KINDS[draft.kind].label.toLowerCase()}
                 </button>
                 <button type="button" onClick={close} className="text-sm text-muted transition hover:text-foreground">{standalone ? 'Back' : 'Not now'}</button>
@@ -469,7 +469,7 @@ export function ImageChatCard({ kind: startKind, topic, userText, storageKey, re
                   <div className="mt-5 flex flex-wrap gap-2">
                     {standalone ? (
                       <>
-                        <button type="button" onClick={() => void download()} disabled={pictureBusy} className="rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
+                        <button type="button" onClick={() => void download()} disabled={pictureBusy} className="rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-50">
                           {signedIn === false ? 'Sign in to download' : 'Download picture'}
                         </button>
                         <button type="button" onClick={() => void copyCaption()} className="rounded-xl border border-line px-4 py-2.5 text-sm text-foreground transition hover:border-ember">
@@ -490,7 +490,7 @@ export function ImageChatCard({ kind: startKind, topic, userText, storageKey, re
                         />
                       </>
                     ) : (
-                      <button type="button" onClick={() => void save()} disabled={sending || pictureBusy} className="rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
+                      <button type="button" onClick={() => void save()} disabled={sending || pictureBusy} className="rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-50">
                         {sending ? 'Saving…' : 'Save to chat'}
                       </button>
                     )}

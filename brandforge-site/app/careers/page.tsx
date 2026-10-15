@@ -60,7 +60,7 @@ export default function CareersPage() {
                 href={COMMUNITY_LINKS.discord.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-95"
+                className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-on-ember transition hover:opacity-95"
               >
                 Join Discord
               </a>

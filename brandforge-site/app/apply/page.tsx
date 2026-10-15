@@ -119,7 +119,7 @@ export default function ApplyPage() {
               <button
                 type="button"
                 onClick={() => openLogin({ reason: 'signin', next: '/apply' })}
-                className="mt-3 rounded-lg bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90"
+                className="mt-3 rounded-lg bg-ember px-4 py-2 text-sm font-semibold text-on-ember transition hover:opacity-90"
               >
                 Create my account
               </button>
@@ -146,7 +146,7 @@ export default function ApplyPage() {
               Back to chat
             </Link>
             {application.status === 'accepted' ? (
-              <Link href="/trade" className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90">
+              <Link href="/trade" className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-on-ember transition hover:opacity-90">
                 Open the Trade Center
               </Link>
             ) : null}
@@ -253,7 +253,7 @@ export default function ApplyPage() {
           <button
             type="submit"
             disabled={submitting || !specialty || message.trim().length < 20 || !(signedInEmail ?? email).includes('@')}
-            className="rounded-xl bg-ember px-6 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-xl bg-ember px-6 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? 'Sending…' : 'Send application'}
           </button>

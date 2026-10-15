@@ -20,7 +20,7 @@ export default function NotFound() {
         <div className="mt-8 flex flex-wrap justify-center gap-2">
           <Link
             href="/chat"
-            className="rounded-xl bg-ember px-6 py-3 text-sm font-semibold text-background transition hover:opacity-95"
+            className="rounded-xl bg-ember px-6 py-3 text-sm font-semibold text-on-ember transition hover:opacity-95"
           >
             Open the chat
           </Link>

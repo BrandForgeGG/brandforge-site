@@ -97,7 +97,7 @@ export function AiNotices({
         <div key={person.userId} className={`${bar} border-ember/30 bg-ember/10`} role="region" aria-label="AI access request">
           <p className="min-w-0 text-sm text-foreground">{person.name} asked to use the AI.</p>
           <div className="flex shrink-0 gap-2">
-            <button type="button" onClick={() => onDecide(person.userId, 'grant')} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background transition hover:opacity-90">Allow</button>
+            <button type="button" onClick={() => onDecide(person.userId, 'grant')} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember transition hover:opacity-90">Allow</button>
             <button type="button" onClick={() => onDecide(person.userId, 'deny')} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">Not now</button>
           </div>
         </div>,
@@ -107,7 +107,7 @@ export function AiNotices({
     notices.push(
       <div key="request" className={`${bar} border-line bg-panel`} role="region" aria-label="AI access">
         <p className="min-w-0 text-sm text-foreground">Only the chat owner can use the AI here.</p>
-        <button type="button" onClick={onRequestAccess} className="shrink-0 rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background transition hover:opacity-90">Ask to use it</button>
+        <button type="button" onClick={onRequestAccess} className="shrink-0 rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember transition hover:opacity-90">Ask to use it</button>
       </div>,
     );
   }

@@ -187,7 +187,7 @@ export default function OnboardingPage() {
         <button
           type="submit"
           disabled={!termsAccepted || !dateOfBirth || submitting}
-          className="mt-6 w-full rounded-xl bg-ember px-4 py-3 text-sm font-semibold text-background transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-6 w-full rounded-xl bg-ember px-4 py-3 text-sm font-semibold text-on-ember transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {submitting ? 'Setting up…' : 'Open my chat'}
         </button>

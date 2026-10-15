@@ -68,13 +68,13 @@ function useIsVisitor(): boolean {
 }
 
 const NAV_ITEMS = [
-  { href: "/create", label: "Create", hint: "Make it, download it, publish it", path: "M10 3.5l1.6 4.4 4.4 1.6-4.4 1.6L10 15.5l-1.6-4.4L4 9.5l4.4-1.6zM15.5 3v3M14 4.5h3" },
-  { href: "/distribute", label: "Distribute", hint: "A week of posts, written for you", path: "M4 5.5h12v10H4zM4 8.5h12M7.5 3.5v3M12.5 3.5v3M7 12h2M11 12h2" },
-  { href: "/trade", label: "Trade", hint: "Hire or get hired", path: "M4 7h11l-3-3M16 13H5l3 3" },
-  { href: "/explore", label: "Explore", hint: "Where BrandForge is going and what is happening now", path: "M10 3a7 7 0 100 14 7 7 0 000-14zM12.8 7.2l-1.6 4-4 1.6 1.6-4z" },
+  { href: "/create", hue: "var(--hue-create)", label: "Create", hint: "Make it, download it, publish it", path: "M10 3.5l1.6 4.4 4.4 1.6-4.4 1.6L10 15.5l-1.6-4.4L4 9.5l4.4-1.6zM15.5 3v3M14 4.5h3" },
+  { href: "/distribute", hue: "var(--hue-distribute)", label: "Distribute", hint: "A week of posts, written for you", path: "M4 5.5h12v10H4zM4 8.5h12M7.5 3.5v3M12.5 3.5v3M7 12h2M11 12h2" },
+  { href: "/trade", hue: "var(--hue-trade)", label: "Trade", hint: "Hire or get hired", path: "M4 7h11l-3-3M16 13H5l3 3" },
+  { href: "/explore", hue: "var(--hue-explore)", label: "Explore", hint: "Where BrandForge is going and what is happening now", path: "M10 3a7 7 0 100 14 7 7 0 000-14zM12.8 7.2l-1.6 4-4 1.6 1.6-4z" },
 ];
 
-const DASHBOARD_ITEM = { href: "/admin", label: "Dashboard", hint: "Admin: people, money, chats", path: "M4 4h5v5H4zM11 4h5v5h-5zM4 11h5v5H4zM11 11h5v5h-5z" };
+const DASHBOARD_ITEM = { href: "/admin", hue: "var(--muted)", label: "Dashboard", hint: "Admin: people, money, chats", path: "M4 4h5v5H4zM11 4h5v5h-5zM4 11h5v5H4zM11 11h5v5h-5z" };
 
 function RailIcon({ path, className = "h-4 w-4" }: { path: string; className?: string }) {
   return (
@@ -405,7 +405,10 @@ onMobileClose,
                     : "flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-[15px] text-muted transition hover:bg-overlay hover:text-foreground"
                 }
               >
-                <RailIcon path={item.path} className="h-[18px] w-[18px] shrink-0" />
+                {/* Each part of BrandForge keeps its own colour: Create orange, Distribute blue, Trade green, Explore violet. */}
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ color: item.hue, background: `color-mix(in srgb, ${item.hue} 13%, transparent)` }}>
+                  <RailIcon path={item.path} className="h-[16px] w-[16px]" />
+                </span>
                 {isCollapsed ? null : item.label}
               </Link>
             ))}
@@ -556,7 +559,7 @@ onMobileClose,
             <button
               type="button"
               onClick={() => openLogin({ reason: isGuestBrowser ? "save" : "signin" })}
-              className="mt-3 w-full rounded-full bg-ember px-4 py-3 text-center text-sm font-semibold text-background transition hover:opacity-90"
+              className="mt-3 w-full rounded-full bg-ember px-4 py-3 text-center text-sm font-semibold text-on-ember transition hover:opacity-90"
             >
               Log in
             </button>
@@ -631,7 +634,7 @@ onMobileClose,
                       setDropdownOpen(false);
                       openLogin({ reason: "save" });
                     }}
-                    className="mb-1 block w-full rounded-lg bg-ember px-3 py-2 text-center text-sm font-semibold text-background transition hover:opacity-90"
+                    className="mb-1 block w-full rounded-lg bg-ember px-3 py-2 text-center text-sm font-semibold text-on-ember transition hover:opacity-90"
                   >
                     Save my chats
                   </button>

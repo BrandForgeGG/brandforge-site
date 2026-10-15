@@ -118,7 +118,7 @@ function CropDialog({ file, onCancel, onSaved }: { file: File; onCancel: () => v
         {error ? <p role="alert" className="mt-3 text-sm text-danger">{error}</p> : null}
         <div className="mt-5 flex justify-end gap-2">
           <button type="button" onClick={onCancel} className="rounded-lg border border-line px-3.5 py-2 text-sm text-foreground transition hover:border-ember">Cancel</button>
-          <button type="button" onClick={() => void save()} disabled={!crop || busy} className="rounded-lg bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">{busy ? 'Saving…' : 'Use this picture'}</button>
+          <button type="button" onClick={() => void save()} disabled={!crop || busy} className="rounded-lg bg-ember px-4 py-2 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-50">{busy ? 'Saving…' : 'Use this picture'}</button>
         </div>
       </div>
     </div>

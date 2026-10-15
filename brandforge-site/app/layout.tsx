@@ -7,7 +7,8 @@ import { JsonLd } from "@/components/json-ld";
 import { SITE_URL, ogImageUrl, siteGraph } from "@/lib/seo";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces" });
+// The soft axis rounds the serif's corners: warmer, more human headings.
+const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces", axes: ["SOFT", "opsz"] });
 
 const DESCRIPTION = 'Describe an idea, paste a URL or drop a file. AI researches, plans and creates; your team and vetted specialists finish it in the same chat.';
 
@@ -53,7 +54,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0f0e0d",
+  themeColor: "#fbfaf8",
   // Lets env(safe-area-inset-*) work, so footers clear the iPhone home indicator.
   viewportFit: "cover",
   // The on-screen keyboard shrinks the page instead of covering the composer (Chrome/Android;
@@ -71,7 +72,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('brandforge:theme');if(t==='light')t='mono';if(t==='original')t='forge';if(t==='crystal'||t==='mono'){document.documentElement.dataset.theme=t;}}catch(e){}try{if(localStorage.getItem('brandforge:rail-collapsed')==='1')document.documentElement.dataset.rail='collapsed';}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('brandforge:theme');if(t==='light')t='mono';if(t==='original')t='forge';if(t==='forge'||t==='crystal'||t==='mono'){document.documentElement.dataset.theme=t;}}catch(e){}try{if(localStorage.getItem('brandforge:rail-collapsed')==='1')document.documentElement.dataset.rail='collapsed';}catch(e){}})();`,
           }}
         />
       </head>

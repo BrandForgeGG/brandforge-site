@@ -56,7 +56,7 @@ export function LandingNav() {
           {signedIn ? (
             <Link
               href="/chat"
-              className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-95"
+              className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-on-ember transition hover:opacity-95"
             >
               Open the app
             </Link>
@@ -73,7 +73,7 @@ export function LandingNav() {
               <button
                 type="button"
                 onClick={() => openLogin({ reason: 'signin', next: '/chat' })}
-                className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-95"
+                className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-on-ember transition hover:opacity-95"
               >
                 Sign in
               </button>

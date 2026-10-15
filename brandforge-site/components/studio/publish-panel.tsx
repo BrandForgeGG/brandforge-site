@@ -75,7 +75,7 @@ export function PublishPanel({ platforms, caption, copyText, fileName = 'post.tx
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-line pt-4">
-        <Link href="/distribute" className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">Post and schedule in Distribute</Link>
+        <Link href="/distribute" className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90">Post and schedule in Distribute</Link>
         <p className="min-w-0 flex-1 text-xs text-muted">Download or copy it here. Posting and scheduling live in Distribute.</p>
       </div>
     </section>

@@ -132,7 +132,7 @@ export function IntegrationsPanel() {
               {lockedReason(kind) ? (
                 <div className="mt-3 rounded-xl border border-ember/30 bg-ember/10 px-3 py-2.5">
                   <p className="text-xs leading-relaxed text-foreground">{lockedReason(kind)}</p>
-                  <a href={donateUrl()} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background transition hover:opacity-90">Donate</a>
+                  <a href={donateUrl()} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember transition hover:opacity-90">Donate</a>
                 </div>
               ) : (
               <div className="mt-3">

@@ -14,7 +14,7 @@ export function PricingPlans() {
           {PLANS.map((plan) => (
             <div key={plan.id} className={`relative flex flex-col rounded-3xl border p-6 ${plan.highlight ? "border-ember bg-panel shadow-[0_20px_60px_-30px_var(--ember)]" : "border-line bg-panel/70"}`}>
               {plan.highlight ? (
-                <span className="absolute -top-3 left-6 rounded-full bg-ember px-3 py-1 text-[11px] font-semibold text-background">For people who publish every week</span>
+                <span className="absolute -top-3 left-6 rounded-full bg-ember px-3 py-1 text-[11px] font-semibold text-on-ember">For people who publish every week</span>
               ) : null}
               <p className="font-serif text-2xl text-foreground">{plan.name}</p>
               <p className="mt-1 text-sm text-muted">{plan.blurb}</p>

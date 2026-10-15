@@ -119,7 +119,7 @@ export function VideoMessageCard({ embed, createdAt }: { embed: VideoEmbed; crea
 
       {isOwner ? (
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => openMaker(kind, embed.state)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background transition hover:opacity-90">Edit</button>
+          <button type="button" onClick={() => openMaker(kind, embed.state)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember transition hover:opacity-90">Edit</button>
           {embed.videoPath ? (
             <>
               <button type="button" onClick={() => void download()} disabled={busy} className={btn}>Download</button>

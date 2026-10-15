@@ -89,7 +89,7 @@ export default function InvestorsPage() {
           <h2 className="font-serif text-2xl text-foreground">Talk to the founder</h2>
           <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">A short message is enough. We reply, send the data room and set up a call.</p>
           <div className="mt-5 flex flex-wrap justify-center gap-3">
-            <a href={COMMUNITY_LINKS.telegramManager.href} target="_blank" rel="noreferrer" className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">Message on Telegram</a>
+            <a href={COMMUNITY_LINKS.telegramManager.href} target="_blank" rel="noreferrer" className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90">Message on Telegram</a>
             <a href="mailto:hello@brandforge.gg?subject=BrandForge%20investor%20note" className="rounded-xl border border-line px-5 py-2.5 text-sm text-foreground transition hover:border-ember">hello@brandforge.gg</a>
           </div>
         </section>

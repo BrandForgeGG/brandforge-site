@@ -132,7 +132,7 @@ export function ImageMessageCard({ embed, createdAt }: { embed: ImageEmbed; crea
               ))}
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
-              <button type="button" onClick={() => void download()} disabled={busy} className="rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
+              <button type="button" onClick={() => void download()} disabled={busy} className="rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-50">
                 {signedIn === false ? 'Sign in to download' : busy ? 'Preparing…' : 'Download picture'}
               </button>
               <button type="button" onClick={() => void copyCaption()} className="rounded-xl border border-line px-4 py-2.5 text-sm text-foreground transition hover:border-ember">

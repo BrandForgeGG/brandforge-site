@@ -31,7 +31,7 @@ type Data = {
 };
 
 const btn = 'rounded-lg border border-line px-2.5 py-1 text-xs text-foreground transition hover:border-ember disabled:opacity-50';
-const btnPrimary = 'rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background transition hover:opacity-90 disabled:opacity-50';
+const btnPrimary = 'rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-50';
 const input = 'w-full rounded-md border border-line bg-background px-2 py-1 text-xs text-foreground';
 const TYPE_LABEL: Record<string, string> = { educational: 'Educational', news: 'News', promo: 'Promotional', list: 'List', funny: 'Funny', story: 'Story', explainer: 'Explainer', inspire: 'Inspiring', engage: 'Question' };
 const FORMAT_LABEL: Record<string, string> = { carousel: 'Carousel', quote: 'Quote', tip: 'Tip', ad: 'Ad', announcement: 'Announcement', question: 'Poll' };

@@ -30,7 +30,7 @@ export default function ErrorPage({
           <button
             type="button"
             onClick={() => reset()}
-            className="rounded-xl bg-ember px-6 py-3 text-sm font-semibold text-background transition hover:opacity-95"
+            className="rounded-xl bg-ember px-6 py-3 text-sm font-semibold text-on-ember transition hover:opacity-95"
           >
             Try again
           </button>

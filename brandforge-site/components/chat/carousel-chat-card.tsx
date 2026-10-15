@@ -351,7 +351,7 @@ export function CarouselChatCard({ topic, userText, storageKey, restore, onSend,
 
               {error ? <p role="alert" className="mt-3 text-sm text-danger">{error}</p> : null}
               <div className="mt-5 flex items-center gap-3">
-                <button type="button" onClick={() => void make()} disabled={draft.topic.trim().length < 8} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
+                <button type="button" onClick={() => void make()} disabled={draft.topic.trim().length < 8} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-50">
                   Make my carousel
                 </button>
                 <button type="button" onClick={close} className="text-sm text-muted transition hover:text-foreground">Not now</button>
@@ -433,7 +433,7 @@ export function CarouselChatCard({ topic, userText, storageKey, restore, onSend,
                   </button>
 
                   <div className="mt-5 flex flex-wrap gap-2">
-                    <button type="button" onClick={() => void sendToChat()} disabled={sending || coverBusy} className="rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
+                    <button type="button" onClick={() => void sendToChat()} disabled={sending || coverBusy} className="rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-50">
                       {sending ? 'Saving…' : 'Save to chat'}
                     </button>
                     <button type="button" onClick={startOver} className="rounded-xl px-3 py-2.5 text-sm text-muted transition hover:text-foreground">

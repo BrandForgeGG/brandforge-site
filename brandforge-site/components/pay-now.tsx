@@ -61,7 +61,7 @@ export function PayNow({ planId, planName, primary = false }: { planId: string; 
   if (status.open) {
     return (
       <div>
-        <button type="button" onClick={() => void pay()} disabled={busy} className={`${base} ${primary ? 'bg-ember text-background hover:opacity-90' : 'border border-line text-foreground hover:border-ember'} disabled:opacity-60`}>
+        <button type="button" onClick={() => void pay()} disabled={busy} className={`${base} ${primary ? 'bg-ember text-on-ember hover:opacity-90' : 'border border-line text-foreground hover:border-ember'} disabled:opacity-60`}>
           {busy ? 'Opening payment…' : `Pay now · ${planName}`}
         </button>
         {error ? <p role="alert" className="mt-1.5 text-xs text-danger">{error}</p> : null}

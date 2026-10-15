@@ -90,7 +90,7 @@ export default function AboutPage() {
           </p>
           <Link
             href="/chat"
-            className="mt-6 inline-block rounded-xl bg-ember px-6 py-3 text-sm font-semibold text-background transition hover:opacity-95"
+            className="mt-6 inline-block rounded-xl bg-ember px-6 py-3 text-sm font-semibold text-on-ember transition hover:opacity-95"
           >
             Open the app
           </Link>

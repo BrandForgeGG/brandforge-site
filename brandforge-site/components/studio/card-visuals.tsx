@@ -29,7 +29,7 @@ export function CarouselVisual() {
           <div className="p-1.5"><p className="font-serif text-lg leading-none text-ember">1</p><div className="mt-1.5 space-y-1">{['w-4/5', 'w-full', 'w-3/5'].map((w) => <div key={w} className={`h-1 rounded-full bg-foreground/25 ${w}`} />)}</div></div>
         </Mini>
         <Mini tilt={9} delay={0.8}>
-          <div className="flex h-full flex-col items-center justify-center gap-1.5"><div className="h-1 w-3/5 rounded-full bg-foreground/30" /><div className="rounded-full bg-ember px-2 py-0.5 text-[6px] font-bold text-background">Follow</div></div>
+          <div className="flex h-full flex-col items-center justify-center gap-1.5"><div className="h-1 w-3/5 rounded-full bg-foreground/30" /><div className="rounded-full bg-ember px-2 py-0.5 text-[6px] font-bold text-on-ember">Follow</div></div>
         </Mini>
       </div>
     </Stage>

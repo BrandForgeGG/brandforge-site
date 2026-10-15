@@ -26,7 +26,7 @@ function ago(iso: string): string {
 }
 
 const btn = 'rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember disabled:opacity-50';
-const btnPrimary = 'rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background transition hover:opacity-90 disabled:opacity-50';
+const btnPrimary = 'rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-50';
 
 function Section({ title, note, children, action }: { title: string; note?: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (
@@ -305,7 +305,7 @@ export function AdminDashboard() {
           return (
             <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`flex shrink-0 items-center gap-1.5 px-3 py-2 text-sm transition ${tab === id ? 'border-b-2 border-ember text-foreground' : 'text-muted hover:text-foreground'}`}>
               {label}
-              {badge > 0 ? <span className="rounded-full bg-ember px-1.5 text-[10px] font-bold text-background">{badge}</span> : null}
+              {badge > 0 ? <span className="rounded-full bg-ember px-1.5 text-[10px] font-bold text-on-ember">{badge}</span> : null}
             </button>
           );
         })}

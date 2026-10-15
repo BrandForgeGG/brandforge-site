@@ -32,7 +32,7 @@ export default function DevelopersPage() {
           We are a small team that builds websites, apps, bots and brands for clients, with AI doing the first drafts and people making the result good. If you build well and finish what you start, there is paid work here.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <Link href="/apply" className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">Apply to join the team</Link>
+          <Link href="/apply" className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90">Apply to join the team</Link>
           <a href={COMMUNITY_LINKS.discord.href} target="_blank" rel="noreferrer" className="rounded-xl border border-line px-5 py-2.5 text-sm text-foreground transition hover:border-ember">Join the Discord</a>
         </div>
 

@@ -41,7 +41,7 @@ function Slide({ kind, n, tilt = 0, delay = 0, hue = 'var(--ember)' }: { kind: '
       ) : (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-2.5 text-center">
           <div className="h-1.5 w-4/5 rounded-full bg-foreground/30" />
-          <div className="rounded-full bg-ember px-3 py-1 text-[8px] font-bold text-background">Follow</div>
+          <div className="rounded-full bg-ember px-3 py-1 text-[8px] font-bold text-on-ember">Follow</div>
         </div>
       )}
     </div>
@@ -99,7 +99,7 @@ export function CarouselDiagram() {
       <div className="flex items-center gap-3 rounded-xl border border-line bg-background px-3.5 py-2.5">
         <span className="text-ember" aria-hidden="true">✎</span>
         <span className="bf-type min-w-0 flex-1 overflow-hidden whitespace-nowrap text-sm text-foreground">Why every small shop needs a newsletter</span>
-        <span className="rounded-lg bg-ember px-2.5 py-1 text-[11px] font-semibold text-background">Make</span>
+        <span className="rounded-lg bg-ember px-2.5 py-1 text-[11px] font-semibold text-on-ember">Make</span>
       </div>
       <div className="mt-5 flex items-end justify-center gap-3 overflow-hidden sm:gap-4">
         <Slide kind="cover" delay={0} />
@@ -167,7 +167,7 @@ export function ContractDiagram() {
         <span aria-hidden="true" className="bf-grow absolute left-[16%] top-4 h-0.5 w-[34%] rounded-full bg-ember" />
         {steps.map((s) => (
           <li key={s.name} className="relative text-center">
-            <span className={`relative mx-auto flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold ${s.done ? 'border-ember bg-ember text-background' : s.live ? 'bf-pulse border-ember bg-background text-ember' : 'border-line bg-background text-muted'}`}>
+            <span className={`relative mx-auto flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold ${s.done ? 'border-ember bg-ember text-on-ember' : s.live ? 'bf-pulse border-ember bg-background text-ember' : 'border-line bg-background text-muted'}`}>
               {s.done ? '✓' : s.live ? '…' : ''}
             </span>
             <p className="mt-2 text-xs font-medium text-foreground">{s.name}</p>

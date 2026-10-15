@@ -458,7 +458,7 @@ export function DistributeHub() {
           </div>
           {error ? <p role="alert" className="mt-2 text-xs text-danger">{error}</p> : null}
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => void write_(start)} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">Write my week</button>
+            <button type="button" onClick={() => void write_(start)} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90">Write my week</button>
             <input type="date" value={start} onChange={(event) => setStart(event.target.value)} aria-label="First day" className="rounded-lg border border-line bg-background px-2.5 py-1.5 text-sm text-foreground focus:border-ember focus:outline-none" />
             <input value={brand} onChange={(event) => setBrand(event.target.value)} maxLength={40} placeholder="Name on the pictures (optional)" aria-label="Name on the pictures" className="min-w-0 flex-1 rounded-lg border border-line bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none sm:max-w-[16rem]" />
             {editing || !plan ? <button type="button" onClick={() => { setEditing(false); setMakerOpen(false); }} className="px-2 py-2 text-sm text-muted transition hover:text-foreground">{plan ? 'Cancel' : 'Close'}</button> : null}
@@ -470,7 +470,7 @@ export function DistributeHub() {
             <p className="font-serif text-lg text-foreground">Write a week of posts</p>
             <p className="text-sm text-muted">Say what you promote. Get pictures, captions and times, then post or schedule them.</p>
           </div>
-          <button type="button" aria-expanded={makerOpen} onClick={() => setMakerOpen(true)} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">Start a week</button>
+          <button type="button" aria-expanded={makerOpen} onClick={() => setMakerOpen(true)} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90">Start a week</button>
         </div>
       ) : (
         <div className={weekOpen ? 'flex flex-wrap items-center gap-2' : 'flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-panel p-4 sm:p-5'}>
@@ -488,7 +488,7 @@ export function DistributeHub() {
             </>
           ) : (
             <>
-              <button type="button" onClick={() => setWeekOpen(true)} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90">Open your week</button>
+              <button type="button" onClick={() => setWeekOpen(true)} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90">Open your week</button>
               <button type="button" onClick={() => setEditing(true)} className="rounded-xl border border-line px-4 py-2.5 text-sm text-foreground transition hover:border-ember">Start a new week</button>
             </>
           )}
@@ -498,7 +498,7 @@ export function DistributeHub() {
       {plan && !editing && weekOpen ? (
         <>
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => void downloadAll()} disabled={Boolean(preparing) || writing} className="rounded-xl bg-ember px-4 py-2 text-sm bf-tap font-semibold text-background transition hover:opacity-90 disabled:opacity-60">{preparing && preparing.startsWith('Preparing') ? preparing : signedIn === false ? 'Sign in to download all' : 'Download all pictures'}</button>
+            <button type="button" onClick={() => void downloadAll()} disabled={Boolean(preparing) || writing} className="rounded-xl bg-ember px-4 py-2 text-sm bf-tap font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-60">{preparing && preparing.startsWith('Preparing') ? preparing : signedIn === false ? 'Sign in to download all' : 'Download all pictures'}</button>
             <button type="button" onClick={() => void copy(weekText(), 'The whole week is copied.')} className="rounded-xl border border-line px-4 py-2 text-sm bf-tap text-foreground transition hover:border-ember">Copy the captions</button>
             <button type="button" onClick={downloadCsv} className="rounded-xl border border-line px-4 py-2 text-sm bf-tap text-foreground transition hover:border-ember">Captions CSV</button>
             <button type="button" onClick={() => void write_(shift(plan.start, 7))} disabled={writing} className="rounded-xl border border-line px-4 py-2 text-sm bf-tap text-foreground transition hover:border-ember disabled:opacity-50">Write next week</button>
@@ -525,7 +525,7 @@ export function DistributeHub() {
               )}
               {signedIn ? <Link href="/settings" className="text-xs text-muted underline-offset-2 hover:text-foreground hover:underline">{publisher.channels.length === 0 ? 'Link LinkedIn, Bluesky, Tumblr, Mastodon, Telegram or Discord' : 'Link another'}</Link> : null}
               {signedIn && publisher.channels.length > 0 ? (
-                <button type="button" onClick={() => void publisher.scheduleWeek(plan.days, pickedBrand)} disabled={Boolean(publisher.busy) || writing || publisher.picked.length === 0 || !publisher.ready} className="ml-auto rounded-xl bg-ember px-4 py-2 text-sm bf-tap font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
+                <button type="button" onClick={() => void publisher.scheduleWeek(plan.days, pickedBrand)} disabled={Boolean(publisher.busy) || writing || publisher.picked.length === 0 || !publisher.ready} className="ml-auto rounded-xl bg-ember px-4 py-2 text-sm bf-tap font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-60">
                   {publisher.busy && publisher.busy.startsWith('Scheduling') ? publisher.busy : 'Schedule the whole week'}
                 </button>
               ) : null}
@@ -614,7 +614,7 @@ export function DistributeHub() {
                     className={`${field} mt-2 text-[13px] leading-relaxed`}
                   />
                   <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <button type="button" onClick={() => void downloadPost(pickedDay, pickedPost)} disabled={Boolean(preparing)} className="rounded-lg bg-ember px-3 py-1.5 text-xs bf-tap font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
+                    <button type="button" onClick={() => void downloadPost(pickedDay, pickedPost)} disabled={Boolean(preparing)} className="rounded-lg bg-ember px-3 py-1.5 text-xs bf-tap font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-60">
                       {preparing === pickedPost.id ? 'Preparing…' : signedIn === false ? 'Sign in to download' : pickedPost.format === 'carousel' ? 'Download slides' : 'Download picture'}
                     </button>
                     <button type="button" onClick={() => void copy(pickedPost.caption, 'Caption copied.')} className="rounded-lg border border-line px-3 py-1.5 text-xs bf-tap text-foreground transition hover:border-ember">Copy caption</button>

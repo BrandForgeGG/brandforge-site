@@ -1,17 +1,53 @@
 @import "tailwindcss";
 
 :root {
-  /* Forge (default): warm near-black with fire orange. Chosen in Settings > Theme. */
+  /* Daylight (default): a people-first look. A near-white ground and paper-white panels with soft shadows read as a
+     place to work with others, not a terminal. The fire orange stays the brand and the colour of action (energy,
+     making things), with dark text on it so every button reads clearly. Each part of BrandForge has its own hue, chosen
+     for what it does: Create orange (creativity), Distribute blue (reach and conversation), Trade green (money, trust,
+     growth), Explore violet (curiosity). Forge (dark), Crystal and Black and white stay in Settings > Theme. */
+  color-scheme: light;
+  --background: #fbfaf8;
+  --foreground: #1d1b18;
+  --font-sans: var(--font-inter), "Inter", sans-serif;
+  --font-serif: var(--font-fraunces), "Fraunces", serif;
+  --panel: #ffffff;
+  --panel-2: #f4f2ee;
+  --line: rgba(29, 27, 24, 0.09);
+  --muted: #67635c;
+  --ember: #ff6a2b;
+  --on-ember: #1d1b18;
+  --ember-soft: rgba(255, 106, 43, 0.12);
+  --ember-light: #b8410f;
+  --copper: #a8561f;
+  --trust: #1f9d6b;
+  --trust-light: #14633f;
+  --focus: #e5531a;
+  --deep: #f1eee8;
+  --overlay: rgba(29, 27, 24, 0.04);
+  --danger-fg: #b42318;
+  --success-fg: #14633f;
+  --shadow-soft: 0 1px 2px rgba(29, 27, 24, 0.05), 0 8px 24px -12px rgba(29, 27, 24, 0.12);
+  --hue-create: #ff6a2b;
+  --hue-distribute: #2e7cf6;
+  --hue-trade: #1f9d6b;
+  --hue-explore: #7c5cff;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+}
+
+/* Forge: warm near-black with fire orange, the original look. */
+:root[data-theme='forge'] {
   color-scheme: dark;
   --background: #0f0e0d;
   --foreground: #f1ece4;
-  --font-sans: var(--font-inter), "Inter", sans-serif;
-  --font-serif: var(--font-fraunces), "Fraunces", serif;
   --panel: #171514;
   --panel-2: #1f1c1a;
   --line: rgba(241, 236, 228, 0.1);
   --muted: #9b958c;
   --ember: #ff6a2b;
+  --on-ember: #0f0e0d;
   --ember-soft: rgba(255, 106, 43, 0.14);
   --ember-light: #ffd3bd;
   --copper: #d68a4e;
@@ -22,9 +58,11 @@
   --overlay: rgba(241, 236, 228, 0.05);
   --danger-fg: #fca5a5;
   --success-fg: #d9f7ea;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  --shadow-soft: none;
+  --hue-create: #ff8a55;
+  --hue-distribute: #6aa8ff;
+  --hue-trade: #5fd0a0;
+  --hue-explore: #a993ff;
 }
 
 /* Crystal: cool near-black with crystal blue, the tech side of BrandForge. */
@@ -47,6 +85,12 @@
   --overlay: rgba(190, 225, 255, 0.05);
   --danger-fg: #fca5a5;
   --success-fg: #d4f7ec;
+  --on-ember: #090e13;
+  --shadow-soft: none;
+  --hue-create: #ff8a55;
+  --hue-distribute: #55c7ff;
+  --hue-trade: #5fd0b0;
+  --hue-explore: #a993ff;
 }
 
 /* Mono: black and white. Paper white, ink black, no colour except meaning. */
@@ -69,6 +113,19 @@
   --overlay: rgba(0, 0, 0, 0.04);
   --danger-fg: #b91c1c;
   --success-fg: #14532d;
+  --on-ember: #ffffff;
+  --shadow-soft: none;
+  --hue-create: #0a0a0a;
+  --hue-distribute: #0a0a0a;
+  --hue-trade: #0a0a0a;
+  --hue-explore: #0a0a0a;
+}
+
+/* Daylight: the bright orange is for surfaces (buttons, badges, marks); words in orange use a deeper shade so they
+   stay readable on the light ground (5:1). */
+:root:not([data-theme]) .text-ember,
+:root:not([data-theme]) .hover\:text-ember:hover {
+  color: #c2410c;
 }
 
 @theme inline {
@@ -79,6 +136,12 @@
   --color-muted: var(--muted);
   --color-ember: var(--ember);
   --color-ember-light: var(--ember-light);
+  --color-on-ember: var(--on-ember);
+  --color-create: var(--hue-create);
+  --color-distribute: var(--hue-distribute);
+  --color-trade: var(--hue-trade);
+  --color-explore: var(--hue-explore);
+  --shadow-soft: var(--shadow-soft);
   --color-copper: var(--copper);
   --color-trust: var(--trust);
   --color-trust-light: var(--trust-light);
@@ -106,6 +169,17 @@ body {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Daylight: cards sit on the page like paper, with a soft shadow instead of only a hard outline. */
+:root:not([data-theme]) .rounded-2xl.bg-panel,
+:root:not([data-theme]) .rounded-3xl.bg-panel {
+  box-shadow: var(--shadow-soft);
+}
+
+/* Headings in the serif use its soft axis: rounded, friendlier letterforms. */
+.font-serif {
+  font-variation-settings: "SOFT" 100;
 }
 
 ::selection {

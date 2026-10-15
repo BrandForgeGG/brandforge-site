@@ -324,7 +324,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
           ) : null}
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => void write()} disabled={Boolean(busy)} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
+          <button type="button" onClick={() => void write()} disabled={Boolean(busy)} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-60">
             {scenes.length > 0 ? 'Write it again' : 'Write the launch video'}
           </button>
           {busy ? <span role="status" className="text-sm text-muted">{busy}</span> : null}
@@ -367,7 +367,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
             </ol>
 
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={() => void make()} disabled={Boolean(busy) || !fontsReady || Boolean(loadingPictures) || (withVoice && voiceState.status === 'working')} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
+              <button type="button" onClick={() => void make()} disabled={Boolean(busy) || !fontsReady || Boolean(loadingPictures) || (withVoice && voiceState.status === 'working')} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-60">
                 {busy === 'Making the video…' ? `Making the video, ${Math.round(progress * 100)}%` : loadingPictures ? 'Waiting for the pictures…' : withVoice && voiceState.status === 'working' ? 'Waiting for the voice…' : chat ? 'Make the video' : 'Make the MP4'}
               </button>
               {busy ? <button type="button" onClick={() => stopRef.current?.abort()} className="px-2 py-2 text-xs text-muted hover:text-foreground">Stop</button> : null}
@@ -376,7 +376,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
               <div className="rounded-xl border border-trust/30 bg-trust/10 p-3">
                 <p className="text-sm text-foreground">Your launch video is ready: {Math.round(result.seconds)} seconds{result.voiced ? ', with voice-over' : ''}.</p>
                 <video src={result.url} controls playsInline className="mt-2 max-h-72 w-auto max-w-full rounded-lg" />
-                <a href={result.url} download={result.name} className="mt-2 inline-block rounded-lg bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90">Download MP4</a>
+                <a href={result.url} download={result.name} className="mt-2 inline-block rounded-lg bg-ember px-4 py-2 text-sm font-semibold text-on-ember transition hover:opacity-90">Download MP4</a>
                 <YouTubePost blob={result.blob} defaultTitle={`${media.name ? `${media.name}: ` : ''}${scenes[0]?.heading ?? ''}`.slice(0, 100)} defaultDescription={[...scenes.map((scene) => scene.voice), site?.url ?? ''].filter(Boolean).join(NEWLINE)} vertical={f.h > f.w} seconds={result.seconds} />
               </div>
             ) : null}

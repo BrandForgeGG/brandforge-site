@@ -196,7 +196,7 @@ export function CarouselMessageCard({ embed, createdAt }: { embed: CarouselEmbed
                 ))}
               </div>
               <div className="mt-5 flex flex-wrap gap-2">
-                <button type="button" onClick={() => void downloadAll()} disabled={busy} className="rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50">
+                <button type="button" onClick={() => void downloadAll()} disabled={busy} className="rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-50">
                   {signedIn === false ? 'Sign in to download' : busy ? 'Preparing…' : 'Download all'}
                 </button>
                 <button type="button" onClick={() => void openEditor()} disabled={busy} className="rounded-xl border border-line px-4 py-2.5 text-sm text-foreground transition hover:border-ember disabled:opacity-50">

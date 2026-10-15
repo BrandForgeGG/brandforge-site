@@ -1,24 +1,24 @@
 'use strict';
 
-// Theme persistence for the three BrandForge themes: Forge (fire orange, the default), Crystal
-// (crystal blue) and Mono (black and white). The choice lives in localStorage and applies before
-// paint via the inline script in app/layout.tsx. Forge is the absence of data-theme.
+// Theme persistence for the four BrandForge themes: Daylight (the default, light and people-first), Forge (warm dark
+// with fire orange, the original look), Crystal (cool dark with crystal blue) and Mono (black and white). The choice lives
+// in localStorage and applies before paint via the inline script in app/layout.tsx. Daylight is the absence of data-theme.
 // Older saved values map forward: 'original' -> forge, 'light' -> mono.
 
 const THEME_KEY = 'brandforge:theme';
-const VALID_THEMES = ['forge', 'crystal', 'mono'];
+const VALID_THEMES = ['daylight', 'forge', 'crystal', 'mono'];
 const LEGACY = { original: 'forge', light: 'mono' };
 
 function normalizeTheme(value) {
   const mapped = LEGACY[value] || value;
-  return VALID_THEMES.includes(mapped) ? mapped : 'forge';
+  return VALID_THEMES.includes(mapped) ? mapped : 'daylight';
 }
 
 function applyTheme(theme) {
   const root = typeof document !== 'undefined' ? document.documentElement : null;
   if (!root) return;
   const normalized = normalizeTheme(theme);
-  if (normalized === 'forge') {
+  if (normalized === 'daylight') {
     delete root.dataset.theme;
   } else {
     root.dataset.theme = normalized;
@@ -29,14 +29,14 @@ function getStoredTheme() {
   try {
     return normalizeTheme(localStorage.getItem(THEME_KEY));
   } catch {
-    return 'forge';
+    return 'daylight';
   }
 }
 
 function setStoredTheme(theme) {
   const normalized = normalizeTheme(theme);
   try {
-    if (normalized === 'forge') {
+    if (normalized === 'daylight') {
       localStorage.removeItem(THEME_KEY);
     } else {
       localStorage.setItem(THEME_KEY, normalized);

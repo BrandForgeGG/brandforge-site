@@ -32,6 +32,7 @@ function profileFromEmail(email: string, name?: string | null): SettingsProfile 
 }
 
 const THEME_CHOICES: { id: Theme; label: string; bg: string; fg: string; accent: string }[] = [
+  { id: 'daylight', label: 'Daylight', bg: '#fbfaf8', fg: '#1d1b18', accent: '#ff6a2b' },
   { id: 'forge', label: 'Forge', bg: '#0f0e0d', fg: '#f1ece4', accent: '#ff6a2b' },
   { id: 'crystal', label: 'Crystal', bg: '#090e13', fg: '#e8f1f8', accent: '#55c7ff' },
   { id: 'mono', label: 'Black and white', bg: '#ffffff', fg: '#0a0a0a', accent: '#0a0a0a' },
@@ -259,7 +260,7 @@ export default function SettingsPage() {
                   type="button"
                   onClick={handleSave}
                   disabled={saving}
-                  className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background transition hover:opacity-95 disabled:opacity-50"
+                  className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember transition hover:opacity-95 disabled:opacity-50"
                 >
                   {saving ? 'Saving…' : 'Save'}
                 </button>
@@ -427,7 +428,7 @@ export default function SettingsPage() {
                 ))}
               </div>
               <p className="mt-1 text-xs text-muted">
-                Forge is fire orange, Crystal is crystal blue, Black and white is plain and calm.
+                Daylight is light and warm, Forge is the original dark with fire orange, Crystal is crystal blue, Black and white is plain and calm.
               </p>
             </div>
           </div>

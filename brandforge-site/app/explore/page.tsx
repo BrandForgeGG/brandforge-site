@@ -10,7 +10,7 @@ export default function ExplorePage() {
   return (
     <>
       <JsonLd data={pageGraph({ path: '/explore', name: 'Explore', kind: 'CollectionPage', crumbs: [{ name: 'Explore', path: '/explore' }] })} />
-      <AppShell title="Explore" subtitle="Where we are going, and what is happening now." wide>
+      <AppShell hue="explore" title="Explore" subtitle="Where we are going, and what is happening now." wide>
         <ExploreHub />
       </AppShell>
     </>

@@ -108,7 +108,7 @@ export function LandingHero() {
             <button
               type="submit"
               disabled={busy || !input.trim()}
-              className="absolute bottom-4 right-4 rounded-lg bg-ember px-5 py-2 text-sm font-semibold text-background transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-panel disabled:cursor-not-allowed disabled:opacity-50"
+              className="absolute bottom-4 right-4 rounded-lg bg-ember px-5 py-2 text-sm font-semibold text-on-ember transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-panel disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy ? 'Starting…' : 'Start →'}
             </button>

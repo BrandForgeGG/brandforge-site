@@ -37,7 +37,7 @@ export function RetainerPlans() {
               <Link
                 href={`/chat?plan=${plan.id}`}
                 onClick={() => trackEvent('plan_interest', { source: plan.id })}
-                className={`mt-5 rounded-xl px-4 py-2.5 text-center text-sm font-semibold transition hover:opacity-90 ${plan.highlight ? 'bg-ember text-background' : 'border border-line text-foreground hover:border-ember'}`}
+                className={`mt-5 rounded-xl px-4 py-2.5 text-center text-sm font-semibold transition hover:opacity-90 ${plan.highlight ? 'bg-ember text-on-ember' : 'border border-line text-foreground hover:border-ember'}`}
               >
                 {plan.id === 'custom' ? 'Talk to us' : `Start with ${plan.name}`}
               </Link>

@@ -146,7 +146,7 @@ export function FundingForm({
       <button
         type="submit"
         disabled={disabled || !txHash.trim()}
-        className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background disabled:opacity-60"
+        className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember disabled:opacity-60"
       >
         Submit for verification
       </button>
@@ -463,7 +463,7 @@ function SystemEmbedCard({
                   onEmbedAction?.(embed, "edit_contract", draft.trim());
                   setEditing(false);
                 }}
-                className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background disabled:opacity-60"
+                className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember disabled:opacity-60"
               >
                 Save contract
               </button>
@@ -543,7 +543,7 @@ function SystemEmbedCard({
                   );
                   setCountering(null);
                 }}
-                className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background disabled:opacity-60"
+                className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember disabled:opacity-60"
               >
                 {countering === "counter" ? "Send counter offer" : "Send counter back"}
               </button>
@@ -610,7 +610,7 @@ function SystemEmbedCard({
                 type="button"
                 disabled={embedBusy}
                 onClick={() => onEmbedAction?.(embed, item.action)}
-                className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background disabled:opacity-60"
+                className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember disabled:opacity-60"
               >
                 {item.label}
               </button>
@@ -1086,7 +1086,7 @@ function MessageActions({
                 setEditing(false);
               })
             }
-            className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background"
+            className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember"
           >
             Save
           </button>
@@ -1131,7 +1131,7 @@ function FirstRunRail() {
               aria-hidden="true"
               className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold ${
                 index === 0
-                  ? "bg-ember text-background"
+                  ? "bg-ember text-on-ember"
                   : "border border-line text-muted"
               }`}
             >

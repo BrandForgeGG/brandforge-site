@@ -2566,7 +2566,7 @@ return (
           event.preventDefault();
           composerRef.current?.focus();
         }}
-        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[60] focus:rounded-lg focus:bg-ember focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-background"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[60] focus:rounded-lg focus:bg-ember focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-on-ember"
       >
         Skip to the message box
       </a>
@@ -2640,7 +2640,7 @@ return (
                 <button
                   type="button"
                   onClick={() => openGuestLogin({ reason: "save", next: conversationId ? `/chat?conversationId=${conversationId}` : "/" })}
-                  className="rounded-full bg-ember px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90"
+                  className="rounded-full bg-ember px-4 py-2 text-sm font-semibold text-on-ember transition hover:opacity-90"
                 >
                   <span className="sm:hidden">Sign up</span>
                   <span className="hidden sm:inline">Sign up for free</span>
@@ -2834,7 +2834,7 @@ return (
                     <button
                       type="button"
                       onClick={() => void handleInvite()}
-                      className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background"
+                      className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember"
                     >
                       Send
                     </button>
@@ -3299,7 +3299,7 @@ return (
                         type="button"
                         onClick={() => void handleSendProposal()}
                         disabled={proposalSending}
-                        className="rounded-lg bg-ember px-4 py-2 text-xs font-semibold text-background disabled:opacity-60"
+                        className="rounded-lg bg-ember px-4 py-2 text-xs font-semibold text-on-ember disabled:opacity-60"
                       >
                         {proposalSending ? "Sending…" : "Submit proposal"}
                       </button>
@@ -3322,7 +3322,7 @@ return (
                     <button
                       type="button"
                       onClick={() => setShowProposalForm(true)}
-                      className="ml-auto shrink-0 rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background"
+                      className="ml-auto shrink-0 rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember"
                     >
                       Send proposal
                     </button>

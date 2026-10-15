@@ -111,7 +111,7 @@ export function ArticleMaker({ draftId, onDraftId, chat }: { draftId?: string; o
               {id === 'short' ? 'Short' : id === 'normal' ? 'Normal' : 'Long'}
             </button>
           ))}
-          <button type="button" onClick={() => void write()} disabled={busy} className="ml-auto rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
+          <button type="button" onClick={() => void write()} disabled={busy} className="ml-auto rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-60">
             {busy ? 'Writing…' : article ? 'Write it again' : 'Write the article'}
           </button>
         </div>

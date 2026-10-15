@@ -209,7 +209,7 @@ export function PeerContractCard({ contractId }: { contractId: string }) {
                     type="button"
                     disabled={busy}
                     onClick={() => void act("submit_milestone", { index, proofUrl: proof[index] ?? "" })}
-                    className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background disabled:opacity-60"
+                    className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember disabled:opacity-60"
                   >
                     Submit
                   </button>
@@ -223,7 +223,7 @@ export function PeerContractCard({ contractId }: { contractId: string }) {
                       type="button"
                       disabled={busy}
                       onClick={() => void act("approve_milestone", { index })}
-                      className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background disabled:opacity-60"
+                      className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember disabled:opacity-60"
                     >
                       Approve and release
                     </button>
@@ -250,7 +250,7 @@ export function PeerContractCard({ contractId }: { contractId: string }) {
 
               {view.viewerIsStaff && m.status === "disputed" ? (
                 <div className="mt-2 flex gap-2">
-                  <button type="button" disabled={busy} onClick={() => void act("resolve_dispute", { index, outcome: "release" })} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background disabled:opacity-60">
+                  <button type="button" disabled={busy} onClick={() => void act("resolve_dispute", { index, outcome: "release" })} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember disabled:opacity-60">
                     Release to delivering side
                   </button>
                   <button type="button" disabled={busy} onClick={() => void act("resolve_dispute", { index, outcome: "refund" })} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground disabled:opacity-60">
@@ -266,7 +266,7 @@ export function PeerContractCard({ contractId }: { contractId: string }) {
       {view.status === "proposed" && side ? (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {!mySigned ? (
-            <button type="button" disabled={busy} onClick={() => void act("accept")} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background disabled:opacity-60">
+            <button type="button" disabled={busy} onClick={() => void act("accept")} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember disabled:opacity-60">
               Accept and sign
             </button>
           ) : (
@@ -299,7 +299,7 @@ export function PeerContractCard({ contractId }: { contractId: string }) {
               aria-label="Transaction reference"
               className="min-w-0 flex-1 rounded-lg border border-line bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-muted"
             />
-            <button type="button" disabled={busy || tx.trim().length < 6} onClick={() => void act("submit_funding", { tx })} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background disabled:opacity-60">
+            <button type="button" disabled={busy || tx.trim().length < 6} onClick={() => void act("submit_funding", { tx })} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember disabled:opacity-60">
               I have paid
             </button>
           </div>
@@ -312,7 +312,7 @@ export function PeerContractCard({ contractId }: { contractId: string }) {
           {view.viewerIsStaff ? (
             <div className="mt-2 flex items-center gap-2">
               <span className="min-w-0 truncate text-[11px] text-muted">{view.fundingTx}</span>
-              <button type="button" disabled={busy} onClick={() => void act("verify_funding", { approve: true })} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background disabled:opacity-60">
+              <button type="button" disabled={busy} onClick={() => void act("verify_funding", { approve: true })} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember disabled:opacity-60">
                 Mark funded
               </button>
               <button type="button" disabled={busy} onClick={() => void act("verify_funding", { approve: false })} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground disabled:opacity-60">
@@ -525,7 +525,7 @@ export function PeerContractForm({ conversationId, onClose, onSaved, reviseId, i
           <button type="button" onClick={onClose} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground">
             Cancel
           </button>
-          <button type="button" disabled={busy || (!reviseId && !counterpartyId)} onClick={() => void submit()} className="rounded-lg bg-ember px-4 py-1.5 text-xs font-semibold text-background disabled:opacity-60">
+          <button type="button" disabled={busy || (!reviseId && !counterpartyId)} onClick={() => void submit()} className="rounded-lg bg-ember px-4 py-1.5 text-xs font-semibold text-on-ember disabled:opacity-60">
             {reviseId ? "Save changes" : "Send contract"}
           </button>
         </div>

@@ -36,7 +36,7 @@ import {
 
 const field = 'w-full rounded-xl border border-line bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none';
 const btn = 'rounded-xl border border-line px-3.5 py-2 text-sm text-foreground transition hover:border-ember disabled:opacity-50';
-const btnPrimary = 'rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50';
+const btnPrimary = 'rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-50';
 const EXAMPLES = ['5 habits of calm teams', 'Why every small shop needs a newsletter', 'How to prepare for a job interview'];
 
 // Makes numbered-list style carousels (Instagram, TikTok, LinkedIn): a hook cover, one slide per point

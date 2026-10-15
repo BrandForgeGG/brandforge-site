@@ -61,7 +61,7 @@ export function ArticleMessageCard({ embed, createdAt }: { embed: ArticleEmbed; 
       ) : null}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {isOwner ? (
-          <button type="button" onClick={() => openMaker('article', { topic: embed.topic, audience: embed.audience, length: embed.length, article })} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-background transition hover:opacity-90">
+          <button type="button" onClick={() => openMaker('article', { topic: embed.topic, audience: embed.audience, length: embed.length, article })} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember transition hover:opacity-90">
             Rewrite
           </button>
         ) : null}

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { Channel, ChannelKind } from '@/components/integrations/use-channels';
 
 const field = 'w-full rounded-xl border border-line bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none';
-const btnPrimary = 'rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50';
+const btnPrimary = 'rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-50';
 
 // The form that checks and links one channel. Each platform shows only what it needs, with the
 // steps in plain words. Nothing is saved until the platform itself confirms it.
