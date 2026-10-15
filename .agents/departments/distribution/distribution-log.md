@@ -1337,3 +1337,11 @@ we do not have.
 
 **Distribution move:** changelog line: "Launch videos now come with music, a tone you choose, and the post to go with them. Every BrandForge writer now follows house rules: no AI-speak."
 
+
+
+## 2026-10-15 â€” One name per person: the username you choose
+
+**Change:** names were inconsistent: onboarding silently assigned a random handle ("bright.maker123"), most screens showed the Google name or a separate display name, and Settings had two name fields with a vague error when a username was taken. Now the username is the name, everywhere. (1) The first screen after a first sign-in asks for it (prefilled from your own name, live "available / taken" check, required before "Open my chat"), then age and terms. (2) Migration 0056: a trigger keeps display_name equal to the username whoever writes it, and all 35 existing accounts were brought in line (verified with a rolled-back test). (3) Every place that showed a person's name now reads their profile instead of the Google name: messages sent in chats, team joins and claims, invites, task claims, attachments, blueprint, specialist profile suggestions, the chat list and the sidebar account block. (4) Settings has one field, "Username, your name on BrandForge", with the same live check; Save waits for a valid, free name, and a taken name says so plainly.
+
+**Distribution move:** in-app copy on the welcome screen ("Pick the name you go by here"). No announcement needed.
+

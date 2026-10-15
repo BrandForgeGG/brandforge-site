@@ -9,8 +9,9 @@ import {
   getProfileRole,
   hasAcceptedProposalFrom,
 } from '@/lib/project-db';
-import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
+import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { notifyFounder } from '@/lib/stage-notify';
+import { getProfileDisplayName } from '@/lib/project-db';
 
 // Staff access = profiles.role is operator or admin. Nothing else opens /api/staff/*:
 // owning the conversation or merely being a participant in it does not (H4) — the client
@@ -85,7 +86,7 @@ export async function requireStaffContext(
     conversationId: trimmedId,
     role,
     profileRole: profileRole as 'operator' | 'admin',
-    displayName: getActorName(user),
+    displayName: (await getProfileDisplayName(user.id)),
   };
 }
 

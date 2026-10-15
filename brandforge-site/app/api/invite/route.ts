@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
-import { canAccessConversation, getConversation } from '@/lib/project-db';
+import { canAccessConversation, getConversation, getProfileDisplayName } from '@/lib/project-db';
 import { isValidEmail, resolveSiteUrl } from '@/lib/auth-utils';
 import { escapeHtml, oneLine } from '@/lib/html';
 import { notify } from '@/lib/notify';
@@ -84,11 +84,10 @@ export async function POST(request: NextRequest) {
     const siteUrl = resolveSiteUrl();
     void siteUrl;
     const chatUrl = joinUrl;
-    // Display name comes from Google metadata and the title from the founder — both are
+    // The name is the username they chose and the title comes from the founder — both are
     // user-controlled, so they are escaped for the HTML body and flattened for the subject.
     const inviterName = oneLine(
-      (user.user_metadata?.full_name as string | undefined) ||
-        (user.user_metadata?.name as string | undefined) ||
+      (await getProfileDisplayName(user.id)) ||
         user.email ||
         'A BrandForge member',
       80,

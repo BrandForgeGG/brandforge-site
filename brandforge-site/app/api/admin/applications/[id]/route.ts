@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { addMessage, addParticipant, decideOperatorApplication, isAdminAccount, recordFunnelEvent } from '@/lib/project-db';
 import { notifyFounder } from '@/lib/stage-notify';
-import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
+import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { sendEmail } from '@/lib/email';
 import { resolveSiteUrl } from '@/lib/auth-utils';
 import { buildSpecialistEmail } from '@/lib/specialist-emails.js';
+import { getProfileDisplayName } from '@/lib/project-db';
 
 export const dynamic = 'force-dynamic';
 
@@ -146,7 +147,7 @@ export async function POST(
         return NextResponse.json({ error: 'Could not add participant' }, { status: 500 });
       }
 
-      const adminName = getActorName(user);
+      const adminName = (await getProfileDisplayName(user.id));
       await notifyFounder(conversationId, 'team_joined', { name: displayName });
       await addMessage({
         conversation_id: conversationId,

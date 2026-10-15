@@ -13,8 +13,9 @@ import {
   recordBlueprintRun,
   saveBlueprintResult,
 } from '@/lib/project-db';
-import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
+import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { getProfileDisplayName } from '@/lib/project-db';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -263,7 +264,7 @@ export async function POST(request: NextRequest) {
         blueprintId: saved.blueprint.id,
         sessionId,
         userId: user?.id ?? null,
-        senderName: user ? getActorName(user) : null,
+        senderName: user ? (await getProfileDisplayName(user.id)) : null,
         title: blueprint.input,
         input: blueprint.input,
         document: saved.blueprint.document,

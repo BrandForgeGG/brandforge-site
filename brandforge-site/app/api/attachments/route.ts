@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { displayAttachmentName, safeDownloadName } from '@/lib/message-actions';
 import { resolveGuestSession } from '@/lib/guest-session';
 import { canAccessConversation, getConversationOwnerSession, downloadConversationAttachment, removeConversationAttachment, uploadConversationAttachment, addMessage } from '@/lib/project-db';
-import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
+import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { getProfileDisplayName } from '@/lib/project-db';
 
 const ATTACHMENTS_RATE_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 };
 
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
     conversation_id: conversationId,
     sender_type: 'user',
     sender_id: user.id,
-    sender_name: getActorName(user),
+    sender_name: (await getProfileDisplayName(user.id)),
     content: String(form.get('caption') ?? '').trim().slice(0, 8000) || `Shared ${attachment.name}`,
     content_type: 'attachment',
     artifact_data: attachment,

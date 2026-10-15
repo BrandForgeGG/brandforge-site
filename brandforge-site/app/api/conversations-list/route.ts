@@ -5,6 +5,7 @@ import {
   getUserConversationSummaries,
   isStaffAccount,
   getProfileRole,
+  getProfileDisplayName,
 } from '@/lib/project-db';
 import { resolveGuestSession } from '@/lib/guest-session';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
@@ -54,8 +55,8 @@ export async function GET(request: NextRequest) {
       ? conversations.filter((conversation) => conversation.isUnseen).length
       : 0;
 
-    const name =
-      user.user_metadata?.full_name ?? user.user_metadata?.name ?? null;
+    // The username the person chose is their name everywhere.
+    const name = await getProfileDisplayName(user.id);
     const email = user.email ?? null;
     // profiles.role is the truth; the email hint only covers rows that predate it.
     const role = (await roleRead) ?? (email ? getUserRoleFromEmail(email) : 'user');

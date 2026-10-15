@@ -541,7 +541,7 @@ export async function updateMyUsername(
 
 export async function updateMyProfile(
   userId: string,
-  fields: { display_name?: string; email?: string; avatar_url?: string | null; marketing_opt_in?: boolean },
+  fields: { display_name?: string; email?: string; avatar_url?: string | null; marketing_opt_in?: boolean; username?: string },
 ): Promise<{ ok: true; identity: ProfileIdentity } | { ok: false; reason: string }> {
   const supabase = await db();
 
@@ -553,7 +553,9 @@ export async function updateMyProfile(
     .maybeSingle();
 
   if (error) {
-    return { ok: false, reason: 'Could not update your profile.' };
+    const taken = error.code === '23505' || /duplicate key|already exists/i.test(error.message);
+    if (!taken) console.error('updateMyProfile error:', error.message);
+    return { ok: false, reason: taken ? 'That username is taken. Try another.' : 'Could not update your profile.' };
   }
 
   const identity = shapeProfileIdentity(data);
@@ -962,10 +964,11 @@ export async function getProfileDisplayName(userId: string | null | undefined): 
     .eq('id', userId)
     .maybeSingle();
 
+  // The username the person chose is their name everywhere (display_name follows it, migration 0056).
   return (
+    (profile?.username && String(profile.username)) ||
     (profile?.display_name && String(profile.display_name)) ||
     (profile?.full_name && String(profile.full_name)) ||
-    (profile?.username && String(profile.username)) ||
     (profile?.email && String(profile.email).split('@')[0]) ||
     'The team'
   );

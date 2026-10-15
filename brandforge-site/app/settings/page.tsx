@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { fetchAuthed, getSessionUser } from '@/lib/browser-auth';
 import { IntegrationsPanel } from '@/components/integrations/integrations-panel';
 import { getUserRoleFromEmail } from '@/lib/user-roles';
+import { validateUsername } from '@/lib/identity';
 import { RoleBadge } from '@/components/role-badge';
 import { AvatarEditor } from '@/components/profile/avatar-editor';
 import { SettingsPlanCard } from '@/components/settings-plan-card';
@@ -47,7 +48,6 @@ export default function SettingsPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const [formName, setFormName] = useState('');
   const [formEmail, setFormEmail] = useState('');
   const [formUsername, setFormUsername] = useState('');
   const [formPassword, setFormPassword] = useState('');
@@ -55,6 +55,35 @@ export default function SettingsPage() {
   const [theme, setTheme] = useState<Theme>(() => getStoredTheme());
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [marketingBusy, setMarketingBusy] = useState(false);
+
+  // The username is the name everyone sees. While it is being changed, say right away whether it can be used.
+  const [usernameCheck, setUsernameCheck] = useState<'idle' | 'checking' | 'free' | 'taken' | 'invalid'>('idle');
+  const [usernameHint, setUsernameHint] = useState('');
+  useEffect(() => {
+    if (!editing || !profile || formUsername === profile.username) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- nothing to check until the username changes
+      setUsernameCheck('idle');
+      return;
+    }
+    const checked = validateUsername(formUsername);
+    if (!checked.ok) {
+      setUsernameCheck('invalid');
+      setUsernameHint(checked.reason);
+      return;
+    }
+    setUsernameCheck('checking');
+    let live = true;
+    const timer = window.setTimeout(() => {
+      void fetchAuthed(`/api/identity/username-available?username=${encodeURIComponent(checked.username)}`)
+        .then((res) => res.json())
+        .then((data: { available?: boolean }) => live && setUsernameCheck(data.available ? 'free' : 'taken'))
+        .catch(() => live && setUsernameCheck('idle'));
+    }, 400);
+    return () => {
+      live = false;
+      window.clearTimeout(timer);
+    };
+  }, [editing, formUsername, profile]);
 
   function handleThemeChange(next: Theme) {
     setStoredTheme(next);
@@ -101,7 +130,6 @@ export default function SettingsPage() {
 
       if (!cancelled) {
         setProfile(base);
-        setFormName(base.name);
         setFormEmail(base.email);
         setFormUsername(base.username);
         setAvatarPreview(base.avatarUrl);
@@ -117,7 +145,6 @@ export default function SettingsPage() {
 
   function startEditing() {
     if (!profile) return;
-    setFormName(profile.name);
     setFormEmail(profile.email);
     setFormUsername(profile.username);
     setFormPassword('');
@@ -163,7 +190,6 @@ export default function SettingsPage() {
     try {
       const updates: Record<string, unknown> = {};
 
-      if (formName !== profile.name) updates.display_name = formName;
       if (formEmail !== profile.email) updates.email = formEmail;
       if (formUsername !== profile.username) updates.username = formUsername;
 
@@ -190,7 +216,7 @@ export default function SettingsPage() {
         prev
           ? {
               ...prev,
-              name: formName,
+              name: formUsername || prev.name,
               email: formEmail,
               username: formUsername,
               avatarUrl: avatarPreview,
@@ -259,7 +285,7 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={handleSave}
-                  disabled={saving}
+                  disabled={saving || usernameCheck === 'taken' || usernameCheck === 'invalid' || usernameCheck === 'checking'}
                   className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember transition hover:opacity-95 disabled:opacity-50"
                 >
                   {saving ? 'Saving…' : 'Save'}
@@ -280,28 +306,17 @@ export default function SettingsPage() {
                 }}
               />
               <div className="mt-3 min-w-0">
-                <p className="truncate text-base text-foreground">{profile.name}</p>
+                <p className="truncate text-base text-foreground">{profile.username || profile.name}</p>
                 <p className="truncate text-sm text-muted">{profile.email}</p>
                 <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted">
                   <RoleBadge role={profile.role} />
-                  {profile.username ? <span>@{profile.username}</span> : null}
                 </p>
               </div>
             </div>
 
             {editing ? (
               <>
-                <div>
-                  <label className="text-sm text-muted" htmlFor="settings-name">
-                    Display name
-                  </label>
-                  <input
-                    id="settings-name"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-line bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ember"
-                  />
-                </div>
+
                 <div>
                   <label className="text-sm text-muted" htmlFor="settings-email">
                     Email
@@ -319,14 +334,25 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className="text-sm text-muted" htmlFor="settings-username">
-                    Username
+                    Username, your name on BrandForge
                   </label>
                   <input
                     id="settings-username"
                     value={formUsername}
-                    onChange={(e) => setFormUsername(e.target.value)}
+                    onChange={(e) => setFormUsername(e.target.value.toLowerCase().replace(/\s+/g, ''))}
+                    maxLength={24}
+                    autoComplete="username"
                     className="mt-1 w-full rounded-lg border border-line bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ember"
                   />
+                  <p className={`mt-1 text-xs ${usernameCheck === 'taken' || usernameCheck === 'invalid' ? 'text-danger' : usernameCheck === 'free' ? 'text-success' : 'text-muted'}`} aria-live="polite">
+                    {usernameCheck === 'taken'
+                      ? 'That username is taken. Try another.'
+                      : usernameCheck === 'invalid'
+                        ? usernameHint
+                        : usernameCheck === 'free'
+                          ? 'Available.'
+                          : 'Everyone sees this name: 3 to 24 letters, numbers, dots or underscores.'}
+                  </p>
                 </div>
                 <div>
                   <label className="text-sm text-muted" htmlFor="settings-password">
@@ -344,19 +370,14 @@ export default function SettingsPage() {
               </>
             ) : (
               <>
-                <div>
-                  <p className="text-sm text-muted">Name</p>
-                  <p className="mt-1 text-base text-foreground">{profile.name}</p>
-                </div>
+
                 <div>
                   <p className="text-sm text-muted">Email</p>
                   <p className="mt-1 text-base text-foreground">{profile.email}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted">Username</p>
-                  <p className="mt-1 text-base text-foreground">
-                    {profile.username ? `@${profile.username}` : '—'}
-                  </p>
+                  <p className="mt-1 text-base text-foreground">{profile.username || '—'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted">Role</p>

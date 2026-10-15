@@ -3,36 +3,26 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { fetchAuthed } from '@/lib/browser-auth';
+import { fetchAuthed, getSessionUser } from '@/lib/browser-auth';
+import { validateUsername } from '@/lib/identity';
+import { BrandMark } from '@/components/brand-mark';
 
-// One screen, not four: the two things we must collect (terms, age) and nothing else.
-// The username is picked for them (changeable in Settings) so nobody stalls on a naming
-// task before their first answer.
-const ADJECTIVES = ['bright', 'bold', 'swift', 'calm', 'keen', 'lucky', 'sharp', 'vivid'];
-const NOUNS = ['builder', 'maker', 'founder', 'spark', 'forge', 'studio', 'pilot', 'crafter'];
+// The first screen after signing up for the first time: the name you go by on BrandForge (your username, shown
+// everywhere), then the two things we must collect (age and terms). One screen, then your chat opens.
 
-function randomHandle() {
-  const pick = (list: string[]) => list[Math.floor(Math.random() * list.length)];
-  return `${pick(ADJECTIVES)}.${pick(NOUNS)}${Math.floor(100 + Math.random() * 900)}`;
+/** A starting suggestion from the person's own name or email: lowercase letters, numbers and dots. */
+function suggestionFrom(name: string, email: string): string {
+  const base = (name || email.split('@')[0] || '')
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '.')
+    .replace(/^\.+|\.+$/g, '')
+    .slice(0, 20);
+  return base.length >= 3 ? base : '';
 }
 
-async function pickAvailableUsername(): Promise<string> {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const candidate = randomHandle();
-    try {
-      const response = await fetchAuthed(
-        `/api/identity/username-available?username=${encodeURIComponent(candidate)}`,
-      );
-      if (response.ok) {
-        const data = (await response.json()) as { available?: boolean };
-        if (data.available) return candidate;
-      }
-    } catch {
-      // Try another candidate; the final write is checked by the database anyway.
-    }
-  }
-  return `${randomHandle()}${Math.floor(Math.random() * 90 + 10)}`;
-}
+type Check = 'idle' | 'checking' | 'free' | 'taken' | 'invalid';
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -42,22 +32,20 @@ export default function OnboardingPage() {
   // only, else /chat. A ref: it is only read at redirect time.
   const nextPathRef = useRef('/chat');
 
+  const [username, setUsername] = useState('');
+  const [usernameCheck, setUsernameCheck] = useState<Check>('idle');
+  const [usernameHint, setUsernameHint] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Signed-out visitors go to login; users who already finished go straight on.
+  // Signed-out visitors go to login; users who already finished go straight on. Everyone else starts with a suggested
+  // username taken from their own name.
   useEffect(() => {
     const raw = new URLSearchParams(window.location.search).get('next');
-    const safe =
-      typeof raw === 'string' &&
-      raw.startsWith('/') &&
-      !raw.startsWith('//') &&
-      !raw.startsWith('/\\')
-        ? raw
-        : '/chat';
+    const safe = typeof raw === 'string' && raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/\\') ? raw : '/chat';
     nextPathRef.current = safe;
 
     let cancelled = false;
@@ -72,6 +60,9 @@ export default function OnboardingPage() {
             return;
           }
         }
+        const user = await getSessionUser().catch(() => null);
+        const meta = (user?.user_metadata ?? {}) as { full_name?: string; name?: string };
+        if (!cancelled) setUsername(suggestionFrom(meta.full_name || meta.name || '', user?.email ?? ''));
         setChecking(false);
       } catch {
         if (!cancelled) setChecking(false);
@@ -82,24 +73,48 @@ export default function OnboardingPage() {
     };
   }, [router]);
 
+  // Say right away whether the username can be used.
+  useEffect(() => {
+    if (!username) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- nothing to check until there is a name
+      setUsernameCheck('idle');
+      return;
+    }
+    const checked = validateUsername(username);
+    if (!checked.ok) {
+      setUsernameCheck('invalid');
+      setUsernameHint(checked.reason);
+      return;
+    }
+    setUsernameCheck('checking');
+    let live = true;
+    const timer = window.setTimeout(() => {
+      void fetchAuthed(`/api/identity/username-available?username=${encodeURIComponent(checked.username)}`)
+        .then((res) => res.json())
+        .then((data: { available?: boolean }) => live && setUsernameCheck(data.available ? 'free' : 'taken'))
+        .catch(() => live && setUsernameCheck('idle'));
+    }, 350);
+    return () => {
+      live = false;
+      window.clearTimeout(timer);
+    };
+  }, [username]);
+
+  const ready = usernameCheck === 'free' && termsAccepted && Boolean(dateOfBirth);
+
   async function finish() {
-    if (submitting || !termsAccepted || !dateOfBirth) return;
+    if (submitting || !ready) return;
     setSubmitting(true);
     setError('');
     try {
-      const username = await pickAvailableUsername();
       const response = await fetchAuthed('/api/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          date_of_birth: dateOfBirth,
-          accept_terms: termsAccepted,
-          marketing_opt_in: marketingOptIn,
-          username,
-        }),
+        body: JSON.stringify({ date_of_birth: dateOfBirth, accept_terms: termsAccepted, marketing_opt_in: marketingOptIn, username }),
       });
       const data = (await response.json().catch(() => ({}))) as { error?: string };
       if (!response.ok) {
+        if (response.status === 409) setUsernameCheck('taken');
         setError(data.error || 'Could not save your setup. Try again.');
         setSubmitting(false);
         return;
@@ -121,8 +136,8 @@ export default function OnboardingPage() {
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-background px-4 py-10 text-foreground">
-      <Link href="/" className="font-serif text-xl text-foreground" aria-label="BrandForge home">
-        Brand<span className="text-ember">Forge</span>
+      <Link href="/" className="text-xl" aria-label="BrandForge home">
+        <BrandMark size={30} />
       </Link>
 
       <form
@@ -130,13 +145,41 @@ export default function OnboardingPage() {
           event.preventDefault();
           void finish();
         }}
-        className="mt-8 w-full max-w-md rounded-2xl border border-line bg-panel p-6 sm:p-8"
+        className="mt-8 w-full max-w-md rounded-3xl border border-line bg-panel p-6 shadow-[var(--shadow-soft)] sm:p-8"
       >
-        <h1 className="font-serif text-2xl sm:text-3xl">Almost in</h1>
-        <p className="mt-1 text-sm text-muted">Two quick things, then your chat opens.</p>
+        <h1 className="font-serif text-2xl sm:text-3xl">Welcome to BrandForge</h1>
+        <p className="mt-1 text-sm text-muted">Pick the name you go by here, then your chat opens.</p>
 
-        <label htmlFor="dob" className="mt-6 block text-sm text-muted">
-          Date of birth <span className="text-xs">(you must be 13 or older)</span>
+        <label htmlFor="username" className="mt-6 block text-sm text-foreground">
+          Your username
+        </label>
+        <div className="mt-2 flex items-center rounded-xl border border-line bg-background px-4 focus-within:border-ember">
+          <span className="text-sm text-muted" aria-hidden="true">@</span>
+          <input
+            id="username"
+            value={username}
+            onChange={(event) => setUsername(event.target.value.toLowerCase().replace(/\s+/g, ''))}
+            maxLength={24}
+            autoComplete="username"
+            autoFocus
+            placeholder="yourname"
+            className="w-full bg-transparent py-3 pl-1 text-sm text-foreground outline-none"
+          />
+        </div>
+        <p className={`mt-1.5 text-xs ${usernameCheck === 'taken' || usernameCheck === 'invalid' ? 'text-danger' : usernameCheck === 'free' ? 'text-success' : 'text-muted'}`} aria-live="polite">
+          {usernameCheck === 'taken'
+            ? 'That username is taken. Try another.'
+            : usernameCheck === 'invalid'
+              ? usernameHint
+              : usernameCheck === 'free'
+                ? 'Available. This is the name everyone sees.'
+                : usernameCheck === 'checking'
+                  ? 'Checking…'
+                  : 'This is the name everyone sees: 3 to 24 letters, numbers, dots or underscores.'}
+        </p>
+
+        <label htmlFor="dob" className="mt-5 block text-sm text-foreground">
+          Date of birth <span className="text-xs text-muted">(you must be 13 or older)</span>
         </label>
         <input
           id="dob"
@@ -149,12 +192,7 @@ export default function OnboardingPage() {
         />
 
         <label className="mt-5 flex cursor-pointer items-start gap-3 text-sm text-foreground">
-          <input
-            type="checkbox"
-            checked={termsAccepted}
-            onChange={(event) => setTermsAccepted(event.target.checked)}
-            className="mt-0.5 h-4 w-4 accent-[var(--ember)]"
-          />
+          <input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--ember)]" />
           <span>
             I accept the{' '}
             <Link href="/terms" className="text-ember underline-offset-2 hover:underline">
@@ -169,12 +207,7 @@ export default function OnboardingPage() {
         </label>
 
         <label className="mt-3 flex cursor-pointer items-start gap-3 text-sm text-muted">
-          <input
-            type="checkbox"
-            checked={marketingOptIn}
-            onChange={(event) => setMarketingOptIn(event.target.checked)}
-            className="mt-0.5 h-4 w-4 accent-[var(--ember)]"
-          />
+          <input type="checkbox" checked={marketingOptIn} onChange={(event) => setMarketingOptIn(event.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--ember)]" />
           <span>Email me tips for getting started and news about new features. About one a week at most, and one click to stop.</span>
         </label>
 
@@ -184,14 +217,10 @@ export default function OnboardingPage() {
           </p>
         ) : null}
 
-        <button
-          type="submit"
-          disabled={!termsAccepted || !dateOfBirth || submitting}
-          className="mt-6 w-full rounded-xl bg-ember px-4 py-3 text-sm font-semibold text-on-ember transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
-        >
+        <button type="submit" disabled={!ready || submitting} className="mt-6 w-full rounded-xl bg-ember px-4 py-3 text-sm font-semibold text-on-ember transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50">
           {submitting ? 'Setting up…' : 'Open my chat'}
         </button>
-        <p className="mt-3 text-center text-xs text-muted">We pick a username for you. Change it anytime in Settings.</p>
+        <p className="mt-3 text-center text-xs text-muted">You can change your username later in Settings.</p>
       </form>
     </main>
   );

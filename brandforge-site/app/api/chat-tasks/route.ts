@@ -11,6 +11,7 @@ import {
   recordFunnelEvent,
   updateTaskDueDate,
   updateTaskStatus,
+  getProfileDisplayName,
 } from '@/lib/project-db';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { notify } from '@/lib/notify';
@@ -140,7 +141,7 @@ export async function PATCH(request: NextRequest) {
         assignee_id: user.id,
         assignee_name:
           assigneeName ||
-          String(user.user_metadata?.full_name ?? '').trim() ||
+          (await getProfileDisplayName(user.id)) ||
           String(user.email ?? '').split('@')[0] ||
           'BrandForge staff',
       });

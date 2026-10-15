@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSpecialistProfile, isStaffAccount, saveSpecialistProfile } from '@/lib/project-db';
-import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
+import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { validateProfile } from '@/lib/specialist-profile.js';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { getProfileDisplayName } from '@/lib/project-db';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
   const auth = await requireSpecialist(request);
   if ('error' in auth) return auth.error;
   const profile = await getSpecialistProfile(auth.user.id);
-  return NextResponse.json({ profile, suggestedName: getActorName(auth.user) });
+  return NextResponse.json({ profile, suggestedName: (await getProfileDisplayName(auth.user.id)) });
 }
 
 // PUT: save your profile. Listing it publicly is your choice (isPublic).

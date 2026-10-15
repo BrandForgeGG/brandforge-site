@@ -11,11 +11,12 @@ import {
   recordFunnelEvent,
 } from '@/lib/project-db';
 import { attachGuestCookies, ensureGuestSession, resolveGuestSession } from '@/lib/guest-session';
-import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
+import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getRetainer } from '@/lib/plans.js';
 import { postOpsEvent } from '@/lib/ops-events';
 import { notifyTeamChatOpened } from '@/lib/stage-notify';
+import { getProfileDisplayName } from '@/lib/project-db';
 
 const CONVERSATION_CREATE_RATE_LIMIT = { limit: 10, windowMs: 60 * 60 * 1000 };
 const CONVERSATION_DELETE_RATE_LIMIT = { limit: 20, windowMs: 60 * 60 * 1000 };
@@ -153,7 +154,7 @@ export async function POST(request: NextRequest) {
         conversation_id: conversationId,
         sender_type: 'user',
         sender_id: user.id,
-        sender_name: getActorName(user),
+        sender_name: (await getProfileDisplayName(user.id)),
         content: initialMessage,
         content_type: 'text',
       });
@@ -181,7 +182,7 @@ export async function POST(request: NextRequest) {
 
     // The team hears about it the moment someone writes their first message (staff opening their own chats do not count).
     if (messageId && !staff && body.source !== 'trade') {
-      const who = getActorName(user);
+      const who = (await getProfileDisplayName(user.id));
       after(() => notifyTeamChatOpened({ conversationId, who, message: initialMessage, openerId: user.id }));
     }
 

@@ -5,7 +5,7 @@ import { answerModel, canAffordPremium, getAIService, type Message as AIMessage 
 import { budgetLimits, decideBudget } from "@/lib/ai-budget.js";
 import { tierOf } from "@/lib/ai-tier";
 import { chainFor, limitsFor } from "@/lib/model-router.js";
-import { getActorName, getAuthenticatedUser } from "@/lib/supabase-server";
+import { getAuthenticatedUser } from "@/lib/supabase-server";
 import {
   addMessage,
   canAccessConversation,
@@ -43,6 +43,7 @@ import { executeTool } from "@/lib/ai-tools";
 import { readChatSilently } from "@/lib/silent-reader";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { screenText } from "@/lib/content-policy.js";
+import { getProfileDisplayName } from "@/lib/project-db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -344,12 +345,13 @@ export async function POST(request: NextRequest) {
     guest ? runAsGuestSession(guest.sessionId, fn) : fn();
 
   if (message) {
+    const senderName = user ? await getProfileDisplayName(user.id) : "Guest";
     const storedMessageId = await scope(() =>
       addMessage({
         conversation_id: conversationId,
         sender_type: "user",
         sender_id: user?.id ?? null,
-        sender_name: user ? getActorName(user) : "Guest",
+        sender_name: senderName,
         content: message,
         content_type: "text",
       }),
@@ -364,7 +366,7 @@ export async function POST(request: NextRequest) {
 
     // The first message of a chat that was opened empty: the team is called to check it (once per chat).
     {
-      const senderName = user ? getActorName(user) : "A visitor";
+      const senderName = user ? (await getProfileDisplayName(user.id)) : "A visitor";
       const senderId = user?.id ?? null;
       after(async () => {
         if (user && (await isStaffAccount(user.id).catch(() => false))) return;
@@ -376,7 +378,7 @@ export async function POST(request: NextRequest) {
 
     // Other members of this chat (a Trade chat, invited teammates) get a ping, at most once every ten minutes.
     if (user) {
-      const sender = { id: user.id, name: getActorName(user) };
+      const sender = { id: user.id, name: (await getProfileDisplayName(user.id)) };
       after(async () => {
         await notifyChatMembers(conversationId, sender, message);
       });

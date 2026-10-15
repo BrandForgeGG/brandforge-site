@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getActorName, getAuthenticatedUser } from '@/lib/supabase-server';
+import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { joinConversationAsMember, recordFunnelEvent } from '@/lib/project-db';
 import { blueprintConfig } from '@/lib/blueprint-config';
 import { verifyJoinToken } from '@/lib/join-token';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { getProfileDisplayName } from '@/lib/project-db';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'This invite link is invalid or has expired.' }, { status: 400 });
   }
 
-  const joined = await joinConversationAsMember(conversationId, user.id, getActorName(user));
+  const joined = await joinConversationAsMember(conversationId, user.id, (await getProfileDisplayName(user.id)));
   if (!joined.ok) {
     return NextResponse.json(
       { error: joined.error === 'not_found' ? 'That chat no longer exists.' : 'Could not join the chat.' },

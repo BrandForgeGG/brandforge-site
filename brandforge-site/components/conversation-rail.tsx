@@ -219,7 +219,8 @@ onMobileClose,
       }
 
       if (cancelled) return;
-      const loaded = { name: fullName?.trim() || email.split("@")[0], email, role, username, avatarUrl };
+      // The username is the name people go by on BrandForge; the Google name is only a fallback before one is set.
+      const loaded = { name: username || fullName?.trim() || email.split("@")[0], email, role, username, avatarUrl };
       railCache.account = loaded;
       railCache.accountId = user.id;
       railCache.accountAt = Date.now();
