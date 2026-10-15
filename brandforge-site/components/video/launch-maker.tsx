@@ -16,6 +16,8 @@ import { LaunchProgress } from '@/components/video/launch-progress';
 import { posterOf } from '@/components/drafts/drafts-store';
 import { postVideoToChat, type ChatTarget } from '@/components/chat/post-creation';
 import { useAutosave, useDraft } from '@/components/drafts/use-draft';
+import { sampleReference } from '@/components/video/reference-video';
+import { paceLabel, type ReferenceFormat } from '@/lib/reference-format.js';
 
 const field = 'w-full rounded-xl border border-line bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none';
 const chip = 'rounded-full border px-3 py-1.5 text-xs transition';
@@ -33,9 +35,13 @@ const KIND_LABEL: Record<LaunchScene['kind'], string> = { hook: 'Opening', probl
 const DEFAULT_LOOK: LaunchLook = { bg: '#0f0e0d', text: '#f4f1ec', accent: '#ff6a2b', dark: true };
 
 /** What a launch video draft keeps, to reopen it as it was. */
-type LaunchState = { url: string; about: string; shape: Shape; withVoice: boolean; voice: VoiceId; scenes: LaunchScene[]; site: SiteInfo | null; look: LaunchLook; tone?: LaunchTone; music?: MusicStyle; share?: LaunchShare | null };
+type LaunchState = { url: string; about: string; shape: Shape; withVoice: boolean; voice: VoiceId; scenes: LaunchScene[]; site: SiteInfo | null; look: LaunchLook; tone?: LaunchTone; music?: MusicStyle; share?: LaunchShare | null; reference?: Reference | null };
+
+/** A video the member likes, as the format to follow ("Make one like this"). */
+type Reference = { name: string; format: ReferenceFormat };
 
 const TONE_LABEL: Record<LaunchTone, string> = { bold: 'Bold', calm: 'Calm', playful: 'Playful', premium: 'Premium' };
+const HOOK_LABEL: Record<string, string> = { result: 'result-first hook', problem: 'pain-first hook', question: 'question hook', claim: 'bold-claim hook', demo: 'demo hook', story: 'story hook' };
 
 function slugOf(name: string): string {
   return (name || 'launch').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'launch';
@@ -92,6 +98,10 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
   const [music, setMusic] = useState<MusicStyle>('warm');
   const [share, setShare] = useState<LaunchShare | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  // "Make one like this": the format of a video the member likes, and what the study of it is doing right now.
+  const [reference, setReference] = useState<Reference | null>(null);
+  const [referenceStep, setReferenceStep] = useState<string | null>(null);
+  const referenceInput = useRef<HTMLInputElement>(null);
   const [clips, setClips] = useState<Clip[] | null>(null);
   const [voiceState, setVoiceState] = useState<{ status: 'idle' | 'working' | 'ready' | 'failed'; text: string }>({ status: 'idle', text: '' });
   const [progress, setProgress] = useState(0);
@@ -131,6 +141,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
         if (s.tone) setTone(s.tone);
         if (s.music) setMusic(s.music);
         setShare(s.share ?? null);
+        setReference(s.reference ?? null);
         setScenes(s.scenes);
         setSite(s.site);
         setLook(s.look);
@@ -143,7 +154,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
   }, [draft, chat?.initialState]);
 
   // Keep the draft up to date while working; an edit after the MP4 was made drops the old MP4 from the draft.
-  const draftState: LaunchState = { url, about, shape, withVoice, voice, scenes, site, look, tone, music, share };
+  const draftState: LaunchState = { url, about, shape, withVoice, voice, scenes, site, look, tone, music, share, reference };
   useAutosave({ draftState, made: Boolean(result) }, scenes.length > 0, () =>
     void draft.save({ title: scenes[0]?.heading || site?.name || 'Launch video', state: draftState, ...(result ? {} : { video: undefined, poster: undefined, seconds: undefined }) })
   );
@@ -249,7 +260,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
     setBusy('writing');
     setWriteStarted(Date.now());
     try {
-      const res = await fetch('/api/create/launch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: url.trim(), about: about.trim(), tone }) });
+      const res = await fetch('/api/create/launch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: url.trim(), about: about.trim(), tone, format: reference?.format ?? null }) });
       const data = (await res.json().catch(() => ({}))) as { site?: SiteInfo | null; scenes?: LaunchScene[]; share?: LaunchShare; error?: string };
       if (!res.ok || !data.scenes) throw new Error(data.error || 'The writer could not make the story. Try again.');
       setScenes(data.scenes);
@@ -269,6 +280,34 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
     } finally {
       setBusy(null);
       setWriteStarted(null);
+    }
+  }
+
+  // Studies a video the member likes: measured here, then a short sound track and five frames go to be listened to and
+  // looked at. What comes back is its format; its tone and shape become the starting choices, and the member can change them.
+  async function studyReference(file: File) {
+    setError(null);
+    setReferenceStep('Opening the video…');
+    try {
+      const sample = await sampleReference(file, setReferenceStep);
+      setReferenceStep('Learning its format…');
+      const form = new FormData();
+      form.append('measured', JSON.stringify(sample.measured));
+      sample.frames.forEach((frame, i) => form.append('frames', frame, `frame-${i}.jpg`));
+      if (sample.audio) form.append('audio', sample.audio, 'sound.wav');
+      const res = await fetch('/api/create/launch/reference', { method: 'POST', body: form });
+      const data = (await res.json().catch(() => ({}))) as { format?: ReferenceFormat | null; error?: string };
+      if (!res.ok || !data.format) throw new Error(data.error || 'That video could not be studied. Try another one.');
+      setReference({ name: file.name.replace(/\.[a-z0-9]+$/i, '').slice(0, 60) || 'your video', format: data.format });
+      if (data.format.tone) setTone(data.format.tone);
+      setShape(sample.tall ? 'tall' : 'wide');
+      setResult(null);
+      trackEvent('create_interest', { status: 'video-launch-reference' });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'That video could not be studied. Try another one.');
+    } finally {
+      setReferenceStep(null);
+      if (referenceInput.current) referenceInput.current.value = '';
     }
   }
 
@@ -346,6 +385,36 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
           <input id="launch-url" value={url} onChange={(event) => setUrl(event.target.value)} inputMode="url" maxLength={300} placeholder="yourproduct.com" className={`${field} mt-2 text-base`} />
           <label htmlFor="launch-about" className="mt-3 block text-sm text-foreground">Anything to add <span className="text-muted">(optional, or use this alone if you have no site yet)</span></label>
           <textarea id="launch-about" value={about} onChange={(event) => setAbout(event.target.value)} rows={2} maxLength={1200} placeholder="Who it is for, what is new, the one thing people should remember." className={`${field} mt-1.5`} />
+          <div className="mt-3 rounded-xl border border-dashed border-line px-3 py-2.5">
+            <input ref={referenceInput} type="file" accept="video/*" className="sr-only" id="launch-reference" onChange={(event) => { const file = event.target.files?.[0]; if (file) void studyReference(file); }} />
+            {referenceStep ? (
+              <p className="flex items-center gap-2 text-sm text-foreground" aria-live="polite">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-ember" aria-hidden="true" />
+                {referenceStep}
+              </p>
+            ) : reference ? (
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-foreground">Made like “{reference.name}”</p>
+                  <p className="mt-0.5 text-xs text-muted">{reference.format.summary}</p>
+                  {reference.format.hookStyle ? (
+                  <p className="mt-1 text-xs text-muted">
+                    {Math.round(reference.format.seconds)}s · {paceLabel(reference.format.avgShot)}
+                    {reference.format.hookStyle ? ` · ${HOOK_LABEL[reference.format.hookStyle]}` : ''}
+                    {reference.format.beats.length ? ` · ${reference.format.beats.length} beats` : ''}
+                  </p>
+                  ) : null}
+                </div>
+                <label htmlFor="launch-reference" className="shrink-0 cursor-pointer text-xs text-muted hover:text-foreground">Swap</label>
+                <button type="button" onClick={() => { setReference(null); setResult(null); }} className="shrink-0 text-xs text-muted hover:text-foreground">Remove</button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <label htmlFor="launch-reference" className="cursor-pointer text-sm font-semibold text-foreground underline-offset-2 hover:underline">Make one like this</label>
+                <span className="text-xs text-muted">Optional. Pick a launch video you like; yours follows its hook, pace and order, in your own words.</span>
+              </div>
+            )}
+          </div>
           <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label="Shape">
             {(Object.keys(SHAPES) as Shape[]).map((id) => (
               <button key={id} type="button" aria-pressed={shape === id} onClick={() => { setShape(id); setResult(null); }} className={`${chip} ${shape === id ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>
@@ -378,14 +447,14 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
             ))}
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => void write()} disabled={Boolean(busy)} className="w-full rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-60 sm:w-auto">
+            <button type="button" onClick={() => void write()} disabled={Boolean(busy) || Boolean(referenceStep)} className="w-full rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-60 sm:w-auto">
               {writing ? 'Writing…' : written ? 'Write it again' : 'Write the launch video'}
             </button>
             {written && !writing ? (
               <button type="button" onClick={() => setEditingSetup(false)} className="px-3 py-2 text-sm text-muted hover:text-foreground">Keep this one</button>
             ) : null}
           </div>
-          <p className="mt-2 text-xs text-muted">Written only from what your site says. Check every line before you post it.</p>
+          <p className="mt-2 text-xs text-muted">Written only from what your site says. Check every line before you post it.{reference ? ' The video you picked stays on your device: only its sound and five frames are studied, then dropped.' : ''}</p>
           {error ? <p role="alert" className="mt-2 text-sm text-danger">{error}</p> : null}
         </section>
       ) : (
@@ -398,7 +467,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-foreground">{site?.host || about.slice(0, 60) || 'Your launch'}</p>
             <p className="truncate text-xs text-muted">
-              {SHAPES[shape].label} · {withVoice ? voiceLabel : 'No voice'} · {timed.length} scenes · {Math.round(seconds)}s
+              {SHAPES[shape].label} · {withVoice ? voiceLabel : 'No voice'} · {timed.length} scenes · {Math.round(seconds)}s{reference ? ` · like “${reference.name}”` : ''}
             </p>
           </div>
           <button type="button" onClick={() => setEditingSetup(true)} className="shrink-0 rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">Change</button>

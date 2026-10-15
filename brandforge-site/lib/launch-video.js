@@ -31,7 +31,7 @@ function cleanList(list, max, size) {
 }
 
 /** The system and user lines for the writer. site may be null when the person only described the product. */
-function buildLaunchPrompt({ site, about, hasPictures, tone }) {
+function buildLaunchPrompt({ site, about, hasPictures, tone, rules }) {
   const voiceOfVideo = TONES[tone] || TONES.bold;
   const system = [
     'You write short product launch videos, like the ones startups post on launch day.',
@@ -59,6 +59,7 @@ function buildLaunchPrompt({ site, about, hasPictures, tone }) {
     '  No superlatives you cannot prove ("best", "#1", "fastest"). If the material does not support a scene, set it to null.',
     hasPictures ? '- proof: the video shows real pictures from the site under this heading. Keep it factual.' : '- Set proof to null.',
     site ? '' : '- Set tour to null: there is no website to show.',
+    ...(Array.isArray(rules) ? rules : []),
   ]
     .filter(Boolean)
     .join('\n');

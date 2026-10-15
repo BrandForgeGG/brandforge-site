@@ -9,6 +9,7 @@ import { THEMES } from '@/lib/carousel-render.js';
 import { VIDEO_FORMATS, fitToVoice, totalSeconds, type VideoFormat, type VideoScene, planToScenes } from '@/lib/video-scenes.js';
 import { canEncode, drawFrame, encodeVideo, lookOf, makeArt, type SceneArt } from '@/components/video/video-engine';
 import { VOICES, clipsFor, layTrack, playClips, type Clip, type VoiceId } from '@/components/video/voice';
+import { masterOrNull } from '@/components/video/music';
 import { YouTubePost } from '@/components/video/youtube-post';
 import { posterOf } from '@/components/drafts/drafts-store';
 import { postVideoToChat, type ChatTarget } from '@/components/chat/post-creation';
@@ -305,7 +306,7 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId, chat }
     const controller = new AbortController();
     stopRef.current = controller;
     try {
-      const track = voiced && clips ? layTrack(clips, startsOf(timed), seconds) : null;
+      const track = voiced && clips ? masterOrNull(layTrack(clips, startsOf(timed), seconds)) : null;
       setBusy('Making the video…');
       setProgress(0);
       const blob = await encodeVideo({ w: f.w, h: f.h, scenes: timed, look, brand: { name: brand.trim(), handle: handle.trim() }, art: sceneArt, voice: track, onProgress: setProgress, signal: controller.signal });

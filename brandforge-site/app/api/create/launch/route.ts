@@ -11,6 +11,7 @@ import { aiBudget, aiModels } from '@/lib/ai-tier';
 import { noteFailure } from '@/lib/model-router.js';
 import { withAiTier } from '@/lib/ai-tier';
 import { isSloppy, withCraft } from '@/lib/craft.js';
+import { formatRules, normalizeFormat } from '@/lib/reference-format.js';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -29,7 +30,7 @@ function siteUrl(raw: string): string | null {
   }
 }
 
-// POST { url?, about? } -> { site, scenes }. Free, like the other makers: the page is read safely, a writer turns it into a
+// POST { url?, about?, tone?, format? } -> { site, scenes }. Free, like the other makers: the page is read safely, a writer turns it into a
 // launch story from the page's own facts, and the browser draws, voices and encodes the video. Pictures and the screenshot
 // come back as addresses on our picture route, so the browser can put them in the video.
 async function handle(request: NextRequest) {
@@ -40,7 +41,7 @@ async function handle(request: NextRequest) {
     const apiKey = String(process.env.OPENROUTER_API_KEY ?? '').trim();
     if (!apiKey) return NextResponse.json({ error: 'The writer is not available right now.' }, { status: 503 });
 
-    const body = (await request.json().catch(() => ({}))) as { url?: unknown; about?: unknown; tone?: unknown };
+    const body = (await request.json().catch(() => ({}))) as { url?: unknown; about?: unknown; tone?: unknown; format?: unknown };
     const about = String(body.about ?? '').replace(/\s+/g, ' ').trim().slice(0, 1200);
     const rawUrl = String(body.url ?? '').trim();
     const url = siteUrl(rawUrl);
@@ -68,7 +69,9 @@ async function handle(request: NextRequest) {
     if (!budget.allowed) return NextResponse.json({ error: budget.message }, { status: 429 });
 
     const hasPictures = (site?.pictures.length ?? 0) >= 2;
-    const prompt = buildLaunchPrompt({ site, about, hasPictures, tone: String(body.tone ?? 'bold') });
+    // A reference video the member likes ("Make one like this"): its format, checked again here, becomes extra writer rules.
+    const format = body.format && typeof body.format === 'object' ? normalizeFormat(body.format, null) : null;
+    const prompt = buildLaunchPrompt({ site, about, hasPictures, tone: String(body.tone ?? 'bold'), rules: formatRules(format) });
     const name = site?.name || '';
     let lastError = 'The writer is busy. Try again in a moment.';
     const models = aiModels();

@@ -147,7 +147,8 @@ function hook(f: Frame, s: Extract<LaunchScene, { kind: 'hook' }>, local: number
     const width = words.reduce((sum, word) => sum + ctx.measureText(word).width, 0) + space * (words.length - 1);
     let x = (w - width) / 2;
     for (const word of words) {
-      const a = easeOut((local - 0.2 - index * 0.13) / 0.55);
+      // The first words are readable on frame one; the rest follow quickly, one every 0.16s.
+      const a = easeOut((local + 0.55 - index * 0.16) / 0.55);
       ctx.globalAlpha = base * a;
       ctx.fillStyle = accent && word.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '') === accent.replace(/[^\p{L}\p{N}]/gu, '') ? look.accent : look.text;
       ctx.fillText(word, x, y + (1 - a) * 60 * k);
@@ -157,7 +158,7 @@ function hook(f: Frame, s: Extract<LaunchScene, { kind: 'hook' }>, local: number
     y += lineH;
   }
   if (subLines.length) {
-    const a = easeOut((local - 0.4 - index * 0.13) / 0.6);
+    const a = easeOut((local + 0.2 - index * 0.16) / 0.6);
     ctx.globalAlpha = base * a;
     ctx.fillStyle = f.muted;
     ctx.textAlign = 'center';
@@ -535,10 +536,11 @@ export function drawLaunchFrame(ctx: CanvasRenderingContext2D, w: number, h: num
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, w, h);
 
-  // The scene: in over a quarter second, out over its last third of a second (the last scene holds).
+  // The scene: in over a quarter second, out over its last third of a second (the last scene holds). The first scene is
+  // already there on frame one: that frame is the thumbnail and the autoplay frame, so it must never be blank.
   const last = index === scenes.length - 1;
   const leave = !last && scene.seconds - local < 0.3 ? easeOut((scene.seconds - local) / 0.3) : 1;
-  ctx.globalAlpha = Math.min(easeOut(local / 0.25), leave);
+  ctx.globalAlpha = Math.min(index === 0 ? 1 : easeOut(local / 0.25), leave);
   if (scene.kind === 'hook') hook(f, scene, local);
   else if (scene.kind === 'problem') problem(f, scene, local);
   else if (scene.kind === 'tour') tour(f, scene, local);

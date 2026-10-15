@@ -88,25 +88,60 @@ function resampleTo(samples: Float32Array, from: number, to: number): Float32Arr
   return out;
 }
 
-/** The voice track (if any) over the music bed, the bed ducked wherever someone is speaking. */
+/**
+ * Brings a finished track up to social-video loudness: the loud parts (gated, so pauses don't count) land near -15 dBFS RMS,
+ * about -14 LUFS, where Instagram, TikTok and YouTube play things back. Peaks are rounded off softly instead of clipped.
+ */
+export function master(track: { samples: Float32Array; sampleRate: number }): { samples: Float32Array; sampleRate: number } {
+  const { samples, sampleRate } = track;
+  const block = Math.max(1, Math.round(sampleRate * 0.4));
+  let sum = 0;
+  let count = 0;
+  for (let start = 0; start < samples.length; start += block) {
+    const end = Math.min(samples.length, start + block);
+    let energy = 0;
+    for (let i = start; i < end; i++) energy += samples[i] * samples[i];
+    const mean = energy / (end - start);
+    if (mean > 1e-5) {
+      sum += energy;
+      count += end - start;
+    }
+  }
+  if (!count) return track;
+  const rms = Math.sqrt(sum / count);
+  const gain = Math.min(8, 0.178 / rms);
+  const out = new Float32Array(samples.length);
+  // Peaks round off above the knee and never pass the ceiling (about -0.5 dB, headroom for the AAC encoder).
+  const knee = 0.7;
+  const ceiling = 0.94;
+  for (let i = 0; i < samples.length; i++) {
+    const v = samples[i] * gain;
+    const a = Math.abs(v);
+    out[i] = a <= knee ? v : Math.sign(v) * (knee + (ceiling - knee) * Math.tanh((a - knee) / (ceiling - knee)));
+  }
+  return { samples: out, sampleRate };
+}
+
+/** The voice track (if any) over the music bed, the bed ducked wherever someone is speaking, then mastered. */
 export function mixWithMusic(voice: { samples: Float32Array; sampleRate: number } | null, seconds: number, style: MusicStyle): { samples: Float32Array; sampleRate: number } | null {
-  if (style === 'none') return voice;
+  if (style === 'none') return voice ? master(voice) : null;
   const rate = 48_000;
   const bed = makeBed(seconds, rate, style);
-  if (!voice) return { samples: bed, sampleRate: rate };
+  if (!voice) return master({ samples: bed, sampleRate: rate });
   const words = resampleTo(voice.samples, voice.sampleRate, rate);
   const out = new Float32Array(Math.max(bed.length, words.length));
   let envelope = 0;
   for (let i = 0; i < out.length; i++) {
     const w = i < words.length ? words[i] : 0;
-    // Follow the voice loudness (fast up, slow down) and lower the bed under it.
+    // Follow the voice loudness (fast up, slow release so the bed doesn't pump between words) and lower the bed about
+    // 12 dB under it.
     const level = Math.abs(w);
-    envelope = level > envelope ? envelope + (level - envelope) * 0.02 : envelope * 0.9997;
-    const duck = 1 - Math.min(0.6, envelope * 6);
+    envelope = level > envelope ? envelope + (level - envelope) * 0.02 : envelope * 0.99996;
+    const duck = 1 - Math.min(0.75, envelope * 10);
     const b = i < bed.length ? bed[i] * duck : 0;
-    out[i] = Math.max(-1, Math.min(1, w + b));
+    out[i] = w + b;
   }
-  return { samples: out, sampleRate: rate };
+  return master({ samples: out, sampleRate: rate });
 }
 
 /** Plays the bed in time with a preview that starts now. Returns a stop function. */
@@ -129,4 +164,9 @@ export function playBed(context: AudioContext, seconds: number, style: MusicStyl
       /* already finished */
     }
   };
+}
+
+/** `master` for a track that may not exist. */
+export function masterOrNull(track: { samples: Float32Array; sampleRate: number } | null): { samples: Float32Array; sampleRate: number } | null {
+  return track ? master(track) : null;
 }

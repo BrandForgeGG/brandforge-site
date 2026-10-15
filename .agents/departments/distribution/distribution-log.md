@@ -1345,3 +1345,9 @@ we do not have.
 
 **Distribution move:** in-app copy on the welcome screen ("Pick the name you go by here"). No announcement needed.
 
+
+## 2026-10-15 — Video QA with Watch, and "Make one like this"
+
+**Change:** (1) We installed the open-source Watch skill (bradautomates/claude-video) and used it to review a launch video and a short made by our own makers. Three fixes came from that. Both makers had a blank first frame; that frame is the thumbnail and the autoplay frame, so the opening words now show from frame one. The sound was -23.5 LUFS, far quieter than social apps play; every track is now mastered to about -14.8 LUFS with a soft peak ceiling. The music bed sat only about 5 dB under the voice and pumped between words; it now ducks about 12 dB with a slow release. On the short video's end card the link was orange text on an orange glow; it now sits on a solid pill. (2) **Make one like this** in the launch maker: pick a launch video you like, and yours follows its hook, pace and story order in your own words. The browser measures the cuts and keeps five frames and the sound; the video never leaves the device. Groq Whisper and a vision model return the format, which becomes extra writer rules. Verified on prod: our own launch video was read as 7 shots, 106 words a minute, a bold-claim hook in 5s, and a pain-first reference turned bakesy.app into 4 short beats. New lib/reference-format.js (+7 tests, 674/674).
+
+**Distribution move:** changelog line for founders: "New in the launch video maker: Make one like this. Show it a launch video you love; yours follows its hook, pace and order, in your own words. Your video never leaves your device." Demo note: pick a fast-cut 9:16 launch video, then show the "Made like …" card and the shorter, punchier story it writes.

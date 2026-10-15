@@ -57,6 +57,19 @@ function drawCover(ctx: CanvasRenderingContext2D, image: CanvasImageSource & { w
   ctx.drawImage(image, (w - dw) / 2 + drift, (h - dh) / 2 + lift, dw, dh);
 }
 
+/** Near-black or white, whichever reads better on a hex colour. */
+function readableOn(hex: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return '#ffffff';
+  const n = parseInt(m[1], 16);
+  const lin = (c: number) => {
+    const v = c / 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  };
+  const lum = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+  return lum > 0.4 ? '#141414' : '#ffffff';
+}
+
 /** Draws the frame at time t (seconds) onto a canvas sized w by h. */
 export function drawFrame(ctx: CanvasRenderingContext2D, w: number, h: number, scenes: VideoScene[], t: number, look: Look, brand: VideoBrand, art: HTMLCanvasElement | SceneArt): void {
   if (scenes.length === 0) return;
@@ -89,8 +102,10 @@ export function drawFrame(ctx: CanvasRenderingContext2D, w: number, h: number, s
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, w, h);
 
-  // Words: in over half a second, out over the last third of a second.
-  const appear = ease(local / 0.5);
+  // Words: in over half a second, out over the last third of a second. The first scene is already there on frame one:
+  // that frame is the thumbnail and the autoplay frame, so it must never be blank.
+  const first = index === 0;
+  const appear = first ? 1 : ease(local / 0.5);
   const leave = scene.seconds - local < 0.35 ? ease((scene.seconds - local) / 0.35) : 1;
   const alpha = Math.min(appear, leave);
   const rise = (1 - appear) * 40 * k;
@@ -131,9 +146,25 @@ export function drawFrame(ctx: CanvasRenderingContext2D, w: number, h: number, s
     ctx.font = `600 ${bodySize}px ${BODY}`;
     bodyLines.forEach((line, i) => {
       // Each line arrives a beat after the one before it.
-      ctx.globalAlpha = Math.min(alpha, ease((local - 0.25 - i * 0.18) / 0.4));
-      ctx.fillStyle = scene.kind === 'end' && i === 0 ? look.accent : look.text;
-      ctx.fillText(line, x, y);
+      ctx.globalAlpha = Math.min(alpha, first ? 1 : ease((local - 0.25 - i * 0.18) / 0.4));
+      if (scene.kind === 'end' && i === 0) {
+        // The call to action sits on a solid accent pill, so it reads over any picture, glow or photo.
+        const pad = 34 * k;
+        const pillW = ctx.measureText(line).width + pad * 2;
+        const pillH = bodySize * 1.7;
+        y += 18 * k;
+        const top = y - bodySize * 1.15;
+        ctx.fillStyle = look.accent;
+        ctx.beginPath();
+        ctx.roundRect(x - pillW / 2, top, pillW, pillH, pillH / 2);
+        ctx.fill();
+        ctx.fillStyle = readableOn(look.accent);
+        ctx.fillText(line, x, y);
+        y += pillH - bodySize * 1.35 + 14 * k;
+      } else {
+        ctx.fillStyle = look.text;
+        ctx.fillText(line, x, y);
+      }
       y += bodySize * 1.35;
     });
   }
