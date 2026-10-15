@@ -5,6 +5,7 @@ import { screenText } from '@/lib/content-policy.js';
 import { getAiUsageToday } from '@/lib/project-db';
 import { aiBudget, aiModels } from '@/lib/ai-tier';
 import { noteFailure } from '@/lib/model-router.js';
+import { withCraft } from '@/lib/craft.js';
 
 // Writes the words for a carousel. One place for the website, the Telegram and Discord bots and the
 // weekly calendar, so they all get the same rules: facts only from what was given or found, a
@@ -107,7 +108,7 @@ export async function makeCarouselPlan(input: PlanInput): Promise<PlanResult> {
   let lastError = 'The writer is busy. Try again in a moment.';
   for (const model of aiModels()) {
     try {
-      const completion = await completeJson({ apiKey, model, system: prompt.system, user: prompt.user, temperature: 0.6, maxTokens: model.includes(':') ? 4000 : 1600, timeoutMs: model.includes(':') ? 55000 : 30000 });
+      const completion = await completeJson({ apiKey, model, system: withCraft(prompt.system), user: prompt.user, temperature: 0.6, maxTokens: model.includes(':') ? 4000 : 1600, timeoutMs: model.includes(':') ? 55000 : 30000 });
       const checked = normalizePlan(completion.text, { count: prompt.count, cta });
       if (checked.ok) return { ok: true, plan: checked.plan, source: { title: sourceTitle, image: sourceImage, url: sourceUrl } };
       lastError = checked.error;

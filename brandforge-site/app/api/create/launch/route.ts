@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { completeJson } from '@/lib/blueprint-llm';
 import { readSite, type SiteRead } from '@/lib/site-capture.js';
-import { buildLaunchPrompt, launchText, normalizeLaunch } from '@/lib/launch-video.js';
+import { buildLaunchPrompt, launchText, normalizeLaunch, type LaunchScene } from '@/lib/launch-video.js';
 import { screenText } from '@/lib/content-policy.js';
 import { getAiUsageToday } from '@/lib/project-db';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -10,6 +10,7 @@ import { fetchSiteHtml, fetchStylesheets, pictureRoute } from '@/lib/launch-fetc
 import { aiBudget, aiModels } from '@/lib/ai-tier';
 import { noteFailure } from '@/lib/model-router.js';
 import { withAiTier } from '@/lib/ai-tier';
+import { isSloppy, withCraft } from '@/lib/craft.js';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -39,7 +40,7 @@ async function handle(request: NextRequest) {
     const apiKey = String(process.env.OPENROUTER_API_KEY ?? '').trim();
     if (!apiKey) return NextResponse.json({ error: 'The writer is not available right now.' }, { status: 503 });
 
-    const body = (await request.json().catch(() => ({}))) as { url?: unknown; about?: unknown };
+    const body = (await request.json().catch(() => ({}))) as { url?: unknown; about?: unknown; tone?: unknown };
     const about = String(body.about ?? '').replace(/\s+/g, ' ').trim().slice(0, 1200);
     const rawUrl = String(body.url ?? '').trim();
     const url = siteUrl(rawUrl);
@@ -67,40 +68,51 @@ async function handle(request: NextRequest) {
     if (!budget.allowed) return NextResponse.json({ error: budget.message }, { status: 429 });
 
     const hasPictures = (site?.pictures.length ?? 0) >= 2;
-    const prompt = buildLaunchPrompt({ site, about, hasPictures });
+    const prompt = buildLaunchPrompt({ site, about, hasPictures, tone: String(body.tone ?? 'bold') });
     const name = site?.name || '';
     let lastError = 'The writer is busy. Try again in a moment.';
-    for (const model of aiModels()) {
+    const models = aiModels();
+    // An answer full of AI-isms is kept only as a last resort: the next writer gets a chance to do better.
+    let fallback: { scenes: LaunchScene[]; share: { caption: string; linkedin: string } } | null = null;
+    const respond = (scenes: LaunchScene[], share: { caption: string; linkedin: string }) =>
+      NextResponse.json({
+        site: site
+          ? {
+              name: site.name,
+              host: site.host,
+              url: site.url,
+              colors: site.colors,
+              shot: pictureRoute(site.url, 'shot'),
+              pictures: site.pictures.map((picture) => ({ src: pictureRoute(picture.url), label: picture.label })),
+            }
+          : null,
+        scenes,
+        share,
+      });
+    for (const [index, model] of models.entries()) {
       try {
         // Fallback providers ("groq:" ...) and free models may think before answering, so they get room for both.
         const free = model.includes(':');
-        const completion = await completeJson({ apiKey, model, system: prompt.system, user: prompt.user, temperature: 0.6, maxTokens: free ? 4000 : 1200, timeoutMs: free ? 45000 : 30000 });
+        const completion = await completeJson({ apiKey, model, system: withCraft(prompt.system), user: prompt.user, temperature: 0.6, maxTokens: free ? 4000 : 1200, timeoutMs: free ? 45000 : 30000 });
         const checked = normalizeLaunch(completion.text, { name, hasSite: Boolean(site), hasPictures });
         if (!checked.ok) {
           console.warn('launch model answer refused:', model, checked.error, String(completion.text ?? '').slice(0, 300).replace(/\s+/g, ' '));
           lastError = checked.error;
           continue;
         }
-        const words = screenText(launchText(checked.scenes));
+        const words = screenText(`${launchText(checked.scenes)}\n${checked.share.caption}\n${checked.share.linkedin}`);
         if (!words.ok) return NextResponse.json({ error: words.message }, { status: 422 });
-        return NextResponse.json({
-          site: site
-            ? {
-                name: site.name,
-                host: site.host,
-                url: site.url,
-                colors: site.colors,
-                shot: pictureRoute(site.url, 'shot'),
-                pictures: site.pictures.map((picture) => ({ src: pictureRoute(picture.url), label: picture.label })),
-              }
-            : null,
-          scenes: checked.scenes,
-        });
+        if (isSloppy(`${launchText(checked.scenes)} ${checked.share.caption}`) && index < models.length - 1) {
+          fallback ??= { scenes: checked.scenes, share: checked.share };
+          continue;
+        }
+        return respond(checked.scenes, checked.share);
       } catch (cause) {
         noteFailure(model);
         console.warn('launch model failed:', model, cause instanceof Error ? cause.message.slice(0, 160) : cause);
       }
     }
+    if (fallback) return respond(fallback.scenes, fallback.share);
     return NextResponse.json({ error: `${lastError} Try again.` }, { status: 502 });
   } catch (error) {
     console.error('Launch video error:', error);

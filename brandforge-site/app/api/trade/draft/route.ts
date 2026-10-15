@@ -9,6 +9,7 @@ import { getAuthenticatedUser } from '@/lib/supabase-server';
 import { aiModels } from '@/lib/ai-tier';
 import { noteFailure } from '@/lib/model-router.js';
 import { withAiTier } from '@/lib/ai-tier';
+import { withCraft } from '@/lib/craft.js';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -79,7 +80,7 @@ async function handle(request: NextRequest) {
   let thin: { draft: ReturnType<typeof toDraft>; notes: { found: string[]; tips: string[] } } | null = null;
   for (const model of aiModels()) {
     try {
-      const completion = await completeJson({ apiKey, model, system: prompt.system, user: prompt.user, temperature: 0.5, maxTokens: model.includes(':') ? 3000 : 1100, timeoutMs: model.includes(':') ? 45000 : 25000 });
+      const completion = await completeJson({ apiKey, model, system: withCraft(prompt.system), user: prompt.user, temperature: 0.5, maxTokens: model.includes(':') ? 3000 : 1100, timeoutMs: model.includes(':') ? 45000 : 25000 });
       const json = JSON.parse(completion.text.slice(completion.text.indexOf('{'), completion.text.lastIndexOf('}') + 1));
       const checked = validateListing({ ...json, budgetMin: json.budgetMin ?? '', budgetMax: json.budgetMax ?? '' });
       if (!checked.ok) continue;

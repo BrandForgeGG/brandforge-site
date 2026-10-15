@@ -4,6 +4,7 @@ import { screenText } from '@/lib/content-policy.js';
 import { getAiUsageToday } from '@/lib/project-db';
 import { aiBudget, aiModels } from '@/lib/ai-tier';
 import { noteFailure } from '@/lib/model-router.js';
+import { withCraft } from '@/lib/craft.js';
 
 // Writes the words for one image (ad, quote, tip, announcement, poll). Same rules as the carousel writer: facts
 // only from what the person gave, a token-capped call to the standard model, a free model as the second try,
@@ -31,7 +32,7 @@ export async function makeImageCopy(input: ImageCopyInput): Promise<ImageCopyRes
   let lastError = 'The writer is busy. Try again in a moment.';
   for (const model of aiModels()) {
     try {
-      const completion = await completeJson({ apiKey, model, system: prompt.system, user: prompt.user, temperature: 0.7, maxTokens: model.includes(':') ? 2500 : 700, timeoutMs: model.includes(':') ? 55000 : 30000 });
+      const completion = await completeJson({ apiKey, model, system: withCraft(prompt.system), user: prompt.user, temperature: 0.7, maxTokens: model.includes(':') ? 2500 : 700, timeoutMs: model.includes(':') ? 55000 : 30000 });
       const checked = normalizeImageCopy(completion.text, kind, { button: input.button });
       if (checked.ok) return { ok: true, kind, copy: checked.copy };
       lastError = checked.error;

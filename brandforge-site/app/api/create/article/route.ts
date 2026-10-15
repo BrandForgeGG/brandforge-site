@@ -8,6 +8,7 @@ import { checkRateLimit } from '@/lib/rate-limit';
 import { aiBudget, aiModels } from '@/lib/ai-tier';
 import { noteFailure } from '@/lib/model-router.js';
 import { withAiTier } from '@/lib/ai-tier';
+import { withCraft } from '@/lib/craft.js';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -41,7 +42,7 @@ async function handle(request: NextRequest) {
     for (const model of aiModels()) {
       try {
         const free = model.includes(':');
-        const completion = await completeJson({ apiKey, model, system: prompt.system, user: prompt.user, temperature: 0.6, maxTokens: free ? 5000 : 2600, timeoutMs: free ? 55000 : 40000 });
+        const completion = await completeJson({ apiKey, model, system: withCraft(prompt.system), user: prompt.user, temperature: 0.6, maxTokens: free ? 5000 : 2600, timeoutMs: free ? 55000 : 40000 });
         const checked = normalizeArticle(completion.text);
         if (checked.ok) return NextResponse.json({ article: checked.article });
         lastError = checked.error;

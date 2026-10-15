@@ -5,6 +5,7 @@ import { normalizePlan } from '@/lib/carousel-plan.js';
 import { buildCaptionPrompt, fallbackCaptions, normalizeCaptions } from '@/lib/carousel-captions.js';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { screenText } from '@/lib/content-policy.js';
+import { withCraft } from '@/lib/craft.js';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
     const prompt = buildCaptionPrompt({ plan: checked.plan, topic, brandName: String(brand.name ?? '').slice(0, 40), handle: String(brand.handle ?? '').slice(0, 40), cta });
     for (const model of MODELS) {
       try {
-        const completion = await completeJson({ apiKey, model, system: prompt.system, user: prompt.user, temperature: 0.7, maxTokens: 1400, timeoutMs: model.endsWith(':free') ? 40000 : 30000 });
+        const completion = await completeJson({ apiKey, model, system: withCraft(prompt.system), user: prompt.user, temperature: 0.7, maxTokens: 1400, timeoutMs: model.endsWith(':free') ? 40000 : 30000 });
         const parsed = normalizeCaptions(completion.text);
         if (parsed.ok) return NextResponse.json({ captions: parsed.captions, written: true });
       } catch (cause) {

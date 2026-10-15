@@ -11,6 +11,10 @@ export type LaunchScene =
   | { kind: 'cta'; heading: string; button: string; voice: string; seconds: number };
 export type LaunchKind = LaunchScene['kind'];
 export const KINDS: LaunchKind[];
-export function buildLaunchPrompt(input: { site: SiteRead | null; about: string; hasPictures: boolean }): { system: string; user: string };
-export function normalizeLaunch(raw: unknown, opts: { name: string; hasSite: boolean; hasPictures: boolean }): { ok: true; scenes: LaunchScene[] } | { ok: false; error: string };
+export type LaunchTone = 'bold' | 'calm' | 'playful' | 'premium';
+export type LaunchShare = { caption: string; linkedin: string };
+export const TONES: Record<LaunchTone, string>;
+export const TONE_IDS: LaunchTone[];
+export function buildLaunchPrompt(input: { site: SiteRead | null; about: string; hasPictures: boolean; tone?: string }): { system: string; user: string };
+export function normalizeLaunch(raw: unknown, opts: { name: string; hasSite: boolean; hasPictures: boolean }): { ok: true; scenes: LaunchScene[]; share: LaunchShare } | { ok: false; error: string };
 export function launchText(scenes: LaunchScene[]): string;

@@ -8,6 +8,15 @@ const { readSeconds } = require('./video-scenes.js');
 
 const KINDS = ['hook', 'problem', 'tour', 'features', 'steps', 'proof', 'cta'];
 
+// The voice of the video, chosen by the person (an idea from latent-spaces/brag: a tone you pick beats a tone you hope for).
+const TONES = {
+  bold: 'Bold: short, punchy lines with momentum. Confident, never shouty.',
+  calm: 'Calm: clear, warm and unhurried. Plain words, room to breathe.',
+  playful: 'Playful: light and witty, with one unexpected turn of phrase. Never silly about facts.',
+  premium: 'Premium: restrained and precise. Fewer words, each one chosen.',
+};
+const TONE_IDS = Object.keys(TONES);
+
 function clean(value, max) {
   return String(value == null ? '' : value)
     .replace(/[*_`#]/g, '')
@@ -22,7 +31,8 @@ function cleanList(list, max, size) {
 }
 
 /** The system and user lines for the writer. site may be null when the person only described the product. */
-function buildLaunchPrompt({ site, about, hasPictures }) {
+function buildLaunchPrompt({ site, about, hasPictures, tone }) {
+  const voiceOfVideo = TONES[tone] || TONES.bold;
   const system = [
     'You write short product launch videos, like the ones startups post on launch day.',
     'Answer with JSON only, in this exact shape:',
@@ -32,8 +42,13 @@ function buildLaunchPrompt({ site, about, hasPictures }) {
     '"features":{"heading":"","items":[{"title":"","note":""}],"voice":""},',
     '"steps":{"heading":"","items":[{"title":"","note":""}],"voice":""},',
     '"proof":{"heading":"","voice":""},',
-    '"cta":{"line":"","button":"","voice":""}}',
+    '"cta":{"line":"","button":"","voice":""},',
+    '"share":{"caption":"","linkedin":""}}',
     'Rules:',
+    `- Tone: ${voiceOfVideo}`,
+    '- The hook must stop the scroll in the first two seconds: the result, the tension or the surprise, never a greeting.',
+    '- share.caption: the post that goes with the video, at most 220 characters, hook first, no hashtag walls (two at most).',
+    '- share.linkedin: 2 to 4 short lines for LinkedIn, specific, no engagement-bait question.',
     '- heading: at most 7 words, a statement, no question marks. accent: one word from the hook heading to colour.',
     '- sub and note: at most 12 words. chips: 3 to 5 items of 1 to 3 words, the jobs or tools the product replaces.',
     '- features: 3 to 6 items; steps: exactly 3 items. title: 1 to 4 words.',
@@ -139,7 +154,9 @@ function normalizeLaunch(raw, { name, hasSite, hasPictures }) {
   scenes.push(timed({ kind: 'cta', heading: line, button: clean(cta.button, 24) || 'Get started', voice: voiceOf(cta, line) }, 1.2));
 
   if (scenes.length < 3) return { ok: false, error: 'The writer could not find enough to say about this.' };
-  return { ok: true, scenes };
+  // The post that goes with the video (written from the same plan, so the words match what people see).
+  const share = data.share && typeof data.share === 'object' ? { caption: clean(data.share.caption, 280), linkedin: clean(data.share.linkedin, 700) } : { caption: '', linkedin: '' };
+  return { ok: true, scenes, share };
 }
 
 /** All the words a scene puts on screen or says, for the content policy. */
@@ -149,4 +166,4 @@ function launchText(scenes) {
     .join('\n');
 }
 
-module.exports = { KINDS, buildLaunchPrompt, normalizeLaunch, launchText };
+module.exports = { KINDS, TONES, TONE_IDS, buildLaunchPrompt, normalizeLaunch, launchText };

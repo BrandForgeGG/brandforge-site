@@ -1329,3 +1329,11 @@ we do not have.
 
 **Distribution move:** the front page itself is the move. Demo note: screenshot the new hero (Meet BrandForge + sign-up card) for a "new front page" post.
 
+
+
+## 2026-10-15 â€” Creation quality: house writing rules, launch video tone, music and share copy
+
+**Change:** from the four repos the founder pointed at: latent-spaces/brag (MIT) and affaan-m/ECC (MIT) shaped this; VoiceStudio (AGPL desktop app needing a GPU) cannot run on the free hosting plan, and context-mode is agent tooling, not asset quality, so neither was adopted. (1) House writing rules for every writer (`lib/craft.js`, adapted from ECC's article-writing and content-engine skills): strongest concrete thing first, one idea per piece, proof over adjectives, short human sentences, nothing invented, no engagement bait, and a list of banned AI-isms ("unlock", "elevate", "seamless", "game-changer", "in today's fast-paced world"...). Applied to carousels, pictures, posts, captions, Distribute weeks, Trade drafts, articles and launch videos. Launch videos also drop an answer with two or more AI-isms in favour of the next writer, keeping it only as a last resort. (2) Launch videos, after brag: a tone you pick (Bold, Calm, Playful, Premium), a hook rule (the first two seconds show the result, tension or surprise), music under the video composed in the browser from code (Warm or Upbeat, four-chord pad, arpeggio, soft kick; ducks under the voice; nothing to license), and the post that goes with the video written from the same plan (a short caption and a LinkedIn version, with Copy buttons; the YouTube description defaults to it; the chat's video card has Copy caption). 671 tests (+3 craft).
+
+**Distribution move:** changelog line: "Launch videos now come with music, a tone you choose, and the post to go with them. Every BrandForge writer now follows house rules: no AI-speak."
+

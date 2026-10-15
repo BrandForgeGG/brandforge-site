@@ -35,6 +35,9 @@ export function VideoMessageCard({ embed, createdAt }: { embed: VideoEmbed; crea
   const [youtubeUrl, setYoutubeUrl] = useState(embed.youtubeUrl ?? null);
   const [shared, setShared] = useState(Boolean(embed.shared));
   const kind = `video-${embed.maker}` as MakerKind;
+  // The post written with the video (launch videos), to copy or to use as the YouTube description.
+  const share = (embed.state as { share?: { caption?: string; linkedin?: string } | null }).share ?? null;
+  const [copiedCaption, setCopiedCaption] = useState(false);
 
   async function link(): Promise<string | null> {
     if (url) return url;
@@ -123,6 +126,11 @@ export function VideoMessageCard({ embed, createdAt }: { embed: VideoEmbed; crea
           {embed.videoPath ? (
             <>
               <button type="button" onClick={() => void download()} disabled={busy} className={btn}>Download</button>
+              {share?.caption ? (
+                <button type="button" onClick={() => void navigator.clipboard?.writeText(share.caption ?? '').then(() => { setCopiedCaption(true); window.setTimeout(() => setCopiedCaption(false), 1500); })} className={btn}>
+                  {copiedCaption ? 'Caption copied' : 'Copy caption'}
+                </button>
+              ) : null}
               <button type="button" onClick={() => setPosting((value) => !value)} aria-expanded={posting} className={btn}>{youtubeUrl ? 'Post again to YouTube' : 'Post to YouTube'}</button>
               {shared ? null : (
                 <ShareButton
@@ -150,7 +158,7 @@ export function VideoMessageCard({ embed, createdAt }: { embed: VideoEmbed; crea
         <YouTubePost
           keptPath={embed.videoPath}
           defaultTitle={embed.title}
-          defaultDescription={embed.title}
+          defaultDescription={share?.caption || embed.title}
           vertical={embed.vertical}
           seconds={embed.seconds ?? 0}
           onPosted={(posted) => {

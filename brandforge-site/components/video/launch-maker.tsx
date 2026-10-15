@@ -8,7 +8,9 @@ import { fitToVoice, totalSeconds } from '@/lib/video-scenes.js';
 import type { LaunchScene } from '@/lib/launch-video.js';
 import { canEncode, encodeFrames } from '@/components/video/video-engine';
 import { drawLaunchFrame, loadLaunchFonts, type LaunchLook, type LaunchMedia } from '@/components/video/launch-engine';
-import { VOICES, clipsFor, layTrack, playClips, type Clip, type VoiceId } from '@/components/video/voice';
+import { VOICES, audioContext, clipsFor, layTrack, playClips, type Clip, type VoiceId } from '@/components/video/voice';
+import { MUSIC_STYLES, mixWithMusic, playBed, type MusicStyle } from '@/components/video/music';
+import { TONE_IDS, type LaunchShare, type LaunchTone } from '@/lib/launch-video.js';
 import { YouTubePost } from '@/components/video/youtube-post';
 import { LaunchProgress } from '@/components/video/launch-progress';
 import { posterOf } from '@/components/drafts/drafts-store';
@@ -31,7 +33,9 @@ const KIND_LABEL: Record<LaunchScene['kind'], string> = { hook: 'Opening', probl
 const DEFAULT_LOOK: LaunchLook = { bg: '#0f0e0d', text: '#f4f1ec', accent: '#ff6a2b', dark: true };
 
 /** What a launch video draft keeps, to reopen it as it was. */
-type LaunchState = { url: string; about: string; shape: Shape; withVoice: boolean; voice: VoiceId; scenes: LaunchScene[]; site: SiteInfo | null; look: LaunchLook };
+type LaunchState = { url: string; about: string; shape: Shape; withVoice: boolean; voice: VoiceId; scenes: LaunchScene[]; site: SiteInfo | null; look: LaunchLook; tone?: LaunchTone; music?: MusicStyle; share?: LaunchShare | null };
+
+const TONE_LABEL: Record<LaunchTone, string> = { bold: 'Bold', calm: 'Calm', playful: 'Playful', premium: 'Premium' };
 
 function slugOf(name: string): string {
   return (name || 'launch').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'launch';
@@ -83,6 +87,11 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
   const [playing, setPlaying] = useState(false);
   const [withVoice, setWithVoice] = useState(true);
   const [voice, setVoice] = useState<VoiceId>('af_heart');
+  // How it sounds and reads: the tone the story is written in, the music under it, and the post that goes with it.
+  const [tone, setTone] = useState<LaunchTone>('bold');
+  const [music, setMusic] = useState<MusicStyle>('warm');
+  const [share, setShare] = useState<LaunchShare | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
   const [clips, setClips] = useState<Clip[] | null>(null);
   const [voiceState, setVoiceState] = useState<{ status: 'idle' | 'working' | 'ready' | 'failed'; text: string }>({ status: 'idle', text: '' });
   const [progress, setProgress] = useState(0);
@@ -119,6 +128,9 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
         setShape(s.shape);
         setWithVoice(s.withVoice);
         setVoice(s.voice);
+        if (s.tone) setTone(s.tone);
+        if (s.music) setMusic(s.music);
+        setShare(s.share ?? null);
         setScenes(s.scenes);
         setSite(s.site);
         setLook(s.look);
@@ -131,7 +143,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
   }, [draft, chat?.initialState]);
 
   // Keep the draft up to date while working; an edit after the MP4 was made drops the old MP4 from the draft.
-  const draftState: LaunchState = { url, about, shape, withVoice, voice, scenes, site, look };
+  const draftState: LaunchState = { url, about, shape, withVoice, voice, scenes, site, look, tone, music, share };
   useAutosave({ draftState, made: Boolean(result) }, scenes.length > 0, () =>
     void draft.save({ title: scenes[0]?.heading || site?.name || 'Launch video', state: draftState, ...(result ? {} : { video: undefined, poster: undefined, seconds: undefined }) })
   );
@@ -203,6 +215,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
       return;
     }
     const stopVoice = voiced && clips ? playClips(clips, startsOf(timed)) : () => undefined;
+    const stopMusic = playBed(audioContext(), seconds, music);
     const start = performance.now() + 50;
     let frame = 0;
     const tick = () => {
@@ -218,8 +231,9 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
     return () => {
       cancelAnimationFrame(frame);
       stopVoice();
+      stopMusic();
     };
-  }, [timed, playing, fontsReady, f.w, f.h, look, media, seconds, voiced, clips, assetsReady]);
+  }, [timed, playing, fontsReady, f.w, f.h, look, media, seconds, voiced, clips, assetsReady, music]);
 
   useEffect(() => () => {
     if (result) URL.revokeObjectURL(result.url);
@@ -235,10 +249,11 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
     setBusy('writing');
     setWriteStarted(Date.now());
     try {
-      const res = await fetch('/api/create/launch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: url.trim(), about: about.trim() }) });
-      const data = (await res.json().catch(() => ({}))) as { site?: SiteInfo | null; scenes?: LaunchScene[]; error?: string };
+      const res = await fetch('/api/create/launch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: url.trim(), about: about.trim(), tone }) });
+      const data = (await res.json().catch(() => ({}))) as { site?: SiteInfo | null; scenes?: LaunchScene[]; share?: LaunchShare; error?: string };
       if (!res.ok || !data.scenes) throw new Error(data.error || 'The writer could not make the story. Try again.');
       setScenes(data.scenes);
+      setShare(data.share ?? null);
       setSite(data.site ?? null);
       setLook(data.site?.colors ?? DEFAULT_LOOK);
       if (!data.site) setMedia({ name: '', host: '', shot: null, pictures: [] });
@@ -282,7 +297,8 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
     const controller = new AbortController();
     stopRef.current = controller;
     try {
-      const track = voiced && clips ? layTrack(clips, startsOf(timed), seconds) : null;
+      // The voice-over (if any) over the music bed, the music ducked under the words.
+      const track = mixWithMusic(voiced && clips ? layTrack(clips, startsOf(timed), seconds) : null, seconds, music);
       setBusy('Making the video…');
       setProgress(0);
       const blob = await encodeFrames({ w: f.w, h: f.h, seconds, draw: (ctx, t) => drawLaunchFrame(ctx, f.w, f.h, timed, t, look, media), voice: track, onProgress: setProgress, signal: controller.signal });
@@ -343,6 +359,20 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
             </button>
             {VOICES.map((option) => (
               <button key={option.id} type="button" aria-pressed={withVoice && voice === option.id} onClick={() => { setWithVoice(true); setVoice(option.id); setResult(null); setPlaying(false); }} className={`${chip} ${withVoice && voice === option.id ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-1.5" role="group" aria-label="Tone">
+            {TONE_IDS.map((id) => (
+              <button key={id} type="button" aria-pressed={tone === id} onClick={() => setTone(id)} className={`${chip} ${tone === id ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>
+                {TONE_LABEL[id]}
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-1.5" role="group" aria-label="Music">
+            {MUSIC_STYLES.map((option) => (
+              <button key={option.id} type="button" aria-pressed={music === option.id} onClick={() => { setMusic(option.id); setResult(null); setPlaying(false); }} className={`${chip} ${music === option.id ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>
                 {option.label}
               </button>
             ))}
@@ -412,6 +442,28 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
           ) : null}
           {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
 
+          {share && (share.caption || share.linkedin) ? (
+            <div className="rounded-2xl border border-line bg-panel p-4">
+              <p className="text-sm font-semibold text-foreground">The post that goes with it</p>
+              {[
+                { id: 'caption', label: 'Short caption', text: share.caption },
+                { id: 'linkedin', label: 'LinkedIn', text: share.linkedin },
+              ]
+                .filter((entry) => entry.text)
+                .map((entry) => (
+                  <div key={entry.id} className="mt-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{entry.label}</p>
+                      <button type="button" onClick={() => void navigator.clipboard?.writeText(entry.text).then(() => { setCopied(entry.id); window.setTimeout(() => setCopied(null), 1500); })} className="text-xs text-ember hover:underline">
+                        {copied === entry.id ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                    <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-foreground">{entry.text}</p>
+                  </div>
+                ))}
+            </div>
+          ) : null}
+
           <details className="group rounded-2xl border border-line bg-panel">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm text-foreground">
               <span>
@@ -450,7 +502,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
               <p className="text-sm text-foreground">Your launch video is ready: {Math.round(result.seconds)} seconds{result.voiced ? ', with voice-over' : ''}.</p>
               <video src={result.url} controls playsInline className="mt-2 max-h-72 w-auto max-w-full rounded-lg" />
               <a href={result.url} download={result.name} className="mt-2 inline-block rounded-lg bg-ember px-4 py-2 text-sm font-semibold text-on-ember transition hover:opacity-90">Download MP4</a>
-              <YouTubePost blob={result.blob} defaultTitle={`${media.name ? `${media.name}: ` : ''}${scenes[0]?.heading ?? ''}`.slice(0, 100)} defaultDescription={[...scenes.map((scene) => scene.voice), site?.url ?? ''].filter(Boolean).join(NEWLINE)} vertical={tall} seconds={result.seconds} />
+              <YouTubePost blob={result.blob} defaultTitle={`${media.name ? `${media.name}: ` : ''}${scenes[0]?.heading ?? ''}`.slice(0, 100)} defaultDescription={[share?.caption || scenes.map((scene) => scene.voice).join(' '), site?.url ?? ''].filter(Boolean).join(NEWLINE)} vertical={tall} seconds={result.seconds} />
             </div>
           ) : null}
         </div>

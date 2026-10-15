@@ -5,6 +5,7 @@ import { screenText } from '@/lib/content-policy.js';
 import { getAiUsageToday } from '@/lib/project-db';
 import { aiBudget, aiModels } from '@/lib/ai-tier';
 import { noteFailure } from '@/lib/model-router.js';
+import { withCraft } from '@/lib/craft.js';
 
 // Writes the first draft of an update, poll, quiz or thread from one sentence. The person edits it before
 // anything is posted. Same rules as the carousel writer: facts only from what they gave, a token-capped
@@ -43,7 +44,7 @@ export async function makePostDraft(type: PostType, topic: string): Promise<Draf
       const completion = await completeJson({
         apiKey,
         model,
-        system: `${SYSTEM}\n\n${SHAPES[type]}`,
+        system: withCraft(`${SYSTEM}\n\n${SHAPES[type]}`),
         user: `What the post is about:\n${words}`,
         temperature: 0.7,
         maxTokens: model.includes(':') ? 3000 : 700,

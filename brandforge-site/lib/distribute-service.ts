@@ -5,6 +5,7 @@ import { getAiUsageToday } from '@/lib/project-db';
 import { extractUrls } from '@/lib/trade-research.js';
 import { aiBudget, aiModels } from '@/lib/ai-tier';
 import { noteFailure } from '@/lib/model-router.js';
+import { withCraft } from '@/lib/craft.js';
 import {
   anglesFor,
   assembleWeek,
@@ -39,7 +40,7 @@ async function ask(system: string, user: string, until: number, maxTokens: numbe
     if (left < 4000) return null;
     const free = model.includes(':');
     try {
-      const completion = await completeJson({ apiKey, model, system, user, temperature: 0.7, maxTokens: free ? maxTokens * 3 : maxTokens, timeoutMs: Math.min(free ? 40_000 : 22_000, left) });
+      const completion = await completeJson({ apiKey, model, system: withCraft(system), user, temperature: 0.7, maxTokens: free ? maxTokens * 3 : maxTokens, timeoutMs: Math.min(free ? 40_000 : 22_000, left) });
       return completion.text;
     } catch (cause) {
       noteFailure(model);
