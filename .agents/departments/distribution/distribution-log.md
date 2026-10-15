@@ -1399,3 +1399,9 @@ we do not have.
 **Change:** the first live "Pay by card" said "That plan cannot be paid by card". The server log showed Stripe's real reason: secret_key_required, because STRIPE_SECRET_KEY held the publishable key (pk_live) instead of the secret key (sk_live). The founder is swapping it in Vercel. The checkout route now checks the plan first ("cannot be paid by card" is only for a plan that does not exist). A Stripe refusal is now an honest 502: "Card payment could not start right now. Try again in a moment, or pay with crypto."
 
 **Distribution move:** none; an internal fix with no marketing angle.
+
+## 2026-10-16 — Card checkout works
+
+**Change:** the founder swapped STRIPE_SECRET_KEY to the real secret key; redeployed. A signed-in "Pay by card · Pro" opened Stripe's page (BrandForge Pro, €19/month). The server shows a checkout_started funnel event for pro and no Stripe errors in the log. BrandForge now takes cards (Stripe) and crypto (17 coin and network options). Not yet seen: a completed card payment through the webhook (needs a real charge, refundable in Stripe).
+
+**Distribution move:** ready to announce on Discord and Telegram: "Pro and the team plans are open: pay by card, or in crypto straight from Trust Wallet (USDT, USDC, BTC, ETH, SOL and more)."
