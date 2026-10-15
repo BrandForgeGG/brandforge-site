@@ -1321,3 +1321,11 @@ we do not have.
 
 **Distribution move:** none (internal cost work); the maker fix goes in the next changelog line: "Hide a maker in a chat and pick it up later, exactly where you left it."
 
+
+
+## 2026-10-15 â€” Less noise: a short front page, four nav links, a clear chat start
+
+**Change:** removed the Investors, Developers, Enterprise and Features pages (permanent redirects: Features and Investors to the front page, Enterprise to Pricing, Developers to Apply; sitemap and llms.txt updated). The landing nav is now Create, Distribute, Trade, Pricing (Join Discord and Community gone), led by the BrandForge app-icon mark (also in the app's sidebar). The front page is now short, in the spirit of Claude's: "Meet BrandForge" with the sign-up card right in the hero (Google in one tap or an email code), then Create with BrandForge (real member creations), Distribute with BrandForge (the networks and real just-published posts), Collaborate with people (real team profiles, Trade, milestone contracts), Pricing (Free, Pro, a team) and three FAQs; member work is read at most every ten minutes (ISR) so it stays cheap to serve. New footer: brand promise and Start free, four columns (Product, People, Company, Talk to us), small print and socials. /chat now says at once that the chat goes to the official BrandForge team and a person answers (AI only when asked), with three one-tap ways in: Hire someone (Trade), Make an asset (Create), Post everywhere (Distribute); the duplicate chip row is gone and the composer reads "Write to the BrandForge teamâ€¦". Verified by local captures of the front page and /chat.
+
+**Distribution move:** the front page itself is the move. Demo note: screenshot the new hero (Meet BrandForge + sign-up card) for a "new front page" post.
+

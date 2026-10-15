@@ -3,15 +3,15 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { getSessionUser } from '@/lib/browser-auth';
-import { COMMUNITY_LINKS } from '@/lib/community';
 import { useLogin } from '@/components/login-dialog';
+import { BrandMark } from '@/components/brand-mark';
 
+// Four places, nothing else: what you can do, and what it costs.
 const NAV_LINKS = [
-  { label: 'Features', href: '/features' },
+  { label: 'Create', href: '/create' },
+  { label: 'Distribute', href: '/distribute' },
   { label: 'Trade', href: '/trade' },
   { label: 'Pricing', href: '/pricing' },
-  { label: 'Work', href: '/#work' },
-  { label: 'Community', href: '/#community' },
 ];
 
 export function LandingNav() {
@@ -38,10 +38,10 @@ export function LandingNav() {
       <div className="bf-landing-nav-inner">
         <Link
           href="/"
-          className="font-serif text-2xl text-foreground"
+          className="text-2xl"
           aria-label="BrandForge home"
         >
-          Brand<span className="text-ember">Forge</span>
+          <BrandMark size={32} />
         </Link>
 
         <div className="hidden items-center gap-6 text-sm text-muted sm:flex">
@@ -62,14 +62,6 @@ export function LandingNav() {
             </Link>
           ) : (
             <>
-              <a
-                href={COMMUNITY_LINKS.discord.href}
-                target="_blank"
-                rel="noreferrer"
-                className="hidden rounded-xl border border-line px-4 py-2 text-sm text-foreground transition hover:border-ember sm:inline-block"
-              >
-                Join Discord
-              </a>
               <button
                 type="button"
                 onClick={() => openLogin({ reason: 'signin', next: '/chat' })}
@@ -117,14 +109,6 @@ export function LandingNav() {
                   {link.label}
                 </a>
               ))}
-              <a
-                href={COMMUNITY_LINKS.discord.href}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-lg px-2 py-3 text-base text-foreground transition hover:bg-panel-2"
-              >
-                Join Discord
-              </a>
             </div>
           </div>
         ) : null}

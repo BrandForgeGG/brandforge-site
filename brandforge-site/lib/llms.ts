@@ -7,13 +7,11 @@ import { SITE_URL } from '@/lib/seo';
 type Retainer = { name: string; price: string; cadence: string; blurb: string; features: string[] };
 
 const PAGES: Array<[string, string, string]> = [
-  ['/features', 'Features', 'What the chat, the makers, Distribute, Trade and the team do.'],
   ['/pricing', 'Pricing', 'Free tools; the BrandForge team by the month or one project at a fixed price.'],
   ['/create', 'Create', 'Make a carousel, ad, quote, tip, announcement or poll from one sentence.'],
   ['/distribute', 'Distribute', 'A week of posts written from a sentence, a link or a file.'],
   ['/trade', 'Trade', 'An open marketplace for gigs, products, tools, launches and requests.'],
   ['/platform', 'Platform', 'Brief, proposal, contract, escrow and milestone release, step by step.'],
-  ['/enterprise', 'Enterprise', 'A named team, fixed prices and escrow for bigger projects.'],
   ['/work', 'Work', 'Real projects the team shipped, with live links.'],
   ['/specialists', 'The team', 'How specialists are vetted and paid.'],
   ['/blog', 'Blog', 'Dated product updates.'],

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BrandMark } from "@/components/brand-mark";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { fetchAuthed, getSessionUser } from "@/lib/browser-auth";
@@ -330,15 +331,7 @@ onMobileClose,
             aria-label="BrandForge home"
             className="font-serif text-lg tracking-tight text-foreground"
           >
-            {isCollapsed ? (
-              <span aria-hidden="true">
-                B<span className="text-ember">F</span>
-              </span>
-            ) : (
-              <>
-                Brand<span className="text-ember">Forge</span>
-              </>
-            )}
+            <BrandMark iconOnly={isCollapsed} size={26} />
           </Link>
           {/* Desktop: collapse to the icon rail. Phone: the drawer closes instead; a collapse
               control does nothing there. */}

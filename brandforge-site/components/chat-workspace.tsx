@@ -180,22 +180,6 @@ export const COMMANDS: { id: ChatCommand; label: string; hint: string; placehold
   { id: 'plan', label: 'Hire the BrandForge team', hint: 'Describe it and get a proposal from people', placeholder: 'What do you need built or made?', icon: 'M4 4.5h4v4H4zM12 4.5h4v4h-4zM8 6.5h4M6 8.5v4h6M12 12.5h4v3h-4z' },
 ];
 
-function StartPrompts({ onPick }: { onPick: (command: ChatCommand) => void }) {
-  return (
-    <div className="bf-start-prompts mx-auto w-full max-w-3xl px-4 sm:px-6">
-      <div className="flex flex-wrap justify-center gap-2" role="group" aria-label="Starting points">
-        {COMMANDS.map((item) => (
-          <button key={item.id} type="button" data-tip={item.hint} onClick={() => onPick(item.id)} className="bf-start-chip bf-start-chip-command">
-            <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d={item.icon} />
-            </svg>
-            {item.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // One quiet pointer, shown once, after the first answer: where the extra powers live.
 function ActionsHint({ show, onDismiss }: { show: boolean; onDismiss: () => void }) {
@@ -2896,11 +2880,27 @@ return (
                 <img src="/discord-server-icon.png" alt="" className="h-full w-full object-cover" />
               </div>
               <h1 className="bf-start-title mt-5 font-serif text-3xl text-foreground sm:text-[2.6rem]">
-                What are we building today?
+                Talk to the BrandForge team
               </h1>
               <p className="bf-start-sub mt-3 max-w-md text-sm leading-relaxed text-muted">
-                AI drafts in seconds. People make it good.{isGuestBrowser ? " Free to try, no sign-up." : ""}
+                This chat goes to the official BrandForge team and a person answers you here. The AI joins only when you ask it to.{isGuestBrowser ? " Free, no sign-up." : ""}
               </p>
+              {/* The other ways in, one tap each: pick a person, make an asset, or post. */}
+              <div className="mt-7 grid w-full gap-2 text-left sm:grid-cols-3">
+                {[
+                  { href: "/trade", hue: "var(--hue-trade)", title: "Hire someone", line: "Pick a profile in Trade" },
+                  { href: "/create", hue: "var(--hue-create)", title: "Make an asset", line: "Video, carousel, ad, article" },
+                  { href: "/distribute", hue: "var(--hue-distribute)", title: "Post everywhere", line: "Now, or a whole week" },
+                ].map((item) => (
+                  <Link key={item.href} href={item.href} className="group rounded-2xl border border-line bg-panel p-4 transition hover:border-ember">
+                    <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <span className="h-2 w-2 rounded-full" style={{ background: item.hue }} aria-hidden="true" />
+                      {item.title}
+                    </span>
+                    <span className="mt-1 block text-xs text-muted">{item.line}</span>
+                  </Link>
+                ))}
+              </div>
             </div>
           )}
             />
@@ -3414,7 +3414,7 @@ return (
                       ? aiEnabled && (!aiAccess || aiAccess.state === "allowed")
                         ? "Ask anything…"
                         : "Message the team…"
-                      : "Make, plan or trade anything…"
+                      : "Write to the BrandForge team…"
                 }
                 rows={1}
                 disabled={isBusy}
@@ -3482,9 +3482,6 @@ return (
           </form>
           <ActionsHint show={showActionsHint} onDismiss={dismissActionsHint} />
         </div>
-        {!conversationId && !isBooting ? (
-          <StartPrompts onPick={pickCommand} />
-        ) : null}
         <p className="bf-chat-footer">
           <span>AI can make mistakes. People check what matters.</span>
           <span className="bf-chat-footer-links">

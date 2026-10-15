@@ -7,7 +7,6 @@ import { SITE_URL } from '@/lib/seo';
 // can skip what has not moved. Update a date here when its page changes.
 const PAGES: Array<{ path: string; frequency: 'daily' | 'weekly' | 'monthly'; priority: number; modified: string }> = [
   { path: '/', frequency: 'weekly', priority: 1.0, modified: '2026-10-12' },
-  { path: '/features', frequency: 'weekly', priority: 0.9, modified: '2026-10-12' },
   { path: '/pricing', frequency: 'weekly', priority: 0.9, modified: '2026-10-12' },
   { path: '/create', frequency: 'weekly', priority: 0.9, modified: '2026-10-11' },
   { path: '/distribute', frequency: 'weekly', priority: 0.8, modified: '2026-10-12' },
@@ -15,12 +14,9 @@ const PAGES: Array<{ path: string; frequency: 'daily' | 'weekly' | 'monthly'; pr
   { path: '/explore', frequency: 'daily', priority: 0.7, modified: '2026-10-13' },
   { path: '/platform', frequency: 'weekly', priority: 0.8, modified: '2026-10-05' },
   { path: '/apply', frequency: 'monthly', priority: 0.8, modified: '2026-10-05' },
-  { path: '/enterprise', frequency: 'monthly', priority: 0.7, modified: '2026-10-11' },
   { path: '/work', frequency: 'weekly', priority: 0.7, modified: '2026-10-09' },
   { path: '/specialists', frequency: 'weekly', priority: 0.7, modified: '2026-10-09' },
   { path: '/blog', frequency: 'weekly', priority: 0.7, modified: '2026-10-12' },
-  { path: '/developers', frequency: 'monthly', priority: 0.6, modified: '2026-10-11' },
-  { path: '/investors', frequency: 'monthly', priority: 0.6, modified: '2026-10-12' },
   { path: '/about', frequency: 'monthly', priority: 0.6, modified: '2026-10-11' },
   { path: '/careers', frequency: 'monthly', priority: 0.5, modified: '2026-10-11' },
   { path: '/terms', frequency: 'monthly', priority: 0.3, modified: '2026-09-28' },

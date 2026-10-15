@@ -1,46 +1,21 @@
+// Three questions, the ones a first-time visitor actually has.
 const FAQS = [
   {
     question: 'What is BrandForge?',
     answer:
-      'A workspace where AI and people work on the same page. Make and publish many kinds of messages, trade products, services and requests, and get a person to finish the job when you want one. AI drafts in seconds; people make it good.',
+      'One place to make content, publish it and get help from real people. You describe what you need in a chat; AI makes the first version in seconds (a launch video, a carousel, an ad, an article), you post or schedule it on your channels, and the BrandForge team or a member you hire from Trade can take it the rest of the way.',
   },
   {
     question: 'How much does it cost?',
     answer:
-      'The tools are free. The BrandForge team costs from €490 a month (Starter), €990 (Growth) or €2,490 (Build), and larger builds are quoted. One-off projects carry a fixed price and timeline that you accept before anything is funded; you can counter the offer in the chat. Nothing is charged until you agree.',
+      'Making and publishing is free. Pro (€19 a month) puts the strongest AI models on everything you make. A BrandForge team that delivers every month starts at €490. Hiring a member in Trade is a contract you agree on, paid per milestone, with a flat 5% fee when a milestone is paid.',
   },
   {
-    question: 'How do payments work?',
+    question: 'Who reads my chat?',
     answer:
-      'You fund the agreed total in crypto to the BrandForge escrow wallet. The transfer is verified on-chain, and milestone payments release only after you approve the delivered work. The rest stays with you.',
-  },
-  {
-    question: 'Can I hire or get hired by other members?',
-    answer:
-      'Yes. Post what you offer or need in the Trade Center, agree terms in a private chat and sign a milestone contract there. The payer funds it, the other person submits each milestone, and the payer has 48 hours to approve or raise an issue before it releases. BrandForge keeps a flat 5% of each released milestone.',
-  },
-  {
-    question: 'Who builds my project?',
-    answer:
-      'The BrandForge team: vetted designers, developers, reverse engineers and marketers. They join your project chat with the proposal and stay there through delivery.',
-  },
-  {
-    question: 'How long does it take?',
-    answer:
-      'Every proposal states delivery in weeks. Small builds ship in days, larger projects run in milestones you approve one by one.',
-  },
-  {
-    question: 'What if something goes wrong?',
-    answer:
-      'Money only moves on your approval: escrow releases per milestone, and anything unapproved stays with you. Decline any proposal twice and that team member is out; your brief stays open.',
-  },
-  {
-    question: 'Why use BrandForge instead of AI alone?',
-    answer:
-      'AI is fast, but it does not stand behind the result. On BrandForge the AI drafts and a person finishes: you, your team or the BrandForge team. For paid work, funding is protected through milestone-based escrow, and you only pay after you approve what was delivered.',
+      'You and the official BrandForge team. A person from the team claims your chat and answers you there; the AI only answers when you ask it to. If you hire someone from Trade, they join that chat too.',
   },
 ];
-
 export function LandingFaq() {
   const schema = {
     '@context': 'https://schema.org',
@@ -55,7 +30,7 @@ export function LandingFaq() {
     <section id="faq" className="bf-section" aria-labelledby="faq-title">
       <div className="mx-auto max-w-3xl">
         <h2 id="faq-title" className="mt-2 font-serif text-3xl text-foreground sm:text-4xl">
-          Questions, answered
+          Three questions, answered
         </h2>
         <div className="mt-8 space-y-3">
           {FAQS.map((item) => (

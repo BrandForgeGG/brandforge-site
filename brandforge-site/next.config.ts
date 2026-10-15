@@ -51,6 +51,11 @@ const nextConfig: NextConfig = {
       // Free tools live inside Create and Distribute now; Connect became Settings > Integrations.
       { source: "/tools/:slug", destination: "/create", permanent: false },
       { source: "/connect", destination: "/settings#integrations", permanent: false },
+      // Fewer pages, less noise: these said what the front page and pricing say now.
+      { source: "/features", destination: "/", permanent: true },
+      { source: "/enterprise", destination: "/pricing", permanent: true },
+      { source: "/developers", destination: "/apply", permanent: true },
+      { source: "/investors", destination: "/", permanent: true },
     ];
   },
   async headers() {
