@@ -56,8 +56,8 @@ export const PAGE_COPY: Record<string, PageCopy> = {
     cta: 'Browse the projects',
   },
   '/specialists': {
-    title: 'The BrandForge team: vetted designers and developers',
-    description: 'How BrandForge vets its team: real work reviewed by a person, paid per milestone, held to quality. Meet the team and brief them.',
+    title: 'The BrandForge team: the people behind your plan',
+    description: 'Designers, editors, developers and marketers who ship your content, ads and site updates every month, each reviewed by a person. Meet the team.',
     keywords: ['vetted freelancers', 'BrandForge team', 'hire designers and developers', 'specialist marketplace', 'trusted freelancers'],
     cta: 'Meet the team',
   },
@@ -74,8 +74,8 @@ export const PAGE_COPY: Record<string, PageCopy> = {
     cta: 'See the roadmap',
   },
   '/about': {
-    title: 'About BrandForge: AI and people, one workspace',
-    description: 'BrandForge is where AI and people work on the same page: make and publish every kind of message, and trade services. Learn what we do.',
+    title: 'About BrandForge: AI and people, on the same page',
+    description: 'AI makes the first version in seconds; a team of designers, editors, developers and marketers ships it every month. Learn what we do.',
     keywords: ['about BrandForge', 'AI and people', 'who runs BrandForge', 'BrandForge mission'],
     cta: 'Learn what we do',
   },

@@ -6,23 +6,23 @@ import { CookieSettingsLink } from '@/components/cookie-consent';
 // The footer: the brand and its one-line promise, four short columns, then the small print and where to follow us.
 type Item = { label: string; href: string; external?: boolean };
 
+// Buyer first: what you get and the proof, then the tools, then the company.
 const COLUMNS: { title: string; items: Item[] }[] = [
   {
-    title: 'Product',
+    title: 'Team plans',
+    items: [
+      { label: 'Pricing', href: '/pricing' },
+      { label: 'Client work', href: '/work' },
+      { label: 'The team', href: '/specialists' },
+      { label: 'Talk to the team', href: '/chat' },
+    ],
+  },
+  {
+    title: 'Do it yourself',
     items: [
       { label: 'Create', href: '/create' },
       { label: 'Distribute', href: '/distribute' },
       { label: 'Trade', href: '/trade' },
-      { label: 'Pricing', href: '/pricing' },
-    ],
-  },
-  {
-    title: 'People',
-    items: [
-      { label: 'The BrandForge team', href: '/specialists' },
-      { label: 'Work we shipped', href: '/work' },
-      { label: 'Join the team', href: '/apply' },
-      { label: 'Careers', href: '/careers' },
     ],
   },
   {
@@ -31,12 +31,13 @@ const COLUMNS: { title: string; items: Item[] }[] = [
       { label: 'About', href: '/about' },
       { label: 'Blog', href: '/blog' },
       { label: 'Explore', href: '/explore' },
+      { label: 'Join the team', href: '/apply' },
+      { label: 'Careers', href: '/careers' },
     ],
   },
   {
-    title: 'Talk to us',
+    title: 'Community',
     items: [
-      { label: 'Start a chat', href: '/chat' },
       { label: 'Discord', href: COMMUNITY_LINKS.discord.href, external: true },
       { label: 'Telegram', href: COMMUNITY_LINKS.telegramGroup.href, external: true },
     ],
@@ -60,9 +61,9 @@ export function SiteFooter() {
             <Link href="/" className="font-serif text-2xl text-foreground" aria-label="BrandForge home">
               Brand<span className="text-ember">Forge</span>
             </Link>
-            <p className="mt-3 text-sm leading-relaxed text-muted">Create, publish and work with real people, in one chat read by the BrandForge team.</p>
-            <Link href="/chat" className="mt-5 inline-flex rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-on-ember transition hover:opacity-90">
-              Start free
+            <p className="mt-3 text-sm leading-relaxed text-muted">A full growth team for less than one hire. Full refund if month one isn&apos;t delivered.</p>
+            <Link href="/pricing" className="mt-5 inline-flex rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-on-ember transition hover:opacity-90">
+              See plans
             </Link>
           </div>
           {COLUMNS.map((column) => (

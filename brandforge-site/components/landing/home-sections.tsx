@@ -9,9 +9,13 @@ import { TESTIMONIALS } from '@/lib/testimonials';
 const WORK = PORTFOLIO_PROJECTS.filter((project) => project.screenshot).slice(0, 4);
 
 // Verbatim client words (lib/testimonials.js): the three about ongoing content and brand work, which is what the plans sell.
-const QUOTES = ['charizard-5stars', 'deleted-user-content', 'deleted-user-mx-growth']
-  .map((id) => TESTIMONIALS.find((quote) => quote.id === id))
-  .filter((quote): quote is NonNullable<typeof quote> => Boolean(quote));
+const HOME_QUOTES = ['charizard-5stars', 'deleted-user-content', 'deleted-user-mx-growth'];
+
+const quotesFor = (ids: string[]) =>
+  ids.map((id) => TESTIMONIALS.find((quote) => quote.id === id)).filter((quote): quote is NonNullable<typeof quote> => Boolean(quote));
+
+// How a review is signed: the Discord name as written, or Client when the account is gone or unnamed.
+const signedBy = (author: string) => (/^(deleted user|brandforge client)$/i.test(author) ? 'Client' : author.replace(/^[^A-Za-z0-9]+\s*/, ''));
 
 const STEPS = [
   ['Chat with the team', 'Tell us about your brand. A person answers in the chat.'],
@@ -68,14 +72,15 @@ export function HomeSteps() {
   );
 }
 
-export function HomeQuotes() {
+/** Three verbatim client reviews (lib/testimonials.js) in a row. */
+export function QuoteRow({ ids = HOME_QUOTES }: { ids?: string[] }) {
   return (
     <section aria-label="What clients say" className="border-t border-line px-5 py-14 sm:px-8">
       <div className="mx-auto grid max-w-6xl gap-4 md:grid-cols-3">
-        {QUOTES.map((quote) => (
+        {quotesFor(ids).map((quote) => (
           <figure key={quote.id} className="flex flex-col justify-between rounded-3xl border border-line bg-panel p-6">
             <blockquote className="text-base leading-relaxed text-foreground">&ldquo;{quote.text}&rdquo;</blockquote>
-            <figcaption className="mt-4 text-xs text-muted">{quote.author === 'Deleted User' ? 'Client' : quote.author}, on Discord</figcaption>
+            <figcaption className="mt-4 text-xs text-muted">{signedBy(quote.author)}, on Discord</figcaption>
           </figure>
         ))}
       </div>
@@ -92,6 +97,10 @@ export function HomePricing() {
       </div>
     </section>
   );
+}
+
+export function HomeQuotes() {
+  return <QuoteRow />;
 }
 
 // The tools stay one line away for people who would rather do it themselves.

@@ -10,6 +10,9 @@ const DIRECTION = [
 
 // status: live (works today), building (being made or waiting on one step), next (not started, needed).
 const ROADMAP = [
+  { status: 'live', title: 'A growth team by the month', body: 'Designers, editors, developers and marketers ship your content, ads and site updates from €690 a month. Chat first, pay when you agree.', since: '2026-10-16' },
+  { status: 'live', title: 'Client work you can open', body: 'Real client sites and apps, live today, on the Work page.', since: '2026-10-09' },
+  { status: 'live', title: 'One post, every network', body: 'Each network gets its own picture shape and a caption fitted to its limits.', since: '2026-10-16' },
   { status: 'live', title: 'A chat that does the work', body: 'Ideas, links and files become a researched plan, a fix list or a draft.' },
   { status: 'live', title: 'Create', body: 'Carousels, ads, quotes, tips, announcements and polls from one sentence, ready to download.' },
   { status: 'live', title: 'Distribute', body: 'A week of posts written for you, posted or scheduled to LinkedIn, Bluesky, Tumblr, Mastodon, Telegram and Discord.' },
@@ -18,11 +21,9 @@ const ROADMAP = [
   { status: 'live', title: 'Video and every format', body: 'Short and long videos with a free voice-over, story covers, infographics, offers, events, pins, slide decks and articles.', since: '2026-10-14' },
   { status: 'live', title: 'Launch videos from a website', body: 'Paste a site and get a narrated launch video in its own colours, with a look at the real site and its pictures. Free.', since: '2026-10-15' },
   { status: 'live', title: 'Scheduled posting with links', body: 'Posts go out at their time and each one links back to the real post on its network.', since: '2026-10-14' },
-  { status: 'building', title: 'Instagram, Facebook and Threads', body: 'Built. Waiting for the Meta app to be set up, then for Meta to review it before everyone can connect.' },
+  { status: 'building', title: 'Instagram, Facebook and Threads', body: 'Built and set up. Waiting for Meta to review the app before every member can connect.' },
   { status: 'building', title: 'X', body: 'Paused: X charges for every post and BrandForge cannot afford it yet. Donations turn it back on.' },
   { status: 'next', title: 'TikTok', body: 'Photo posts and slideshows, after TikTok audits the app.' },
-  { status: 'next', title: 'Video', body: 'Short videos for Reels, Shorts and TikTok, made the same way as carousels.' },
-  { status: 'next', title: 'Work we can show', body: 'The first client projects delivered through BrandForge, shown with their permission.' },
 ];
 
 const STATUS_LABEL = { live: 'Live', building: 'Building now', next: 'Needs to happen' };

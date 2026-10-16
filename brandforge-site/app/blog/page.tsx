@@ -14,6 +14,15 @@ export const metadata: Metadata = pageMeta({ path: "/blog", title: "Blog — Bra
 // Real shipping entries, dated to when they actually went live. New posts go on top.
 const POSTS: { date: string; title: string; body: Block[] }[] = [
   {
+    date: '2026-10-16',
+    title: 'A full growth team for less than one hire',
+    body: [
+      'The team plans are new. Launch is €690 a month (8 posts or carousels, 2 short videos, everything scheduled on your channels). Growth is €1,250 (12 posts or carousels, 4 short videos, fresh ad creatives every week, one site or store update and a monthly results report). Scale is €2,490 (20 posts or carousels, 8 short videos, ad management, up to 10 developer hours and a weekly call with your project lead).',
+      'You chat first and pay when you agree. The invoice arrives in your chat, by card or crypto. Each month the work list lands in that chat, and nothing counts as delivered until you approve it. If month one is not delivered, you get a full refund.',
+      'Start at brandforge.gg/pricing.',
+    ],
+  },
+  {
     date: '2026-10-11',
     title: 'Ads, quotes, tips, announcements and polls, made inside the chat',
     body: [
@@ -27,6 +36,7 @@ const POSTS: { date: string; title: string; body: Block[] }[] = [
     date: '2026-10-11',
     title: 'Your own BrandForge team, by the month, and everything new this week',
     body: [
+      'Update, October 16: these plans were replaced by Launch (€690), Growth (€1,250) and Scale (€2,490). See the newest post or the pricing page.',
       'You can now hire the BrandForge team by the month. Starter is €490 (eight carousels or posts, captions for every platform and a content calendar). Growth is €990 (twenty pieces, ad copy, a weekly report and replies within a working day). Build is €2,490 (a website or app that keeps moving, up to two new pages or features a month). Bigger projects start at €5,000 and run as milestone contracts held in escrow. Every plan starts in a chat with a person, and you only pay once you agree what you get.',
       'The chat is the front door: brandforge.gg/chat. Pick a command (Make an ad or image, Make a carousel, Post a gig or listing, or Hire the BrandForge team), and what you ask for is made right in the conversation, saved as a message with its own date, and keeps the chat going underneath it. You can delete what you send, see how long ago you sent it, and switch the AI off with one tap when you want to talk to people only.',
       'Trade is open to everyone. Say what you offer or need in your own words, a profile, a gig, a product, a tool, a startup launch or a request, and BrandForge writes the listing for you to check and publish. Every listing gets its own assistant chat that remembers the goal.',
