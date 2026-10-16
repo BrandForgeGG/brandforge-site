@@ -4,6 +4,7 @@ import { makeCarouselPlan } from '@/lib/carousel-service';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { recordFunnelEvent } from '@/lib/project-db';
 import { withAiTier } from '@/lib/ai-tier';
+import { withFreeGate } from '@/lib/usage-gate';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -48,5 +49,7 @@ async function handle(request: NextRequest) {
 
 // Runs in the asker's AI tier: paying accounts get the strongest models and a bigger daily allowance.
 export async function POST(request: NextRequest) {
-  return withAiTier(request, () => handle(request));
+  // The short video maker writes its scenes here too: that counts as its one video, not a creation.
+  const purpose = await request.clone().json().then((b: { purpose?: unknown }) => b?.purpose).catch(() => null);
+  return withFreeGate(request, purpose === 'video' ? 'video' : 'creation', () => withAiTier(request, () => handle(request)));
 }

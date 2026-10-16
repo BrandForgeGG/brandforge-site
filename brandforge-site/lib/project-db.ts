@@ -6689,3 +6689,23 @@ export async function openTeamPlanChat(userId: string, title: string, welcome: s
   await admin.from('messages').insert({ conversation_id: id, sender_type: 'human_operator', sender_name: 'BrandForge', content: welcome, content_type: 'system' });
   return { id, created: true };
 }
+
+// Free plan allowances (usage_monthly, migration 0060). Service role only; a read or write failure never blocks making
+// something (fail open), it only means that use was not counted.
+export async function getMonthlyUsage(key: string, month: string, kind: 'creation' | 'video'): Promise<number> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return 0;
+  const { data, error } = await admin.from('usage_monthly').select('count').eq('key', key).eq('month', month).eq('kind', kind).maybeSingle();
+  if (error) {
+    console.error('getMonthlyUsage:', error.message);
+    return 0;
+  }
+  return Number(data?.count ?? 0);
+}
+
+export async function bumpMonthlyUsage(key: string, month: string, kind: 'creation' | 'video'): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return;
+  const { error } = await admin.rpc('bump_usage', { p_key: key, p_month: month, p_kind: kind });
+  if (error) console.error('bumpMonthlyUsage:', error.message);
+}

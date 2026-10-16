@@ -9,6 +9,7 @@ import { oauthConfigured } from '@/lib/oauth-channels';
 import { metaOpenTo } from '@/lib/meta';
 import { threadsConfigured } from '@/lib/threads';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { channelAllowed, limitResponse } from '@/lib/usage-gate';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -39,6 +40,7 @@ export async function POST(request: NextRequest) {
   if ('error' in auth) return auth.error;
   const rate = checkRateLimit(`carousel-link:${auth.user.id}`, { limit: 20, windowMs: 60 * 60 * 1000 });
   if (!rate.allowed) return NextResponse.json({ error: 'Too many tries. Wait a little and try again.' }, { status: 429 });
+  if (!(await channelAllowed(auth.user.id))) return limitResponse('channel');
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   let linked: LinkResult;

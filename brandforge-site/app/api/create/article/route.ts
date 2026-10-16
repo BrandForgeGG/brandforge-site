@@ -8,6 +8,7 @@ import { checkRateLimit } from '@/lib/rate-limit';
 import { aiBudget, aiModels } from '@/lib/ai-tier';
 import { noteFailure } from '@/lib/model-router.js';
 import { withAiTier } from '@/lib/ai-tier';
+import { withFreeGate } from '@/lib/usage-gate';
 import { withCraft } from '@/lib/craft.js';
 
 export const runtime = 'nodejs';
@@ -60,5 +61,5 @@ async function handle(request: NextRequest) {
 
 // Runs in the asker's AI tier: paying accounts get the strongest models and a bigger daily allowance.
 export async function POST(request: NextRequest) {
-  return withAiTier(request, () => handle(request));
+  return withFreeGate(request, 'creation', () => withAiTier(request, () => handle(request)));
 }

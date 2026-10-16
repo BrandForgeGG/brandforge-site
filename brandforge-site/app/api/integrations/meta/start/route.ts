@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
+import { channelAllowed } from '@/lib/usage-gate';
 import { metaAuthorizeUrl, metaConfigured } from '@/lib/meta';
 import { makeUnsubscribeToken } from '@/lib/unsubscribe-token';
 
@@ -14,6 +15,8 @@ export async function GET(request: NextRequest) {
   if (!metaConfigured()) return back('unavailable');
   const user = await getAuthenticatedUser(request).catch(() => null);
   if (!user) return NextResponse.redirect(new URL('/login?next=/settings%23integrations', origin));
+  // Free connects two channels; the settings page shows the upgrade prompt.
+  if (!(await channelAllowed(user.id))) return NextResponse.redirect(new URL('/settings?limit=channel#integrations', origin));
   const state = makeUnsubscribeToken(user.id);
   if (!state) return back('error');
   return NextResponse.redirect(metaAuthorizeUrl(state, origin));

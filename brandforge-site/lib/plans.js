@@ -13,7 +13,7 @@ const PLANS = [
     cadence: '',
     blurb: 'Try it on your brand.',
     aiDaily: 150,
-    features: ['AI carousels, posts, ads and videos', 'Post to your channels', 'Fast AI models', 'Hire on Trade (5% fee)'],
+    features: ['10 AI creations a month (carousels, posts, ads)', '1 short video a month', '2 connected channels', 'Fast AI models', 'Hire on Trade (5% fee)'],
   },
   {
     id: 'pro',
@@ -23,7 +23,7 @@ const PLANS = [
     cadence: '/mo',
     blurb: 'For creators and solo founders.',
     aiDaily: 1500,
-    features: ['Everything in Free', 'Strongest AI models', '10x the AI every day', 'Keeps going when Free runs out', 'Cancel anytime'],
+    features: ['Unlimited AI creations', '10 videos a month', 'All channels, and a whole week scheduled at once', 'Strongest AI models', 'Cancel anytime'],
     highlight: true,
   },
   {

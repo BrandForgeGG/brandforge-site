@@ -4,6 +4,7 @@ import { makeBrief } from '@/lib/distribute-service';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { recordFunnelEvent } from '@/lib/project-db';
 import { withAiTier } from '@/lib/ai-tier';
+import { withFreeGate } from '@/lib/usage-gate';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -47,5 +48,5 @@ async function handle(request: NextRequest) {
 
 // Runs in the asker's AI tier: paying accounts get the strongest models and a bigger daily allowance.
 export async function POST(request: NextRequest) {
-  return withAiTier(request, () => handle(request));
+  return withFreeGate(request, 'creation', () => withAiTier(request, () => handle(request)));
 }

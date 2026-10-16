@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Fraunces } from "next/font/google";
 import { LoginProvider } from "@/components/login-dialog";
 import { CookieConsent } from "@/components/cookie-consent";
+import { LimitDialog } from "@/components/limit-dialog";
 import { JsonLd } from "@/components/json-ld";
 import { SITE_URL, ogImageUrl, siteGraph } from "@/lib/seo";
 
@@ -79,6 +80,7 @@ export default function RootLayout({
       <body>
         <JsonLd data={siteGraph()} />
         <LoginProvider>{children}</LoginProvider>
+        <LimitDialog />
         <CookieConsent />
       </body>
     </html>

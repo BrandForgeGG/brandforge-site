@@ -10,6 +10,7 @@ import { fetchSiteHtml, fetchStylesheets, pictureRoute } from '@/lib/launch-fetc
 import { aiBudget, aiModels } from '@/lib/ai-tier';
 import { noteFailure } from '@/lib/model-router.js';
 import { withAiTier } from '@/lib/ai-tier';
+import { withFreeGate } from '@/lib/usage-gate';
 import { isSloppy, withCraft } from '@/lib/craft.js';
 import { formatRules, normalizeFormat } from '@/lib/reference-format.js';
 
@@ -125,5 +126,5 @@ async function handle(request: NextRequest) {
 
 // Runs in the asker's AI tier: paying accounts get the strongest models and a bigger daily allowance.
 export async function POST(request: NextRequest) {
-  return withAiTier(request, () => handle(request));
+  return withFreeGate(request, 'video', () => withAiTier(request, () => handle(request)));
 }

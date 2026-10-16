@@ -298,7 +298,7 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId, chat }
       const res = await fetch('/api/carousel/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'words', type: 'list', topic: topic.trim(), count: format === 'long' ? 7 : format === 'square' ? 5 : 4 }),
+        body: JSON.stringify({ mode: 'words', type: 'list', purpose: 'video', topic: topic.trim(), count: format === 'long' ? 7 : format === 'square' ? 5 : 4 }),
       });
       const data = (await res.json().catch(() => ({}))) as { plan?: unknown; error?: string };
       if (!res.ok || !data.plan) throw new Error(data.error || 'The writer could not make the scenes. Try again.');
