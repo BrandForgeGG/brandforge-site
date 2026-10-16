@@ -9,7 +9,7 @@ import { TESTIMONIALS } from '@/lib/testimonials';
 const WORK = PORTFOLIO_PROJECTS.filter((project) => project.screenshot).slice(0, 4);
 
 // Verbatim client words (lib/testimonials.js): the three about ongoing content and brand work, which is what the plans sell.
-const HOME_QUOTES = ['charizard-5stars', 'deleted-user-content', 'deleted-user-mx-growth'];
+const HOME_QUOTES = ['charizard-5stars', 'deleted-user-content', 'vizzy-multiple-projects'];
 
 const quotesFor = (ids: string[]) =>
   ids.map((id) => TESTIMONIALS.find((quote) => quote.id === id)).filter((quote): quote is NonNullable<typeof quote> => Boolean(quote));
@@ -44,7 +44,7 @@ export function HomeHero() {
           <div className="grid grid-cols-2 gap-3">
             {WORK.map((project) => (
               <Link key={project.name} href={`/work/${projectSlug(project.name)}`} className="group overflow-hidden rounded-2xl border border-line bg-panel transition hover:border-ember">
-                <Image src={project.screenshot as string} alt={`${project.name}, ${project.description}`} width={640} height={400} className="aspect-[16/10] w-full object-cover object-top" />
+                <Image src={project.screenshot as string} alt={`${project.name}, ${project.description}`} width={640} height={400} priority className="aspect-[16/10] w-full object-cover object-top" />
                 <span className="block truncate px-3 py-2 text-xs text-muted group-hover:text-foreground">{project.name}</span>
               </Link>
             ))}

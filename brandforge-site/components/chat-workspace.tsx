@@ -562,6 +562,13 @@ export function ChatWorkspace() {
   };
 
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  // The box grows with what is in it (up to its CSS cap), so a prefilled first line is read in full before it is sent.
+  useEffect(() => {
+    const node = composerRef.current;
+    if (!node) return;
+    node.style.height = "auto";
+    node.style.height = `${node.scrollHeight}px`;
+  }, [input]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const autoAnsweredRef = useRef<Set<string>>(new Set());
   // Mirror of the current conversation, readable inside async continuations: any fetch that
@@ -2634,17 +2641,9 @@ return (
                 <button
                   type="button"
                   onClick={() => openGuestLogin({ reason: "save", next: conversationId ? `/chat?conversationId=${conversationId}` : "/" })}
-                  className="rounded-full border border-line px-4 py-2 text-sm font-medium text-foreground transition hover:bg-overlay"
+                  className="rounded-full px-3 py-2 text-sm font-medium text-muted transition hover:text-foreground"
                 >
                   Log in
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openGuestLogin({ reason: "save", next: conversationId ? `/chat?conversationId=${conversationId}` : "/" })}
-                  className="rounded-full bg-ember px-4 py-2 text-sm font-semibold text-on-ember transition hover:opacity-90"
-                >
-                  <span className="sm:hidden">Sign up</span>
-                  <span className="hidden sm:inline">Sign up for free</span>
                 </button>
               </>
             ) : null}
@@ -3240,6 +3239,20 @@ return (
                 <span className="min-w-0 flex-1">The BrandForge team has your message and will answer here.</span>
                 <button type="button" onClick={() => void runTurn(conversationId, undefined, true)} className="rounded-lg border border-line px-2.5 py-1 text-xs text-foreground transition hover:border-ember">
                   Ask the AI now
+                </button>
+              </div>
+            ) : null}
+            {/* A guest who wrote to the team: the reply lands here, but they may close the tab. Signing in (email or Google)
+                makes the chat theirs, so the team's reply also reaches them by email. */}
+            {isGuestOwner && messages.some((entry) => entry.sender === "user") ? (
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-ember/40 bg-ember/10 px-3 py-2 text-sm">
+                <span className="text-foreground">Sent. We reply here. Get the reply by email too?</span>
+                <button
+                  type="button"
+                  onClick={() => openGuestLogin({ reason: "reply", next: conversationId ? `/chat?conversationId=${conversationId}` : "/chat" })}
+                  className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember transition hover:opacity-90"
+                >
+                  Email me the reply
                 </button>
               </div>
             ) : null}

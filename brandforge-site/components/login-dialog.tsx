@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { createPortal } from 'react-dom';
 import { SignInForm } from '@/components/sign-in-form';
 
-type OpenOptions = { next?: string; reason?: 'save' | 'signin' | 'start' | 'carousel' | 'distribute' };
+type OpenOptions = { next?: string; reason?: 'save' | 'signin' | 'start' | 'carousel' | 'distribute' | 'reply' };
 type LoginApi = { openLogin: (options?: OpenOptions) => void };
 
 const LoginContext = createContext<LoginApi>({
@@ -24,6 +24,7 @@ const COPY = {
   carousel: { title: 'Sign in to edit and download', line: 'Free, no card. Your carousel is saved and waiting for you the moment you are in.' },
   distribute: { title: 'Sign in to schedule or post', line: 'Free, no card. Your carousel and captions are kept for you.' },
   start: { title: 'Sign in to get your answer', line: 'Free, no card. Your idea is kept and ready the moment you are in.' },
+  reply: { title: 'Get the reply by email', line: 'Use your email or Google. This chat stays yours, and the team’s reply reaches your inbox.' },
   signin: { title: 'Log in or sign up', line: 'New or returning, same options. Free to start, no card.' },
 } as const;
 
