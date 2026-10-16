@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { HeroSignIn } from '@/components/landing/hero-signin';
 import { ImageSampleVisual } from '@/components/studio/image-sample-visual';
+import { PricingPlans } from '@/components/pricing-plans';
+import { RANK, SERVICES, ServiceTile } from '@/components/integrations/brand-icons';
 import type { ImageKind } from '@/lib/image-kinds.js';
 
 // The front page, short on purpose: who we are with a way in, the three things you do here (shown with real work from
@@ -10,15 +12,8 @@ type Creation = { id: string; title: string; image: string | null; video: boolea
 type Published = { id: string; network: string; url: string; caption: string; thumb: string };
 type Person = { handle: string; name: string; headline: string };
 
-const NETWORKS: { name: string; color: string }[] = [
-  { name: 'LinkedIn', color: '#0a66c2' },
-  { name: 'YouTube', color: '#ff0033' },
-  { name: 'Bluesky', color: '#1185fe' },
-  { name: 'Telegram', color: '#229ed9' },
-  { name: 'Discord', color: '#5865f2' },
-  { name: 'Mastodon', color: '#6364ff' },
-  { name: 'Tumblr', color: '#36465d' },
-];
+// Networks a member can link today, most used first (Instagram and Facebook join once Meta approves the app).
+const NETWORKS = RANK.filter((id) => ['youtube', 'linkedin', 'telegram', 'discord', 'slack', 'bluesky', 'mastodon', 'tumblr'].includes(id));
 
 const SAMPLE_KINDS: ImageKind[] = ['ad', 'quote', 'announcement', 'tip'];
 
@@ -42,18 +37,18 @@ function Cta({ href, children, primary = false }: { href: string; children: Reac
 export function HomeHero() {
   return (
     <section className="px-5 pb-16 pt-10 sm:px-8 sm:pt-16">
-      <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-16">
+      <div className="mx-auto grid max-w-6xl items-center gap-10 [&>*]:min-w-0 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-16">
         <div>
           <h1 className="font-serif text-5xl leading-[1.02] text-foreground sm:text-6xl lg:text-7xl" style={{ textWrap: 'balance' }}>
-            Meet Brand<span className="text-ember">Forge</span>
+            A full growth team for <span className="text-ember">less than one hire.</span>
           </h1>
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted sm:text-xl">
-            Make it, post it everywhere, and get real people on it when you need them. One chat, read by the BrandForge team.
+            Developers, designers, editors and marketers ship your content, ads and site updates every month. From €1,250/mo, and if month one isn&apos;t delivered, it&apos;s free.
           </p>
           <ul className="mt-7 space-y-2.5 text-[15px] text-foreground">
-            <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--hue-create)]" aria-hidden="true" />Launch videos, carousels, ads and articles in your own colours, in minutes.</li>
-            <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--hue-distribute)]" aria-hidden="true" />Post now or schedule a week on LinkedIn, YouTube, Bluesky, Telegram and more.</li>
-            <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--hue-trade)]" aria-hidden="true" />Hire a designer, developer or marketer, and pay per milestone.</li>
+            <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--hue-create)]" aria-hidden="true" />AI makes videos, posts, ads and articles in minutes.</li>
+            <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--hue-distribute)]" aria-hidden="true" />Post everywhere, each network in its own format.</li>
+            <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--hue-trade)]" aria-hidden="true" />People finish it. You pay per milestone.</li>
           </ul>
         </div>
         <HeroSignIn />
@@ -68,7 +63,7 @@ export function HomeCreate({ creations }: { creations: Creation[] }) {
   const real = withPictures.slice(0, withPictures.length >= 4 ? 4 : 2);
   return (
     <section id="create" className="border-t border-line px-5 py-16 sm:px-8 sm:py-20">
-      <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-2 lg:gap-16">
+      <div className="mx-auto grid max-w-6xl items-center gap-10 [&>*]:min-w-0 lg:grid-cols-2 lg:gap-16">
         <div>
           <Eyebrow hue="create">Create</Eyebrow>
           <h2 className="mt-3 font-serif text-4xl leading-tight text-foreground sm:text-5xl">Create with BrandForge</h2>
@@ -104,23 +99,23 @@ export function HomeDistribute({ published }: { published: Published[] }) {
   const recent = published.slice(0, 3);
   return (
     <section id="distribute" className="border-t border-line px-5 py-16 sm:px-8 sm:py-20">
-      <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-2 lg:gap-16">
-        <div className="lg:order-2">
+      <div className="mx-auto grid max-w-6xl items-center gap-10 [&>*]:min-w-0 lg:grid-cols-2 lg:gap-16">
+        <div className="min-w-0 lg:order-2">
           <Eyebrow hue="distribute">Distribute</Eyebrow>
           <h2 className="mt-3 font-serif text-4xl leading-tight text-foreground sm:text-5xl">Distribute with BrandForge</h2>
           <p className="mt-4 max-w-lg text-lg leading-relaxed text-muted">
-            Connect your channels once. Post what you made right away, or let BrandForge write and schedule a whole week, pictures included.
+            Connect once. Post now, or schedule the whole week.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Cta href="/distribute" primary>Plan my week</Cta>
           </div>
         </div>
-        <div className="space-y-3 lg:order-1">
+        <div className="min-w-0 space-y-3 lg:order-1">
           <div className="flex flex-wrap gap-2">
-            {NETWORKS.map((network) => (
-              <span key={network.name} className="inline-flex items-center gap-2 rounded-full border border-line bg-panel px-3.5 py-2 text-sm text-foreground">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: network.color }} aria-hidden="true" />
-                {network.name}
+            {NETWORKS.map((id) => (
+              <span key={id} title={SERVICES[id].name}>
+                <ServiceTile id={id} on size={40} />
+                <span className="sr-only">{SERVICES[id].name}</span>
               </span>
             ))}
           </div>
@@ -154,7 +149,7 @@ export function HomeCollaborate({ people }: { people: Person[] }) {
   const shown = people.slice(0, 4);
   return (
     <section id="people" className="border-t border-line px-5 py-16 sm:px-8 sm:py-20">
-      <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-2 lg:gap-16">
+      <div className="mx-auto grid max-w-6xl items-center gap-10 [&>*]:min-w-0 lg:grid-cols-2 lg:gap-16">
         <div>
           <Eyebrow hue="trade">People</Eyebrow>
           <h2 className="mt-3 font-serif text-4xl leading-tight text-foreground sm:text-5xl">Collaborate with people</h2>
@@ -190,26 +185,10 @@ export function HomeCollaborate({ people }: { people: Person[] }) {
 }
 
 export function HomePricing() {
-  const plans = [
-    { name: 'Free', price: '€0', line: 'Make, publish and trade. Fast AI models.', href: '/chat', cta: 'Start free' },
-    { name: 'Pro', price: '€19/mo', line: 'The strongest AI on everything you make.', href: '/pricing', cta: 'See Pro', highlight: true },
-    { name: 'A team', price: 'from €490/mo', line: 'People who deliver for you every month.', href: '/pricing', cta: 'See team plans' },
-  ];
   return (
-    <section id="pricing" className="border-t border-line px-5 py-16 sm:px-8 sm:py-20">
-      <div className="mx-auto max-w-6xl">
-        <h2 className="font-serif text-4xl text-foreground sm:text-5xl">Pricing</h2>
-        <div className="mt-8 grid gap-3 md:grid-cols-3">
-          {plans.map((plan) => (
-            <Link key={plan.name} href={plan.href} className={`flex flex-col rounded-3xl border p-6 transition hover:border-ember ${plan.highlight ? 'border-ember bg-panel' : 'border-line bg-panel/70'}`}>
-              <span className="font-serif text-2xl text-foreground">{plan.name}</span>
-              <span className="mt-1 text-sm text-muted">{plan.line}</span>
-              <span className="mt-6 font-serif text-3xl text-foreground">{plan.price}</span>
-              <span className={`mt-5 text-sm font-semibold ${plan.highlight ? 'text-ember' : 'text-foreground'}`}>{plan.cta} →</span>
-            </Link>
-          ))}
-        </div>
-      </div>
+    <section id="pricing" className="border-t border-line px-5 pt-16 sm:px-8 sm:pt-20">
+      <h2 className="mx-auto max-w-6xl font-serif text-4xl text-foreground sm:text-5xl">Pricing</h2>
+      <PricingPlans />
     </section>
   );
 }

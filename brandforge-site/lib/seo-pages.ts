@@ -16,7 +16,7 @@ export const PAGE_COPY: Record<string, PageCopy> = {
     cta: 'See every feature',
   },
   '/pricing': {
-    description: 'The tools are free. The BrandForge team starts at €490 a month, or hire one project at a fixed price. Compare plans and pick yours.',
+    description: 'The tools are free. The BrandForge team starts at €690 a month, or hire one project at a fixed price. Compare plans and pick yours.',
     keywords: ['BrandForge pricing', 'marketing retainer', 'content team subscription', 'fixed price web design', 'hire designers monthly'],
     cta: 'Compare plans',
   },

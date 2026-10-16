@@ -8,7 +8,7 @@ const FAQS = [
   {
     question: 'How much does it cost?',
     answer:
-      'Making and publishing is free. Pro (€19 a month) puts the strongest AI models on everything you make. A BrandForge team that delivers every month starts at €490. Hiring a member in Trade is a contract you agree on, paid per milestone, with a flat 5% fee when a milestone is paid.',
+      'Making and publishing is free. Pro (€19 a month) puts the strongest AI models on everything you make. A BrandForge team that delivers every month starts at €690. Hiring a member in Trade is a contract you agree on, paid per milestone, with a flat 5% fee when a milestone is paid.',
   },
   {
     question: 'Who reads my chat?',

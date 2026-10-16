@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { byRank } from '@/components/integrations/brand-icons';
 
 export type ChannelKind = 'telegram' | 'discord' | 'bluesky' | 'slack' | 'tumblr' | 'mastodon' | 'linkedin' | 'x' | 'facebook' | 'instagram' | 'threads' | 'youtube';
 export type Channel = { id: string; kind: ChannelKind; label: string };
@@ -18,7 +19,7 @@ export function useChannels(enabled = true) {
     const res = await fetch('/api/carousel/channels').catch(() => null);
     if (res && res.ok) {
       const data = (await res.json()) as { channels: Channel[]; telegramLinked: boolean; tumblrReady?: boolean; oauthReady?: Record<string, boolean> };
-      setChannels(data.channels);
+      setChannels(byRank(data.channels, (c) => c.kind));
       setTelegramLinked(data.telegramLinked);
       setTumblrReady(Boolean(data.tumblrReady));
       setOauthReady(data.oauthReady ?? {});

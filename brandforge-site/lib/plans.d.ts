@@ -1,5 +1,5 @@
 export type Plan = {
-  id: 'free' | 'pro';
+  id: 'free' | 'pro' | 'studio';
   name: string;
   cents: number;
   aiDaily: number;
@@ -8,19 +8,20 @@ export type Plan = {
   blurb: string;
   features: string[];
   highlight?: boolean;
+  soon?: boolean;
 };
 export type Retainer = {
-  id: 'starter' | 'growth' | 'build' | 'custom';
+  id: 'launch' | 'growth' | 'scale';
   name: string;
   cents: number;
   price: string;
   cadence: string;
   blurb: string;
-  bestFor: string;
   features: string[];
   highlight?: boolean;
 };
 export const RETAINERS: Retainer[];
+export const TEAM_INCLUDES: string[];
 export function getRetainer(id: string | null | undefined): Retainer | null;
 export const PLANS: Plan[];
 export function getPlan(id: string | null | undefined): Plan;

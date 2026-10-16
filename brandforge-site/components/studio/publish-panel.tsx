@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { SERVICES, ServiceTile, type ServiceId } from '@/components/integrations/brand-icons';
+import { SERVICES, ServiceTile, byRank, type ServiceId } from '@/components/integrations/brand-icons';
 
 const field = 'w-full rounded-xl border border-line bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none';
 const btn = 'rounded-xl border border-line px-3.5 py-2 text-sm text-foreground transition hover:border-ember disabled:opacity-50';
@@ -17,7 +17,7 @@ export type CaptionControl = { value: (id: ServiceId) => string; onChange: (id: 
 export function PublishPanel({ platforms, caption, copyText, fileName = 'post.txt' }: { platforms: ServiceId[]; caption?: CaptionControl; copyText?: string; fileName?: string }) {
   const [chosen, setChosen] = useState<ServiceId | null>(null);
   const [copied, setCopied] = useState(false);
-  const active = chosen ?? platforms[0];
+  const active = chosen ?? byRank(platforms, (id) => id)[0];
 
   async function copy(text: string) {
     try {
@@ -46,7 +46,7 @@ export function PublishPanel({ platforms, caption, copyText, fileName = 'post.tx
       <p className="mt-0.5 text-xs text-muted">One written for each place.</p>
 
       <div role="group" aria-label="Caption for" className="mt-3 flex flex-wrap gap-2">
-        {platforms.map((id) => {
+        {byRank(platforms, (id) => id).map((id) => {
           const on = id === active;
           return (
             <button key={id} type="button" aria-pressed={on} onClick={() => setChosen(id)} className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-xs transition ${on ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>

@@ -18,6 +18,17 @@ export const SERVICES: Record<ServiceId, { name: string; color: string }> = {
   threads: { name: 'Threads', color: '#101010' },
 };
 
+// Most used first: the order every list of networks follows across the site.
+export const RANK: ServiceId[] = ['instagram', 'facebook', 'youtube', 'tiktok', 'x', 'linkedin', 'threads', 'telegram', 'discord', 'slack', 'bluesky', 'mastodon', 'tumblr'];
+
+export function byRank<T>(items: T[], idOf: (item: T) => string): T[] {
+  const at = (item: T) => {
+    const i = RANK.indexOf(idOf(item) as ServiceId);
+    return i < 0 ? RANK.length : i;
+  };
+  return [...items].sort((a, b) => at(a) - at(b));
+}
+
 const GLYPH: Record<ServiceId, React.ReactNode> = {
   telegram: <path d="M4 11.4l15-6.2-2.6 13.2-4.2-3.1-2.3 2.2-.4-4.3L16 8.6l-8.3 4.7L4 11.4z" />,
   discord: <path d="M7 8c1.6-.8 3.3-1 5-1s3.4.2 5 1l1.4 7.6c-1.5 1-3 1.6-4.6 1.9l-.8-1.3c-.7.1-1.3.2-1 .2s-.3-.1-1-.2l-.8 1.3c-1.6-.3-3.1-.9-4.6-1.9L7 8zm2.3 4.2a1.1 1.3 0 100 2.6 1.1 1.3 0 000-2.6zm5.4 0a1.1 1.3 0 100 2.6 1.1 1.3 0 000-2.6z" />,

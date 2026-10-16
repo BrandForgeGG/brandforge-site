@@ -22,6 +22,12 @@ export function metaConfigured(): boolean {
   return Boolean(env('META_APP_ID') && env('META_APP_SECRET'));
 }
 
+// Until Meta approves the app (App Review), only people with a role on the Meta app can link: BrandForge admins. Set
+// META_LIVE=true once the app is Live and every member sees the switch.
+export function metaOpenTo(role: string | null | undefined): boolean {
+  return metaConfigured() && (env('META_LIVE') === 'true' || role === 'admin');
+}
+
 export function metaRedirectUri(origin: string): string {
   return `${origin}/api/integrations/meta/callback`;
 }

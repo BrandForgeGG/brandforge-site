@@ -524,7 +524,7 @@ export function DistributeHub() {
                   );
                 })
               )}
-              {signedIn ? <Link href="/settings" className="text-xs text-muted underline-offset-2 hover:text-foreground hover:underline">{publisher.channels.length === 0 ? 'Link LinkedIn, Bluesky, Tumblr, Mastodon, Telegram or Discord' : 'Link another'}</Link> : null}
+              {signedIn ? <Link href="/settings#integrations" className="text-xs text-muted underline-offset-2 hover:text-foreground hover:underline">{publisher.channels.length === 0 ? 'Connect channels' : 'Add'}</Link> : null}
               {signedIn && publisher.channels.length > 0 ? (
                 <button type="button" onClick={() => void publisher.scheduleWeek(plan.days, pickedBrand)} disabled={Boolean(publisher.busy) || writing || publisher.picked.length === 0 || !publisher.ready} className="ml-auto rounded-xl bg-ember px-4 py-2 text-sm bf-tap font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-60">
                   {publisher.busy && publisher.busy.startsWith('Scheduling') ? publisher.busy : 'Schedule the whole week'}

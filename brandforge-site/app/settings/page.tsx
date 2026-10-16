@@ -240,7 +240,7 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <AppShell title="Settings" subtitle="Profile, org preferences, and account controls.">
+      <AppShell title="Settings" subtitle="">
         <p className="text-sm text-muted">Loading your account…</p>
       </AppShell>
     );
@@ -248,7 +248,7 @@ export default function SettingsPage() {
 
   if (!profile) {
     return (
-      <AppShell title="Settings" subtitle="Profile, org preferences, and account controls.">
+      <AppShell title="Settings" subtitle="">
         <p className="text-sm text-muted">
           Sign in to view account settings.{' '}
           <a href="/login" className="text-ember underline-offset-2 hover:underline">
@@ -260,7 +260,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <AppShell title="Settings" subtitle="Profile, org preferences, and account controls.">
+    <AppShell title="Settings" subtitle="">
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="min-w-0 rounded-2xl border border-line bg-panel p-5">
           <div className="flex items-center justify-between">
@@ -328,9 +328,6 @@ export default function SettingsPage() {
                     disabled
                     className="mt-1 w-full cursor-not-allowed rounded-lg border border-line bg-overlay px-3 py-2 text-sm text-muted outline-none"
                   />
-                  <p className="mt-1 text-xs text-muted">
-                    Your sign-in email comes from Google and cannot be changed here.
-                  </p>
                 </div>
                 <div>
                   <label className="text-sm text-muted" htmlFor="settings-username">
@@ -368,25 +365,7 @@ export default function SettingsPage() {
                   />
                 </div>
               </>
-            ) : (
-              <>
-
-                <div>
-                  <p className="text-sm text-muted">Email</p>
-                  <p className="mt-1 text-base text-foreground">{profile.email}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted">Username</p>
-                  <p className="mt-1 text-base text-foreground">{profile.username || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted">Role</p>
-                  <p className="mt-1.5">
-                    <RoleBadge role={profile.role} />
-                  </p>
-                </div>
-              </>
-            )}
+            ) : null}
           </div>
 
           {error ? (
@@ -410,21 +389,10 @@ export default function SettingsPage() {
         <SettingsPlanCard />
 
         <div className="min-w-0 rounded-2xl border border-line bg-panel p-5">
-          <h2 className="text-xl font-medium text-foreground">Workspace</h2>
-          <div className="mt-4 space-y-4">
+          <h2 className="text-xl font-medium text-foreground">Theme</h2>
+          <div className="mt-4">
             <div>
-              <p className="text-sm text-muted">Organization</p>
-              <p className="mt-1 text-base text-foreground">BrandForge</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted">Default timezone</p>
-              <p className="mt-1 text-base text-foreground">
-                {Intl.DateTimeFormat().resolvedOptions().timeZone}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted">Theme</p>
-              <div className="mt-2 flex gap-2" role="radiogroup" aria-label="Theme">
+              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Theme">
                 {THEME_CHOICES.map((choice) => (
                   <button
                     key={choice.id}
@@ -448,16 +416,12 @@ export default function SettingsPage() {
                   </button>
                 ))}
               </div>
-              <p className="mt-1 text-xs text-muted">
-                Daylight is light and warm, Forge is the original dark with fire orange, Crystal is crystal blue, Black and white is plain and calm.
-              </p>
             </div>
           </div>
         </div>
 
         <div className="min-w-0 rounded-2xl border border-line bg-panel p-5">
           <h2 className="text-xl font-medium text-foreground">Email</h2>
-          <p className="mt-1 text-sm text-muted">Project email always arrives: proposals, contracts, delivery. This switch is only for product news.</p>
           <label htmlFor="marketing-emails" className="mt-4 flex min-h-9 cursor-pointer items-start gap-3">
             <input
               id="marketing-emails"
@@ -467,14 +431,12 @@ export default function SettingsPage() {
               onChange={(event) => void handleMarketingToggle(event.target.checked)}
               className="mt-0.5 h-4 w-4 accent-ember"
             />
-            <span className="text-sm text-foreground">Email me occasional product updates</span>
+            <span className="text-sm text-foreground">Product updates</span>
           </label>
-          <p className="mt-1 text-xs text-muted">Every email also carries its own unsubscribe link.</p>
         </div>
 
         <div id="integrations" className="min-w-0 scroll-mt-6 rounded-2xl border border-line bg-panel p-5 lg:col-span-2">
           <h2 className="text-xl font-medium text-foreground">Integrations</h2>
-          <p className="mt-1 text-sm text-muted">Where BrandForge can reach you and post for you. Connected services light up in their own color.</p>
           <div className="mt-4">
             <IntegrationsPanel />
           </div>

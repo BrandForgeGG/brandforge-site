@@ -1,12 +1,12 @@
 import { after, NextRequest, NextResponse } from 'next/server';
 import { sendFirstTimeEmail } from '@/lib/first-time-email';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
-import { addCarouselChannel, getUserNotifyTargets, listCarouselChannels, removeCarouselChannel } from '@/lib/project-db';
+import { addCarouselChannel, getProfileRole, getUserNotifyTargets, listCarouselChannels, removeCarouselChannel } from '@/lib/project-db';
 import { linkBluesky, linkDiscordWebhook, linkSlackWebhook, linkTelegramChannel, type LinkResult } from '@/lib/carousel-channels';
 import { tumblrConfigured } from '@/lib/tumblr';
 import { linkMastodon } from '@/lib/mastodon';
 import { oauthConfigured } from '@/lib/oauth-channels';
-import { metaConfigured } from '@/lib/meta';
+import { metaOpenTo } from '@/lib/meta';
 import { threadsConfigured } from '@/lib/threads';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -23,12 +23,13 @@ async function requireUser(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const auth = await requireUser(request);
   if ('error' in auth) return auth.error;
-  const [channels, targets] = await Promise.all([listCarouselChannels(auth.user.id), getUserNotifyTargets(auth.user.id).catch(() => ({ telegramChatId: null }))]);
+  const [channels, targets, role] = await Promise.all([listCarouselChannels(auth.user.id), getUserNotifyTargets(auth.user.id).catch(() => ({ telegramChatId: null })), getProfileRole(auth.user.id).catch(() => null)]);
+  const meta = metaOpenTo(role);
   return NextResponse.json({
     channels: channels.map((c) => ({ id: c.id, kind: c.kind, label: c.label })),
     telegramLinked: Boolean(targets.telegramChatId),
     tumblrReady: tumblrConfigured(),
-    oauthReady: { linkedin: oauthConfigured('linkedin'), x: oauthConfigured('x'), facebook: metaConfigured(), instagram: metaConfigured(), threads: threadsConfigured(), youtube: oauthConfigured('youtube') },
+    oauthReady: { linkedin: oauthConfigured('linkedin'), x: oauthConfigured('x'), facebook: meta, instagram: meta, threads: threadsConfigured(), youtube: oauthConfigured('youtube') },
   });
 }
 
