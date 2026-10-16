@@ -14,8 +14,8 @@ const QUOTES = ['charizard-5stars', 'deleted-user-content', 'deleted-user-mx-gro
   .filter((quote): quote is NonNullable<typeof quote> => Boolean(quote));
 
 const STEPS = [
-  ['Pick a plan', 'Card or crypto. Cancel any month.'],
-  ['Your team chat opens', 'The moment you pay. Send your site and goals.'],
+  ['Chat with the team', 'Tell us about your brand. A person answers in the chat.'],
+  ['Agree, then pay', 'The invoice arrives in your chat. Card or crypto, cancel any month.'],
   ['Work ships every week', "Posts, videos, ads and site updates. If month one isn't delivered, you get a full refund."],
 ];
 
@@ -32,7 +32,7 @@ export function HomeHero() {
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-4">
             <Link href="#pricing" className="rounded-xl bg-ember px-6 py-3 text-base font-semibold text-on-ember transition hover:opacity-90">See plans · from €690/mo</Link>
-            <a href="https://t.me/headstartup" target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-foreground underline-offset-4 hover:underline">Questions? Message us</a>
+            <Link href="/chat?plan=growth" className="text-sm font-semibold text-foreground underline-offset-4 hover:underline">Chat with the team</Link>
           </div>
           <p className="mt-4 text-sm text-muted">If month one isn&apos;t delivered, you get a full refund.</p>
         </div>

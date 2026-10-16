@@ -29,6 +29,7 @@ import { ImageChatCard, SavedImageCard, clearSavedImage, imageKey, seedImageCard
 import type { ImageKind } from "@/lib/image-kinds.js";
 import { RoleBadge } from "@/components/role-badge";
 import { detectMakeIntent } from "@/lib/make-intent";
+import { PlanInvoiceBar } from "@/components/chat/plan-invoice-bar";
 import { MakerChatCard, OPEN_MAKER_EVENT, clearMakerSeed, isMakerKind, readMakerSeed, seedMakerCard, type MakerKind } from "@/components/chat/maker-chat-card";
 import { CreationChatContext } from "@/components/chat/creation-context";
 import { TicketBar } from "@/components/chat/ticket-bar";
@@ -3252,6 +3253,7 @@ return (
                 writes the offer here (POST /api/proposals). Admins see it in any chat;
                 operators see it while the brief waits, before their invite lands. */}
             {railMeta.isStaff && !isOwnConversation && conversationId ? <TicketBar key={conversationId} conversationId={conversationId} onCanTalk={setStaffCanTalk} /> : null}
+            {railMeta.isStaff && !isOwnConversation && conversationId ? <PlanInvoiceBar conversationId={conversationId} onSent={() => void refreshMessages(conversationId)} /> : null}
             {railMeta.isStaff &&
             !isOwnConversation &&
             state?.status === "READY_FOR_REVIEW" ? (

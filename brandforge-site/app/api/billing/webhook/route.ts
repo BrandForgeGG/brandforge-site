@@ -3,13 +3,19 @@ import { verifyStripeSignature } from '@/lib/stripe-signature';
 import { recordFunnelEvent, upsertSubscription } from '@/lib/project-db';
 import { getRetainer } from '@/lib/plans.js';
 import { postOpsEvent } from '@/lib/ops-events';
-import { startTeamPlan } from '@/lib/team-plan-start';
+import { startTeamPlan, teamPlanEnded } from '@/lib/team-plan-start';
 
 export const dynamic = 'force-dynamic';
 
 type StripeObject = Record<string, unknown> & { metadata?: Record<string, string> };
 
 const str = (value: unknown) => (typeof value === 'string' && value ? value : null);
+// An invoice carries its subscription's metadata in subscription_details (older API) or parent.subscription_details (newer).
+function subscriptionMeta(invoice: StripeObject): Record<string, string> {
+  const direct = (invoice.subscription_details as { metadata?: Record<string, string> } | undefined)?.metadata;
+  const parent = ((invoice.parent as { subscription_details?: { metadata?: Record<string, string> } } | undefined)?.subscription_details)?.metadata;
+  return direct ?? parent ?? {};
+}
 const periodEnd = (value: unknown) => (typeof value === 'number' ? new Date(value * 1000).toISOString() : null);
 
 // Stripe calls this when money moves. It is trusted only when the signature checks out.
@@ -41,7 +47,13 @@ export async function POST(request: NextRequest) {
     const id = str(object.id);
     if (id) {
       await upsertSubscription({ stripeSubscriptionId: id, userId: str(object.metadata?.user_id), plan: str(object.metadata?.plan), status: event.type === 'customer.subscription.deleted' ? 'canceled' : (str(object.status) ?? 'active'), stripeCustomerId: str(object.customer), currentPeriodEnd: periodEnd(object.current_period_end) });
+      // A team plan ending is the moment to keep the client: the team is told in that client's chat.
+      if (event.type === 'customer.subscription.deleted') await teamPlanEnded(str(object.metadata?.user_id), str(object.metadata?.plan));
     }
+  } else if (event.type === 'invoice.paid' && object.billing_reason === 'subscription_cycle') {
+    // A team plan renewed: the next month's work list starts in the client's chat (the first month is checkout.session.completed).
+    const meta = subscriptionMeta(object);
+    await startTeamPlan(meta.user_id ?? null, meta.plan ?? null, 'card');
   } else if (event.type === 'invoice.payment_failed') {
     const id = str(object.subscription);
     if (id) await upsertSubscription({ stripeSubscriptionId: id, status: 'past_due' });

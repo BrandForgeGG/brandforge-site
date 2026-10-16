@@ -12,6 +12,7 @@ export type Plan = {
 };
 export type Retainer = {
   id: 'launch' | 'growth' | 'scale';
+  deliverables: string[];
   name: string;
   cents: number;
   price: string;

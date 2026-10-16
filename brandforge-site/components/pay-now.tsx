@@ -19,7 +19,8 @@ function readStatus(): Promise<Status> {
 // "Pay now" for a monthly plan: by card when Stripe is connected, with crypto (stablecoins from Trust Wallet or any wallet,
 // 30 days per payment) when a receiving address is set. With neither it shows locked, says why in one line, and lets the
 // person say they want it (recorded as interest; nothing is charged or collected).
-export function PayNow({ planId, planName, primary = false }: { planId: string; planName: string; primary?: boolean }) {
+export function PayNow({ planId, planName, primary = false, chatId, label }: { planId: string; planName: string; primary?: boolean; chatId?: string; label?: string }) {
+  const back = chatId ? `/chat?conversationId=${chatId}` : '/pricing';
   const { openLogin } = useLogin();
   const [status, setStatus] = useState<Status | null>(null);
   const [busy, setBusy] = useState(false);
@@ -29,7 +30,7 @@ export function PayNow({ planId, planName, primary = false }: { planId: string; 
 
   async function payCrypto() {
     if (!(await getSessionUser().catch(() => null))) {
-      openLogin({ reason: 'signin', next: '/pricing' });
+      openLogin({ reason: 'signin', next: back });
       return;
     }
     trackEvent('plan_interest', { source: `crypto-${planId}` });
@@ -49,10 +50,10 @@ export function PayNow({ planId, planName, primary = false }: { planId: string; 
     setError(null);
     trackEvent('plan_interest', { source: `pay-${planId}` });
     try {
-      const response = await fetchAuthed('/api/billing/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan: planId }) });
+      const response = await fetchAuthed('/api/billing/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan: planId, chatId }) });
       const data = (await response.json().catch(() => ({}))) as { url?: string; error?: string };
       if (response.status === 401) {
-        openLogin({ reason: 'signin', next: '/pricing' });
+        openLogin({ reason: 'signin', next: back });
         return;
       }
       if (!response.ok || !data.url) {
@@ -75,7 +76,7 @@ export function PayNow({ planId, planName, primary = false }: { planId: string; 
       <div className="space-y-1.5">
         {status.card ? (
           <button type="button" onClick={() => void pay()} disabled={busy} className={`${base} ${primary ? 'bg-ember text-on-ember hover:opacity-90' : 'border border-line text-foreground hover:border-ember'} disabled:opacity-60`}>
-            {busy ? 'Opening payment…' : `Start ${planName}`}
+            {busy ? 'Opening payment…' : label ?? `Start ${planName}`}
           </button>
         ) : null}
         {status.crypto && status.card ? (

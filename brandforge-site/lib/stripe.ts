@@ -32,14 +32,14 @@ async function stripePost(path: string, params: URLSearchParams): Promise<Record
 }
 
 // A monthly plan, paid by card. Returns the page Stripe hosts for the payment.
-export async function createCheckoutUrl(input: { planId: string; userId: string; email: string | null; origin: string }): Promise<string | null> {
+export async function createCheckoutUrl(input: { planId: string; userId: string; email: string | null; origin: string; chatId?: string | null }): Promise<string | null> {
   const plan = getPaidPlan(input.planId);
   if (!plan || plan.cents <= 0) return null;
   const params = new URLSearchParams({
     mode: 'subscription',
     // A team plan lands in the chat, where its team chat appears as soon as Stripe confirms the payment.
-    success_url: getRetainer(plan.id) ? `${input.origin}/chat?paid=team` : `${input.origin}/settings?plan=thanks`,
-    cancel_url: `${input.origin}/pricing`,
+    success_url: input.chatId ? `${input.origin}/chat?conversationId=${input.chatId}` : getRetainer(plan.id) ? `${input.origin}/chat?paid=team` : `${input.origin}/settings?plan=thanks`,
+    cancel_url: input.chatId ? `${input.origin}/chat?conversationId=${input.chatId}` : `${input.origin}/pricing`,
     client_reference_id: input.userId,
     'metadata[plan]': plan.id,
     'metadata[user_id]': input.userId,

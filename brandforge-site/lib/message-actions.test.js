@@ -161,3 +161,9 @@ test('parseChatEmbed accepts a peer contract card and needs its id', () => {
   assert.deepEqual(parseChatEmbed({ type: 'peer_contract', id: 'c1', status: 'proposed' }), { type: 'peer_contract', contractId: 'c1', status: 'proposed' });
   assert.equal(parseChatEmbed({ type: 'peer_contract' }), null);
 });
+
+test('a plan invoice card keeps only its plan and open or paid', () => {
+  assert.deepEqual(parseChatEmbed({ type: 'plan_invoice', id: 'growth', status: 'open' }), { type: 'plan_invoice', planId: 'growth', status: 'open' });
+  assert.deepEqual(parseChatEmbed({ type: 'plan_invoice', id: 'scale', status: 'weird' }), { type: 'plan_invoice', planId: 'scale', status: 'open' });
+  assert.equal(parseChatEmbed({ type: 'plan_invoice', id: '<script>' }), null);
+});

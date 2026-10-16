@@ -49,6 +49,8 @@ const RETAINERS = [
     cadence: '/mo',
     blurb: 'For brands that need to show up every week.',
     features: ['8 posts or carousels a month', '2 short videos', 'Scheduled on your channels', 'Designer and editor', 'Replies within 48 hours'],
+    // What the team delivers each month: the month's work list in the client's chat (lib/plan-month.js).
+    deliverables: ['8 posts or carousels', '2 short videos', 'Everything scheduled on your channels'],
   },
   {
     id: 'growth',
@@ -58,6 +60,7 @@ const RETAINERS = [
     cadence: '/mo',
     blurb: 'For brands ready to grow.',
     features: ['12 posts or carousels', '4 short videos', 'Fresh ad creatives every week', '1 site or store update a month', 'Designer, editor and marketer', 'Same-day replies, plus a monthly results report'],
+    deliverables: ['12 posts or carousels', '4 short videos', 'Ad creatives, fresh every week', '1 site or store update', 'Monthly results report'],
     highlight: true,
   },
   {
@@ -68,6 +71,7 @@ const RETAINERS = [
     cadence: '/mo',
     blurb: 'Your full growth team.',
     features: ['20 posts or carousels', '8 short videos', 'Ad creatives and ad management', 'Up to 10 developer hours a month', 'A dedicated project lead and a weekly call', 'Priority replies'],
+    deliverables: ['20 posts or carousels', '8 short videos', 'Ad creatives and ad management', 'Up to 10 developer hours', 'Weekly call with your project lead', 'Monthly results report'],
   },
 ];
 

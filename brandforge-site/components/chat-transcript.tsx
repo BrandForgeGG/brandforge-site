@@ -8,6 +8,7 @@ import { isDirectlyReadable } from "@/lib/file-context";
 import { RichContent } from "@/components/rich-content";
 import { RoleBadge } from "@/components/role-badge";
 import { FinishWithTeam } from "@/components/chat/finish-with-team";
+import { PlanInvoiceCard } from "@/components/chat/plan-invoice-card";
 
 import { detectDeliverable, KINDS } from "@/lib/deliverable-intent";
 import { BlueprintEmbedCard } from "@/components/blueprint/blueprint-embed-card";
@@ -51,6 +52,7 @@ export type ChatEmbed =
   | ArticleEmbed
   | { type: "agreement"; agreementId: string; status: string }
   | { type: "peer_contract"; contractId: string; status: string }
+  | { type: "plan_invoice"; planId: string; status: string }
   | { type: "review_request"; conversationId: string; percent?: number; complete?: boolean }
   | {
       type: "blueprint";
@@ -199,8 +201,11 @@ function SystemEmbedCard({
   embedBusy,
   onEmbedAction,
   finishIn,
+  planChat,
 }: {
   message: ChatMessage;
+  /** This chat's id, for cards that pay from it (the plan invoice). */
+  planChat?: string;
   /** The chat id when this is the owner's newest creation: shows "Have the team finish this" under it. */
   finishIn?: string;
   canDecide?: boolean;
@@ -255,6 +260,9 @@ function SystemEmbedCard({
    }
 
    // Peer contracts load and act on themselves.
+   if (embed.type === "plan_invoice") {
+     return <PlanInvoiceCard planId={embed.planId} status={embed.status} canPay={Boolean(canDecide)} conversationId={planChat ?? ""} />;
+   }
    if (embed.type === "peer_contract") {
      return <PeerContractCard contractId={embed.contractId} />;
    }
@@ -1307,6 +1315,7 @@ export function ChatTranscript({
                 embedBusy={embedBusy}
                 onEmbedAction={onEmbedAction}
                 finishIn={canDecide && message.id === lastCreationId ? conversationId : undefined}
+                planChat={conversationId}
               />
             );
           }

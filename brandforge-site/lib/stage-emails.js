@@ -257,6 +257,18 @@ ${chatUrl || ''}`.trim(),
       };
     }
 
+    // To the client: the team sent the invoice for the monthly plan agreed in the chat.
+    case 'plan_invoice': {
+      const plan = line(details.title) || 'your plan';
+      const price = line(details.price, 30);
+      const paragraphs = [`Your invoice for ${plan}${price ? ` (${price})` : ''} is in your chat.`, 'Pay by card or crypto there. Month 1 starts the moment it lands, and if it isn\'t delivered you get a full refund.'];
+      return {
+        subject: `Your ${plan} invoice`,
+        text: `${paragraphs.join('\n\n')}\n\n${chatUrl || ''}`.trim(),
+        html: card('Invoice', `${plan} is ready to start`, paragraphs, open, chatUrl),
+      };
+    }
+
     // For the team: someone opened a chat and wrote their first message.
     case 'chat_opened': {
       const who = line(details.name) || 'Someone';

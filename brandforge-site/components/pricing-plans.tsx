@@ -15,7 +15,9 @@ const BOOKING_URL = BOOKING_IS_CALENDAR ? BOOKING : "https://t.me/headstartup";
 
 type Card = { id: string; name: string; price: string; cadence: string; blurb: string; features: string[]; highlight?: boolean; soon?: boolean; cents: number };
 
-function PlanCard({ plan }: { plan: Card }) {
+// Team plans start with a chat: the team answers, you agree what you get, then the invoice arrives in that chat. Software
+// plans are bought straight away.
+function PlanCard({ plan, team }: { plan: Card; team: boolean }) {
   return (
     <div className={`relative flex flex-col rounded-3xl border p-6 ${plan.highlight ? "border-ember bg-panel shadow-[0_20px_60px_-30px_var(--ember)]" : "border-line bg-panel/70"} ${plan.soon ? "opacity-70" : ""}`}>
       {plan.highlight ? <span className="absolute -top-3 left-6 rounded-full bg-ember px-3 py-1 text-[11px] font-semibold text-on-ember">Most popular</span> : null}
@@ -39,6 +41,14 @@ function PlanCard({ plan }: { plan: Card }) {
           <span className="block w-full rounded-xl border border-dashed border-line px-4 py-2.5 text-center text-sm text-muted">Soon</span>
         ) : plan.cents === 0 ? (
           <Link href="/chat" className="block w-full rounded-xl border border-line px-4 py-2.5 text-center text-sm font-semibold text-foreground transition hover:border-ember">Start free</Link>
+        ) : team ? (
+          <Link
+            href={`/chat?plan=${plan.id}`}
+            onClick={() => trackEvent("plan_interest", { source: plan.id })}
+            className={`block w-full rounded-xl px-4 py-2.5 text-center text-sm font-semibold transition hover:opacity-90 ${plan.highlight ? "bg-ember text-on-ember" : "border border-line text-foreground hover:border-ember"}`}
+          >
+            Talk to us about {plan.name}
+          </Link>
         ) : (
           <PayNow planId={plan.id} planName={plan.name} primary={Boolean(plan.highlight)} />
         )}
@@ -74,10 +84,10 @@ export function PricingPlans() {
           ))}
         </div>
         <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {plans.map((plan) => <PlanCard key={plan.id} plan={plan} />)}
+          {plans.map((plan) => <PlanCard key={plan.id} plan={plan} team={tab === "teams"} />)}
         </div>
         <p className="mt-6 text-center text-sm text-muted">
-          {tab === "teams" ? <>Every plan includes: {TEAM_INCLUDES.join(" · ")}</> : <>Prices in euros, before tax. No late fees.</>}
+          {tab === "teams" ? <>Chat first, pay when you agree. Every plan includes: {TEAM_INCLUDES.join(" · ")}</> : <>Prices in euros, before tax. No late fees.</>}
         </p>
         {tab === "teams" ? (
           <p className="mt-2 text-center text-sm">

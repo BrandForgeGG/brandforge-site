@@ -20,7 +20,9 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
   const plan = getPaidPlan(String(body.plan ?? ''));
   if (!plan || plan.cents <= 0) return NextResponse.json({ error: 'That plan cannot be paid by card. Ask for it in the chat.' }, { status: 400 });
-  const url = await createCheckoutUrl({ planId: plan.id, userId: user.id, email: user.email ?? null, origin: resolveSiteUrl() });
+  // Paying an invoice from a chat brings the person back to that chat.
+  const chatId = typeof body.chatId === 'string' && /^[0-9a-f-]{36}$/i.test(body.chatId) ? body.chatId : null;
+  const url = await createCheckoutUrl({ planId: plan.id, userId: user.id, email: user.email ?? null, origin: resolveSiteUrl(), chatId });
   // A valid plan that still gets no checkout page means Stripe refused (the reason is in the server log).
   if (!url) return NextResponse.json({ error: status.crypto ? 'Card payment could not start right now. Try again in a moment, or pay with crypto.' : 'Card payment could not start right now. Try again in a moment.' }, { status: 502 });
   await recordFunnelEvent('checkout_started', { signedIn: true, properties: { source: String(body.plan ?? '') } });

@@ -6709,3 +6709,77 @@ export async function bumpMonthlyUsage(key: string, month: string, kind: 'creati
   const { error } = await admin.rpc('bump_usage', { p_key: key, p_month: month, p_kind: kind });
   if (error) console.error('bumpMonthlyUsage:', error.message);
 }
+
+// Plan invoices in chats: the team agrees a monthly plan with the buyer in the chat, then sends an invoice card there. When
+// the payment lands (card or crypto) the newest open invoice for that plan, in a chat the buyer owns, is the one paid.
+export async function findOpenPlanInvoice(userId: string, planId: string): Promise<{ conversationId: string; messageId: string } | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data: chats } = await admin.from('conversations').select('id').eq('user_id', userId).order('updated_at', { ascending: false }).limit(50);
+  const ids = ((chats ?? []) as { id: string }[]).map((row) => row.id);
+  if (ids.length === 0) return null;
+  const { data } = await admin
+    .from('messages')
+    .select('id, conversation_id')
+    .in('conversation_id', ids)
+    .eq('content_type', 'system')
+    .eq('artifact_data->>type', 'plan_invoice')
+    .eq('artifact_data->>id', planId)
+    .eq('artifact_data->>status', 'open')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data ? { conversationId: String(data.conversation_id), messageId: String(data.id) } : null;
+}
+
+export async function markPlanInvoicePaid(messageId: string, planId: string): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return;
+  const { error } = await admin.from('messages').update({ artifact_data: { type: 'plan_invoice', id: planId, status: 'paid' } }).eq('id', messageId);
+  if (error) console.error('markPlanInvoicePaid:', error.message);
+}
+
+/** A product line in a chat, written by the service role (payment webhooks have no session). */
+export async function addSystemLine(conversationId: string, content: string): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return;
+  const { error } = await admin.from('messages').insert({ conversation_id: conversationId, sender_type: 'human_operator', sender_name: 'BrandForge', content, content_type: 'system' });
+  if (error) console.error('addSystemLine:', error.message);
+}
+
+/** The chat where a person's team plan runs: the one whose plan invoice was paid, else the one opened by a direct payment. */
+export async function findPlanChat(userId: string, planId: string, planName: string): Promise<string | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data: chats } = await admin.from('conversations').select('id, title').eq('user_id', userId).order('updated_at', { ascending: false }).limit(50);
+  const rows = (chats ?? []) as { id: string; title: string | null }[];
+  if (rows.length === 0) return null;
+  const { data } = await admin
+    .from('messages')
+    .select('conversation_id')
+    .in('conversation_id', rows.map((row) => row.id))
+    .eq('artifact_data->>type', 'plan_invoice')
+    .eq('artifact_data->>id', planId)
+    .eq('artifact_data->>status', 'paid')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (data?.conversation_id) return String(data.conversation_id);
+  return rows.find((row) => row.title === `${planName} team plan`)?.id ?? null;
+}
+
+/** Task titles and dates in a chat, for the monthly team-plan cycle (service role: runs from payment webhooks). */
+export async function getChatTaskStamps(conversationId: string): Promise<{ title: string; created_at: string }[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const { data } = await admin.from('tasks').select('title, created_at').eq('conversation_id', conversationId);
+  return (data ?? []) as { title: string; created_at: string }[];
+}
+
+export async function insertPlanTasks(tasks: { conversation_id: string; title: string; due_date: string; status: string }[]): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const { error } = await admin.from('tasks').insert(tasks);
+  if (error) console.error('insertPlanTasks:', error.message);
+  return !error;
+}
