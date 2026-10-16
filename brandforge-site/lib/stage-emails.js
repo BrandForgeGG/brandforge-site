@@ -257,6 +257,18 @@ ${chatUrl || ''}`.trim(),
       };
     }
 
+    // To the buyer: the team accepted or countered their custom task.
+    case 'task_answered': {
+      const answer = line(details.line, 240);
+      if (!answer) return null;
+      const paragraphs = [answer, 'Open your chat to see it and answer.'];
+      return {
+        subject: `The team answered: ${title || 'your task'}`,
+        text: `${paragraphs.join('\n\n')}\n\n${chatUrl || ''}`.trim(),
+        html: card('Task', 'The team answered your task', paragraphs, open, chatUrl),
+      };
+    }
+
     // To the client: the team sent the invoice for the monthly plan agreed in the chat.
     case 'plan_invoice': {
       const plan = line(details.title) || 'your plan';

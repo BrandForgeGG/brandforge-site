@@ -98,6 +98,7 @@ export async function priceFor(purpose: Purpose, refId: string, userId: string):
     const decision = canSubmitFunding({ actor: { userId, isStaff: await isStaffAccount(userId) }, ownerId });
     if (!decision.allowed) return { ok: false, status: decision.status, error: decision.reason };
     if (agreement.status !== 'pending_funding') return { ok: false, status: 409, error: 'This agreement is not waiting for payment.' };
+    if (!agreement.proposal_id && !agreement.team_accepted_at) return { ok: false, status: 409, error: 'Waiting for the team to accept the task.' };
     return { ok: true, cents: Math.round(Number(agreement.total_amount) * 100), currency: String(agreement.currency || 'EUR'), title: 'Project escrow' };
   }
   const found = await getPeerContract(refId);

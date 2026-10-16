@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     conversation_id: chatId,
     sender_type: 'human_operator',
     sender_name: 'BrandForge',
-    content: `Task: ${title}, €${funds.toLocaleString('en-US')}. Fund it to start.`,
+    content: `Task: ${title}, €${funds.toLocaleString('en-US')}. The team accepts it or counters here.`,
     content_type: 'system',
     artifact_data: { type: 'task_fund', id: agreement.id, status: 'open', title, amount: funds },
   });

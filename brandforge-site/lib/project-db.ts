@@ -6902,11 +6902,15 @@ export async function listFundedProjects(userId: string, seeAll: boolean): Promi
   const { RETAINERS } = await import('./plans.js');
   const { data: agreements } = await admin
     .from('agreements')
-    .select('conversation_id, total_amount, currency, status, funded_at, proposal_id')
-    .in('status', ['funded', 'active', 'completed'])
-    .order('funded_at', { ascending: false })
+    .select('id, conversation_id, total_amount, currency, status, funded_at, proposal_id')
+    .in('status', ['pending_funding', 'funded', 'active', 'completed'])
+    .order('created_at', { ascending: false })
     .limit(200);
-  const funded = ((agreements ?? []) as { conversation_id: string; total_amount: number; currency: string | null; status: string; funded_at: string | null; proposal_id: string | null }[]).map((row) => ({
+  // Waiting custom tasks show too; a project's pending agreement stays in its proposal flow.
+  const funded = ((agreements ?? []) as { id: string; conversation_id: string; total_amount: number; currency: string | null; status: string; funded_at: string | null; proposal_id: string | null }[])
+    .filter((row) => row.status !== 'pending_funding' || !row.proposal_id)
+    .map((row) => ({
+    agreementId: row.id as string | null,
     chatId: row.conversation_id,
     kind: (row.proposal_id ? 'project' : 'task') as FundedProject['kind'],
     amount: row.total_amount,
@@ -6925,7 +6929,7 @@ export async function listFundedProjects(userId: string, seeAll: boolean): Promi
   for (const row of (paidPlans ?? []) as { conversation_id: string; artifact_data: { id?: string }; created_at: string }[]) {
     const plan = RETAINERS.find((entry) => entry.id === row.artifact_data?.id);
     if (plan && !funded.some((item) => item.chatId === row.conversation_id)) {
-      funded.push({ chatId: row.conversation_id, kind: 'plan', amount: plan.cents / 100, currency: 'EUR', status: 'active', fundedAt: row.created_at });
+      funded.push({ agreementId: null, chatId: row.conversation_id, kind: 'plan', amount: plan.cents / 100, currency: 'EUR', status: 'active', fundedAt: row.created_at });
     }
   }
   if (funded.length === 0) return [];
@@ -6939,6 +6943,11 @@ export async function listFundedProjects(userId: string, seeAll: boolean): Promi
   const chatRows = (chats ?? []) as { id: string; title: string | null; user_id: string | null }[];
   const partRows = (parts ?? []) as { conversation_id: string; user_id: string | null; role: string }[];
   const taskRows = (tasks ?? []) as { conversation_id: string; status: string | null }[];
+  const pendingIds = funded.filter((item) => item.status === 'pending_funding' && item.agreementId).map((item) => item.agreementId as string);
+  const { data: cards } = pendingIds.length
+    ? await admin.from('messages').select('artifact_data').eq('content_type', 'system').eq('artifact_data->>type', 'task_fund').in('artifact_data->>id', pendingIds)
+    : { data: [] };
+  const stageOf = new Map(((cards ?? []) as { artifact_data: { id?: string; status?: string; counterAmount?: number } }[]).map((row) => [String(row.artifact_data?.id), row.artifact_data]));
   const manager = await getProjectManager();
   const staff = await getProfileRoles([...new Set(partRows.map((row) => row.user_id).filter((id): id is string => Boolean(id)))]);
 
@@ -6956,8 +6965,12 @@ export async function listFundedProjects(userId: string, seeAll: boolean): Promi
       .filter((row) => row.conversation_id === item.chatId && row.user_id && row.user_id !== chat.user_id && row.user_id !== manager?.id && ['operator', 'member'].includes(row.role) && staff.get(row.user_id) !== 'admin')
       .map((row) => ({ id: row.user_id as string, name: names.get(row.user_id as string) ?? 'Specialist' }));
     const mine = taskRows.filter((row) => row.conversation_id === item.chatId);
+    const card = item.agreementId ? stageOf.get(item.agreementId) : undefined;
+    const waiting = item.status === 'pending_funding';
     return {
       ...item,
+      status: waiting ? String(card?.status ?? 'open') : item.status,
+      amount: waiting && card?.status === 'countered' && card.counterAmount ? card.counterAmount : item.amount,
       title: chat.title || 'Project',
       buyer: chat.user_id ? { id: chat.user_id, name: names.get(chat.user_id) ?? 'Buyer' } : null,
       specialists: specialists.filter((person, index) => specialists.findIndex((other) => other.id === person.id) === index),
@@ -6966,4 +6979,40 @@ export async function listFundedProjects(userId: string, seeAll: boolean): Promi
       isBuyer: chat.user_id === userId,
     };
   });
+}
+
+// ---- Custom task offers: the task card in its chat carries the live state (open, countered, accepted, funded) ----
+
+export async function getTaskCard(agreementId: string): Promise<{ messageId: string; conversationId: string; artifact: Record<string, unknown> } | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data } = await admin
+    .from('messages')
+    .select('id, conversation_id, artifact_data')
+    .eq('content_type', 'system')
+    .eq('artifact_data->>type', 'task_fund')
+    .eq('artifact_data->>id', agreementId)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  const row = data as { id: string; conversation_id: string; artifact_data: Record<string, unknown> | null };
+  return { messageId: row.id, conversationId: row.conversation_id, artifact: row.artifact_data ?? {} };
+}
+
+export async function updateTaskCard(messageId: string, artifact: Record<string, unknown>): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const { error } = await admin.from('messages').update({ artifact_data: artifact }).eq('id', messageId);
+  if (error) console.error('updateTaskCard:', error.message);
+  return !error;
+}
+
+/** The agreed price of a custom task: the amount both sides accepted, and when the team accepted it. */
+export async function setTaskAgreed(agreementId: string, amount: number): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return false;
+  const { error } = await admin.from('agreements').update({ total_amount: amount, team_accepted_at: new Date().toISOString() }).eq('id', agreementId).eq('status', 'pending_funding');
+  if (error) console.error('setTaskAgreed:', error.message);
+  return !error;
 }

@@ -142,7 +142,8 @@ function parseChatEmbed(artifactData) {
   if (type === 'task_fund' && /^[0-9a-f-]{36}$/i.test(id)) {
     const title = typeof artifactData.title === 'string' ? artifactData.title.slice(0, 120) : '';
     const amount = Number.isInteger(artifactData.amount) && artifactData.amount > 0 ? artifactData.amount : undefined;
-    return { type, agreementId: id, status: status === 'funded' ? 'funded' : 'open', ...(title ? { title } : {}), ...(amount ? { amount } : {}) };
+    const known = ['open', 'countered', 'accepted', 'funded'];
+    return { type, agreementId: id, status: known.includes(status) ? status : 'open', ...(title ? { title } : {}), ...(amount ? { amount } : {}) };
   }
   // A monthly team plan the team invoiced in the chat after agreeing it: id is the plan, status open or paid.
   if (type === 'plan_invoice' && /^[a-z]{2,20}$/.test(id)) return { type, planId: id, status: status === 'paid' ? 'paid' : 'open' };

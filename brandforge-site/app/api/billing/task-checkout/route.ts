@@ -23,6 +23,8 @@ export async function POST(request: NextRequest) {
   const chat = await getConversation(agreement.conversation_id);
   if (!chat || chat.user_id !== user.id) return NextResponse.json({ error: 'Only the buyer can fund this task.' }, { status: 403 });
   if (agreement.status !== 'pending_funding') return NextResponse.json({ error: 'This task is already funded.' }, { status: 409 });
+  // A custom task is funded only after the team accepted it (or the buyer accepted the team's counter).
+  if (!agreement.proposal_id && !agreement.team_accepted_at) return NextResponse.json({ error: 'Waiting for the team to accept the task.' }, { status: 409 });
   const url = await createTaskCheckoutUrl({ agreementId, cents: Math.round(Number(agreement.total_amount) * 100), title: String(chat.title ?? 'Task'), userId: user.id, email: user.email ?? null, origin: resolveSiteUrl(), chatId: agreement.conversation_id });
   if (!url) return NextResponse.json({ error: status.crypto ? 'Card payment could not start right now. Try again, or pay with crypto.' : 'Card payment could not start right now. Try again in a moment.' }, { status: 502 });
   await recordFunnelEvent('checkout_started', { signedIn: true, properties: { source: 'task' } });

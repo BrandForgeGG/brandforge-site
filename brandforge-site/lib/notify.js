@@ -280,6 +280,10 @@ function buildPersonalMessageText(event, details = {}) {
     case 'team_joined':
       return `BrandForge: ${clip(details.name, 60) || 'Someone'} from our team joined your chat and is reading along now.`;
 
+    // The team accepted or countered the buyer's custom task.
+    case 'task_answered':
+      return clip(details.line, 200) ? `BrandForge: ${clip(details.line, 200)}` : null;
+
     // The team sent the invoice for the monthly plan agreed in the chat.
     case 'plan_invoice':
       return `BrandForge: your invoice for ${clip(details.title, 40) || 'your plan'} (${clip(details.price, 30)}) is in your chat. Pay there to start month 1.`;
