@@ -15,8 +15,8 @@ export default function WorkPage() {
       <JsonLd data={pageGraph({ path: "/work", name: "Work — BrandForge", description: "Real projects shipped by the BrandForge team. Open the live sites and judge the work yourself.", kind: "CollectionPage", crumbs: [{ name: "Work", path: "/work" }] })} />
       <LandingNav />
       <main className="mx-auto max-w-5xl px-6 py-16">
-        <h1 className="font-serif text-4xl text-foreground sm:text-5xl">Work we have shipped</h1>
-        <p className="mt-4 max-w-2xl text-lg leading-relaxed text-muted">
+        <h1 className="text-center font-serif text-4xl text-foreground sm:text-5xl">Work we have shipped</h1>
+        <p className="mx-auto mt-4 max-w-2xl text-center text-lg leading-relaxed text-muted">
           Real sites and apps, live today. No mockups and no made-up numbers: open any of them and judge the work yourself.
         </p>
         <ul className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -37,10 +37,10 @@ export default function WorkPage() {
             </li>
           ))}
         </ul>
-        <div className="mt-12 rounded-2xl border border-line bg-panel p-6">
+        <div className="mt-12 rounded-2xl border border-line bg-panel p-6 text-center">
           <p className="font-serif text-2xl text-foreground">Want this team on your brand every month?</p>
-          <p className="mt-2 text-sm text-muted">Content, ads and site updates from €690 a month. If month one isn&apos;t delivered, you get a full refund.</p>
-          <div className="mt-4 flex flex-wrap items-center gap-4">
+          <p className="mt-2 text-sm text-muted">Development, design, video and marketing, 1 to 3 tasks at a time, from €690 a month. If month one isn&apos;t delivered, you get a full refund.</p>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-4">
             <Link href="/pricing" className="rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90">See plans</Link>
             <Link href="/chat" className="text-sm font-semibold text-foreground underline-offset-4 hover:underline">Talk to the team</Link>
           </div>

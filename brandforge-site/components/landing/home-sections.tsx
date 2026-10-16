@@ -20,28 +20,28 @@ const signedBy = (author: string) => (/^(deleted user|brandforge client)$/i.test
 const STEPS = [
   ['Chat with the team', 'Tell us about your brand. A person answers in the chat.'],
   ['Agree, then pay', 'The invoice arrives in your chat. Card or crypto, cancel any month.'],
-  ['Work ships every week', "Posts, videos, ads and site updates. If month one isn't delivered, you get a full refund."],
+  ['Tasks ship one after another', "Add as many as you like. If month one isn't delivered, you get a full refund."],
 ];
 
 export function HomeHero() {
   return (
     <section className="px-5 pb-16 pt-10 sm:px-8 sm:pt-16">
-      <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] [&>*]:min-w-0">
-        <div>
+      <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-3xl text-center">
           <h1 className="font-serif text-5xl leading-[1.02] text-foreground sm:text-6xl lg:text-7xl" style={{ textWrap: 'balance' }}>
             A full growth team for <span className="text-ember">less than one hire.</span>
           </h1>
-          <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted sm:text-xl">
-            Designers, editors, developers and marketers ship your content, ads and site updates every month.
+          <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-muted sm:text-xl">
+            Development, design, video and marketing by real people. 1, 2 or 3 tasks at a time, every month.
           </p>
-          <div className="mt-8 flex flex-wrap items-center gap-4">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <Link href="#pricing" className="rounded-xl bg-ember px-6 py-3 text-base font-semibold text-on-ember transition hover:opacity-90">See plans · from €690/mo</Link>
-            <Link href="/chat?plan=growth" className="text-sm font-semibold text-foreground underline-offset-4 hover:underline">Chat with the team</Link>
+            <Link href="/chat" className="text-sm font-semibold text-foreground underline-offset-4 hover:underline">Chat with the team</Link>
           </div>
           <p className="mt-4 text-sm text-muted">If month one isn&apos;t delivered, you get a full refund.</p>
         </div>
-        <div>
-          <div className="grid grid-cols-2 gap-3">
+        <div className="mx-auto mt-12 max-w-5xl text-center">
+          <div className="grid grid-cols-2 gap-3 text-left lg:grid-cols-4">
             {WORK.map((project) => (
               <Link key={project.name} href={`/work/${projectSlug(project.name)}`} className="group overflow-hidden rounded-2xl border border-line bg-panel transition hover:border-ember">
                 <Image src={project.screenshot as string} alt={`${project.name}, ${project.description}`} width={640} height={400} priority className="aspect-[16/10] w-full object-cover object-top" />
@@ -59,7 +59,7 @@ export function HomeHero() {
 export function HomeSteps() {
   return (
     <section aria-label="How it works" className="border-t border-line px-5 py-14 sm:px-8">
-      <ol className="mx-auto grid max-w-6xl gap-8 sm:grid-cols-3">
+      <ol className="mx-auto grid max-w-6xl gap-8 text-center sm:grid-cols-3">
         {STEPS.map(([title, line], i) => (
           <li key={title}>
             <span className="font-serif text-3xl text-ember">{i + 1}</span>
@@ -92,7 +92,7 @@ export function HomePricing() {
   return (
     <section id="pricing" className="scroll-mt-16 border-t border-line px-5 py-16 sm:px-8 sm:py-20">
       <div className="mx-auto max-w-6xl">
-        <h2 className="font-serif text-4xl text-foreground sm:text-5xl">Pricing</h2>
+        <h2 className="text-center font-serif text-4xl text-foreground sm:text-5xl">Pricing</h2>
         <PricingPlans bare />
       </div>
     </section>
@@ -107,7 +107,7 @@ export function HomeQuotes() {
 export function HomeDiy() {
   return (
     <section className="border-t border-line px-5 py-10 sm:px-8">
-      <p className="mx-auto max-w-6xl text-sm text-muted">
+      <p className="mx-auto max-w-6xl text-center text-sm text-muted">
         Rather do it yourself?{' '}
         <Link href="/create" className="font-semibold text-foreground underline-offset-2 hover:underline">Make it with AI</Link>,{' '}
         <Link href="/distribute" className="font-semibold text-foreground underline-offset-2 hover:underline">post it everywhere</Link>, or{' '}

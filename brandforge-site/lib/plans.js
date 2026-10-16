@@ -47,10 +47,11 @@ const RETAINERS = [
     cents: 69000,
     price: '€690',
     cadence: '/mo',
-    blurb: 'For brands that need to show up every week.',
-    features: ['8 posts or carousels a month', '2 short videos', 'Scheduled on your channels', 'Designer and editor', 'Replies within 48 hours'],
-    // What the team delivers each month: the month's work list in the client's chat (lib/plan-month.js).
-    deliverables: ['8 posts or carousels', '2 short videos', 'Everything scheduled on your channels'],
+    active: 1,
+    blurb: 'One task at a time.',
+    features: ['1 task at a time', 'Development, design, video and marketing', 'Add tasks any time: the next starts when one ships', 'Replies within 48 hours'],
+    // The plan in short, on the invoice and when a buyer arrives in the chat.
+    deliverables: ['1 task at a time', 'Development, design, video and marketing', 'The next task starts as soon as one ships'],
   },
   {
     id: 'growth',
@@ -58,9 +59,10 @@ const RETAINERS = [
     cents: 125000,
     price: '€1,250',
     cadence: '/mo',
-    blurb: 'For brands ready to grow.',
-    features: ['12 posts or carousels', '4 short videos', 'Fresh ad creatives every week', '1 site or store update a month', 'Designer, editor and marketer', 'Same-day replies, plus a monthly results report'],
-    deliverables: ['12 posts or carousels', '4 short videos', 'Ad creatives, fresh every week', '1 site or store update', 'Monthly results report'],
+    active: 2,
+    blurb: 'Two tasks at a time.',
+    features: ['2 tasks at a time', 'Development, design, video and marketing', 'Add tasks any time: the next starts when one ships', 'Same-day replies, plus a monthly results report'],
+    deliverables: ['2 tasks at a time', 'Development, design, video and marketing', 'The next task starts as soon as one ships', 'Monthly results report'],
     highlight: true,
   },
   {
@@ -69,10 +71,19 @@ const RETAINERS = [
     cents: 249000,
     price: '€2,490',
     cadence: '/mo',
-    blurb: 'Your full growth team.',
-    features: ['20 posts or carousels', '8 short videos', 'Ad creatives and ad management', 'Up to 10 developer hours a month', 'A dedicated project lead and a weekly call', 'Priority replies'],
-    deliverables: ['20 posts or carousels', '8 short videos', 'Ad creatives and ad management', 'Up to 10 developer hours', 'Weekly call with your project lead', 'Monthly results report'],
+    active: 3,
+    blurb: 'Three tasks at a time.',
+    features: ['3 tasks at a time', 'Development, design, video and marketing', 'A dedicated project lead and a weekly call', 'Priority replies'],
+    deliverables: ['3 tasks at a time', 'Development, design, video and marketing', 'A dedicated project lead and a weekly call', 'Monthly results report'],
   },
+];
+
+// What a task can be: one clear piece of work in one of the four things the team does. Shown on the pricing page.
+const TASK_EXAMPLES = [
+  { area: 'Development', examples: ['A landing page', 'A new feature', 'Fixes and updates', 'A store or checkout'] },
+  { area: 'Design', examples: ['A logo or brand kit', 'Social posts and carousels', 'Ad creatives', 'A pitch deck'] },
+  { area: 'Video', examples: ['Reels, Shorts and TikToks', 'A launch video', 'Edits of your footage', 'Motion graphics'] },
+  { area: 'Marketing', examples: ['A content calendar', 'An ad campaign', 'Emails that sell', 'A monthly results report'] },
 ];
 
 // Every team plan carries these.
@@ -99,4 +110,4 @@ function effectivePlan(id, paidThrough, now = new Date()) {
   return new Date(paidThrough).getTime() >= now.getTime() ? getPlan(id) : PLANS[0];
 }
 
-module.exports = { PLANS, RETAINERS, TEAM_INCLUDES, getPlan, getPaidPlan, getRetainer, effectivePlan };
+module.exports = { PLANS, RETAINERS, TASK_EXAMPLES, TEAM_INCLUDES, getPlan, getPaidPlan, getRetainer, effectivePlan };

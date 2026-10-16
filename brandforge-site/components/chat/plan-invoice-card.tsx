@@ -4,7 +4,7 @@ import { getRetainer } from '@/lib/plans.js';
 import { PayNow } from '@/components/pay-now';
 
 // The invoice for a monthly team plan, sent by the team once it was agreed in this chat. The client pays right here; the
-// payment marks it Paid and starts month 1 (its work list appears in the chat).
+// payment marks it Paid and starts month 1, and the client adds their tasks in the chat.
 export function PlanInvoiceCard({ planId, status, canPay, conversationId }: { planId: string; status: string; canPay: boolean; conversationId: string }) {
   const plan = getRetainer(planId);
   if (!plan) return null;
@@ -29,7 +29,7 @@ export function PlanInvoiceCard({ planId, status, canPay, conversationId }: { pl
         ))}
       </ul>
       {paid ? (
-        <p className="mt-4 text-sm text-muted">Your month&apos;s work list is in this chat.</p>
+        <p className="mt-4 text-sm text-muted">Add your tasks in this chat. We start right away.</p>
       ) : canPay ? (
         <div className="mt-5">
           <PayNow planId={plan.id} planName={plan.name} primary chatId={conversationId} label={`Pay ${plan.price} and start`} />

@@ -8,7 +8,7 @@ import { startPlanMonth } from '@/lib/plan-month-start';
 //   that card turns Paid and month 1 starts in the same chat.
 // - A renewal: the next month starts in the chat where the plan already runs.
 // - A payment with neither (bought straight from a link): it opens its own team chat.
-// Each month adds its work list to the chat, and the whole team hears about it on every channel. Software plans (Pro) do
+// Each month posts its start line in the chat, and the whole team hears about it on every channel. Software plans (Pro) do
 // nothing here. Best-effort, never throws.
 export async function startTeamPlan(userId: string | null, planId: string | null, via: 'card' | 'crypto'): Promise<string | null> {
   const plan = planId ? getRetainer(planId) : null;
@@ -29,9 +29,9 @@ export async function startTeamPlan(userId: string | null, planId: string | null
       }
     }
     if (!chatId) return null;
-    const month = await startPlanMonth(chatId, plan.id, (n) => (n === 1 ? `Paid: ${price}. Month 1 starts today.` : `Renewed: ${price}. Month ${n} starts today.`));
+    const month = await startPlanMonth(chatId, plan.id);
     if (month === 0) return chatId;
-    await notifyTeamChatOpened({ conversationId: chatId, who: `PAID ${price} (${via}, month ${month}): ${who}`, message: `Month ${month} work list is in the chat.`, openerId: userId, again: true });
+    await notifyTeamChatOpened({ conversationId: chatId, who: `PAID ${price} (${via}, month ${month}): ${who}`, message: `Month ${month} started. ${plan.active === 1 ? '1 task' : `${plan.active} tasks`} at a time: check the chat for their tasks.`, openerId: userId, again: true });
     return chatId;
   } catch (cause) {
     console.error('startTeamPlan failed:', cause instanceof Error ? cause.message : cause);

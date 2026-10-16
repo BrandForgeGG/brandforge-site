@@ -47,7 +47,7 @@ const SECTIONS: LegalSection[] = [
   {
     title: '7. Team plans: the first-month refund',
     body: [
-      'Team plans (Launch, Growth, Scale) are paid monthly in advance. If the deliverables listed for your plan are not delivered in your first month, you get a full refund of that first month on request. Ask in your team chat or message @headstartup on Telegram within 14 days after the month ends. The refund goes back to the card or wallet you paid with.',
+      'Team plans (Launch, Growth, Scale) are paid monthly in advance. If the tasks agreed for your first month are not delivered, you get a full refund of that first month on request. Ask in your team chat or message @headstartup on Telegram within 14 days after the month ends. The refund goes back to the card or wallet you paid with.',
       'This is a refund, not a free month: the first month is paid like every other month. After the first month you can cancel any time and the plan stops at the end of the month already paid.',
     ],
   },

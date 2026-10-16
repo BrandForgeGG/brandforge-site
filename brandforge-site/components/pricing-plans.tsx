@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { PLANS, RETAINERS, TEAM_INCLUDES } from "@/lib/plans.js";
+import { PLANS, RETAINERS, TASK_EXAMPLES, TEAM_INCLUDES } from "@/lib/plans.js";
 import { PayNow } from "@/components/pay-now";
 import { trackEvent } from "@/lib/funnel-client";
 
@@ -70,7 +70,7 @@ export function PricingPlans({ bare = false }: { bare?: boolean }) {
   return (
     <section id="plans" className={bare ? "scroll-mt-20 pt-8" : "scroll-mt-20 px-5 py-10 sm:px-8"} aria-label="Plans">
       <div className={bare ? "" : "mx-auto max-w-6xl"}>
-        <div role="tablist" aria-label="Plan type" className="flex w-fit rounded-full border border-line bg-panel p-1">
+        <div role="tablist" aria-label="Plan type" className="mx-auto flex w-fit rounded-full border border-line bg-panel p-1">
           {(["teams", "software"] as Tab[]).map((id) => (
             <button
               key={id}
@@ -87,11 +87,26 @@ export function PricingPlans({ bare = false }: { bare?: boolean }) {
         <div className="mt-8 grid gap-5 md:grid-cols-3">
           {plans.map((plan) => <PlanCard key={plan.id} plan={plan} team={tab === "teams"} />)}
         </div>
-        <p className="mt-6 text-sm text-muted">
+        {tab === "teams" ? (
+          <div className="mt-10">
+            <p className="text-center font-serif text-2xl text-foreground">What a task can be</p>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {TASK_EXAMPLES.map((group) => (
+                <div key={group.area} className="rounded-2xl border border-line bg-panel p-5">
+                  <p className="font-semibold text-foreground">{group.area}</p>
+                  <ul className="mt-2 space-y-1 text-sm text-muted">
+                    {group.examples.map((example) => <li key={example}>{example}</li>)}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+        <p className="mt-6 text-center text-sm text-muted">
           {tab === "teams" ? <>Chat first, pay when you agree. Every plan includes: {TEAM_INCLUDES.join(" · ")}</> : <>Prices in euros, before tax. No late fees.</>}
         </p>
         {tab === "teams" ? (
-          <p className="mt-2 text-sm">
+          <p className="mt-2 text-center text-sm">
             <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer" onClick={() => trackEvent("plan_interest", { source: "call" })} className="font-semibold text-foreground underline-offset-4 hover:underline">
               {BOOKING_IS_CALENDAR ? "Book a 15-min call" : "Questions? Message us"}
             </a>

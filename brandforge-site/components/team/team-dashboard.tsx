@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { fetchAuthed } from '@/lib/browser-auth';
 import { getRetainer } from '@/lib/plans.js';
 
-type Client = { userId: string; name: string; plan: string; status: string; via: 'card' | 'crypto'; chatId: string | null; month: number; done: number; total: number; lead: string | null; cents: number; team: number; brandforge: number };
+type Client = { userId: string; name: string; plan: string; status: string; via: 'card' | 'crypto'; chatId: string | null; month: number; done: number; active: number; slots: number; lead: string | null; cents: number; team: number; brandforge: number };
 type Data = {
   mrr: number;
   teamCents: number;
@@ -34,8 +34,8 @@ const FLOW: { step: string; what: string; who: 'Team' | 'Auto' | 'Everyone' }[] 
   { step: 'Come', what: 'Posts, outreach and the site bring buyers to the pricing page.', who: 'Everyone' },
   { step: 'Chat', what: '"Talk to us about Growth" opens a chat. All of us get pinged. First to claim it leads.', who: 'Team' },
   { step: 'Agree', what: 'Answer, shape what they get, then one click: Send the invoice.', who: 'Team' },
-  { step: 'Pay', what: 'Card or crypto in the chat. The invoice turns Paid, month 1 starts.', who: 'Auto' },
-  { step: 'Work', what: "The month's work list appears in the chat. The lead splits it up.", who: 'Team' },
+  { step: 'Pay', what: 'Card or crypto in the chat. The invoice turns Paid and month 1 starts.', who: 'Auto' },
+  { step: 'Work', what: 'The client adds tasks in the chat. We work 1, 2 or 3 at a time, by plan. A free slot shows red here.', who: 'Team' },
   { step: 'Deliver', what: 'Move each item to review. The client approves in the chat.', who: 'Team' },
   { step: 'Retain', what: 'Renewal starts the next month by itself. A cancel pings all of us.', who: 'Auto' },
 ];
@@ -164,10 +164,10 @@ export function TeamDashboard() {
                     <td className="px-4 py-3 text-foreground">{client.name}{client.status === 'past_due' ? <span className="ml-2 text-xs text-danger">payment failed</span> : null}</td>
                     <td className="px-4 py-3 text-foreground">{getRetainer(client.plan)?.name} <span className="text-muted">{eur(client.cents)}</span></td>
                     <td className="px-4 py-3">
-                      {client.total ? (
-                        <span className="flex items-center gap-2">
-                          <span className="h-1.5 w-16 overflow-hidden rounded-full bg-overlay"><span className="block h-full bg-success" style={{ width: `${(client.done / client.total) * 100}%` }} /></span>
-                          <span className="text-muted">Month {client.month}: {client.done}/{client.total}</span>
+                      {client.month ? (
+                        <span className="text-muted">
+                          Month {client.month} · {client.done} shipped ·{' '}
+                          <span className={client.active < client.slots ? 'font-semibold text-danger' : 'text-foreground'}>{client.active}/{client.slots} in progress</span>
                         </span>
                       ) : <span className="text-muted">Starting</span>}
                     </td>

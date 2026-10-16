@@ -1,2 +1,3 @@
-export function currentMonth(taskTitles: string[]): number;
-export function monthTasks(planId: string, month: number, start?: Date): { title: string; due_date: string }[];
+export const MONTH_LINE: RegExp;
+export function currentMonth(lines: string[]): number;
+export function monthLines(plan: { name: string; price: string; cadence: string; active: number }, month: number, renewed: boolean): [string, string];

@@ -17,8 +17,9 @@ const POSTS: { date: string; title: string; body: Block[] }[] = [
     date: '2026-10-16',
     title: 'A full growth team for less than one hire',
     body: [
-      'The team plans are new. Launch is €690 a month (8 posts or carousels, 2 short videos, everything scheduled on your channels). Growth is €1,250 (12 posts or carousels, 4 short videos, fresh ad creatives every week, one site or store update and a monthly results report). Scale is €2,490 (20 posts or carousels, 8 short videos, ad management, up to 10 developer hours and a weekly call with your project lead).',
-      'You chat first and pay when you agree. The invoice arrives in your chat, by card or crypto. Each month the work list lands in that chat, and nothing counts as delivered until you approve it. If month one is not delivered, you get a full refund.',
+      'The team plans are new: development, design, video and marketing by real people, by the month. Launch is €690 and works on 1 task at a time. Growth is €1,250 and works on 2 at a time. Scale is €2,490 and works on 3 at a time, with a dedicated project lead and a weekly call.',
+      'A task is one clear piece of work: a landing page, a new feature, a logo, a set of social posts, a launch video, an ad campaign. Add as many as you like in your chat; the next one starts as soon as one ships.',
+      'You chat first and pay when you agree. The invoice arrives in your chat, by card or crypto, and nothing counts as delivered until you approve it. If month one is not delivered, you get a full refund.',
       'Start at brandforge.gg/pricing.',
     ],
   },

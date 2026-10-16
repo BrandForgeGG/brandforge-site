@@ -1,18 +1,19 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { currentMonth, monthTasks } = require('./plan-month.js');
+const { currentMonth, monthLines } = require('./plan-month.js');
+const { getRetainer } = require('./plans.js');
 
-test('the month is read from the work list titles', () => {
+test('the month is read from the chat lines', () => {
   assert.equal(currentMonth([]), 0);
-  assert.equal(currentMonth(['Logo', 'Month 1: 12 posts or carousels', 'Month 2: 4 short videos']), 2);
+  assert.equal(currentMonth(['hello', 'Paid: Growth €1,250/mo. Month 1 starts today.', 'Renewed: Growth €1,250/mo. Month 2 starts today.']), 2);
 });
 
-test('each paid month gets the plan deliverables, due in 30 days', () => {
-  const tasks = monthTasks('growth', 2, new Date('2026-10-16T00:00:00Z'));
-  assert.equal(tasks.length, 5);
-  assert.equal(tasks[0].title, 'Month 2: 12 posts or carousels');
-  assert.equal(tasks[0].due_date, '2026-11-15');
-  assert.deepEqual(monthTasks('pro', 1), []);
-  assert.deepEqual(monthTasks('growth', 0), []);
+test('a new month says what was paid and how many tasks run at a time', () => {
+  const [paid, how] = monthLines(getRetainer('growth'), 1, false);
+  assert.equal(paid, 'Paid: Growth €1,250/mo. Month 1 starts today.');
+  assert.match(how, /2 tasks at a time/);
+  assert.match(monthLines(getRetainer('launch'), 3, true)[0], /^Renewed: .*Month 3 starts today\.$/);
+  assert.match(monthLines(getRetainer('launch'), 1, false)[1], /1 task at a time/);
+  assert.equal(currentMonth([monthLines(getRetainer('scale'), 4, true)[0]]), 4);
 });

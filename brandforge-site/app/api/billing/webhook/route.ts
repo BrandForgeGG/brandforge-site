@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       if (event.type === 'customer.subscription.deleted') await teamPlanEnded(str(object.metadata?.user_id), str(object.metadata?.plan));
     }
   } else if (event.type === 'invoice.paid' && object.billing_reason === 'subscription_cycle') {
-    // A team plan renewed: the next month's work list starts in the client's chat (the first month is checkout.session.completed).
+    // A team plan renewed: the next month starts in the client's chat (the first month is checkout.session.completed).
     const meta = subscriptionMeta(object);
     await startTeamPlan(meta.user_id ?? null, meta.plan ?? null, 'card');
   } else if (event.type === 'invoice.payment_failed') {

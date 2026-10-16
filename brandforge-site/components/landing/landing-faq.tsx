@@ -3,7 +3,7 @@ const FAQS = [
   {
     question: 'What do I get each month?',
     answer:
-      'A set amount of work from designers, editors, developers and marketers: posts and carousels, short videos, ad creatives and site updates, depending on the plan. Each month starts with a work list in your chat, and you approve every item there.',
+      'Development, design, video and marketing, done by real people. Add as many tasks as you like in your chat. We work on 1, 2 or 3 at a time, by plan, and you approve each one.',
   },
   {
     question: 'How do I start and pay?',
@@ -13,7 +13,7 @@ const FAQS = [
   {
     question: "What if it isn't delivered?",
     answer:
-      "If the work listed for your first month isn't delivered, you get a full refund of that month. Ask in your chat within 14 days after the month ends.",
+      "If your first month's tasks aren't delivered, you get a full refund of that month. Ask in your chat within 14 days after the month ends.",
   },
   {
     question: 'Can I do some of it myself?',
@@ -34,10 +34,10 @@ export function LandingFaq() {
   return (
     <section id="faq" className="border-t border-line px-5 py-16 sm:px-8" aria-labelledby="faq-title">
       <div className="mx-auto max-w-6xl">
-        <h2 id="faq-title" className="font-serif text-4xl text-foreground sm:text-5xl">
+        <h2 id="faq-title" className="text-center font-serif text-4xl text-foreground sm:text-5xl">
           Before you start
         </h2>
-        <div className="mt-8 max-w-3xl space-y-3">
+        <div className="mx-auto mt-8 max-w-3xl space-y-3">
           {FAQS.map((item) => (
             <details
               key={item.question}

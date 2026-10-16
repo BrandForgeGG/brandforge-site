@@ -6768,25 +6768,17 @@ export async function findPlanChat(userId: string, planId: string, planName: str
   return rows.find((row) => row.title === `${planName} team plan`)?.id ?? null;
 }
 
-/** Task titles and dates in a chat, for the monthly team-plan cycle (service role: runs from payment webhooks). */
-export async function getChatTaskStamps(conversationId: string): Promise<{ title: string; created_at: string }[]> {
+/** The "Month N starts today" lines in a chat, for the monthly team-plan cycle (service role: runs from payment webhooks). */
+export async function getChatMonthLines(conversationId: string): Promise<{ content: string; created_at: string }[]> {
   const admin = createSupabaseAdminClient();
   if (!admin) return [];
-  const { data } = await admin.from('tasks').select('title, created_at').eq('conversation_id', conversationId);
-  return (data ?? []) as { title: string; created_at: string }[];
-}
-
-export async function insertPlanTasks(tasks: { conversation_id: string; title: string; due_date: string; status: string }[]): Promise<boolean> {
-  const admin = createSupabaseAdminClient();
-  if (!admin) return false;
-  const { error } = await admin.from('tasks').insert(tasks);
-  if (error) console.error('insertPlanTasks:', error.message);
-  return !error;
+  const { data } = await admin.from('messages').select('content, created_at').eq('conversation_id', conversationId).eq('content_type', 'system').ilike('content', '%starts today%');
+  return (data ?? []) as { content: string; created_at: string }[];
 }
 
 // The shared team dashboard (/team): every paying client, what month they are on and how far it is delivered, who leads
 // them, invoices still waiting, and the money. Service role; the route lets staff only.
-export type TeamClient = { userId: string; name: string; plan: string; status: string; via: 'card' | 'crypto'; chatId: string | null; month: number; done: number; total: number; leadId: string | null; lead: string | null; paidThrough: string | null };
+export type TeamClient = { userId: string; name: string; plan: string; status: string; via: 'card' | 'crypto'; chatId: string | null; month: number; done: number; active: number; slots: number; leadId: string | null; lead: string | null; paidThrough: string | null };
 export type TeamDashboard = {
   clients: TeamClient[];
   software: { pro: number; cents: number };
@@ -6814,21 +6806,23 @@ export async function getTeamDashboard(): Promise<TeamDashboard | null> {
     const chatId = await findPlanChat(row.user_id as string, plan.id, plan.name);
     let month = 0;
     let done = 0;
-    let total = 0;
+    let active = 0;
     let leadId: string | null = null;
     if (chatId) {
-      const [{ data: tasks }, { data: chat }] = await Promise.all([
-        admin.from('tasks').select('title, status').eq('conversation_id', chatId),
+      const [{ data: tasks }, { data: chat }, lines] = await Promise.all([
+        admin.from('tasks').select('status, updated_at').eq('conversation_id', chatId),
         admin.from('conversations').select('claimed_by').eq('id', chatId).maybeSingle(),
+        getChatMonthLines(chatId),
       ]);
-      const list = (tasks ?? []) as { title: string; status: string | null }[];
-      month = currentMonth(list.map((task) => task.title));
-      const mine = list.filter((task) => task.title.startsWith(`Month ${month}: `));
-      total = mine.length;
-      done = mine.filter((task) => task.status === 'DONE').length;
+      const list = (tasks ?? []) as { status: string | null; updated_at: string | null }[];
+      month = currentMonth(lines.map((line) => line.content));
+      // This month: tasks shipped since the month started, and tasks being worked on now (against the plan's slots).
+      const since = lines.filter((line) => line.content.includes(`Month ${month} starts today`)).map((line) => line.created_at).sort().pop() ?? '';
+      done = list.filter((task) => task.status === 'DONE' && (task.updated_at ?? '') >= since).length;
+      active = list.filter((task) => task.status === 'IN_PROGRESS' || task.status === 'REVIEW').length;
       leadId = (chat as { claimed_by: string | null } | null)?.claimed_by ?? null;
     }
-    clients.push({ userId: row.user_id as string, name: '', plan: plan.id, status: row.status, via: row.stripe_subscription_id.startsWith('crypto:') ? 'crypto' : 'card', chatId, month, done, total, leadId, lead: null, paidThrough: row.current_period_end });
+    clients.push({ userId: row.user_id as string, name: '', plan: plan.id, status: row.status, via: row.stripe_subscription_id.startsWith('crypto:') ? 'crypto' : 'card', chatId, month, done, active, slots: plan.active, leadId, lead: null, paidThrough: row.current_period_end });
   }
 
   const { data: invoiceRows } = await admin

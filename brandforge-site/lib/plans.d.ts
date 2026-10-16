@@ -13,6 +13,7 @@ export type Plan = {
 export type Retainer = {
   id: 'launch' | 'growth' | 'scale';
   deliverables: string[];
+  active: number;
   name: string;
   cents: number;
   price: string;
@@ -23,6 +24,7 @@ export type Retainer = {
 };
 export const RETAINERS: Retainer[];
 export const TEAM_INCLUDES: string[];
+export const TASK_EXAMPLES: { area: string; examples: string[] }[];
 export function getRetainer(id: string | null | undefined): Retainer | null;
 export const PLANS: Plan[];
 export function getPlan(id: string | null | undefined): Plan;

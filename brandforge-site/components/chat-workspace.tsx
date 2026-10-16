@@ -2884,7 +2884,7 @@ return (
                 {activePlan ? `Let's talk about ${getRetainer(activePlan)?.name ?? "your plan"}` : "Talk to the BrandForge team"}
               </h1>
               <p className="bf-start-sub mt-3 max-w-md text-sm leading-relaxed text-muted">
-                {activePlan ? "Tell us about your brand below. A person from the team answers here, and you pay only when you agree." : "A person from the BrandForge team answers you here."}{isGuestBrowser ? " No sign-up needed." : ""}
+                {activePlan ? "Tell us what you need below. The whole team gets notified the moment you send, and you pay only when you agree." : "The whole BrandForge team gets notified the moment you send, and a person replies here."}{isGuestBrowser ? " No sign-up needed." : ""}
               </p>
               {activePlan ? <PlanArrival planId={activePlan} /> : (
                 <>
@@ -3246,7 +3246,7 @@ return (
                 makes the chat theirs, so the team's reply also reaches them by email. */}
             {isGuestOwner && messages.some((entry) => entry.sender === "user") ? (
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-ember/40 bg-ember/10 px-3 py-2 text-sm">
-                <span className="text-foreground">Sent. We reply here. Get the reply by email too?</span>
+                <span className="text-foreground">Sent. The whole team just got notified and will reply in a moment.</span>
                 <button
                   type="button"
                   onClick={() => openGuestLogin({ reason: "reply", next: conversationId ? `/chat?conversationId=${conversationId}` : "/chat" })}

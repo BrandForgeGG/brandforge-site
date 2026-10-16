@@ -57,7 +57,7 @@ export const PAGE_COPY: Record<string, PageCopy> = {
   },
   '/specialists': {
     title: 'The BrandForge team: the people behind your plan',
-    description: 'Designers, editors, developers and marketers who ship your content, ads and site updates every month, each reviewed by a person. Meet the team.',
+    description: 'Designers, editors, developers and marketers who take on your development, design, video and marketing tasks, each reviewed by a person. Meet the team.',
     keywords: ['vetted freelancers', 'BrandForge team', 'hire designers and developers', 'specialist marketplace', 'trusted freelancers'],
     cta: 'Meet the team',
   },
