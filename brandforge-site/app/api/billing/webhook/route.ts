@@ -3,6 +3,7 @@ import { verifyStripeSignature } from '@/lib/stripe-signature';
 import { recordFunnelEvent, upsertSubscription } from '@/lib/project-db';
 import { getRetainer } from '@/lib/plans.js';
 import { postOpsEvent } from '@/lib/ops-events';
+import { startTeamPlan } from '@/lib/team-plan-start';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +35,7 @@ export async function POST(request: NextRequest) {
       await recordFunnelEvent('subscription_active', { signedIn: true, properties: { source: plan ?? 'unknown' } });
       const named = plan ? getRetainer(plan) : null;
       await postOpsEvent('plan_requested', { title: `PAID: ${named ? named.name + ' ' + named.price + named.cadence : 'a plan'}` });
+      await startTeamPlan(str(object.client_reference_id) ?? str(object.metadata?.user_id), plan, 'card');
     }
   } else if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
     const id = str(object.id);

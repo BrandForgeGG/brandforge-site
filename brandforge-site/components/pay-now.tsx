@@ -75,7 +75,7 @@ export function PayNow({ planId, planName, primary = false }: { planId: string; 
       <div className="space-y-1.5">
         {status.card ? (
           <button type="button" onClick={() => void pay()} disabled={busy} className={`${base} ${primary ? 'bg-ember text-on-ember hover:opacity-90' : 'border border-line text-foreground hover:border-ember'} disabled:opacity-60`}>
-            {busy ? 'Opening payment…' : `Pay by card · ${planName}`}
+            {busy ? 'Opening payment…' : `Start ${planName}`}
           </button>
         ) : null}
         {status.crypto ? (
@@ -84,7 +84,7 @@ export function PayNow({ planId, planName, primary = false }: { planId: string; 
             Get {planName} with crypto
           </button>
         ) : null}
-        {status.crypto ? <p className="text-center text-[11px] leading-snug text-muted">USDT, USDC, BTC, ETH, SOL and more, from Trust Wallet. Each payment adds 30 days.</p> : null}
+        {status.crypto ? <p className="text-center text-[11px] leading-snug text-muted">Crypto: each payment adds 30 days.</p> : null}
         {error ? <p role="alert" className="mt-1.5 text-xs text-danger">{error}</p> : null}
         {crypto ? <CryptoCheckout purpose="plan" refId={planId} title={`${planName}, 30 days`} onClose={() => setCrypto(false)} onPaid={() => { statusRead = null; }} /> : null}
       </div>

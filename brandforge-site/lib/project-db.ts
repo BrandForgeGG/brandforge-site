@@ -6671,3 +6671,21 @@ export async function listCryptoInvoices(limit = 30): Promise<(CryptoInvoiceRow 
   const names = new Map(((profiles ?? []) as { id: string; username: string | null; display_name: string | null }[]).map((p) => [p.id, p.username || p.display_name || 'member']));
   return rows.map((row) => ({ ...row, name: names.get(row.user_id) ?? 'member' }));
 }
+
+// A paid team plan opens the buyer's team chat: one per person and plan, so a webhook retry or a crypto renewal never opens
+// a second one. Service role, because it runs from payment webhooks with no signed-in session. Returns the chat id and
+// whether it was just created.
+export async function openTeamPlanChat(userId: string, title: string, welcome: string): Promise<{ id: string; created: boolean } | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data: existing } = await admin.from('conversations').select('id').eq('user_id', userId).eq('title', title).limit(1).maybeSingle();
+  if (existing?.id) return { id: String(existing.id), created: false };
+  const { data, error } = await admin.from('conversations').insert({ user_id: userId, title, status: 'DISCOVERY', source: 'organic' }).select('id').maybeSingle();
+  if (error || !data?.id) {
+    console.error('openTeamPlanChat: could not create the chat:', error?.message);
+    return null;
+  }
+  const id = String(data.id);
+  await admin.from('messages').insert({ conversation_id: id, sender_type: 'human_operator', sender_name: 'BrandForge', content: welcome, content_type: 'system' });
+  return { id, created: true };
+}

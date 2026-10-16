@@ -8,6 +8,11 @@ import { trackEvent } from "@/lib/funnel-client";
 
 type Tab = "teams" | "software";
 
+// A scheduling page (Cal.com, Calendly) when NEXT_PUBLIC_BOOKING_URL is set; until then the team's Telegram.
+const BOOKING = (process.env.NEXT_PUBLIC_BOOKING_URL || "").trim();
+const BOOKING_IS_CALENDAR = /^https:\/\//.test(BOOKING);
+const BOOKING_URL = BOOKING_IS_CALENDAR ? BOOKING : "https://t.me/headstartup";
+
 type Card = { id: string; name: string; price: string; cadence: string; blurb: string; features: string[]; highlight?: boolean; soon?: boolean; cents: number };
 
 function PlanCard({ plan, tab }: { plan: Card; tab: Tab }) {
@@ -36,14 +41,16 @@ function PlanCard({ plan, tab }: { plan: Card; tab: Tab }) {
           <Link href="/chat" className="block w-full rounded-xl border border-line px-4 py-2.5 text-center text-sm font-semibold text-foreground transition hover:border-ember">Start free</Link>
         ) : tab === "teams" ? (
           <>
-            <Link
-              href={`/chat?plan=${plan.id}`}
-              onClick={() => trackEvent("plan_interest", { source: plan.id })}
-              className={`block w-full rounded-xl px-4 py-2.5 text-center text-sm font-semibold transition hover:opacity-90 ${plan.highlight ? "bg-ember text-on-ember" : "border border-line text-foreground hover:border-ember"}`}
+            <PayNow planId={plan.id} planName={plan.name} primary={Boolean(plan.highlight)} />
+            <a
+              href={BOOKING_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackEvent("plan_interest", { source: `call-${plan.id}` })}
+              className="block pt-1 text-center text-xs font-semibold text-muted underline-offset-2 hover:text-foreground hover:underline"
             >
-              Start with {plan.name}
-            </Link>
-            <PayNow planId={plan.id} planName={plan.name} />
+              {BOOKING_IS_CALENDAR ? "Book a 15-min call" : "Questions? Message us"}
+            </a>
           </>
         ) : (
           <PayNow planId={plan.id} planName={plan.name} primary={Boolean(plan.highlight)} />

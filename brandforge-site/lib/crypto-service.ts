@@ -21,6 +21,7 @@ import {
   type CryptoInvoiceRow,
 } from '@/lib/project-db';
 import { completeAgreementFunding } from '@/lib/funding-complete';
+import { startTeamPlan } from '@/lib/team-plan-start';
 import { announce } from '@/lib/peer-contract-service';
 import { postOpsEvent } from '@/lib/ops-events';
 import { sendStageEmail } from '@/lib/email';
@@ -222,7 +223,8 @@ async function deliver(row: CryptoInvoiceRow, hash: string, userId: string, user
     const until = await extendCryptoPlan(userId, row.ref_id);
     await recordFunnelEvent('subscription_active', { signedIn: true, properties: { source: `${row.ref_id}-crypto` } });
     await postOpsEvent('plan_requested', { title: `PAID in crypto: ${row.ref_id} · ${row.amount} ${label}` });
-    return { status: 'paid', note: 'Payment received. Your plan is on.', done: until ?? undefined };
+    const teamChat = await startTeamPlan(userId, row.ref_id, 'crypto');
+    return { status: 'paid', note: teamChat ? 'Payment received. Your team chat is open.' : 'Payment received. Your plan is on.', done: until ?? undefined };
   }
   if (row.purpose === 'agreement') {
     const agreement = await getAgreementById(row.ref_id);

@@ -1,4 +1,4 @@
-import { getPaidPlan } from '@/lib/plans.js';
+import { getPaidPlan, getRetainer } from '@/lib/plans.js';
 
 // Card subscriptions through Stripe, over plain HTTP so there is nothing extra to install. The whole thing is dormant
 // until STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are set: with no key, the pricing page offers the chat instead.
@@ -37,7 +37,8 @@ export async function createCheckoutUrl(input: { planId: string; userId: string;
   if (!plan || plan.cents <= 0) return null;
   const params = new URLSearchParams({
     mode: 'subscription',
-    success_url: `${input.origin}/settings?plan=thanks`,
+    // A team plan lands in the chat, where its team chat appears as soon as Stripe confirms the payment.
+    success_url: getRetainer(plan.id) ? `${input.origin}/chat?paid=team` : `${input.origin}/settings?plan=thanks`,
     cancel_url: `${input.origin}/pricing`,
     client_reference_id: input.userId,
     'metadata[plan]': plan.id,
