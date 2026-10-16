@@ -73,7 +73,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('brandforge:theme');if(t==='light')t='mono';if(t==='original')t='forge';if(t==='forge'||t==='crystal'||t==='mono'){document.documentElement.dataset.theme=t;}}catch(e){}try{if(localStorage.getItem('brandforge:rail-collapsed')==='1')document.documentElement.dataset.rail='collapsed';}catch(e){}})();`,
+            __html: `(function(){document.documentElement.classList.add('bf-js');try{var t=localStorage.getItem('brandforge:theme');if(t==='light')t='mono';if(t==='original')t='forge';if(t==='forge'||t==='crystal'||t==='mono'){document.documentElement.dataset.theme=t;}}catch(e){}try{if(localStorage.getItem('brandforge:rail-collapsed')==='1')document.documentElement.dataset.rail='collapsed';}catch(e){}})();`,
           }}
         />
       </head>

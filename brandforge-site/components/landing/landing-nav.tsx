@@ -71,9 +71,10 @@ export function LandingNav() {
               </button>
               <Link
                 href="/chat"
-                className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-on-ember transition hover:opacity-95"
+                className="whitespace-nowrap rounded-xl bg-ember px-3 py-2 text-sm font-semibold text-on-ember transition hover:opacity-95 sm:px-4"
               >
-                Talk to the team
+                <span className="sm:hidden">Talk to us</span>
+                <span className="hidden sm:inline">Talk to the team</span>
               </Link>
             </>
           )}

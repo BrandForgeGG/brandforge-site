@@ -2272,3 +2272,41 @@ html[data-rail='collapsed'] .bf-rail-ph { width: 4rem; }
 @media (prefers-reduced-motion: reduce) {
   .bf-drift, .bf-sweep, .bf-rise, .bf-pop, .bf-dots span { animation: none; }
 }
+/* ---- Homepage motion system (2026-10-17) ----
+   Three moves only: a section settling in as it enters, the workflow line filling as the reader arrives, and the
+   execution engine stepping through a project. Content is hidden only when JavaScript runs (html.bf-js, set in the
+   head script) and never with reduced motion, so nothing depends on animation to be read. */
+.bf-js .bf-reveal:not([data-in='true']) {
+  opacity: 0;
+  transform: translateY(18px);
+}
+.bf-reveal {
+  transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.bf-flow-fill {
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 1.6s cubic-bezier(0.65, 0, 0.35, 1) 0.2s;
+}
+[data-in='true'] .bf-flow-fill { transform: scaleX(1); }
+.bf-flow-fill-y {
+  transform-origin: center top;
+  transform: scaleY(0);
+  transition: transform 1.6s cubic-bezier(0.65, 0, 0.35, 1) 0.2s;
+}
+[data-in='true'] .bf-flow-fill-y { transform: scaleY(1); }
+.bf-stage-in { animation: bf-stage-in 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@keyframes bf-stage-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.bf-engine-progress { transition: width 0.5s cubic-bezier(0.65, 0, 0.35, 1); }
+.bf-work-shot img { transition: transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.bf-work-shot:hover img, .bf-work-shot:focus-visible img { transform: scale(1.035); }
+@media (prefers-reduced-motion: reduce) {
+  .bf-js .bf-reveal:not([data-in='true']) { opacity: 1; transform: none; }
+  .bf-reveal, .bf-flow-fill, .bf-flow-fill-y, .bf-engine-progress, .bf-work-shot img { transition: none; }
+  .bf-flow-fill, .bf-flow-fill-y { transform: none; }
+  .bf-stage-in { animation: none; }
+  .bf-work-shot:hover img { transform: none; }
+}

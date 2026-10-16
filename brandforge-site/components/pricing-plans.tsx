@@ -60,7 +60,8 @@ function PlanCard({ plan, team }: { plan: Card; team: boolean }) {
 
 // One pricing block: a growth team by the month, or the software on its own.
 // `bare`: inside a section that already sets the page column (the homepage), so no padding or width of its own.
-export function PricingPlans({ bare = false }: { bare?: boolean }) {
+// `tasks`: the What a task can be menu under the team plans (the homepage shows it as its own section instead).
+export function PricingPlans({ bare = false, tasks = true }: { bare?: boolean; tasks?: boolean }) {
   const [tab, setTab] = useState<Tab>("teams");
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- a #software link opens that tab
@@ -98,7 +99,7 @@ export function PricingPlans({ bare = false }: { bare?: boolean }) {
             </a>
           </p>
         ) : null}
-        {tab === "teams" ? <TaskMenu /> : null}
+        {tab === "teams" && tasks ? <TaskMenu /> : null}
       </div>
     </section>
   );
