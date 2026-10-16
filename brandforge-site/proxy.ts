@@ -19,6 +19,7 @@ const protectedRoutes = [
   '/chat',
   '/settings',
   '/admin',
+  '/team',
   '/onboarding',
 ];
 
@@ -178,6 +179,7 @@ export const config = {
     '/settings/:path*',
     '/apply',
     '/admin/:path*',
+    '/team/:path*',
     '/onboarding',
     '/login',
     '/signup',

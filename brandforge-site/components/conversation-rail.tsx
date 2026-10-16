@@ -75,6 +75,8 @@ const NAV_ITEMS = [
   { href: "/explore", hue: "var(--hue-explore)", label: "Explore", hint: "Where BrandForge is going and what is happening now", path: "M10 3a7 7 0 100 14 7 7 0 000-14zM12.8 7.2l-1.6 4-4 1.6 1.6-4z" },
 ];
 
+const TEAM_ITEM = { href: "/team", hue: "var(--ember)", label: "Team", hint: "Clients, money and the road to €10k", path: "M7 8a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM13.5 8a2 2 0 100-4 2 2 0 000 4zM2.5 16c0-2.8 2-4.5 4.5-4.5s4.5 1.7 4.5 4.5M11.5 12.2c.6-.4 1.3-.7 2-.7 2.1 0 3.8 1.5 3.8 4" };
+
 const DASHBOARD_ITEM = { href: "/admin", hue: "var(--muted)", label: "Dashboard", hint: "Admin: people, money, chats", path: "M4 4h5v5H4zM11 4h5v5h-5zM4 11h5v5H4zM11 11h5v5h-5z" };
 
 function RailIcon({ path, className = "h-4 w-4" }: { path: string; className?: string }) {
@@ -385,7 +387,7 @@ onMobileClose,
               <RailIcon path="M14.5 3.5l2 2L9 13l-3 1 1-3 7.5-7.5zM4 16.5h12" className="h-[18px] w-[18px] shrink-0" />
               {isCollapsed ? null : isCreatingConversation ? "Starting…" : "New chat"}
             </button>
-            {(isAdmin ? [...NAV_ITEMS, DASHBOARD_ITEM] : NAV_ITEMS).map((item) => (
+            {(isAdmin ? [...NAV_ITEMS, TEAM_ITEM, DASHBOARD_ITEM] : isStaff ? [...NAV_ITEMS, TEAM_ITEM] : NAV_ITEMS).map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

@@ -6783,3 +6783,78 @@ export async function insertPlanTasks(tasks: { conversation_id: string; title: s
   if (error) console.error('insertPlanTasks:', error.message);
   return !error;
 }
+
+// The shared team dashboard (/team): every paying client, what month they are on and how far it is delivered, who leads
+// them, invoices still waiting, and the money. Service role; the route lets staff only.
+export type TeamClient = { userId: string; name: string; plan: string; status: string; via: 'card' | 'crypto'; chatId: string | null; month: number; done: number; total: number; leadId: string | null; lead: string | null; paidThrough: string | null };
+export type TeamDashboard = {
+  clients: TeamClient[];
+  software: { pro: number; cents: number };
+  openInvoices: { chatId: string; name: string; plan: string; sentAt: string }[];
+  cancelled30d: number;
+  invoices30d: { sent: number; paid: number };
+};
+
+export async function getTeamDashboard(): Promise<TeamDashboard | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { RETAINERS, getPlan } = await import('./plans.js');
+  const { currentMonth } = await import('./plan-month.js');
+  const now = Date.now();
+  const since = new Date(now - 30 * 86_400_000).toISOString();
+  const { data: subs } = await admin.from('subscriptions').select('user_id, plan, status, current_period_end, stripe_subscription_id, updated_at');
+  const rows = (subs ?? []) as { user_id: string | null; plan: string | null; status: string; current_period_end: string | null; stripe_subscription_id: string; updated_at: string }[];
+  const live = rows.filter((row) => row.user_id && ['active', 'trialing', 'past_due'].includes(row.status) && (!row.current_period_end || Date.parse(row.current_period_end) + 3 * 86_400_000 >= now));
+  const team = live.filter((row) => RETAINERS.some((plan) => plan.id === row.plan));
+  const pro = live.filter((row) => row.plan === 'pro');
+
+  const clients: TeamClient[] = [];
+  for (const row of team) {
+    const plan = RETAINERS.find((entry) => entry.id === row.plan)!;
+    const chatId = await findPlanChat(row.user_id as string, plan.id, plan.name);
+    let month = 0;
+    let done = 0;
+    let total = 0;
+    let leadId: string | null = null;
+    if (chatId) {
+      const [{ data: tasks }, { data: chat }] = await Promise.all([
+        admin.from('tasks').select('title, status').eq('conversation_id', chatId),
+        admin.from('conversations').select('claimed_by').eq('id', chatId).maybeSingle(),
+      ]);
+      const list = (tasks ?? []) as { title: string; status: string | null }[];
+      month = currentMonth(list.map((task) => task.title));
+      const mine = list.filter((task) => task.title.startsWith(`Month ${month}: `));
+      total = mine.length;
+      done = mine.filter((task) => task.status === 'DONE').length;
+      leadId = (chat as { claimed_by: string | null } | null)?.claimed_by ?? null;
+    }
+    clients.push({ userId: row.user_id as string, name: '', plan: plan.id, status: row.status, via: row.stripe_subscription_id.startsWith('crypto:') ? 'crypto' : 'card', chatId, month, done, total, leadId, lead: null, paidThrough: row.current_period_end });
+  }
+
+  const { data: invoiceRows } = await admin
+    .from('messages')
+    .select('conversation_id, artifact_data, created_at')
+    .eq('content_type', 'system')
+    .eq('artifact_data->>type', 'plan_invoice')
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(200);
+  const invoices = (invoiceRows ?? []) as { conversation_id: string; artifact_data: { id?: string; status?: string }; created_at: string }[];
+  const open = invoices.filter((row) => row.artifact_data?.status === 'open');
+  const { data: openChats } = open.length ? await admin.from('conversations').select('id, user_id').in('id', open.map((row) => row.conversation_id)) : { data: [] };
+  const ownerOf = new Map(((openChats ?? []) as { id: string; user_id: string | null }[]).map((row) => [row.id, row.user_id]));
+
+  const names = await getProfileDisplayNames([...new Set([...clients.flatMap((c) => [c.userId, c.leadId ?? '']), ...[...ownerOf.values()].map((id) => id ?? '')].filter(Boolean))]);
+  for (const client of clients) {
+    client.name = names.get(client.userId) ?? 'Client';
+    client.lead = client.leadId ? names.get(client.leadId) ?? 'Teammate' : null;
+  }
+  const cancelled30d = rows.filter((row) => row.status === 'canceled' && row.updated_at >= since && RETAINERS.some((plan) => plan.id === row.plan)).length;
+  return {
+    clients,
+    software: { pro: pro.length, cents: pro.length * getPlan('pro').cents },
+    openInvoices: open.map((row) => ({ chatId: row.conversation_id, name: names.get(ownerOf.get(row.conversation_id) ?? '') ?? 'Guest', plan: String(row.artifact_data?.id ?? ''), sentAt: row.created_at })),
+    cancelled30d,
+    invoices30d: { sent: invoices.length, paid: invoices.filter((row) => row.artifact_data?.status === 'paid').length },
+  };
+}
