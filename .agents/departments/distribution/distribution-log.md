@@ -1422,4 +1422,4 @@ we do not have.
 
 **Change:** the founder created the BrandForge Meta app and set META_APP_ID / META_APP_SECRET in Vercel production; redeployed. Verified on prod: the Link Instagram / Facebook start route no longer answers "unavailable" and sends a signed-out visitor to sign-in (signed-in members go to Meta's approval page). Env-only, no code change. Works in Development mode for the app's own admins until App Review.
 
-**Distribution move:** none yet on purpose: posting to Instagram and Facebook from Distribute is only announceable once the founder has linked his own account and one real post has gone out. Then changelog line: "Distribute now posts straight to your Instagram and Facebook Page."
+**Distribution move:** none yet on purpose: posting to Instagram and Facebook from Distribute is only announceable once the founder has linked their own account and one real post has gone out. Then changelog line: "Distribute now posts straight to your Instagram and Facebook Page."
