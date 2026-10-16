@@ -7,6 +7,7 @@ import { avatarLabel, avatarTone, initialsFor } from "@/lib/identity-display";
 import { isDirectlyReadable } from "@/lib/file-context";
 import { RichContent } from "@/components/rich-content";
 import { RoleBadge } from "@/components/role-badge";
+import { FinishWithTeam } from "@/components/chat/finish-with-team";
 
 import { detectDeliverable, KINDS } from "@/lib/deliverable-intent";
 import { BlueprintEmbedCard } from "@/components/blueprint/blueprint-embed-card";
@@ -197,8 +198,11 @@ function SystemEmbedCard({
   proposal,
   embedBusy,
   onEmbedAction,
+  finishIn,
 }: {
   message: ChatMessage;
+  /** The chat id when this is the owner's newest creation: shows "Have the team finish this" under it. */
+  finishIn?: string;
   canDecide?: boolean;
   isStaff?: boolean;
   canEdit?: boolean;
@@ -232,21 +236,22 @@ function SystemEmbedCard({
    if (!embed) return null;
 
    // A carousel made in this chat: a message of its own, with its own date.
+   const finish = finishIn ? <FinishWithTeam conversationId={finishIn} kind={embed.type} /> : null;
    if (embed.type === "carousel") {
-     return <CarouselMessageCard embed={embed} createdAt={message.createdAt} />;
+     return <div><CarouselMessageCard embed={embed} createdAt={message.createdAt} />{finish}</div>;
    }
 
    // An ad, quote, tip, announcement or poll made in this chat, also a message of its own.
    if (embed.type === "image") {
-     return <ImageMessageCard embed={embed} createdAt={message.createdAt} />;
+     return <div><ImageMessageCard embed={embed} createdAt={message.createdAt} />{finish}</div>;
    }
 
    // A video or an article made in this chat: each version is a message of its own.
    if (embed.type === "video") {
-     return <VideoMessageCard embed={embed} createdAt={message.createdAt} />;
+     return <div><VideoMessageCard embed={embed} createdAt={message.createdAt} />{finish}</div>;
    }
    if (embed.type === "article") {
-     return <ArticleMessageCard embed={embed} createdAt={message.createdAt} />;
+     return <div><ArticleMessageCard embed={embed} createdAt={message.createdAt} />{finish}</div>;
    }
 
    // Peer contracts load and act on themselves.
@@ -1277,6 +1282,9 @@ export function ChatTranscript({
     );
   }
 
+  // Only the newest creation offers "Have the team finish this", so older versions stay quiet.
+  const lastCreationId = [...messages].reverse().find((m) => m.sender === "system" && m.embed && ["carousel", "image", "video", "article"].includes(m.embed.type))?.id;
+
   return (
     <div
       className="mx-auto w-full max-w-3xl"
@@ -1298,6 +1306,7 @@ export function ChatTranscript({
                 proposal={proposal ?? null}
                 embedBusy={embedBusy}
                 onEmbedAction={onEmbedAction}
+                finishIn={canDecide && message.id === lastCreationId ? conversationId : undefined}
               />
             );
           }

@@ -11,9 +11,10 @@ const announcedChats = new Set<string>();
 const mailLog: number[] = [];
 const MAIL_CAP_PER_HOUR = 30;
 
-export async function notifyTeamChatOpened(input: { conversationId: string; who: string; message: string; openerId?: string | null }): Promise<number> {
+export async function notifyTeamChatOpened(input: { conversationId: string; who: string; message: string; openerId?: string | null; again?: boolean }): Promise<number> {
   const { conversationId } = input;
-  if (announcedChats.has(conversationId)) return 0;
+  // again: a new ask in a chat the team already heard about (a "finish this" request), so it goes out regardless.
+  if (announcedChats.has(conversationId) && !input.again) return 0;
   announcedChats.add(conversationId);
   if (announcedChats.size > 1000) announcedChats.clear();
   try {

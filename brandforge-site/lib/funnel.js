@@ -110,6 +110,9 @@ const FUNNEL_EVENTS = Object.freeze([
   'apply_started',
   'apply_submitted',
   'application_approved',
+  'team_finish_requested',
+  'free_limit_reached',
+  'sample_requested',
 ]);
 
 const EVENT_SET = new Set(FUNNEL_EVENTS);
