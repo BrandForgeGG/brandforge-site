@@ -11,6 +11,7 @@ import { canEncode, drawFrame, encodeFrames, encodeVideo, lookOf, makeArt, type 
 import { VOICES, audioContext, clipsFor, layTrack, playClips, type Clip, type VoiceId, warmVoice } from '@/components/video/voice';
 import { beatSeconds, masterOrNull, mixWithMusic, playBed } from '@/components/video/music';
 import { drawKineticFrame, loadKineticFonts, shortToKinetic } from '@/components/video/kinetic-engine';
+import { drawCinematicFrame, drawGlowFrame, loadLookFonts } from '@/components/video/looks-engine';
 import { YouTubePost } from '@/components/video/youtube-post';
 import { posterOf } from '@/components/drafts/drafts-store';
 import { postVideoToChat, type ChatTarget } from '@/components/chat/post-creation';
@@ -19,7 +20,8 @@ import { useAutosave, useDraft } from '@/components/drafts/use-draft';
 const field = 'w-full rounded-xl border border-line bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none';
 const chip = 'rounded-full border px-3 py-1.5 text-xs transition';
 // Kinetic first: motion design that cuts on the beat, with an upbeat music bed. The rest are the carousel looks.
-const LOOKS = ['kinetic', ...Object.keys(THEMES)];
+const LOOKS = ['kinetic', 'cinematic', 'glow', ...Object.keys(THEMES)];
+const MOTION_LABEL: Record<string, string> = { kinetic: 'Kinetic', cinematic: 'Cinematic', glow: 'Glow' };
 const KINETIC_LOOK = { bg: '#0f0e0d', text: '#f4f1ec', accent: '#ff6a2b', dark: true };
 const NEWLINE = String.fromCharCode(10);
 
@@ -94,7 +96,9 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId, chat }
   const sceneArt = useMemo<SceneArt | null>(() => (art ? (i: number) => (withPictures && pictures[i]) || art : null), [art, withPictures, pictures]);
   // One function draws any frame in the chosen look, for the preview and the MP4 alike. Kinetic flashes the painted
   // pictures full-bleed between its word cards.
-  const isKinetic = theme === 'kinetic';
+  // Kinetic, Cinematic and Glow share one card model; Cinematic films the painted pictures behind the words.
+  const isKinetic = theme === 'kinetic' || theme === 'cinematic' || theme === 'glow';
+  const bed = theme === 'cinematic' ? 'warm' : 'upbeat';
   const kinetic = useMemo(() => {
     if (!isKinetic) return null;
     const cards = shortToKinetic(timed, { name: brand.trim(), host: handle.trim() });
@@ -102,10 +106,13 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId, chat }
   }, [isKinetic, timed, brand, handle, withPictures, pictures]);
   const drawAt = useMemo(
     () => (ctx: CanvasRenderingContext2D, t: number) => {
-      if (kinetic) drawKineticFrame(ctx, f.w, f.h, kinetic, t, KINETIC_LOOK, { name: brand.trim(), host: handle.trim() }, beatSeconds('upbeat'));
+      const who = { name: brand.trim(), host: handle.trim() };
+      if (kinetic && theme === 'cinematic') drawCinematicFrame(ctx, f.w, f.h, kinetic, t, KINETIC_LOOK, who, beatSeconds('warm'), withPictures ? pictures : []);
+      else if (kinetic && theme === 'glow') drawGlowFrame(ctx, f.w, f.h, kinetic, t, KINETIC_LOOK, who, beatSeconds('upbeat'));
+      else if (kinetic) drawKineticFrame(ctx, f.w, f.h, kinetic, t, KINETIC_LOOK, who, beatSeconds('upbeat'));
       else if (sceneArt) drawFrame(ctx, f.w, f.h, timed, t, look, { name: brand.trim(), handle: handle.trim() }, sceneArt);
     },
-    [kinetic, f.w, f.h, brand, handle, sceneArt, timed, look]
+    [kinetic, theme, withPictures, pictures, f.w, f.h, brand, handle, sceneArt, timed, look]
   );
 
   // Paint the scene pictures once the scenes exist (three at a time), and again when the headings or the shape change.
@@ -149,7 +156,7 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId, chat }
   }, [withPictures, headings, format]);
 
   useEffect(() => {
-    void Promise.all([loadFonts(), loadKineticFonts()]).then(() => setFontsReady(true));
+    void Promise.all([loadFonts(), loadKineticFonts(), loadLookFonts()]).then(() => setFontsReady(true));
   }, []);
 
   // The voice model starts downloading as soon as the maker opens with the voice on, so it is ready when the words are.
@@ -255,7 +262,7 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId, chat }
       return;
     }
     const stopVoice = voiced && clips ? playClips(clips, startsOf(timed)) : () => undefined;
-    const stopMusic = kinetic ? playBed(audioContext(), seconds, 'upbeat') : () => undefined;
+    const stopMusic = kinetic ? playBed(audioContext(), seconds, bed) : () => undefined;
     const start = performance.now() + 50;
     let frame = 0;
     const tick = () => {
@@ -273,7 +280,7 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId, chat }
       stopVoice();
       stopMusic();
     };
-  }, [timed, playing, sceneArt, fontsReady, f.w, f.h, seconds, voiced, clips, drawAt, kinetic]);
+  }, [timed, playing, sceneArt, fontsReady, f.w, f.h, seconds, voiced, clips, drawAt, kinetic, bed]);
 
   useEffect(() => () => {
     if (result) URL.revokeObjectURL(result.url);
@@ -332,7 +339,7 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId, chat }
     try {
       const words = voiced && clips ? layTrack(clips, startsOf(timed), seconds) : null;
       // Kinetic carries the upbeat bed under the voice (ducked); the other looks keep the voice alone.
-      const track = kinetic ? mixWithMusic(words, seconds, 'upbeat') : masterOrNull(words);
+      const track = kinetic ? mixWithMusic(words, seconds, bed) : masterOrNull(words);
       setBusy('Making the video…');
       setProgress(0);
       const blob = kinetic
@@ -437,7 +444,7 @@ export function VideoMaker({ initialFormat = 'short', draftId, onDraftId, chat }
             <div className="flex flex-wrap gap-1.5" role="group" aria-label="Look">
               {LOOKS.map((id) => (
                 <button key={id} type="button" aria-pressed={theme === id} onClick={() => { setTheme(id); setResult(null); }} className={`${chip} ${theme === id ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>
-                  {id === 'kinetic' ? 'Kinetic' : (THEMES as Record<string, { label: string }>)[id].label}
+                  {MOTION_LABEL[id] ?? (THEMES as Record<string, { label: string }>)[id].label}
                 </button>
               ))}
             </div>

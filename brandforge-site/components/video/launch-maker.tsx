@@ -11,6 +11,7 @@ import { drawLaunchFrame, loadLaunchFonts, type LaunchLook, type LaunchMedia } f
 import { VOICES, audioContext, clipsFor, layTrack, playClips, type Clip, type VoiceId, warmVoice } from '@/components/video/voice';
 import { MUSIC_STYLES, beatSeconds, mixWithMusic, playBed, type MusicStyle } from '@/components/video/music';
 import { drawKineticFrame, launchToKinetic, loadKineticFonts } from '@/components/video/kinetic-engine';
+import { drawCinematicFrame, drawGlowFrame, loadLookFonts } from '@/components/video/looks-engine';
 import { TONE_IDS, type LaunchShare, type LaunchTone } from '@/lib/launch-video.js';
 import { YouTubePost } from '@/components/video/youtube-post';
 import { LaunchProgress } from '@/components/video/launch-progress';
@@ -39,9 +40,11 @@ const DEFAULT_LOOK: LaunchLook = { bg: '#0f0e0d', text: '#f4f1ec', accent: '#ff6
 type LaunchState = { url: string; about: string; shape: Shape; withVoice: boolean; voice: VoiceId; scenes: LaunchScene[]; site: SiteInfo | null; look: LaunchLook; tone?: LaunchTone; music?: MusicStyle; share?: LaunchShare | null; reference?: Reference | null; motion?: Motion };
 
 /** How the video moves: calm scenes, or Kinetic motion design that cuts on the beat. */
-type Motion = 'clean' | 'kinetic';
+type Motion = 'clean' | 'kinetic' | 'cinematic' | 'glow';
 const MOTIONS: { id: Motion; label: string; note: string }[] = [
   { id: 'kinetic', label: 'Kinetic', note: 'big words cut on the beat' },
+  { id: 'cinematic', label: 'Cinematic', note: 'your pictures, filmed' },
+  { id: 'glow', label: 'Glow', note: 'dark, glowing, minimal' },
   { id: 'clean', label: 'Clean', note: 'calm scenes' },
 ];
 
@@ -125,11 +128,19 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
   const seconds = totalSeconds(timed);
   const voiceText = scenes.map((scene) => scene.voice).join('|');
   // One function draws any frame in the chosen look, for the preview and the MP4 alike.
-  const kinetic = useMemo(() => (motion === 'kinetic' ? launchToKinetic(timed, media) : null), [motion, timed, media]);
+  // Kinetic, Cinematic and Glow all read the same cards; Cinematic also films the site's own pictures behind them.
+  const kinetic = useMemo(() => (motion !== 'clean' ? launchToKinetic(timed, media) : null), [motion, timed, media]);
+  const backdrops = useMemo(() => [...media.pictures.map((p) => p.image), ...(media.shot ? [media.shot] : [])], [media]);
   const drawAt = useMemo(
     () => (ctx: CanvasRenderingContext2D, t: number) =>
-      kinetic ? drawKineticFrame(ctx, f.w, f.h, kinetic, t, look, { name: media.name, host: media.host }, beatSeconds(music)) : drawLaunchFrame(ctx, f.w, f.h, timed, t, look, media),
-    [kinetic, f.w, f.h, look, media, music, timed]
+      !kinetic
+        ? drawLaunchFrame(ctx, f.w, f.h, timed, t, look, media)
+        : motion === 'cinematic'
+          ? drawCinematicFrame(ctx, f.w, f.h, kinetic, t, look, { name: media.name, host: media.host }, beatSeconds(music), backdrops)
+          : motion === 'glow'
+            ? drawGlowFrame(ctx, f.w, f.h, kinetic, t, look, { name: media.name, host: media.host }, beatSeconds(music))
+            : drawKineticFrame(ctx, f.w, f.h, kinetic, t, look, { name: media.name, host: media.host }, beatSeconds(music)),
+    [kinetic, motion, backdrops, f.w, f.h, look, media, music, timed]
   );
   const writing = busy === 'writing';
   const written = scenes.length > 0;
@@ -137,7 +148,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
   const assetsReady = written && !writing && picturesState !== 'loading' && (!withVoice || voiceState.status === 'ready' || voiceState.status === 'failed');
 
   useEffect(() => {
-    void Promise.all([loadLaunchFonts(), loadKineticFonts()]).then(() => setFontsReady(true));
+    void Promise.all([loadLaunchFonts(), loadKineticFonts(), loadLookFonts()]).then(() => setFontsReady(true));
   }, []);
 
   // The voice model starts downloading as soon as the maker opens with the voice on, so it is ready when the words are.
@@ -456,7 +467,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-1.5" role="group" aria-label="Look">
             {MOTIONS.map((option) => (
-              <button key={option.id} type="button" aria-pressed={motion === option.id} onClick={() => { setMotion(option.id); if (option.id === 'kinetic' && music === 'warm') setMusic('upbeat'); setResult(null); setPlaying(false); }} className={`${chip} ${motion === option.id ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>
+              <button key={option.id} type="button" aria-pressed={motion === option.id} onClick={() => { setMotion(option.id); if ((option.id === 'kinetic' || option.id === 'glow') && music === 'warm') setMusic('upbeat'); if (option.id === 'cinematic' && music === 'upbeat') setMusic('warm'); setResult(null); setPlaying(false); }} className={`${chip} ${motion === option.id ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>
                 {option.label} <span className="hidden text-muted sm:inline">· {option.note}</span>
               </button>
             ))}
@@ -496,7 +507,7 @@ export function LaunchMaker({ draftId, onDraftId, chat }: { draftId?: string; on
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-foreground">{site?.host || about.slice(0, 60) || 'Your launch'}</p>
             <p className="truncate text-xs text-muted">
-              {SHAPES[shape].label} · {motion === 'kinetic' ? 'Kinetic' : 'Clean'} · {withVoice ? voiceLabel : 'No voice'} · {timed.length} scenes · {Math.round(seconds)}s{reference ? ` · like “${reference.name}”` : ''}
+              {SHAPES[shape].label} · {MOTIONS.find((m) => m.id === motion)?.label ?? 'Clean'} · {withVoice ? voiceLabel : 'No voice'} · {timed.length} scenes · {Math.round(seconds)}s{reference ? ` · like “${reference.name}”` : ''}
             </p>
           </div>
           <button type="button" onClick={() => setEditingSetup(true)} className="shrink-0 rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">Change</button>

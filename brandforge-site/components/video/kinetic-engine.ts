@@ -9,7 +9,7 @@ import type { LaunchScene } from '@/lib/launch-video.js';
 // the real site scrolls in a tilted window. The words and the timing of the story are the same as the calm look; only the
 // way it moves changes. All drawn on a 2D canvas, in the browser.
 
-type Img = CanvasImageSource & { width: number; height: number };
+export type Img = CanvasImageSource & { width: number; height: number };
 
 export type KineticCard =
   | { kind: 'words'; text: string; sub?: string; accent?: boolean; strike?: boolean }
@@ -49,18 +49,18 @@ const easeOut = (x: number) => 1 - Math.pow(1 - clamp(x), 3);
 const easeOutExpo = (x: number) => (clamp(x) >= 1 ? 1 : 1 - Math.pow(2, -10 * clamp(x)));
 
 /** A small stable random number from a seed. */
-function rand(seed: number): number {
+export function rand(seed: number): number {
   const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
   return x - Math.floor(x);
 }
 
-function hexRgb(hex: string): [number, number, number] {
+export function hexRgb(hex: string): [number, number, number] {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
   const n = m ? parseInt(m[1], 16) : 0;
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
-function rgba(hex: string, alpha: number): string {
+export function rgba(hex: string, alpha: number): string {
   const [r, g, b] = hexRgb(hex);
   return `rgba(${r},${g},${b},${alpha})`;
 }
@@ -95,7 +95,7 @@ function palette(look: KineticLook) {
 }
 
 /** Near-black or white, whichever reads better on a field. */
-function onField(field: string): string {
+export function onField(field: string): string {
   return luminance(field) > 0.4 ? '#111111' : '#ffffff';
 }
 
@@ -195,12 +195,12 @@ function pattern(ctx: CanvasRenderingContext2D, kind: Pattern, w: number, h: num
   ctx.restore();
 }
 
-function setSpacing(ctx: CanvasRenderingContext2D, px: number): void {
+export function setSpacing(ctx: CanvasRenderingContext2D, px: number): void {
   const c = ctx as CanvasRenderingContext2D & { letterSpacing?: string };
   if ('letterSpacing' in c) c.letterSpacing = `${px}px`;
 }
 
-function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+export function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
   const out: string[] = [];
   let line = '';
   for (const word of text.split(/\s+/).filter(Boolean)) {
@@ -216,7 +216,7 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): st
 }
 
 /** The biggest size at which text fits the box in at most maxLines lines. */
-function fitBig(ctx: CanvasRenderingContext2D, text: string, font: (size: number) => string, maxW: number, maxH: number, maxLines: number, start: number, min: number): { lines: string[]; size: number } {
+export function fitBig(ctx: CanvasRenderingContext2D, text: string, font: (size: number) => string, maxW: number, maxH: number, maxLines: number, start: number, min: number): { lines: string[]; size: number } {
   let size = start;
   for (;;) {
     ctx.font = font(size);
@@ -303,19 +303,19 @@ function subLine(ctx: CanvasRenderingContext2D, text: string, cx: number, y: num
   return y + lines.length * 64 * k;
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+export function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, Math.min(r, w / 2, h / 2));
 }
 
-function coverImage(ctx: CanvasRenderingContext2D, image: Img, x: number, y: number, w: number, h: number, zoom: number, top: boolean): void {
+export function coverImage(ctx: CanvasRenderingContext2D, image: Img, x: number, y: number, w: number, h: number, zoom: number, top: boolean): void {
   const scale = Math.max(w / image.width, h / image.height) * zoom;
   const dw = image.width * scale;
   const dh = image.height * scale;
   ctx.drawImage(image, x + (w - dw) / 2, top ? y : y + (h - dh) / 2, dw, dh);
 }
 
-function formatNumber(value: number, decimals: number): string {
+export function formatNumber(value: number, decimals: number): string {
   return value.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
@@ -491,7 +491,7 @@ function drawCard(c: CardContext, card: KineticCard): void {
  * Where each card of a scene starts, in seconds from the scene start. Cards spread over the scene, each holding a whole
  * number of beats (one to three), and every cut lands on the beat grid of the whole video, so cuts hit the music.
  */
-function cardStarts(sceneStart: number, seconds: number, count: number, beat: number): number[] {
+export function cardStarts(sceneStart: number, seconds: number, count: number, beat: number): number[] {
   if (count <= 1) return [0];
   // Each card gets at least one beat (two at fast tempos), so a word is on screen long enough to read.
   const step = beat < 0.6 ? beat * 2 : beat;
