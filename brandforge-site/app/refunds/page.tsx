@@ -44,6 +44,13 @@ const SECTIONS: LegalSection[] = [
       'If your transaction cannot be verified (wrong amount, wrong network, hash not found), your agreement is not funded and nothing is held. If you sent crypto to the deposit wallet in error, contact us immediately — recovery of mis-sent funds is attempted case by case and may not always be technically possible.',
     ],
   },
+  {
+    title: '7. Team plans: the first-month refund',
+    body: [
+      'Team plans (Launch, Growth, Scale) are paid monthly in advance. If the deliverables listed for your plan are not delivered in your first month, you get a full refund of that first month on request. Ask in your team chat or message @headstartup on Telegram within 14 days after the month ends. The refund goes back to the card or wallet you paid with.',
+      'This is a refund, not a free month: the first month is paid like every other month. After the first month you can cancel any time and the plan stops at the end of the month already paid.',
+    ],
+  },
 ];
 
 export default function RefundsPage() {

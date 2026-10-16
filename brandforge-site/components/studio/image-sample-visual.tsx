@@ -14,7 +14,7 @@ const SAMPLES: Record<ImageKind, Sample> = {
   question: { shape: 'square', theme: 'emerald', kicker: 'Poll', head: ['Morning or ', 'evening', '?'], options: ['Morning', 'Evening'] },
   cover: { shape: 'story', theme: 'rose', kicker: 'New episode', head: ['The ', 'one', ' thing'] },
   infographic: { shape: 'portrait', theme: 'paper', kicker: 'How to', head: ['A post in ', '3 steps'], options: ['Hook', 'One idea', 'One action'] },
-  offer: { shape: 'portrait', theme: 'sunrise', kicker: 'Offer', head: ['First month ', 'on us'], button: 'Claim it' },
+  offer: { shape: 'portrait', theme: 'sunrise', kicker: 'Offer', head: ['New season, ', 'new look'], button: 'Shop now' },
   event: { shape: 'square', theme: 'violet', kicker: 'Event', head: ['Live: build in ', 'public'], button: 'Save your seat' },
   pin: { shape: 'pin', theme: 'crystal', kicker: 'Guide', head: ['A week of posts in ', 'one hour'], button: 'Read it' },
 };

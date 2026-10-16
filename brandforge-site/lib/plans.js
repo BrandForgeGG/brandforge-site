@@ -72,7 +72,7 @@ const RETAINERS = [
 ];
 
 // Every team plan carries these.
-const TEAM_INCLUDES = ['BrandForge AI', 'First month guaranteed', 'Card or crypto', 'Cancel anytime'];
+const TEAM_INCLUDES = ['BrandForge AI', "Full refund if month one isn't delivered", 'Card or crypto', 'Cancel anytime'];
 
 function getRetainer(id) {
   return RETAINERS.find((plan) => plan.id === id) || null;

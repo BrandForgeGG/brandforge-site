@@ -43,7 +43,7 @@ export function HomeHero() {
             A full growth team for <span className="text-ember">less than one hire.</span>
           </h1>
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted sm:text-xl">
-            Developers, designers, editors and marketers ship your content, ads and site updates every month. From €1,250/mo, and if month one isn&apos;t delivered, it&apos;s free.
+            Developers, designers, editors and marketers ship your content, ads and site updates every month. From €1,250/mo. If month one isn&apos;t delivered, you get a full refund.
           </p>
           <ul className="mt-7 space-y-2.5 text-[15px] text-foreground">
             <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--hue-create)]" aria-hidden="true" />AI makes videos, posts, ads and articles in minutes.</li>
