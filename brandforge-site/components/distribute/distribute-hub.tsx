@@ -410,8 +410,8 @@ export function DistributeHub() {
           ))}
         </div>
         <p className="mt-6 font-serif text-xl text-foreground">{PHASES[phase]}…</p>
-        <p className="mt-1 text-sm text-muted">Reading what you gave me takes a few seconds. Then the week fills in day by day.</p>
-        <button type="button" onClick={stopWriting} className="mt-4 text-xs text-muted underline-offset-2 hover:text-foreground hover:underline">Stop</button>
+        <p className="mt-1 text-sm text-foreground/70">Reading what you gave me takes a few seconds. Then the week fills in day by day.</p>
+        <button type="button" onClick={stopWriting} className="mt-4 text-xs text-foreground/70 underline-offset-2 hover:text-foreground hover:underline">Stop</button>
         <ol className="mt-4 flex justify-center gap-1.5" aria-hidden="true">
           {PHASES.map((label, i) => (
             <li key={label} className={`h-1 w-10 rounded-full transition-colors duration-500 ${i <= phase ? 'bg-ember' : 'bg-line'}`} />
@@ -443,17 +443,17 @@ export function DistributeHub() {
           />
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <input ref={fileInput} type="file" accept=".txt,.md,.markdown,.csv,.json,.html,.htm,text/plain" className="hidden" onChange={(event) => void pickFile(event.target.files?.[0])} />
-            <button type="button" onClick={() => fileInput.current?.click()} className="rounded-full border border-line px-3 py-1 text-xs text-muted bf-tap transition hover:border-ember hover:text-foreground">Attach a file</button>
+            <button type="button" onClick={() => fileInput.current?.click()} className="rounded-full border border-line px-3 py-1 text-xs text-foreground/70 bf-tap transition hover:border-ember hover:text-foreground">Attach a file</button>
             {fileName ? (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-overlay px-3 py-1 text-xs text-foreground">
                 {fileName}
-                <button type="button" aria-label="Remove the file" onClick={() => { setFileName(''); setFileText(''); }} className="text-muted hover:text-foreground">✕</button>
+                <button type="button" aria-label="Remove the file" onClick={() => { setFileName(''); setFileText(''); }} className="text-foreground/70 hover:text-foreground">✕</button>
               </span>
             ) : null}
-            <span className="ml-auto flex items-center gap-1.5 text-xs text-muted" role="group" aria-label="Posts a day">
+            <span className="ml-auto flex items-center gap-1.5 text-xs text-foreground/70" role="group" aria-label="Posts a day">
               Posts a day
               {[1, 2, 3, 4, 5].map((n) => (
-                <button key={n} type="button" onClick={() => setPerDay(n)} aria-pressed={perDay === n} className={`h-7 w-7 rounded-full border text-xs transition ${perDay === n ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>{n}</button>
+                <button key={n} type="button" onClick={() => setPerDay(n)} aria-pressed={perDay === n} className={`h-7 w-7 rounded-full border text-xs transition ${perDay === n ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-foreground/70 hover:text-foreground'}`}>{n}</button>
               ))}
             </span>
           </div>
@@ -462,14 +462,15 @@ export function DistributeHub() {
             <button type="button" onClick={() => void write_(start)} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90">Write my week</button>
             <input type="date" value={start} onChange={(event) => setStart(event.target.value)} aria-label="First day" className="rounded-lg border border-line bg-background px-2.5 py-1.5 text-sm text-foreground focus:border-ember focus:outline-none" />
             <input value={brand} onChange={(event) => setBrand(event.target.value)} maxLength={40} placeholder="Name on the pictures (optional)" aria-label="Name on the pictures" className="min-w-0 flex-1 rounded-lg border border-line bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-ember focus:outline-none sm:max-w-[16rem]" />
-            {editing || !plan ? <button type="button" onClick={() => { setEditing(false); setMakerOpen(false); }} className="px-2 py-2 text-sm text-muted transition hover:text-foreground">{plan ? 'Cancel' : 'Close'}</button> : null}
+            {editing || !plan ? <button type="button" onClick={() => { setEditing(false); setMakerOpen(false); }} className="px-2 py-2 text-sm text-foreground/70 transition hover:text-foreground">{plan ? 'Cancel' : 'Close'}</button> : null}
           </div>
         </section>
       ) : !plan ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel p-4 sm:p-5">
           <div className="min-w-0">
             <p className="font-serif text-lg text-foreground">Write a week of posts</p>
-            <p className="text-sm text-muted">Say what you promote. Get pictures, captions and times, then post or schedule them.</p>
+            <p className="text-sm text-foreground/70">Say what you promote. Get pictures, captions and times, then post or schedule them.</p>
+            <p className="mt-1 text-xs text-foreground/70">Rather have it posted for you every month? <a href="/pricing" className="font-semibold text-foreground underline-offset-2 hover:underline">See team plans</a></p>
           </div>
           <button type="button" aria-expanded={makerOpen} onClick={() => setMakerOpen(true)} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90">Start a week</button>
         </div>
@@ -477,7 +478,7 @@ export function DistributeHub() {
         <div className={weekOpen ? 'flex flex-wrap items-center gap-2' : 'flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-panel p-4 sm:p-5'}>
           <div className="min-w-0 flex-1 basis-60">
             {weekOpen ? null : <p className="font-serif text-lg text-foreground">Your week{plan ? `, from ${prettyDate(plan.days[0].date)}` : ''}</p>}
-            <p className="text-sm leading-relaxed text-muted">
+            <p className="text-sm leading-relaxed text-foreground/70">
               <span className={weekOpen ? 'text-foreground' : ''}>{plan?.summary}</span>
               {plan?.site ? ` Posts send people to ${plan.site}.` : ''}
             </p>
@@ -485,7 +486,7 @@ export function DistributeHub() {
           {weekOpen ? (
             <>
               <button type="button" onClick={() => setEditing(true)} className="rounded-lg border border-line px-3 py-1.5 text-xs bf-tap text-foreground transition hover:border-ember">Change what I promote</button>
-              <button type="button" onClick={() => setWeekOpen(false)} className="px-2 py-1.5 text-xs text-muted transition hover:text-foreground">Close</button>
+              <button type="button" onClick={() => setWeekOpen(false)} className="px-2 py-1.5 text-xs text-foreground/70 transition hover:text-foreground">Close</button>
             </>
           ) : (
             <>
@@ -503,57 +504,57 @@ export function DistributeHub() {
             <button type="button" onClick={() => void copy(weekText(), 'The whole week is copied.')} className="rounded-xl border border-line px-4 py-2 text-sm bf-tap text-foreground transition hover:border-ember">Copy the captions</button>
             <button type="button" onClick={downloadCsv} className="rounded-xl border border-line px-4 py-2 text-sm bf-tap text-foreground transition hover:border-ember">Captions CSV</button>
             <button type="button" onClick={() => void write_(shift(plan.start, 7))} disabled={writing} className="rounded-xl border border-line px-4 py-2 text-sm bf-tap text-foreground transition hover:border-ember disabled:opacity-50">Write next week</button>
-            <button type="button" onClick={startOver} className="px-2 py-2 text-sm text-muted transition hover:text-foreground">Start over</button>
+            <button type="button" onClick={startOver} className="px-2 py-2 text-sm text-foreground/70 transition hover:text-foreground">Start over</button>
           </div>
           {/* Where the posts go. Channels are linked in Settings; the choice is remembered in this browser. */}
           <section aria-label="Where to post" className="mt-3 rounded-2xl border border-line bg-panel p-3 sm:p-4">
             <div className="flex flex-wrap items-center gap-2">
               <p className="mr-1 text-sm font-semibold text-foreground">Post to</p>
               {signedIn === false ? (
-                <button type="button" onClick={() => needSignIn()} className="rounded-full border border-line px-3 py-1 text-xs text-muted bf-tap transition hover:border-ember hover:text-foreground">Sign in to post and schedule</button>
+                <button type="button" onClick={() => needSignIn()} className="rounded-full border border-line px-3 py-1 text-xs text-foreground/70 bf-tap transition hover:border-ember hover:text-foreground">Sign in to post and schedule</button>
               ) : publisher.channels.length === 0 ? (
-                <span className="text-xs text-muted">{publisher.loading ? 'Loading your channels…' : 'No channel linked yet.'}</span>
+                <span className="text-xs text-foreground/70">{publisher.loading ? 'Loading your channels…' : 'No channel linked yet.'}</span>
               ) : (
                 publisher.channels.map((channel) => {
                   const on = publisher.picked.includes(channel.id);
                   return (
-                    <button key={channel.id} type="button" aria-pressed={on} onClick={() => publisher.toggle(channel.id)} className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-xs bf-tap transition ${on ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-muted hover:text-foreground'}`}>
+                    <button key={channel.id} type="button" aria-pressed={on} onClick={() => publisher.toggle(channel.id)} className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-xs bf-tap transition ${on ? 'border-ember bg-ember/10 text-foreground' : 'border-line text-foreground/70 hover:text-foreground'}`}>
                       <ServiceTile id={channel.kind} on={on} size={24} />
                       <span className="max-w-[10rem] truncate">{channel.label}</span>
                     </button>
                   );
                 })
               )}
-              {signedIn ? <Link href="/settings#integrations" className="text-xs text-muted underline-offset-2 hover:text-foreground hover:underline">{publisher.channels.length === 0 ? 'Connect channels' : 'Add'}</Link> : null}
+              {signedIn ? <Link href="/settings#integrations" className="text-xs text-foreground/70 underline-offset-2 hover:text-foreground hover:underline">{publisher.channels.length === 0 ? 'Connect channels' : 'Add'}</Link> : null}
               {signedIn && publisher.channels.length > 0 ? (
                 <button type="button" onClick={() => void publisher.scheduleWeek(plan.days, pickedBrand)} disabled={Boolean(publisher.busy) || writing || publisher.picked.length === 0 || !publisher.ready} className="ml-auto rounded-xl bg-ember px-4 py-2 text-sm bf-tap font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-60">
                   {publisher.busy && publisher.busy.startsWith('Scheduling') ? publisher.busy : 'Schedule the whole week'}
                 </button>
               ) : null}
             </div>
-            {!publisher.ready ? <p className="mt-2 text-xs text-muted">Scheduling is being switched on. Download or post now in the meantime.</p> : null}
-            {publisher.message ? <p role={publisher.message.bad ? 'alert' : 'status'} className={`mt-2 text-xs ${publisher.message.bad ? 'text-danger' : 'text-muted'}`}>{publisher.message.text}</p> : null}
+            {!publisher.ready ? <p className="mt-2 text-xs text-foreground/70">Scheduling is being switched on. Download or post now in the meantime.</p> : null}
+            {publisher.message ? <p role={publisher.message.bad ? 'alert' : 'status'} className={`mt-2 text-xs ${publisher.message.bad ? 'text-danger' : 'text-foreground/70'}`}>{publisher.message.text}</p> : null}
           </section>
           {writing ? (
-            <div role="status" className="mt-3 flex items-center gap-3 text-xs text-muted">
+            <div role="status" className="mt-3 flex items-center gap-3 text-xs text-foreground/70">
               <span className="h-1 w-32 overflow-hidden rounded-full bg-line" aria-hidden="true"><span className="block h-full rounded-full bg-ember transition-all duration-500" style={{ width: `${Math.round(((7 - loadingDays.length) / 7) * 100)}%` }} /></span>
               Writing day {Math.min(7, 8 - loadingDays.length)} of 7. You can already open the days that are done.
               <button type="button" onClick={stopWriting} className="underline-offset-2 hover:text-foreground hover:underline">Stop</button>
             </div>
           ) : null}
-          {note ? <p role="status" className="mt-2 text-xs text-muted">{note}</p> : null}
+          {note ? <p role="status" className="mt-2 text-xs text-foreground/70">{note}</p> : null}
           {error ? <p role="alert" className="mt-2 text-sm text-danger">{error}</p> : null}
-          {plan.plainDays > 0 ? <p className="mt-2 text-xs text-muted">{plan.plainDays === 1 ? 'One day uses' : `${plan.plainDays} days use`} simpler captions because the writer was busy. Write the week again to improve {plan.plainDays === 1 ? 'it' : 'them'}.</p> : null}
+          {plan.plainDays > 0 ? <p className="mt-2 text-xs text-foreground/70">{plan.plainDays === 1 ? 'One day uses' : `${plan.plainDays} days use`} simpler captions because the writer was busy. Write the week again to improve {plan.plainDays === 1 ? 'it' : 'them'}.</p> : null}
 
           {/* The calendar: seven days across, each post a small picture at its time. Pick one to open it below. */}
           <section aria-label="Week calendar" className="mt-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground/70">
               {prettyDate(plan.days[0].date)} to {prettyDate(plan.days[plan.days.length - 1].date)}
             </p>
             <div className="mt-2 grid gap-2 sm:grid-cols-7">
               {plan.days.map((day, d) => (
                 <div key={day.date} className="min-w-0 rounded-xl border border-line bg-panel/50 p-2">
-                  <p className="text-[11px] font-semibold text-foreground">{new Date(`${day.date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short' })} <span className="font-normal text-muted">{new Date(`${day.date}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span></p>
+                  <p className="text-[11px] font-semibold text-foreground">{new Date(`${day.date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short' })} <span className="font-normal text-foreground/70">{new Date(`${day.date}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span></p>
                   <ul className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-1">
                     {day.posts.map((post, p) => {
                       const on = selected.d === d && selected.p === p;
@@ -575,7 +576,7 @@ export function DistributeHub() {
                                 })()}
                                 {clock(post.time)}
                               </span>
-                              <span className="truncate uppercase tracking-wide text-muted">{FORMAT_LABEL[post.format] ?? post.format}</span>
+                              <span className="truncate uppercase tracking-wide text-foreground/70">{FORMAT_LABEL[post.format] ?? post.format}</span>
                             </span>
                           </button>
                         </li>
@@ -596,8 +597,8 @@ export function DistributeHub() {
                 <div className="min-w-0 flex-1">
                   <p className="flex flex-wrap items-center gap-2 text-xs">
                     <span className="font-semibold text-foreground">{prettyDate(pickedDay.date)}, {clock(pickedPost.time)}</span>
-                    <span className="rounded-full border border-line px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted">{FORMAT_LABEL[pickedPost.format] ?? pickedPost.format}</span>
-                    <span className="text-muted">{pickedDay.focus}</span>
+                    <span className="rounded-full border border-line px-2 py-0.5 text-[10px] uppercase tracking-wide text-foreground/70">{FORMAT_LABEL[pickedPost.format] ?? pickedPost.format}</span>
+                    <span className="text-foreground/70">{pickedDay.focus}</span>
                     {(() => {
                       const item = statusOf(publisher.items, pickedPost.id);
                       if (!item) return null;
@@ -636,7 +637,7 @@ export function DistributeHub() {
                       </>
                     ) : null}
                     <ShareButton kind="distribute" format={pickedPost.format} title={pickedPost.topic} caption={pickedPost.caption} getImages={async () => (await postFiles(pickedPost, pickedBrand, pickedDay.date)).map((file) => file.blob)} />
-                    <Link href={makeLink(pickedPost)} onClick={() => trackEvent('next_step_clicked', { source: 'distribute_make' })} className="px-2 py-1.5 text-xs text-muted bf-tap transition hover:text-foreground">Edit in the maker</Link>
+                    <Link href={makeLink(pickedPost)} onClick={() => trackEvent('next_step_clicked', { source: 'distribute_make' })} className="px-2 py-1.5 text-xs text-foreground/70 bf-tap transition hover:text-foreground">Edit in the maker</Link>
                   </div>
                   <NetworkVersions post={pickedPost} brand={pickedBrand} channels={publisher.channels} picked={publisher.picked} />
                 </div>

@@ -62,7 +62,7 @@ export function AppShell({
                   {hue ? <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: `var(--hue-${hue})` }} /> : null}
                   {title}
                 </h1>
-                {subtitle ? <p className={hue ? "mt-0.5 truncate text-sm text-muted" : "truncate text-xs text-muted"}>{subtitle}</p> : null}
+                {subtitle ? <p className={hue ? "mt-0.5 truncate text-sm text-foreground/75" : "truncate text-xs text-foreground/75"}>{subtitle}</p> : null}
               </div>
             </div>
             {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}

@@ -52,7 +52,7 @@ export function CreationsList({ card, title = 'Your creations' }: { card?: strin
     <section aria-label={title}>
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="font-serif text-xl text-foreground">{title}</h2>
-        <p className="text-xs text-muted">Each one is its own chat. Open it to keep shaping it.</p>
+        <p className="text-xs text-foreground/70">Each one is its own chat. Open it to keep shaping it.</p>
       </div>
       <ul className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {items.slice(0, 12).map((c) => (
@@ -63,7 +63,7 @@ export function CreationsList({ card, title = 'Your creations' }: { card?: strin
                   // eslint-disable-next-line @next/next/no-img-element -- the poster from our own storage
                   <img src={c.coverUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" />
                 ) : (
-                  <span className="px-3 text-center font-serif text-sm text-muted">{labelOf(c)}</span>
+                  <span className="px-3 text-center font-serif text-sm text-foreground/70">{labelOf(c)}</span>
                 )}
                 {c.type === 'video' && c.hasVideo ? (
                   <span className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
@@ -75,7 +75,7 @@ export function CreationsList({ card, title = 'Your creations' }: { card?: strin
               </span>
               <span className="flex flex-1 flex-col p-3">
                 <span className="line-clamp-2 text-sm font-semibold text-foreground">{c.title || labelOf(c)}</span>
-                <span className="mt-1 text-[11px] text-muted">{labelOf(c)} · {ago(c.updatedAt)}</span>
+                <span className="mt-1 text-[11px] text-foreground/70">{labelOf(c)} · {ago(c.updatedAt)}</span>
                 {c.youtubeUrl || c.shared ? (
                   <span className="mt-2 flex flex-wrap gap-1 text-[10px]">
                     {c.youtubeUrl ? <span className="rounded-full bg-trust/15 px-2 py-0.5 text-success">On YouTube</span> : null}

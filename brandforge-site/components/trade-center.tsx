@@ -51,7 +51,7 @@ function Modal({ label, onClose, children }: { label: string; onClose: () => voi
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-line bg-panel p-4">
         <div className="flex items-center justify-between">
           <p className="font-serif text-lg text-foreground">{label}</p>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-muted hover:text-foreground">
+          <button type="button" onClick={onClose} aria-label="Close" className="text-foreground/70 hover:text-foreground">
             ✕
           </button>
         </div>
@@ -224,7 +224,8 @@ export function TradeCenter() {
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel p-4 sm:p-5">
           <div className="min-w-0">
             <p className="font-serif text-lg text-foreground">List something</p>
-            <p className="text-sm text-muted">A gig, a product, a tool or a request. Describe it and the listing is written for you.</p>
+            <p className="text-sm text-foreground/70">A gig, a product, a tool or a request. Describe it and the listing is written for you.</p>
+            <p className="mt-1 text-xs text-foreground/70">Need it done with a project manager? <a href="/projects" className="font-semibold text-foreground underline-offset-2 hover:underline">Set up a funded task</a></p>
             {published ? (
               <p role="status" className="mt-1 text-sm text-foreground">
                 Published. It is in the list below.
@@ -245,7 +246,7 @@ export function TradeCenter() {
       <section aria-label="Publish a listing" className="rounded-2xl border border-line bg-panel p-4 sm:p-5">
         {draft ? null : (
           <div className="mb-2 flex justify-end">
-            <button type="button" onClick={() => setMakerOpen(false)} className="text-xs text-muted transition hover:text-foreground">Close</button>
+            <button type="button" onClick={() => setMakerOpen(false)} className="text-xs text-foreground/70 transition hover:text-foreground">Close</button>
           </div>
         )}
         {draft ? (
@@ -253,10 +254,10 @@ export function TradeCenter() {
             <p className="font-serif text-lg text-foreground">Here is your listing. Check it, then publish.</p>
             {research && (research.sources.length > 0 || research.found.length > 0) ? (
               <details className="mt-3 rounded-xl border border-line bg-background px-3 py-2 text-sm" open={research.sources.some((source) => !source.ok)}>
-                <summary className="cursor-pointer text-muted">
+                <summary className="cursor-pointer text-foreground/70">
                   {research.sources.some((source) => source.ok) ? "I read " + research.sources.filter((source) => source.ok).map((source) => source.title).join(", ") : "Written from your words"}
                 </summary>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-muted">
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-foreground/70">
                   {research.found.map((note) => (
                     <li key={note}>{note}</li>
                   ))}
@@ -268,7 +269,7 @@ export function TradeCenter() {
             ) : null}
             <div className="mt-3 flex gap-2">
               {(["offer", "request"] as const).map((k) => (
-                <button key={k} type="button" aria-pressed={draft.kind === k} onClick={() => setDraft({ ...draft, kind: k })} className={`flex-1 rounded-lg border px-3 py-1.5 text-xs ${draft.kind === k ? "border-ember bg-ember/10 text-foreground" : "border-line text-muted"}`}>
+                <button key={k} type="button" aria-pressed={draft.kind === k} onClick={() => setDraft({ ...draft, kind: k })} className={`flex-1 rounded-lg border px-3 py-1.5 text-xs ${draft.kind === k ? "border-ember bg-ember/10 text-foreground" : "border-line text-foreground/70"}`}>
                   {k === "offer" ? "I offer this" : "I need this"}
                 </button>
               ))}
@@ -285,14 +286,14 @@ export function TradeCenter() {
               <input value={draft.budgetMax} onChange={(e) => setDraft({ ...draft, budgetMax: e.target.value })} inputMode="decimal" placeholder="To" aria-label="Price to" className={field} />
             </div>
             {research && research.tips.length > 0 ? (
-              <p className="mt-2 text-xs text-muted">To make it stronger: {research.tips.join(" · ")}</p>
+              <p className="mt-2 text-xs text-foreground/70">To make it stronger: {research.tips.join(" · ")}</p>
             ) : null}
             {error ? <p role="alert" className="mt-2 text-xs text-danger">{error}</p> : null}
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <button type="button" onClick={() => void publish()} disabled={publishing} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-60">
                 {publishing ? "Publishing…" : "Publish"}
               </button>
-              <button type="button" onClick={() => { setDraft(null); setResearch(null); }} className="text-sm text-muted transition hover:text-foreground">
+              <button type="button" onClick={() => { setDraft(null); setResearch(null); }} className="text-sm text-foreground/70 transition hover:text-foreground">
                 Change my words
               </button>
             </div>
@@ -313,7 +314,7 @@ export function TradeCenter() {
             />
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {STARTERS.map(([label, start]) => (
-                <button key={label} type="button" onClick={() => setText((current) => (current.trim() ? current : start))} className="bf-tap rounded-full border border-line px-3 py-1 text-xs text-muted transition hover:border-ember hover:text-foreground">
+                <button key={label} type="button" onClick={() => setText((current) => (current.trim() ? current : start))} className="bf-tap rounded-full border border-line px-3 py-1 text-xs text-foreground/70 transition hover:border-ember hover:text-foreground">
                   {label}
                 </button>
               ))}
@@ -357,11 +358,11 @@ export function TradeCenter() {
       ) : (
         <div className="bf-card mt-6 p-6 text-center">
           <p className="font-serif text-lg text-foreground">{pending ? "Trade opens shortly." : "Nothing here yet."}</p>
-          {!pending ? <p className="mt-1 text-xs text-muted">Describe what you offer or need above. It takes a minute.</p> : null}
+          {!pending ? <p className="mt-1 text-xs text-foreground/70">Describe what you offer or need above. It takes a minute.</p> : null}
         </div>
       )}
 
-      <p className="mt-8 text-xs text-muted">Agree the details in a private chat and sign a milestone contract. A flat 5% is taken when a milestone is paid. Listing and chatting are free.</p>
+      <p className="mt-8 text-xs text-foreground/70">Agree the details in a private chat and sign a milestone contract. A flat 5% is taken when a milestone is paid. Listing and chatting are free.</p>
 
       {editing ? <PostForm listing={editing} onClose={() => setEditing(null)} onPosted={() => void load()} /> : null}
       {contacting ? <ContactForm listing={contacting} onClose={() => setContacting(null)} /> : null}
@@ -390,9 +391,9 @@ function Card({ listing: l, onContact, onEdit, onAssistant, onClose, onReopen, o
         <RoleBadge role={l.ownerRole} />
         <span className="min-w-[5rem] flex-1 truncate text-sm font-medium text-foreground">{l.ownerName}</span>
       </div>
-      <p className={`mt-2.5 text-[11px] uppercase tracking-[0.12em] ${l.kind === "request" && !closed ? "text-ember" : "text-muted"}`}>{closed ? "Closed" : l.kind === "request" ? "Wants · " + l.category : l.category}</p>
+      <p className={`mt-2.5 text-[11px] uppercase tracking-[0.12em] ${l.kind === "request" && !closed ? "text-ember" : "text-foreground/70"}`}>{closed ? "Closed" : l.kind === "request" ? "Wants · " + l.category : l.category}</p>
       <h3 className="mt-1 font-serif text-base leading-snug text-foreground">{l.title}</h3>
-      <p className={`mt-1 whitespace-pre-line text-xs leading-relaxed text-muted ${open ? "" : "line-clamp-3"}`}>{l.description}</p>
+      <p className={`mt-1 whitespace-pre-line text-xs leading-relaxed text-foreground/70 ${open ? "" : "line-clamp-3"}`}>{l.description}</p>
       {long ? (
         <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} className="mt-1 self-start text-xs text-ember underline-offset-2 hover:underline">
           {open ? "Show less" : "Read more"}
@@ -402,7 +403,7 @@ function Card({ listing: l, onContact, onEdit, onAssistant, onClose, onReopen, o
       <div className="mt-3 flex items-center justify-between gap-2">
         <p className="min-w-0 truncate text-sm font-semibold tabular-nums text-foreground">
           {budgetLabel(l, formatMoney)}
-          {!l.official && l.createdAt ? <span className="ml-2 text-[11px] font-normal text-muted">{posted(l.createdAt)}</span> : null}
+          {!l.official && l.createdAt ? <span className="ml-2 text-[11px] font-normal text-foreground/70">{posted(l.createdAt)}</span> : null}
         </p>
         {l.mine ? (
           <button type="button" onClick={() => onAssistant(l)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember">
@@ -416,13 +417,13 @@ function Card({ listing: l, onContact, onEdit, onAssistant, onClose, onReopen, o
       </div>
       {l.mine ? (
         <div className="mt-2 flex items-center gap-1 border-t border-line pt-2 text-xs">
-          <button type="button" onClick={() => onEdit(l)} className="rounded px-2 py-1 text-muted hover:text-foreground">Edit</button>
+          <button type="button" onClick={() => onEdit(l)} className="rounded px-2 py-1 text-foreground/70 hover:text-foreground">Edit</button>
           {closed ? (
             <button type="button" onClick={() => onReopen(l)} className="rounded px-2 py-1 text-ember hover:underline">Reopen</button>
           ) : (
-            <button type="button" onClick={() => onClose(l)} className="rounded px-2 py-1 text-muted hover:text-foreground">Close</button>
+            <button type="button" onClick={() => onClose(l)} className="rounded px-2 py-1 text-foreground/70 hover:text-foreground">Close</button>
           )}
-          <button type="button" onClick={() => onDelete(l)} className="ml-auto rounded px-2 py-1 text-muted hover:text-danger">Delete</button>
+          <button type="button" onClick={() => onDelete(l)} className="ml-auto rounded px-2 py-1 text-foreground/70 hover:text-danger">Delete</button>
         </div>
       ) : null}
     </article>
@@ -472,12 +473,12 @@ function PostForm({ onClose, onPosted, listing }: { onClose: () => void; onPoste
     <Modal label="Edit listing" onClose={onClose}>
       <div className="mt-3 flex gap-2">
         {(["offer", "request"] as const).map((k) => (
-          <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)} className={`flex-1 rounded-lg border px-3 py-1.5 text-xs ${kind === k ? "border-ember bg-ember/10 text-foreground" : "border-line text-muted"}`}>
+          <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)} className={`flex-1 rounded-lg border px-3 py-1.5 text-xs ${kind === k ? "border-ember bg-ember/10 text-foreground" : "border-line text-foreground/70"}`}>
             {k === "offer" ? "I offer this" : "I need this"}
           </button>
         ))}
       </div>
-      <label className="mt-3 block text-[11px] text-muted">
+      <label className="mt-3 block text-[11px] text-foreground/70">
         Category
         <select value={category} onChange={(e) => setCategory(e.target.value)} className={`${field} mt-1`}>
           {CATEGORIES.map((c: string) => (
@@ -485,16 +486,16 @@ function PostForm({ onClose, onPosted, listing }: { onClose: () => void; onPoste
           ))}
         </select>
       </label>
-      <label className="mt-3 block text-[11px] text-muted">
+      <label className="mt-3 block text-[11px] text-foreground/70">
         Title
         <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} className={`${field} mt-1`} />
       </label>
-      <label className="mt-3 block text-[11px] text-muted">
+      <label className="mt-3 block text-[11px] text-foreground/70">
         Details
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} maxLength={1200} className={`${field} mt-1`} />
       </label>
       <div className="mt-3 grid grid-cols-3 gap-2">
-        <label className="text-[11px] text-muted">
+        <label className="text-[11px] text-foreground/70">
           Currency
           <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={`${field} mt-1`}>
             <option>EUR</option>
@@ -502,11 +503,11 @@ function PostForm({ onClose, onPosted, listing }: { onClose: () => void; onPoste
             <option>GBP</option>
           </select>
         </label>
-        <label className="text-[11px] text-muted">
+        <label className="text-[11px] text-foreground/70">
           From
           <input value={budgetMin} onChange={(e) => setBudgetMin(e.target.value)} inputMode="decimal" className={`${field} mt-1`} />
         </label>
-        <label className="text-[11px] text-muted">
+        <label className="text-[11px] text-foreground/70">
           To
           <input value={budgetMax} onChange={(e) => setBudgetMax(e.target.value)} inputMode="decimal" className={`${field} mt-1`} />
         </label>
@@ -563,7 +564,7 @@ function ContactForm({ listing, onClose }: { listing: ListingView; onClose: () =
 
   return (
     <Modal label={`Message ${listing.ownerName}`} onClose={onClose}>
-      <p className="mt-2 text-xs text-muted">About: {listing.title}</p>
+      <p className="mt-2 text-xs text-foreground/70">About: {listing.title}</p>
       <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={4} maxLength={1000} placeholder="Say what you need or what you can do, and when." aria-label="Your message" className={`${field} mt-3`} />
       {error ? (
         <p className="mt-2 text-xs text-danger" role="alert">

@@ -207,10 +207,10 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
     return (
       <div>
         <div className="mb-6 flex items-center gap-3">
-          <button type="button" onClick={() => show(null)} className="flex items-center gap-1.5 text-sm text-muted transition hover:text-foreground">
+          <button type="button" onClick={() => show(null)} className="flex items-center gap-1.5 text-sm text-foreground/70 transition hover:text-foreground">
             <span aria-hidden="true">←</span> All formats
           </button>
-          <span className="text-muted" aria-hidden="true">/</span>
+          <span className="text-foreground/70" aria-hidden="true">/</span>
           <h2 className="font-serif text-xl text-foreground">{current.name}</h2>
         </div>
         {building ? (
@@ -220,7 +220,7 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel p-4 sm:p-5">
               <div className="min-w-0">
                 <p className="font-serif text-lg text-foreground">{current.name}</p>
-                <p className="text-sm text-muted">{current.line}</p>
+                <p className="text-sm text-foreground/70">{current.line}</p>
               </div>
               <button type="button" onClick={() => (madeInChat(current.id) ? void startInChat(current) : setBuilding(true))} disabled={starting} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90 disabled:opacity-60">
                 {starting ? 'Opening a chat…' : 'Start making'}
@@ -241,8 +241,8 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel p-4 sm:p-5">
           <div className="min-w-0">
             <p className="font-serif text-lg text-foreground">Make something</p>
-            <p className="text-sm text-muted">A carousel, an ad, a quote, a tip, a poll and more, from one sentence.</p>
-            <p className="mt-1 text-xs text-muted">Rather have it made for you every month? <a href="/pricing" className="font-semibold text-foreground underline-offset-2 hover:underline">See team plans</a></p>
+            <p className="text-sm text-foreground/70">A carousel, an ad, a quote, a tip, a poll and more, from one sentence.</p>
+            <p className="mt-1 text-xs text-foreground/70">Rather have it made for you every month? <a href="/pricing" className="font-semibold text-foreground underline-offset-2 hover:underline">See team plans</a></p>
           </div>
           <button type="button" aria-expanded={picking} onClick={() => setPicking((value) => !value)} className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90">
             {picking ? 'Close' : 'Choose a format'}
@@ -257,14 +257,14 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
         <h2 className="font-serif text-2xl text-foreground sm:text-3xl">What do you want to make?</h2>
         {CARD_GROUPS.map((group) => (
           <div key={group} className="mt-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{group}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground/70">{group}</p>
             <ul className="mt-2 grid grid-cols-2 gap-3 lg:grid-cols-3">
               {CARDS.filter((card) => card.group === group).map((card) => (
                 <li key={card.id}>
                   <button type="button" onClick={() => show(card.id)} className="group block w-full rounded-2xl border border-line bg-panel p-3 text-left transition hover:border-ember sm:p-4">
                     {card.visual}
                     <span className="mt-3 block font-serif text-lg text-foreground">{card.name}</span>
-                    <span className="mt-0.5 block text-xs leading-snug text-muted sm:text-sm">{card.line}</span>
+                    <span className="mt-0.5 block text-xs leading-snug text-foreground/70 sm:text-sm">{card.line}</span>
                   </button>
                 </li>
               ))}
@@ -274,7 +274,7 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
       </section>
 
       <details aria-label="Coming soon" className="group">
-        <summary className="cursor-pointer text-sm text-muted transition hover:text-foreground">More formats are coming. Tell us which you want.</summary>
+        <summary className="cursor-pointer text-sm text-foreground/70 transition hover:text-foreground">More formats are coming. Tell us which you want.</summary>
         <ul className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-3">
           {coming.map((creation: Format) => (
             <li key={creation.n}>
@@ -283,8 +283,8 @@ export function StudioHub({ embedded = false, initialKind = null, initialTopic =
                   <div className="pointer-events-none select-none opacity-60 blur-[3px]" aria-hidden="true">{COMING_VISUAL[creation.group]}</div>
                   <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-line bg-background/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-foreground shadow">Coming soon</span>
                 </div>
-                <span className="mt-3 block font-serif text-lg text-muted">{creation.name}</span>
-                <span className="mt-0.5 block text-xs leading-snug text-muted sm:text-sm">{creation.line}</span>
+                <span className="mt-3 block font-serif text-lg text-foreground/70">{creation.name}</span>
+                <span className="mt-0.5 block text-xs leading-snug text-foreground/70 sm:text-sm">{creation.line}</span>
                 <button type="button" onClick={() => vote(creation)} disabled={voted[creation.n]} className="mt-2 text-xs text-ember underline-offset-2 hover:underline disabled:text-muted disabled:no-underline">
                   {voted[creation.n] ? 'Noted, thanks' : 'I want this'}
                 </button>

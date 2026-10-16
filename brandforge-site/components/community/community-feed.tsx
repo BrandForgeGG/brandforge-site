@@ -84,7 +84,7 @@ export function CommunityFeed({ kind, title }: { kind: 'create' | 'distribute'; 
     <section aria-label={title} className="mt-10">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="font-serif text-xl text-foreground sm:text-2xl">{title}</h2>
-        {posts && posts.length > 0 ? <p className="text-xs text-muted">Shared by members</p> : null}
+        {posts && posts.length > 0 ? <p className="text-xs text-foreground/70">Shared by members</p> : null}
       </div>
 
       {posts === null ? (
@@ -94,7 +94,7 @@ export function CommunityFeed({ kind, title }: { kind: 'create' | 'distribute'; 
           ))}
         </div>
       ) : posts.length === 0 ? (
-        <p className="mt-3 rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">Nothing shared yet. Make something above and press Share to the community to be the first.</p>
+        <p className="mt-3 rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-foreground/70">Nothing shared yet. Make something above and press Share to the community to be the first.</p>
       ) : (
         <>
           <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -114,7 +114,7 @@ export function CommunityFeed({ kind, title }: { kind: 'create' | 'distribute'; 
                   </span>
                   <span className="block p-2.5">
                     <span className="block truncate text-sm text-foreground">{post.title || FORMAT_LABEL[post.format] || 'Creation'}</span>
-                    <span className="mt-1.5 flex items-center gap-1.5 text-[11px] text-muted">
+                    <span className="mt-1.5 flex items-center gap-1.5 text-[11px] text-foreground/70">
                       <Avatar name={post.ownerName} url={post.ownerAvatar} />
                       <span className="min-w-0 flex-1 truncate">{post.ownerName}</span>
                       <span className="shrink-0">{relativeTime(post.createdAt)}</span>
@@ -141,9 +141,9 @@ export function CommunityFeed({ kind, title }: { kind: 'create' | 'distribute'; 
                 <div className="flex items-center gap-2">
                   <Avatar name={open.ownerName} url={open.ownerAvatar} />
                   <p className="min-w-0 flex-1 truncate text-sm text-foreground">
-                    {open.ownerName} <span className="text-muted">· {relativeTime(open.createdAt)}</span>
+                    {open.ownerName} <span className="text-foreground/70">· {relativeTime(open.createdAt)}</span>
                   </p>
-                  <button type="button" onClick={() => setOpen(null)} aria-label="Close" className="rounded-lg p-2 text-muted transition hover:bg-overlay hover:text-foreground">
+                  <button type="button" onClick={() => setOpen(null)} aria-label="Close" className="rounded-lg p-2 text-foreground/70 transition hover:bg-overlay hover:text-foreground">
                     <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
                       <path d="M5 5l10 10M15 5L5 15" />
                     </svg>
@@ -159,7 +159,7 @@ export function CommunityFeed({ kind, title }: { kind: 'create' | 'distribute'; 
                     <img key={src} src={src} alt={`${open.title || 'Creation'}, picture ${i + 1}`} className="max-h-[60dvh] w-auto max-w-full shrink-0 snap-center rounded-xl border border-line object-contain" />
                   ))}
                 </div>
-                {open.caption ? <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted">{open.caption}</p> : null}
+                {open.caption ? <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-foreground/70">{open.caption}</p> : null}
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   {open.caption ? (
                     <button type="button" onClick={() => void navigator.clipboard?.writeText(open.caption).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 1500); })} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground transition hover:border-ember">
@@ -167,7 +167,7 @@ export function CommunityFeed({ kind, title }: { kind: 'create' | 'distribute'; 
                     </button>
                   ) : null}
                   {open.canRemove ? (
-                    <button type="button" onClick={() => void remove(open)} className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted transition hover:border-danger hover:text-danger">
+                    <button type="button" onClick={() => void remove(open)} className="rounded-lg border border-line px-3 py-1.5 text-xs text-foreground/70 transition hover:border-danger hover:text-danger">
                       Remove from the community
                     </button>
                   ) : null}
