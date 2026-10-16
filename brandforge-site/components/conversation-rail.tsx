@@ -69,10 +69,10 @@ function useIsVisitor(): boolean {
 }
 
 const NAV_ITEMS = [
+  { href: "/projects", hue: "var(--ember)", label: "Projects", hint: "Funded work, with your dedicated project manager", path: "M3.5 6.5h13v9h-13zM7.5 6.5V4.5h5v2M3.5 10.5h13" },
   { href: "/create", hue: "var(--hue-create)", label: "Create", hint: "Make it, download it, publish it", path: "M10 3.5l1.6 4.4 4.4 1.6-4.4 1.6L10 15.5l-1.6-4.4L4 9.5l4.4-1.6zM15.5 3v3M14 4.5h3" },
   { href: "/distribute", hue: "var(--hue-distribute)", label: "Distribute", hint: "A week of posts, written for you", path: "M4 5.5h12v10H4zM4 8.5h12M7.5 3.5v3M12.5 3.5v3M7 12h2M11 12h2" },
   { href: "/trade", hue: "var(--hue-trade)", label: "Trade", hint: "Hire or get hired", path: "M4 7h11l-3-3M16 13H5l3 3" },
-  { href: "/explore", hue: "var(--hue-explore)", label: "Explore", hint: "Where BrandForge is going and what is happening now", path: "M10 3a7 7 0 100 14 7 7 0 000-14zM12.8 7.2l-1.6 4-4 1.6 1.6-4z" },
 ];
 
 const TEAM_ITEM = { href: "/team", hue: "var(--ember)", label: "Team", hint: "Clients, money and the road to €10k", path: "M7 8a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM13.5 8a2 2 0 100-4 2 2 0 000 4zM2.5 16c0-2.8 2-4.5 4.5-4.5s4.5 1.7 4.5 4.5M11.5 12.2c.6-.4 1.3-.7 2-.7 2.1 0 3.8 1.5 3.8 4" };
@@ -85,20 +85,6 @@ function RailIcon({ path, className = "h-4 w-4" }: { path: string; className?: s
       <path d={path} />
     </svg>
   );
-}
-
-// Recents are grouped by how recently each chat moved, newest first, so the one you want is near the top.
-function recencyGroup(value: string | null): string {
-  const time = value ? new Date(value).getTime() : NaN;
-  if (Number.isNaN(time)) return "Older";
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  const days = Math.floor((startOfToday.getTime() - time) / 86400000) + (time >= startOfToday.getTime() ? 0 : 1);
-  if (time >= startOfToday.getTime()) return "Today";
-  if (days <= 1) return "Yesterday";
-  if (days <= 7) return "Previous 7 days";
-  if (days <= 30) return "Previous 30 days";
-  return "Older";
 }
 
 export function relativeTime(value: string | null): string {
@@ -397,11 +383,11 @@ onMobileClose,
                 aria-label={item.label}
                 className={
                   isCollapsed
-                    ? "flex h-10 w-10 items-center justify-center rounded-lg text-muted transition hover:bg-overlay hover:text-foreground"
-                    : "flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-[15px] text-muted transition hover:bg-overlay hover:text-foreground"
+                    ? "flex h-10 w-10 items-center justify-center rounded-lg text-foreground transition hover:bg-overlay"
+                    : "flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-[15px] font-medium text-foreground transition hover:bg-overlay"
                 }
               >
-                {/* Each part of BrandForge keeps its own colour: Create orange, Distribute blue, Trade green, Explore violet. */}
+                {/* Each part keeps its own colour: Projects ember, Create orange, Distribute blue, Trade green. */}
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ color: item.hue, background: `color-mix(in srgb, ${item.hue} 13%, transparent)` }}>
                   <RailIcon path={item.path} className="h-[16px] w-[16px]" />
                 </span>
@@ -451,53 +437,30 @@ onMobileClose,
         {isCollapsed ? null : (
           <div className="bf-rail-scroll flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overflow-x-hidden px-4 pb-4">
             <section className="min-h-0 flex-1">
-              <p className="bf-rail-section-label">Recents</p>
+              <p className="bf-rail-section-label">Chats</p>
 
               {recents.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-line px-3 py-3">
-                  <p className="text-sm text-foreground">{isStaff ? 'No briefs yet' : 'No chats yet'}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-muted">
-                    {isStaff
-                      ? 'New briefs appear here the moment a founder sends one for review. Link Telegram in Settings and the ping finds you first.'
-                      : 'Start one and it shows up here.'}
-                  </p>
-                </div>
+                <p className="px-3 text-sm text-foreground">{isStaff ? 'No client chats yet.' : 'No chats yet.'}</p>
               ) : (
                 <div className="bf-recents">
-                  {(() => {
-                    const shown = recents;
-                    const groups: { label: string; items: typeof shown }[] = [];
-                    for (const conversation of shown) {
-                      const label = recencyGroup(conversation.lastActivity);
-                      const group = groups.find((entry) => entry.label === label);
-                      if (group) group.items.push(conversation);
-                      else groups.push({ label, items: [conversation] });
-                    }
-                    return groups.map((group) => (
-                      <div key={group.label} className="mb-2">
-                        <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">{group.label}</p>
-                        {group.items.map((conversation) => {
-                          const isActive = conversation.id === activeConversationId;
-                          return (
-                            <Link
-                              key={conversation.id}
-                              href={"/chat?conversationId=" + conversation.id}
-                              onClick={onMobileClose}
-                              aria-current={isActive ? "page" : undefined}
-                              title={conversation.preview ? conversation.title + " — " + conversation.preview : conversation.title}
-                              className={"bf-recent-item flex items-center gap-2 px-3 py-2 " + (isActive ? "bf-recent-item-active" : "")}
-                            >
-                              {isStaff && conversation.isUnseen ? (
-                                <span aria-label="Nobody from the team has opened this chat yet" className="h-1.5 w-1.5 shrink-0 rounded-full bg-ember" />
-                              ) : null}
-                              <span className="min-w-0 flex-1 truncate text-sm text-foreground">{conversation.title}</span>
-                              <span className="shrink-0 text-[10px] tabular-nums text-muted">{relativeTime(conversation.lastActivity).replace(" ago", "")}</span>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    ));
-                  })()}
+                  {recents.map((conversation) => {
+                    const isActive = conversation.id === activeConversationId;
+                    return (
+                      <Link
+                        key={conversation.id}
+                        href={"/chat?conversationId=" + conversation.id}
+                        onClick={onMobileClose}
+                        aria-current={isActive ? "page" : undefined}
+                        title={conversation.title}
+                        className={"bf-recent-item flex items-center gap-2 px-3 py-2 " + (isActive ? "bf-recent-item-active" : "")}
+                      >
+                        {isStaff && conversation.isUnseen ? (
+                          <span aria-label="Nobody from the team has opened this chat yet" className="h-1.5 w-1.5 shrink-0 rounded-full bg-ember" />
+                        ) : null}
+                        <span className="min-w-0 flex-1 truncate text-sm text-foreground">{conversation.title}</span>
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </section>
@@ -550,8 +513,7 @@ onMobileClose,
           </div>
         ) : (isVisitor || isGuestBrowser) && !account ? (
           <div className="bf-rail-footer mt-auto shrink-0">
-            <p className="text-sm font-semibold text-foreground">Sign up or log in</p>
-            <p className="mt-1 text-xs leading-snug text-muted">Save your chats, bring in your team and pick up on any device. Free, no card.</p>
+            <p className="text-sm text-foreground">Keep your chats on every device.</p>
             <button
               type="button"
               onClick={() => openLogin({ reason: isGuestBrowser ? "save" : "signin" })}
@@ -608,14 +570,7 @@ onMobileClose,
                       {account?.name ?? "Guest"}
                     </span>
                     <span className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-muted">
-                      {account ? (
-                        <>
-                          <RoleBadge role={account.role} />
-                          {account.username ? <span className="truncate">@{account.username}</span> : null}
-                        </>
-                      ) : (
-                        "Not saved yet"
-                      )}
+                      {account ? <RoleBadge role={account.role} /> : "Not saved yet"}
                     </span>
                   </span>
                 </>
@@ -639,7 +594,7 @@ onMobileClose,
                   <Link
                     href="/settings"
                     onClick={() => setDropdownOpen(false)}
-                    className="block rounded-lg px-3 py-2 text-sm text-muted transition hover:bg-overlay hover:text-foreground"
+                    className="block rounded-lg px-3 py-2 text-sm text-foreground transition hover:bg-overlay"
                   >
                     Settings
                   </Link>
@@ -652,7 +607,7 @@ onMobileClose,
                     key={item.label}
                     href={item.href}
                     onClick={() => setDropdownOpen(false)}
-                    className="block rounded-lg px-3 py-2 text-sm text-muted transition hover:bg-overlay hover:text-foreground"
+                    className="block rounded-lg px-3 py-2 text-sm text-foreground transition hover:bg-overlay"
                   >
                     {item.label}
                   </Link>

@@ -2351,7 +2351,7 @@ export async function replaceDraftMilestones(
 
 export async function createAgreement(agreement: {
   conversation_id: string;
-  proposal_id: string;
+  proposal_id?: string | null;
   terms: string;
   total_amount: number;
   currency?: string;
@@ -6851,4 +6851,119 @@ export async function getTeamDashboard(): Promise<TeamDashboard | null> {
     cancelled30d,
     invoices30d: { sent: invoices.length, paid: invoices.filter((row) => row.artifact_data?.status === 'paid').length },
   };
+}
+
+// ---- Funded projects: the buyer, the specialists and the founder as dedicated project manager ----
+
+/** The founder, who manages every funded project. PROJECT_MANAGER_EMAIL overrides the founder account. */
+export async function getProjectManager(): Promise<{ id: string; name: string; avatarUrl: string | null } | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const email = String(process.env.PROJECT_MANAGER_EMAIL || 'brandforge.gg@gmail.com').trim().toLowerCase();
+  const { data } = await admin.from('profiles').select('id, username, display_name, avatar_url').ilike('email', email).maybeSingle();
+  if (!data) return null;
+  const row = data as { id: string; username: string | null; display_name: string | null; avatar_url: string | null };
+  return { id: row.id, name: row.username || row.display_name || 'The founder', avatarUrl: row.avatar_url };
+}
+
+/** A custom task card turns Funded once its agreement is paid (its title and amount stay). */
+export async function markTaskFundFunded(agreementId: string): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return;
+  const { data } = await admin.from('messages').select('id, artifact_data').eq('content_type', 'system').eq('artifact_data->>type', 'task_fund').eq('artifact_data->>id', agreementId);
+  for (const row of (data ?? []) as { id: string; artifact_data: Record<string, unknown> }[]) {
+    const { error } = await admin.from('messages').update({ artifact_data: { ...row.artifact_data, status: 'funded' } }).eq('id', row.id);
+    if (error) console.error('markTaskFundFunded:', error.message);
+  }
+}
+
+export type FundedProject = {
+  chatId: string;
+  title: string;
+  kind: 'task' | 'project' | 'plan';
+  amount: number | null;
+  currency: string;
+  status: string;
+  fundedAt: string | null;
+  buyer: { id: string; name: string } | null;
+  specialists: { id: string; name: string }[];
+  done: number;
+  total: number;
+  isBuyer: boolean;
+};
+
+/**
+ * Every funded task, project or paid team plan this person is part of: as the buyer, as a specialist on it, or (staff)
+ * all of them. Service role; the route decides who may see what.
+ */
+export async function listFundedProjects(userId: string, seeAll: boolean): Promise<FundedProject[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const { RETAINERS } = await import('./plans.js');
+  const { data: agreements } = await admin
+    .from('agreements')
+    .select('conversation_id, total_amount, currency, status, funded_at, proposal_id')
+    .in('status', ['funded', 'active', 'completed'])
+    .order('funded_at', { ascending: false })
+    .limit(200);
+  const funded = ((agreements ?? []) as { conversation_id: string; total_amount: number; currency: string | null; status: string; funded_at: string | null; proposal_id: string | null }[]).map((row) => ({
+    chatId: row.conversation_id,
+    kind: (row.proposal_id ? 'project' : 'task') as FundedProject['kind'],
+    amount: row.total_amount,
+    currency: row.currency || 'EUR',
+    status: row.status,
+    fundedAt: row.funded_at,
+  }));
+  // Paid team plans run in their own chat too.
+  const { data: paidPlans } = await admin
+    .from('messages')
+    .select('conversation_id, artifact_data, created_at')
+    .eq('content_type', 'system')
+    .eq('artifact_data->>type', 'plan_invoice')
+    .eq('artifact_data->>status', 'paid')
+    .limit(200);
+  for (const row of (paidPlans ?? []) as { conversation_id: string; artifact_data: { id?: string }; created_at: string }[]) {
+    const plan = RETAINERS.find((entry) => entry.id === row.artifact_data?.id);
+    if (plan && !funded.some((item) => item.chatId === row.conversation_id)) {
+      funded.push({ chatId: row.conversation_id, kind: 'plan', amount: plan.cents / 100, currency: 'EUR', status: 'active', fundedAt: row.created_at });
+    }
+  }
+  if (funded.length === 0) return [];
+
+  const ids = [...new Set(funded.map((item) => item.chatId))];
+  const [{ data: chats }, { data: parts }, { data: tasks }] = await Promise.all([
+    admin.from('conversations').select('id, title, user_id').in('id', ids),
+    admin.from('participants').select('conversation_id, user_id, role').in('conversation_id', ids),
+    admin.from('tasks').select('conversation_id, status').in('conversation_id', ids),
+  ]);
+  const chatRows = (chats ?? []) as { id: string; title: string | null; user_id: string | null }[];
+  const partRows = (parts ?? []) as { conversation_id: string; user_id: string | null; role: string }[];
+  const taskRows = (tasks ?? []) as { conversation_id: string; status: string | null }[];
+  const manager = await getProjectManager();
+  const staff = await getProfileRoles([...new Set(partRows.map((row) => row.user_id).filter((id): id is string => Boolean(id)))]);
+
+  const visible = funded.filter((item) => {
+    const chat = chatRows.find((row) => row.id === item.chatId);
+    if (!chat) return false;
+    if (seeAll || chat.user_id === userId) return true;
+    return partRows.some((row) => row.conversation_id === item.chatId && row.user_id === userId);
+  });
+  const people = [...new Set([...chatRows.map((row) => row.user_id), ...partRows.map((row) => row.user_id)].filter((id): id is string => Boolean(id)))];
+  const names = await getProfileDisplayNames(people);
+  return visible.map((item) => {
+    const chat = chatRows.find((row) => row.id === item.chatId)!;
+    const specialists = partRows
+      .filter((row) => row.conversation_id === item.chatId && row.user_id && row.user_id !== chat.user_id && row.user_id !== manager?.id && ['operator', 'member'].includes(row.role) && staff.get(row.user_id) !== 'admin')
+      .map((row) => ({ id: row.user_id as string, name: names.get(row.user_id as string) ?? 'Specialist' }));
+    const mine = taskRows.filter((row) => row.conversation_id === item.chatId);
+    return {
+      ...item,
+      title: chat.title || 'Project',
+      buyer: chat.user_id ? { id: chat.user_id, name: names.get(chat.user_id) ?? 'Buyer' } : null,
+      specialists: specialists.filter((person, index) => specialists.findIndex((other) => other.id === person.id) === index),
+      done: mine.filter((row) => row.status === 'DONE').length,
+      total: mine.length,
+      isBuyer: chat.user_id === userId,
+    };
+  });
 }

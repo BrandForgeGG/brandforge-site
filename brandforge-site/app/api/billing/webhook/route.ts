@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyStripeSignature } from '@/lib/stripe-signature';
-import { recordFunnelEvent, upsertSubscription } from '@/lib/project-db';
+import { getAgreementById, recordFunnelEvent, upsertSubscription } from '@/lib/project-db';
+import { completeAgreementFunding } from '@/lib/funding-complete';
 import { getRetainer } from '@/lib/plans.js';
 import { postOpsEvent } from '@/lib/ops-events';
 import { startTeamPlan, teamPlanEnded } from '@/lib/team-plan-start';
@@ -33,7 +34,13 @@ export async function POST(request: NextRequest) {
   const object = event.data?.object;
   if (!object) return NextResponse.json({ received: true });
 
-  if (event.type === 'checkout.session.completed') {
+  if (event.type === 'checkout.session.completed' && !str(object.subscription) && str(object.metadata?.agreement_id)) {
+    // A funded task or project paid once by card: the same funding path as crypto and staff checks.
+    const agreement = await getAgreementById(str(object.metadata?.agreement_id) as string);
+    if (agreement && agreement.status === 'pending_funding' && object.payment_status === 'paid') {
+      await completeAgreementFunding({ id: agreement.id, conversation_id: agreement.conversation_id, total_amount: agreement.total_amount, currency: agreement.currency ?? 'EUR' }, 'card');
+    }
+  } else if (event.type === 'checkout.session.completed') {
     const subscriptionId = str(object.subscription);
     if (subscriptionId) {
       const plan = str(object.metadata?.plan);

@@ -112,6 +112,7 @@ const FUNNEL_EVENTS = Object.freeze([
   'application_approved',
   'team_finish_requested',
   'free_limit_reached',
+  'custom_task_created',
 ]);
 
 const EVENT_SET = new Set(FUNNEL_EVENTS);

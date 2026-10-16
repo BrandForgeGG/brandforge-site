@@ -62,3 +62,25 @@ export async function createPortalUrl(customerId: string, origin: string): Promi
   const session = await stripePost('/billing_portal/sessions', new URLSearchParams({ customer: customerId, return_url: `${origin}/settings` }));
   return typeof session?.url === 'string' ? session.url : null;
 }
+
+// One payment for a funded task or project (an agreement): the buyer pays once by card, BrandForge holds it and releases it
+// when the buyer approves the work. The webhook funds the agreement from metadata.agreement_id.
+export async function createTaskCheckoutUrl(input: { agreementId: string; cents: number; title: string; userId: string; email: string | null; origin: string; chatId: string }): Promise<string | null> {
+  if (!Number.isInteger(input.cents) || input.cents < 100) return null;
+  const params = new URLSearchParams({
+    mode: 'payment',
+    success_url: `${input.origin}/chat?conversationId=${input.chatId}`,
+    cancel_url: `${input.origin}/chat?conversationId=${input.chatId}`,
+    client_reference_id: input.userId,
+    'metadata[agreement_id]': input.agreementId,
+    'metadata[user_id]': input.userId,
+    'payment_intent_data[metadata][agreement_id]': input.agreementId,
+    'line_items[0][quantity]': '1',
+    'line_items[0][price_data][currency]': 'eur',
+    'line_items[0][price_data][unit_amount]': String(input.cents),
+    'line_items[0][price_data][product_data][name]': `BrandForge task: ${input.title.slice(0, 80)}`,
+  });
+  if (input.email) params.set('customer_email', input.email);
+  const session = await stripePost('/checkout/sessions', params);
+  return typeof session?.url === 'string' ? session.url : null;
+}

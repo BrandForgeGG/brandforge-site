@@ -167,3 +167,11 @@ test('a plan invoice card keeps only its plan and open or paid', () => {
   assert.deepEqual(parseChatEmbed({ type: 'plan_invoice', id: 'scale', status: 'weird' }), { type: 'plan_invoice', planId: 'scale', status: 'open' });
   assert.equal(parseChatEmbed({ type: 'plan_invoice', id: '<script>' }), null);
 });
+
+test('a custom task card keeps its agreement and open or funded', () => {
+  const id = '11111111-2222-3333-4444-555555555555';
+  assert.deepEqual(parseChatEmbed({ type: 'task_fund', id, status: 'funded' }), { type: 'task_fund', agreementId: id, status: 'funded' });
+  assert.equal(parseChatEmbed({ type: 'task_fund', id: 'nope' }), null);
+  assert.deepEqual(parseChatEmbed({ type: 'task_fund', id, status: 'open', title: 'Landing page', amount: 450 }), { type: 'task_fund', agreementId: id, status: 'open', title: 'Landing page', amount: 450 });
+  assert.equal(parseChatEmbed({ type: 'task_fund', id, amount: -5 }).amount, undefined);
+});

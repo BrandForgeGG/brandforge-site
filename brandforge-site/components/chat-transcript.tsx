@@ -9,6 +9,7 @@ import { RichContent } from "@/components/rich-content";
 import { RoleBadge } from "@/components/role-badge";
 import { FinishWithTeam } from "@/components/chat/finish-with-team";
 import { PlanInvoiceCard } from "@/components/chat/plan-invoice-card";
+import { TaskFundCard } from "@/components/chat/task-fund-card";
 
 import { detectDeliverable, KINDS } from "@/lib/deliverable-intent";
 import { BlueprintEmbedCard } from "@/components/blueprint/blueprint-embed-card";
@@ -53,6 +54,7 @@ export type ChatEmbed =
   | { type: "agreement"; agreementId: string; status: string }
   | { type: "peer_contract"; contractId: string; status: string }
   | { type: "plan_invoice"; planId: string; status: string }
+  | { type: "task_fund"; agreementId: string; status: string; title?: string; amount?: number }
   | { type: "review_request"; conversationId: string; percent?: number; complete?: boolean }
   | {
       type: "blueprint";
@@ -260,6 +262,9 @@ function SystemEmbedCard({
    }
 
    // Peer contracts load and act on themselves.
+   if (embed.type === "task_fund") {
+     return <TaskFundCard agreementId={embed.agreementId} status={embed.status} title={embed.title} amount={embed.amount} canPay={Boolean(canDecide)} />;
+   }
    if (embed.type === "plan_invoice") {
      return <PlanInvoiceCard planId={embed.planId} status={embed.status} canPay={Boolean(canDecide)} conversationId={planChat ?? ""} />;
    }

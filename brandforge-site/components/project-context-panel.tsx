@@ -207,6 +207,17 @@ export function ProjectContextPanel({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
   const submittedNetwork = payments.find((payment) => payment.network)?.network ?? null;
+  const [managerName, setManagerName] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    void fetch('/api/project-manager')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { name?: string | null } | null) => live && setManagerName(data?.name ?? null))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
 
   const nextDeliveryRaw = describeNextDeliveryAction(state?.tasks ?? []);
   const nextDelivery = nextDeliveryRaw.startsWith('Next: ')
@@ -254,60 +265,33 @@ export function ProjectContextPanel({
           </div>
         </div>
 
+        {state?.project.problemStatement || outline?.goal ? (
         <div className="bf-panel-section">
           <p className="bf-section-label">About</p>
           <p className="text-sm leading-relaxed text-foreground">
-            {state?.project.problemStatement || outline?.goal || 'Define what you want to achieve in the chat.'}
+            {state?.project.problemStatement || outline?.goal}
           </p>
           {state && (state.project.targetUsers.length > 0 || state.project.platforms.length > 0) ? (
             <dl className="mt-2 space-y-1.5 text-xs">
               {state.project.targetUsers.length > 0 ? (
-                <div className="flex gap-2"><dt className="w-12 shrink-0 text-muted">For</dt><dd className="text-foreground">{state.project.targetUsers.slice(0, 4).join(', ')}</dd></div>
+                <div className="flex gap-2"><dt className="w-12 shrink-0 text-foreground/60">For</dt><dd className="text-foreground">{state.project.targetUsers.slice(0, 4).join(', ')}</dd></div>
               ) : null}
               {state.project.platforms.length > 0 ? (
-                <div className="flex gap-2"><dt className="w-12 shrink-0 text-muted">On</dt><dd className="text-foreground">{state.project.platforms.slice(0, 4).join(', ')}</dd></div>
+                <div className="flex gap-2"><dt className="w-12 shrink-0 text-foreground/60">On</dt><dd className="text-foreground">{state.project.platforms.slice(0, 4).join(', ')}</dd></div>
               ) : null}
             </dl>
           ) : null}
         </div>
+        ) : null}
 
         {state && state.openQuestions.length > 0 ? (
           <div className="bf-panel-section">
             <p className="bf-section-label">Still to answer</p>
             <ul className="bf-panel-card space-y-1.5">
-              {state.openQuestions.slice(0, 4).map((question) => (
+              {state.openQuestions.slice(0, 3).map((question) => (
                 <li key={question.id} className="flex gap-2 text-xs leading-snug text-foreground">
                   <span aria-hidden="true" className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-ember" />
                   <span>{question.title}</span>
-                </li>
-              ))}
-              {state.openQuestions.length > 4 ? <li className="text-[11px] text-muted">and {state.openQuestions.length - 4} more</li> : null}
-            </ul>
-          </div>
-        ) : null}
-
-        {haveItems.length > 0 ? (
-          <div className="bf-panel-section">
-            <p className="bf-section-label">Captured so far</p>
-            <ul className="flex flex-wrap gap-1.5">
-              {haveItems.map((item) => (
-                <li key={item} className="rounded-full border border-line px-2.5 py-1 text-[11px] text-muted">{item}</li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        {outline && outline.sections.length > 0 ? (
-          <div className="bf-panel-section">
-            <p className="bf-section-label">Latest answer</p>
-            {outline.assumptions ? (
-              <p className="mb-2 text-xs leading-relaxed text-muted">Assuming: {outline.assumptions.replace(/^Assuming:?\s*/i, '')}</p>
-            ) : null}
-            <ul className="bf-panel-card space-y-1.5">
-              {outline.sections.map((section) => (
-                <li key={section.title} className="flex items-baseline justify-between gap-3 text-xs">
-                  <span className="min-w-0 truncate text-foreground">{section.title}</span>
-                  {section.items > 0 ? <span className="shrink-0 text-muted">{section.items}</span> : null}
                 </li>
               ))}
             </ul>
@@ -337,7 +321,7 @@ export function ProjectContextPanel({
               <p className="mt-1 text-sm text-foreground">
                 {money(state.estimate.costMin, state.estimate.currency)}–{money(state.estimate.costMax, state.estimate.currency)}
               </p>
-              <p className="mt-1 text-xs text-muted">
+              <p className="mt-1 text-xs text-foreground/70">
                 {state.estimate.weeksMin ?? '?'}–{state.estimate.weeksMax ?? '?'} weeks
               </p>
             </div>
@@ -351,7 +335,7 @@ export function ProjectContextPanel({
               <p className="text-sm text-foreground">{proposal.title}</p>
               <p className="mt-1 text-lg tabular-nums text-foreground">
                 {money(proposal.total_amount, proposal.currency)}
-                <span className="ml-2 align-middle text-xs font-normal text-muted">
+                <span className="ml-2 align-middle text-xs font-normal text-foreground/70">
                   {proposal.estimated_weeks_min ?? '?'}–{proposal.estimated_weeks_max ?? '?'} weeks
                 </span>
               </p>
@@ -390,7 +374,7 @@ export function ProjectContextPanel({
               {payments.length > 0 ? (
                 <ul className="mt-2 space-y-1">
                   {payments.map((payment) => (
-                    <li key={payment.id} className="text-xs text-muted">
+                    <li key={payment.id} className="text-xs text-foreground/80">
                       <div className="flex items-center justify-between gap-2">
                         <span className="truncate">{payment.sequence}. {payment.title}</span>
                         <span className="ml-2 whitespace-nowrap text-foreground">
@@ -417,29 +401,34 @@ export function ProjectContextPanel({
         ) : null}
 
         <div className="bf-panel-section">
-          <p className="bf-section-label">Team</p>
+          <p className="bf-section-label">People on this project</p>
           <div className="bf-panel-card">
-            <ul className="space-y-2">
+            <ul className="space-y-2.5">
+              {[...participants]
+                .sort((a, b) => Number(b.displayName === managerName) - Number(a.displayName === managerName))
+                .map((person) => {
+                  const manager = Boolean(managerName) && person.displayName === managerName;
+                  return (
+                    <li key={person.userId} className={`flex items-center gap-2 ${manager ? '-mx-1 rounded-xl border border-ember/50 bg-ember/10 px-1 py-1' : ''}`}>
+                      <span className="bf-stack-item" style={avatarTone(person.userId)} aria-hidden="true">
+                        {person.avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- a small user picture from our own storage
+                          <img src={person.avatarUrl} alt="" decoding="async" className="h-full w-full rounded-full object-cover" />
+                        ) : (
+                          initialsFor(person.displayName)
+                        )}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm text-foreground">{person.displayName}</span>
+                        <span className={`block text-[11px] ${manager ? 'font-semibold text-ember' : 'text-foreground/70'}`}>{manager ? 'Project manager · Founder' : formatRole(person.role)}</span>
+                      </span>
+                    </li>
+                  );
+                })}
               <li className="flex items-center gap-2">
                 <span className="bf-stack-item bf-stack-ai" aria-hidden="true">B</span>
-                <span className="text-xs text-foreground">BrandForge AI</span>
+                <span className="text-sm text-foreground">BrandForge AI</span>
               </li>
-              {participants.map((person) => (
-                <li key={person.userId} className="flex items-center gap-2">
-                  <span className="bf-stack-item" style={avatarTone(person.userId)} aria-hidden="true">
-                    {person.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- a small user picture from our own storage
-                      <img src={person.avatarUrl} alt="" decoding="async" className="h-full w-full rounded-full object-cover" />
-                    ) : (
-                      initialsFor(person.displayName)
-                    )}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-xs text-foreground">{person.displayName}</span>
-                    <span className="block text-[10px] uppercase tracking-[0.14em] text-muted">{formatRole(person.role)}</span>
-                  </span>
-                </li>
-              ))}
             </ul>
           </div>
         </div>
