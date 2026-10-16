@@ -102,17 +102,3 @@ export function HomePricing() {
 export function HomeQuotes() {
   return <QuoteRow />;
 }
-
-// The tools stay one line away for people who would rather do it themselves.
-export function HomeDiy() {
-  return (
-    <section className="border-t border-line px-5 py-10 sm:px-8">
-      <p className="mx-auto max-w-6xl text-center text-sm text-muted">
-        Rather do it yourself?{' '}
-        <Link href="/create" className="font-semibold text-foreground underline-offset-2 hover:underline">Make it with AI</Link>,{' '}
-        <Link href="/distribute" className="font-semibold text-foreground underline-offset-2 hover:underline">post it everywhere</Link>, or{' '}
-        <Link href="/trade" className="font-semibold text-foreground underline-offset-2 hover:underline">hire one specialist</Link>. Free to start.
-      </p>
-    </section>
-  );
-}
