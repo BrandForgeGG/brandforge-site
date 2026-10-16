@@ -31,6 +31,7 @@ import { RoleBadge } from "@/components/role-badge";
 import { detectMakeIntent } from "@/lib/make-intent";
 import { PlanInvoiceBar } from "@/components/chat/plan-invoice-bar";
 import { PlanArrival } from "@/components/chat/plan-arrival";
+import { ChatStarters } from "@/components/chat/chat-starters";
 import { MakerChatCard, OPEN_MAKER_EVENT, clearMakerSeed, isMakerKind, readMakerSeed, seedMakerCard, type MakerKind } from "@/components/chat/maker-chat-card";
 import { CreationChatContext } from "@/components/chat/creation-context";
 import { TicketBar } from "@/components/chat/ticket-bar";
@@ -241,6 +242,8 @@ export function ChatWorkspace() {
     const pkg = ({ launch: "Launch (websites and brand)", build: "Build (SaaS and bots)", product: "Product (apps and platforms)", scale: "Scale (features and growth)" } as Record<string, string>)[searchParams.get("pkg") ?? ""];
     return pkg ? `I'm interested in the ${pkg} package. About the project: ` : "";
   });
+  // A first line written for the person (a plan button or a starter) is not their draft until they add to it.
+  const autoTextRef = useRef(input);
   // A message being typed survives a reload or an accidental close: kept per chat in this browser, cleared when sent.
   const draftKey = `bf:composer:${conversationId || "new"}`;
   const draftKeyRef = useRef<string | null>(null);
@@ -248,6 +251,8 @@ export function ChatWorkspace() {
     let saved = "";
     try {
       saved = window.localStorage.getItem(draftKey) ?? "";
+      // An untouched plan line saved by an older version is not a draft.
+      if (/^I'd like the \w+ plan \([^)]*\)\. About me and what I need: ?$/.test(saved)) saved = "";
     } catch {
       /* storage blocked: the box simply starts empty */
     }
@@ -260,7 +265,7 @@ export function ChatWorkspace() {
     if (draftKeyRef.current !== draftKey) return;
     const timer = window.setTimeout(() => {
       try {
-        if (input.trim()) window.localStorage.setItem(draftKey, input);
+        if (input.trim() && input !== autoTextRef.current) window.localStorage.setItem(draftKey, input);
         else window.localStorage.removeItem(draftKey);
       } catch {
         /* storage blocked: the draft just will not come back */
@@ -2881,29 +2886,14 @@ return (
                 <img src="/discord-server-icon.png" alt="" className="h-full w-full object-cover" />
               </div>
               <h1 className="bf-start-title mt-5 font-serif text-3xl text-foreground sm:text-[2.6rem]">
-                {activePlan ? `Let's talk about ${getRetainer(activePlan)?.name ?? "your plan"}` : "Talk to the BrandForge team"}
+                {activePlan ? `Let's talk about ${getRetainer(activePlan)?.name ?? "your plan"}` : "What do you need done?"}
               </h1>
               <p className="bf-start-sub mt-3 max-w-md text-sm leading-relaxed text-muted">
-                {activePlan ? "Tell us what you need below. The whole team gets notified the moment you send, and you pay only when you agree." : "The whole BrandForge team gets notified the moment you send, and a person replies here."}{isGuestBrowser ? " No sign-up needed." : ""}
+                {activePlan ? "Tell us what you need below. The whole team gets notified the moment you send, and you pay only when you agree." : "Tell us in one message. The whole team gets notified the moment you send, and a person replies here."}{isGuestBrowser ? " No sign-up needed." : ""}
               </p>
               {activePlan ? <PlanArrival planId={activePlan} /> : (
                 <>
-                {/* The other ways in, one tap each: pick a person, make an asset, or post. */}
-                <div className="mt-7 grid w-full gap-2 text-left sm:grid-cols-3">
-                  {[
-                    { href: "/trade", hue: "var(--hue-trade)", title: "Hire someone", line: "Pick a profile in Trade" },
-                    { href: "/create", hue: "var(--hue-create)", title: "Make an asset", line: "Video, carousel, ad, article" },
-                    { href: "/distribute", hue: "var(--hue-distribute)", title: "Post everywhere", line: "Now, or a whole week" },
-                  ].map((item) => (
-                    <Link key={item.href} href={item.href} className="group rounded-2xl border border-line bg-panel p-4 transition hover:border-ember">
-                      <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                        <span className="h-2 w-2 rounded-full" style={{ background: item.hue }} aria-hidden="true" />
-                        {item.title}
-                      </span>
-                      <span className="mt-1 block text-xs text-muted">{item.line}</span>
-                    </Link>
-                  ))}
-                </div>
+                <ChatStarters onPick={(text) => { autoTextRef.current = text; setInput(text); requestAnimationFrame(() => { const node = composerRef.current; if (node) { node.focus(); node.setSelectionRange(text.length, text.length); } }); }} />
                   </>
               )}
             </div>
@@ -3503,7 +3493,7 @@ return (
           <ActionsHint show={showActionsHint} onDismiss={dismissActionsHint} />
         </div>
         <p className="bf-chat-footer">
-          <span>AI can make mistakes. People check what matters.</span>
+          <span>Private: only you, people you invite and the BrandForge team see this chat.</span>
           <span className="bf-chat-footer-links">
             <Link href="/terms">Terms</Link>
             <span aria-hidden="true">·</span>
