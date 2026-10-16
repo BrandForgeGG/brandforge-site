@@ -1,10 +1,9 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { pageMeta, pageGraph } from '@/lib/seo';
 import { JsonLd } from '@/components/json-ld';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { PricingPlans } from '@/components/pricing-plans';
-import { LandingPackages } from '@/components/landing/landing-packages';
-import { LandingSections } from '@/components/landing/landing-sections';
 import { LandingFaq } from '@/components/landing/landing-faq';
 import { SiteFooter } from '@/components/site-footer';
 
@@ -25,12 +24,10 @@ export default function PricingPage() {
           </p>
         </header>
         <PricingPlans />
-        <section className="border-t border-line px-6 pb-2 pt-12 text-center">
-          <h2 className="font-serif text-3xl text-foreground sm:text-4xl">One project at a time</h2>
-          <p className="mx-auto mt-2 max-w-xl text-sm text-muted">A fixed price you accept before anything is funded. Money moves milestone by milestone, only when you approve the work.</p>
-        </section>
-        <LandingPackages />
-        <LandingSections />
+        <p className="mx-auto max-w-2xl border-t border-line px-6 py-10 text-center text-sm text-muted">
+          One project instead, like a website or an app?{' '}
+          <Link href="/chat" className="font-semibold text-foreground underline-offset-4 hover:underline">Describe it in the chat</Link>. You get a fixed price before you pay anything.
+        </p>
         <LandingFaq />
       </main>
       <SiteFooter />

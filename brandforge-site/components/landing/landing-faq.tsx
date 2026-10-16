@@ -1,19 +1,24 @@
-// Three questions, the ones a first-time visitor actually has.
+// The questions a buyer asks before paying for a team plan, answered from how the product works today.
 const FAQS = [
   {
-    question: 'What is BrandForge?',
+    question: 'What do I get each month?',
     answer:
-      'One place to make content, publish it and get help from real people. You describe what you need in a chat; AI makes the first version in seconds (a launch video, a carousel, an ad, an article), you post or schedule it on your channels, and the BrandForge team or a member you hire from Trade can take it the rest of the way.',
+      'A set amount of work from designers, editors, developers and marketers: posts and carousels, short videos, ad creatives and site updates, depending on the plan. Each month starts with a work list in your chat, and you approve every item there.',
   },
   {
-    question: 'How much does it cost?',
+    question: 'How do I start and pay?',
     answer:
-      'Making and publishing is free. Pro (€19 a month) puts the strongest AI models on everything you make. A BrandForge team that delivers every month starts at €690. Hiring a member in Trade is a contract you agree on, paid per milestone, with a flat 5% fee when a milestone is paid.',
+      'Tell us about your brand in the chat. Once we agree what you get, the invoice arrives in that chat. Pay by card or crypto, monthly, and cancel any month.',
   },
   {
-    question: 'Who reads my chat?',
+    question: "What if it isn't delivered?",
     answer:
-      'You and the official BrandForge team. A person from the team claims your chat and answers you there; the AI only answers when you ask it to. If you hire someone from Trade, they join that chat too.',
+      "If the work listed for your first month isn't delivered, you get a full refund of that month. Ask in your chat within 14 days after the month ends.",
+  },
+  {
+    question: 'Can I do some of it myself?',
+    answer:
+      'Yes. The AI tools are free to use: make videos, carousels and ads, and post them everywhere. Pro (€19 a month) gives the strongest AI and no monthly limits.',
   },
 ];
 export function LandingFaq() {
@@ -30,7 +35,7 @@ export function LandingFaq() {
     <section id="faq" className="bf-section" aria-labelledby="faq-title">
       <div className="mx-auto max-w-3xl">
         <h2 id="faq-title" className="mt-2 font-serif text-3xl text-foreground sm:text-4xl">
-          Three questions, answered
+          Before you start
         </h2>
         <div className="mt-8 space-y-3">
           {FAQS.map((item) => (

@@ -8,10 +8,10 @@ import { BrandMark } from '@/components/brand-mark';
 
 // Four places, nothing else: what you can do, and what it costs.
 const NAV_LINKS = [
-  { label: 'Create', href: '/create' },
-  { label: 'Distribute', href: '/distribute' },
-  { label: 'Trade', href: '/trade' },
+  { label: 'Work', href: '/work' },
   { label: 'Pricing', href: '/pricing' },
+  { label: 'Create', href: '/create' },
+  { label: 'Trade', href: '/trade' },
 ];
 
 export function LandingNav() {
@@ -65,10 +65,16 @@ export function LandingNav() {
               <button
                 type="button"
                 onClick={() => openLogin({ reason: 'signin', next: '/chat' })}
-                className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-on-ember transition hover:opacity-95"
+                className="hidden text-sm font-medium text-muted transition hover:text-foreground sm:inline"
               >
                 Sign in
               </button>
+              <Link
+                href="/chat"
+                className="rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-on-ember transition hover:opacity-95"
+              >
+                Talk to the team
+              </Link>
             </>
           )}
           {/* Phones: the section links live behind a 44px menu button. */}
@@ -109,6 +115,18 @@ export function LandingNav() {
                   {link.label}
                 </a>
               ))}
+              {signedIn ? null : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    openLogin({ reason: 'signin', next: '/chat' });
+                  }}
+                  className="rounded-lg px-2 py-3 text-left text-base text-foreground transition hover:bg-panel-2"
+                >
+                  Sign in
+                </button>
+              )}
             </div>
           </div>
         ) : null}

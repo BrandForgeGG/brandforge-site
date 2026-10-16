@@ -30,6 +30,7 @@ import type { ImageKind } from "@/lib/image-kinds.js";
 import { RoleBadge } from "@/components/role-badge";
 import { detectMakeIntent } from "@/lib/make-intent";
 import { PlanInvoiceBar } from "@/components/chat/plan-invoice-bar";
+import { PlanArrival } from "@/components/chat/plan-arrival";
 import { MakerChatCard, OPEN_MAKER_EVENT, clearMakerSeed, isMakerKind, readMakerSeed, seedMakerCard, type MakerKind } from "@/components/chat/maker-chat-card";
 import { CreationChatContext } from "@/components/chat/creation-context";
 import { TicketBar } from "@/components/chat/ticket-bar";
@@ -2881,27 +2882,31 @@ return (
                 <img src="/discord-server-icon.png" alt="" className="h-full w-full object-cover" />
               </div>
               <h1 className="bf-start-title mt-5 font-serif text-3xl text-foreground sm:text-[2.6rem]">
-                Talk to the BrandForge team
+                {activePlan ? `Let's talk about ${getRetainer(activePlan)?.name ?? "your plan"}` : "Talk to the BrandForge team"}
               </h1>
               <p className="bf-start-sub mt-3 max-w-md text-sm leading-relaxed text-muted">
-                This chat goes to the official BrandForge team and a person answers you here. The AI joins only when you ask it to.{isGuestBrowser ? " Free, no sign-up." : ""}
+                {activePlan ? "Tell us about your brand below. A person from the team answers here, and you pay only when you agree." : "A person from the BrandForge team answers you here."}{isGuestBrowser ? " No sign-up needed." : ""}
               </p>
-              {/* The other ways in, one tap each: pick a person, make an asset, or post. */}
-              <div className="mt-7 grid w-full gap-2 text-left sm:grid-cols-3">
-                {[
-                  { href: "/trade", hue: "var(--hue-trade)", title: "Hire someone", line: "Pick a profile in Trade" },
-                  { href: "/create", hue: "var(--hue-create)", title: "Make an asset", line: "Video, carousel, ad, article" },
-                  { href: "/distribute", hue: "var(--hue-distribute)", title: "Post everywhere", line: "Now, or a whole week" },
-                ].map((item) => (
-                  <Link key={item.href} href={item.href} className="group rounded-2xl border border-line bg-panel p-4 transition hover:border-ember">
-                    <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                      <span className="h-2 w-2 rounded-full" style={{ background: item.hue }} aria-hidden="true" />
-                      {item.title}
-                    </span>
-                    <span className="mt-1 block text-xs text-muted">{item.line}</span>
-                  </Link>
-                ))}
-              </div>
+              {activePlan ? <PlanArrival planId={activePlan} /> : (
+                <>
+                {/* The other ways in, one tap each: pick a person, make an asset, or post. */}
+                <div className="mt-7 grid w-full gap-2 text-left sm:grid-cols-3">
+                  {[
+                    { href: "/trade", hue: "var(--hue-trade)", title: "Hire someone", line: "Pick a profile in Trade" },
+                    { href: "/create", hue: "var(--hue-create)", title: "Make an asset", line: "Video, carousel, ad, article" },
+                    { href: "/distribute", hue: "var(--hue-distribute)", title: "Post everywhere", line: "Now, or a whole week" },
+                  ].map((item) => (
+                    <Link key={item.href} href={item.href} className="group rounded-2xl border border-line bg-panel p-4 transition hover:border-ember">
+                      <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <span className="h-2 w-2 rounded-full" style={{ background: item.hue }} aria-hidden="true" />
+                        {item.title}
+                      </span>
+                      <span className="mt-1 block text-xs text-muted">{item.line}</span>
+                    </Link>
+                  ))}
+                </div>
+                  </>
+              )}
             </div>
           )}
             />

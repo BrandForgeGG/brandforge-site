@@ -20,7 +20,7 @@ export default function WorkPage() {
           Real sites and apps, live today. No mockups and no made-up numbers: open any of them and judge the work yourself.
         </p>
         <ul className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {PORTFOLIO_PROJECTS.map((project) => (
+          {[...PORTFOLIO_PROJECTS].sort((a, b) => Number(Boolean(b.screenshot)) - Number(Boolean(a.screenshot))).map((project) => (
             <li key={project.name}>
               <Link href={`/work/${projectSlug(project.name)}`} className="group block rounded-2xl border border-line bg-panel p-4 transition hover:border-ember">
                 <div className="relative flex h-40 items-center justify-center overflow-hidden rounded-xl bg-panel-2">
@@ -38,9 +38,12 @@ export default function WorkPage() {
           ))}
         </ul>
         <div className="mt-12 rounded-2xl border border-line bg-panel p-6">
-          <p className="font-serif text-2xl text-foreground">Have something like this in mind?</p>
-          <p className="mt-2 text-sm text-muted">Describe it in one message. AI drafts the plan in seconds, then a specialist can take it the rest of the way.</p>
-          <Link href="/chat" className="mt-4 inline-block rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90">Start your project</Link>
+          <p className="font-serif text-2xl text-foreground">Want this team on your brand every month?</p>
+          <p className="mt-2 text-sm text-muted">Content, ads and site updates from €690 a month. If month one isn&apos;t delivered, you get a full refund.</p>
+          <div className="mt-4 flex flex-wrap items-center gap-4">
+            <Link href="/pricing" className="rounded-xl bg-ember px-4 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90">See plans</Link>
+            <Link href="/chat" className="text-sm font-semibold text-foreground underline-offset-4 hover:underline">Talk to the team</Link>
+          </div>
         </div>
       </main>
       <SiteFooter />
