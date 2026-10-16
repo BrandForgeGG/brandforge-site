@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { PLANS, RETAINERS, TASK_EXAMPLES, TEAM_INCLUDES } from "@/lib/plans.js";
+import { PLANS, RETAINERS, TEAM_INCLUDES } from "@/lib/plans.js";
+import { TaskMenu } from "@/components/task-menu";
 import { PayNow } from "@/components/pay-now";
 import { trackEvent } from "@/lib/funnel-client";
 
@@ -87,21 +88,6 @@ export function PricingPlans({ bare = false }: { bare?: boolean }) {
         <div className="mt-8 grid gap-5 md:grid-cols-3">
           {plans.map((plan) => <PlanCard key={plan.id} plan={plan} team={tab === "teams"} />)}
         </div>
-        {tab === "teams" ? (
-          <div className="mt-10">
-            <p className="text-center font-serif text-2xl text-foreground">What a task can be</p>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {TASK_EXAMPLES.map((group) => (
-                <div key={group.area} className="rounded-2xl border border-line bg-panel p-5">
-                  <p className="font-semibold text-foreground">{group.area}</p>
-                  <ul className="mt-2 space-y-1 text-sm text-muted">
-                    {group.examples.map((example) => <li key={example}>{example}</li>)}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
         <p className="mt-6 text-center text-sm text-muted">
           {tab === "teams" ? <>Chat first, pay when you agree. Every plan includes: {TEAM_INCLUDES.join(" · ")}</> : <>Prices in euros, before tax. No late fees.</>}
         </p>
@@ -112,6 +98,7 @@ export function PricingPlans({ bare = false }: { bare?: boolean }) {
             </a>
           </p>
         ) : null}
+        {tab === "teams" ? <TaskMenu /> : null}
       </div>
     </section>
   );

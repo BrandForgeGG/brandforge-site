@@ -78,12 +78,29 @@ const RETAINERS = [
   },
 ];
 
-// What a task can be: one clear piece of work in one of the four things the team does. Shown on the pricing page.
+// What a task can be: one clear piece of work in one of the four things the team does, picked from what buyers ask for most
+// right now. Shown on the pricing page. Each must be something the team delivers; nothing here promises a result.
 const TASK_EXAMPLES = [
-  { area: 'Development', examples: ['A landing page', 'A new feature', 'Fixes and updates', 'A store or checkout'] },
-  { area: 'Design', examples: ['A logo or brand kit', 'Social posts and carousels', 'Ad creatives', 'A pitch deck'] },
-  { area: 'Video', examples: ['Reels, Shorts and TikToks', 'A launch video', 'Edits of your footage', 'Motion graphics'] },
-  { area: 'Marketing', examples: ['A content calendar', 'An ad campaign', 'Emails that sell', 'A monthly results report'] },
+  {
+    area: 'Development',
+    line: 'Ship the product, not the backlog.',
+    examples: ['AI agent or chatbot trained on your business', 'SaaS MVP or new feature', 'Landing page built to convert', 'Shopify store, Stripe or crypto checkout', 'Automations that connect your tools', 'Mobile app with React Native'],
+  },
+  {
+    area: 'Design',
+    line: 'Look like the brand people trust.',
+    examples: ['Brand identity: logo, colours, type, rules', 'Carousels and posts people save', 'Ad creatives in every size', 'Website and app UI in Figma', 'Pitch deck investors read to the end', 'Packaging and merch'],
+  },
+  {
+    area: 'Video',
+    line: 'Stop the scroll in the first second.',
+    examples: ['UGC-style ads with real creators', 'Reels, Shorts and TikToks with hooks and captions', 'Launch and product demo videos', 'Podcast and long video cut into clips', 'Motion graphics and 3D product shots', 'AI avatar and voice-over videos'],
+  },
+  {
+    area: 'Marketing',
+    line: 'Turn attention into customers.',
+    examples: ['Meta and TikTok ads, set up and tested', 'SEO and AI search: show up in ChatGPT answers', 'Email and SMS flows that sell on autopilot', 'Comment-to-DM funnels on Instagram', 'Content calendar for every channel', 'Monthly results report with next steps'],
+  },
 ];
 
 // Every team plan carries these.
