@@ -15,7 +15,7 @@ const BOOKING_URL = BOOKING_IS_CALENDAR ? BOOKING : "https://t.me/headstartup";
 
 type Card = { id: string; name: string; price: string; cadence: string; blurb: string; features: string[]; highlight?: boolean; soon?: boolean; cents: number };
 
-function PlanCard({ plan, tab }: { plan: Card; tab: Tab }) {
+function PlanCard({ plan }: { plan: Card }) {
   return (
     <div className={`relative flex flex-col rounded-3xl border p-6 ${plan.highlight ? "border-ember bg-panel shadow-[0_20px_60px_-30px_var(--ember)]" : "border-line bg-panel/70"} ${plan.soon ? "opacity-70" : ""}`}>
       {plan.highlight ? <span className="absolute -top-3 left-6 rounded-full bg-ember px-3 py-1 text-[11px] font-semibold text-on-ember">Most popular</span> : null}
@@ -39,19 +39,6 @@ function PlanCard({ plan, tab }: { plan: Card; tab: Tab }) {
           <span className="block w-full rounded-xl border border-dashed border-line px-4 py-2.5 text-center text-sm text-muted">Soon</span>
         ) : plan.cents === 0 ? (
           <Link href="/chat" className="block w-full rounded-xl border border-line px-4 py-2.5 text-center text-sm font-semibold text-foreground transition hover:border-ember">Start free</Link>
-        ) : tab === "teams" ? (
-          <>
-            <PayNow planId={plan.id} planName={plan.name} primary={Boolean(plan.highlight)} />
-            <a
-              href={BOOKING_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => trackEvent("plan_interest", { source: `call-${plan.id}` })}
-              className="block pt-1 text-center text-xs font-semibold text-muted underline-offset-2 hover:text-foreground hover:underline"
-            >
-              {BOOKING_IS_CALENDAR ? "Book a 15-min call" : "Questions? Message us"}
-            </a>
-          </>
         ) : (
           <PayNow planId={plan.id} planName={plan.name} primary={Boolean(plan.highlight)} />
         )}
@@ -87,11 +74,18 @@ export function PricingPlans() {
           ))}
         </div>
         <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {plans.map((plan) => <PlanCard key={plan.id} plan={plan} tab={tab} />)}
+          {plans.map((plan) => <PlanCard key={plan.id} plan={plan} />)}
         </div>
         <p className="mt-6 text-center text-sm text-muted">
           {tab === "teams" ? <>Every plan includes: {TEAM_INCLUDES.join(" · ")}</> : <>Prices in euros, before tax. No late fees.</>}
         </p>
+        {tab === "teams" ? (
+          <p className="mt-2 text-center text-sm">
+            <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer" onClick={() => trackEvent("plan_interest", { source: "call" })} className="font-semibold text-foreground underline-offset-4 hover:underline">
+              {BOOKING_IS_CALENDAR ? "Book a 15-min call" : "Questions? Message us"}
+            </a>
+          </p>
+        ) : null}
       </div>
     </section>
   );

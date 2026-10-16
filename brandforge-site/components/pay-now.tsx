@@ -78,13 +78,16 @@ export function PayNow({ planId, planName, primary = false }: { planId: string; 
             {busy ? 'Opening payment…' : `Start ${planName}`}
           </button>
         ) : null}
-        {status.crypto ? (
-          <button type="button" onClick={() => void payCrypto()} className={`${base} flex items-center justify-center gap-2 ${primary && !status.card ? 'bg-ember text-on-ember shadow-[0_8px_20px_-10px_var(--ember)] hover:-translate-y-px hover:opacity-95' : 'border border-line text-foreground hover:border-ember'}`}>
+        {status.crypto && status.card ? (
+          <button type="button" onClick={() => void payCrypto()} className="block w-full pt-1 text-center text-xs text-muted underline-offset-2 hover:text-foreground hover:underline">
+            or pay with crypto
+          </button>
+        ) : status.crypto ? (
+          <button type="button" onClick={() => void payCrypto()} className={`${base} flex items-center justify-center gap-2 ${primary ? 'bg-ember text-on-ember hover:opacity-90' : 'border border-line text-foreground hover:border-ember'}`}>
             <CoinStack size={18} />
             Get {planName} with crypto
           </button>
         ) : null}
-        {status.crypto ? <p className="text-center text-[11px] leading-snug text-muted">Crypto: each payment adds 30 days.</p> : null}
         {error ? <p role="alert" className="mt-1.5 text-xs text-danger">{error}</p> : null}
         {crypto ? <CryptoCheckout purpose="plan" refId={planId} title={`${planName}, 30 days`} onClose={() => setCrypto(false)} onPaid={() => { statusRead = null; }} /> : null}
       </div>
