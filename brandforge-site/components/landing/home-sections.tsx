@@ -85,9 +85,11 @@ export function HomeQuotes() {
 
 export function HomePricing() {
   return (
-    <section id="pricing" className="scroll-mt-16 border-t border-line px-5 pt-16 sm:px-8 sm:pt-20">
-      <h2 className="mx-auto max-w-6xl font-serif text-4xl text-foreground sm:text-5xl">Pricing</h2>
-      <PricingPlans />
+    <section id="pricing" className="scroll-mt-16 border-t border-line px-5 py-16 sm:px-8 sm:py-20">
+      <div className="mx-auto max-w-6xl">
+        <h2 className="font-serif text-4xl text-foreground sm:text-5xl">Pricing</h2>
+        <PricingPlans bare />
+      </div>
     </section>
   );
 }

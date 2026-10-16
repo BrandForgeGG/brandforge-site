@@ -58,7 +58,8 @@ function PlanCard({ plan, team }: { plan: Card; team: boolean }) {
 }
 
 // One pricing block: a growth team by the month, or the software on its own.
-export function PricingPlans() {
+// `bare`: inside a section that already sets the page column (the homepage), so no padding or width of its own.
+export function PricingPlans({ bare = false }: { bare?: boolean }) {
   const [tab, setTab] = useState<Tab>("teams");
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- a #software link opens that tab
@@ -67,9 +68,9 @@ export function PricingPlans() {
   const plans: Card[] = tab === "teams" ? RETAINERS : PLANS;
 
   return (
-    <section id="plans" className="scroll-mt-20 px-6 py-10" aria-label="Plans">
-      <div className="mx-auto max-w-5xl">
-        <div role="tablist" aria-label="Plan type" className="mx-auto flex w-fit rounded-full border border-line bg-panel p-1">
+    <section id="plans" className={bare ? "scroll-mt-20 pt-8" : "scroll-mt-20 px-5 py-10 sm:px-8"} aria-label="Plans">
+      <div className={bare ? "" : "mx-auto max-w-6xl"}>
+        <div role="tablist" aria-label="Plan type" className="flex w-fit rounded-full border border-line bg-panel p-1">
           {(["teams", "software"] as Tab[]).map((id) => (
             <button
               key={id}
@@ -83,14 +84,14 @@ export function PricingPlans() {
             </button>
           ))}
         </div>
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
+        <div className="mt-8 grid gap-5 md:grid-cols-3">
           {plans.map((plan) => <PlanCard key={plan.id} plan={plan} team={tab === "teams"} />)}
         </div>
-        <p className="mt-6 text-center text-sm text-muted">
+        <p className="mt-6 text-sm text-muted">
           {tab === "teams" ? <>Chat first, pay when you agree. Every plan includes: {TEAM_INCLUDES.join(" · ")}</> : <>Prices in euros, before tax. No late fees.</>}
         </p>
         {tab === "teams" ? (
-          <p className="mt-2 text-center text-sm">
+          <p className="mt-2 text-sm">
             <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer" onClick={() => trackEvent("plan_interest", { source: "call" })} className="font-semibold text-foreground underline-offset-4 hover:underline">
               {BOOKING_IS_CALENDAR ? "Book a 15-min call" : "Questions? Message us"}
             </a>

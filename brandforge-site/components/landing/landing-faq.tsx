@@ -32,12 +32,12 @@ export function LandingFaq() {
     })),
   };
   return (
-    <section id="faq" className="bf-section" aria-labelledby="faq-title">
-      <div className="mx-auto max-w-3xl">
-        <h2 id="faq-title" className="mt-2 font-serif text-3xl text-foreground sm:text-4xl">
+    <section id="faq" className="border-t border-line px-5 py-16 sm:px-8" aria-labelledby="faq-title">
+      <div className="mx-auto max-w-6xl">
+        <h2 id="faq-title" className="font-serif text-4xl text-foreground sm:text-5xl">
           Before you start
         </h2>
-        <div className="mt-8 space-y-3">
+        <div className="mt-8 max-w-3xl space-y-3">
           {FAQS.map((item) => (
             <details
               key={item.question}
