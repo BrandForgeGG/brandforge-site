@@ -160,9 +160,9 @@ const GATE_FIRST_MESSAGE = false;
 // The slash vocabulary, shared by the Actions menu and the composer autocomplete so the
 // two surfaces can never disagree about which commands exist.
 const SLASH_COMMANDS = [
-  { command: "/carousel", label: "Make a carousel" },
+  { command: "/plan", label: "Talk to the team" },
   { command: "/image", label: "Make an ad or image" },
-  { command: "/plan", label: "Hire the BrandForge team" },
+  { command: "/carousel", label: "Make a carousel" },
   { command: "/trade", label: "Post a gig or listing" },
     { command: "/progress", label: "Progress report" },
   { command: "/review", label: "Send to BrandForge review" },
@@ -180,7 +180,7 @@ export const COMMANDS: { id: ChatCommand; label: string; hint: string; placehold
   { id: 'image', label: 'Make an ad or image', hint: 'Ads, quotes, tips, announcements and polls', placeholder: 'What is the image for?', icon: 'M3.5 4.5h13v11h-13zM3.5 13l4-4 3 3 2-2 4 4M13 7.5h.01' },
   { id: 'carousel', label: 'Make a carousel', hint: 'Swipeable slides from one sentence', placeholder: 'What is the carousel about?', icon: 'M5 5h8v10H5zM7 3.5h8V13M3.5 7v8' },
   { id: 'trade', label: 'Post a gig or listing', hint: 'We write it, you publish it', placeholder: 'What do you offer, or what do you need?', icon: 'M4 7h11l-3-3M16 13H5l3 3' },
-  { id: 'plan', label: 'Hire the BrandForge team', hint: 'Describe it and get a proposal from people', placeholder: 'What do you need built or made?', icon: 'M4 4.5h4v4H4zM12 4.5h4v4h-4zM8 6.5h4M6 8.5v4h6M12 12.5h4v3h-4z' },
+  { id: 'plan', label: 'Talk to the team', hint: 'Say what you need. A person replies.', placeholder: 'What do you need done?', icon: 'M4 4.5h4v4H4zM12 4.5h4v4h-4zM8 6.5h4M6 8.5v4h6M12 12.5h4v3h-4z' },
 ];
 
 
@@ -190,7 +190,7 @@ function ActionsHint({ show, onDismiss }: { show: boolean; onDismiss: () => void
   return (
     <div className="bf-hint" role="status">
       <p className="text-xs leading-snug text-foreground">
-        <span className="font-medium">Actions</span> makes images, ads, a content calendar or a video, and invites your team.
+        The <span className="font-medium">+</span> gets it done: talk to the team, fund a task, or make it yourself.
       </p>
       <button type="button" onClick={onDismiss} className="mt-1.5 text-xs text-ember underline-offset-2 hover:underline">
         Got it
@@ -2889,7 +2889,7 @@ return (
                 {activePlan ? `Let's talk about ${getRetainer(activePlan)?.name ?? "your plan"}` : "What do you need done?"}
               </h1>
               <p className="bf-start-sub mt-3 max-w-md text-sm leading-relaxed text-muted">
-                {activePlan ? "Tell us what you need below. The whole team gets notified the moment you send, and you pay only when you agree." : "Tell us in one message. The whole team gets notified the moment you send, and a person replies here."}{isGuestBrowser ? " No sign-up needed." : ""}
+                {activePlan ? "The whole team gets notified the moment you send. You pay only when you agree." : "The whole team gets notified the moment you send."}{isGuestBrowser ? " No sign-up needed." : ""}
               </p>
               {activePlan ? <PlanArrival planId={activePlan} /> : (
                 <>
@@ -3493,18 +3493,7 @@ return (
           <ActionsHint show={showActionsHint} onDismiss={dismissActionsHint} />
         </div>
         <p className="bf-chat-footer">
-          <span>Private: only you, people you invite and the BrandForge team see this chat.</span>
-          <span className="bf-chat-footer-links">
-            <Link href="/terms">Terms</Link>
-            <span aria-hidden="true">·</span>
-            <Link href="/privacy">Privacy</Link>
-            {!conversationId ? (
-              <>
-                <span aria-hidden="true">·</span>
-                <Link href="/#how">How it works</Link>
-              </>
-            ) : null}
-          </span>
+          <span>Private: only you, people you invite and the BrandForge team see this chat. <Link href="/privacy" className="underline-offset-2 hover:underline">Privacy</Link></span>
         </p>
       </main>
 

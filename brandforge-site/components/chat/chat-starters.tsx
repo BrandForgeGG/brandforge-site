@@ -30,11 +30,8 @@ export function ChatStarters({ onPick }: { onPick: (text: string) => void }) {
           </button>
         ))}
       </div>
-      <p className="mt-5 text-center text-xs text-muted">
+      <p className="mt-5 text-center text-xs text-foreground/70">
         Team plans from €690/mo, 1 to 3 tasks at a time. <Link href="/pricing" className="font-semibold text-foreground underline-offset-2 hover:underline">See plans</Link>
-      </p>
-      <p className="mt-1.5 text-center text-xs text-muted">
-        Rather do it yourself? <Link href="/create" className="underline-offset-2 hover:text-foreground hover:underline">Create</Link> · <Link href="/distribute" className="underline-offset-2 hover:text-foreground hover:underline">Distribute</Link> · <Link href="/trade" className="underline-offset-2 hover:text-foreground hover:underline">Trade</Link>
       </p>
     </div>
   );
