@@ -7,7 +7,7 @@ import { SiteFooter } from '@/components/site-footer';
 import { QuoteRow } from '@/components/landing/home-sections';
 import { listPublicSpecialists } from '@/lib/project-db';
 
-const DESCRIPTION = 'Designers, editors, developers and marketers who take on your tasks, 1 to 3 at a time. Each one reviewed by a person.';
+const DESCRIPTION = 'Designers, editors, developers and marketers who take on your tasks, monthly or one at a time. Each one reviewed by a person.';
 export const metadata: Metadata = pageMeta({ path: '/specialists', title: 'The BrandForge team — BrandForge', description: DESCRIPTION });
 
 export const dynamic = 'force-dynamic';

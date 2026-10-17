@@ -5,6 +5,9 @@ import type { AnswerOutline } from '@/lib/deliverable-outline';
 import { buildProjectPulse, describeAgreementStatus, describeNextDeliveryAction, describePaymentStatus, describeProposalStatus, isTaskOverdue, summarizeTaskProgress } from '@/lib/task-board';
 import { COMMUNITY_LINKS } from '@/lib/community';
 import { avatarTone, formatRole, initialsFor } from '@/lib/identity-display';
+import { seenLabel } from '@/lib/seen.js';
+
+type TeamMember = { name: string; role: string; avatarUrl: string | null; lastSeen: string | null };
 import type { ClientProjectState } from '@/lib/conversation-state';
 import { DISCOVERY_THRESHOLD } from '@/lib/discovery';
 
@@ -208,11 +211,17 @@ export function ProjectContextPanel({
   }, [onClose]);
   const submittedNetwork = payments.find((payment) => payment.network)?.network ?? null;
   const [managerName, setManagerName] = useState<string | null>(null);
+  // The BrandForge team and when each was last active, so a buyer sees real people are around.
+  const [team, setTeam] = useState<TeamMember[]>([]);
   useEffect(() => {
     let live = true;
     void fetch('/api/project-manager')
       .then((res) => (res.ok ? res.json() : null))
       .then((data: { name?: string | null } | null) => live && setManagerName(data?.name ?? null))
+      .catch(() => undefined);
+    void fetch('/api/team/presence')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { team?: TeamMember[] } | null) => live && setTeam(data?.team ?? []))
       .catch(() => undefined);
     return () => {
       live = false;
@@ -264,6 +273,37 @@ export function ProjectContextPanel({
             <p className="text-sm leading-relaxed text-foreground">{nextStepLabel}</p>
           </div>
         </div>
+
+        {team.length > 0 ? (
+          <div className="bf-panel-section">
+            <p className="bf-section-label">BrandForge team</p>
+            <ul className="bf-panel-card space-y-2.5">
+              {team.slice(0, 5).map((member) => {
+                const seen = seenLabel(member.lastSeen);
+                const online = seen === 'Online now';
+                return (
+                  <li key={member.name} className="flex items-center gap-2">
+                    <span className="relative shrink-0">
+                      <span className="bf-stack-item" style={avatarTone(member.name)} aria-hidden="true">
+                        {member.avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- a small team picture from our own storage
+                          <img src={member.avatarUrl} alt="" decoding="async" className="h-full w-full rounded-full object-cover" />
+                        ) : (
+                          initialsFor(member.name)
+                        )}
+                      </span>
+                      {online ? <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-panel bg-success" aria-hidden="true" /> : null}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm text-foreground">{member.name}{member.name === managerName ? <span className="ml-1.5 text-[11px] font-semibold text-ember">Project manager</span> : null}</span>
+                      <span className={`block text-[11px] ${online ? 'font-semibold text-success' : 'text-foreground/70'}`}>{seen || (member.role === 'admin' ? 'Founder' : 'Specialist')}</span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : null}
 
         {state?.project.problemStatement || outline?.goal ? (
         <div className="bf-panel-section">

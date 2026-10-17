@@ -8,11 +8,10 @@ const TEAM_SHARE = 0.6;
 const GOAL_CENTS = 1_000_000; // €10,000 MRR
 // Close rate: one paying client per this many plan chats. A planning number, replace it with the real rate once known.
 const CHATS_PER_CLIENT = 4;
-// The client mix that reaches the goal with the fewest clients the team can serve well: 2 Scale + 3 Growth + 3 Launch.
+// The monthly mix that reaches the goal: 6 Growth + 4 Launch (one-time tasks come on top).
 const GOAL_MIX = [
-  { plan: 'scale', count: 2 },
-  { plan: 'growth', count: 3 },
-  { plan: 'launch', count: 3 },
+  { plan: 'growth', count: 6 },
+  { plan: 'launch', count: 4 },
 ];
 
 function centsOf(planId) {

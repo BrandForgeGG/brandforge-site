@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { addMessage } from '@/lib/project-db';
+import { addMessage, claimConversation } from '@/lib/project-db';
 import { canOperatorParticipate, ensureStaffParticipant, requireStaffContext } from '@/lib/staff';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -68,6 +68,8 @@ export async function POST(request: NextRequest) {
     if (!messageId) {
       return NextResponse.json({ error: 'Message could not be stored' }, { status: 500 });
     }
+    // The first teammate to answer leads the chat (no separate claim step): it only takes a chat nobody leads yet.
+    await claimConversation(context.conversationId, context.user.id).catch(() => false);
 
     return NextResponse.json({ success: true, messageId });
   } catch (error) {

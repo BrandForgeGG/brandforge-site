@@ -31,7 +31,7 @@ export function ChatStarters({ onPick }: { onPick: (text: string) => void }) {
         ))}
       </div>
       <p className="mt-5 text-center text-xs text-foreground/70">
-        Team plans from €690/mo, 1 to 3 tasks at a time. <Link href="/pricing" className="font-semibold text-foreground underline-offset-2 hover:underline">See plans</Link>
+        Monthly from €690, or one task at a time. <Link href="/pricing" className="font-semibold text-foreground underline-offset-2 hover:underline">See plans</Link>
       </p>
     </div>
   );

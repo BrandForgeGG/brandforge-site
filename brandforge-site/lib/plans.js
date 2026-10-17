@@ -65,17 +65,6 @@ const RETAINERS = [
     deliverables: ['2 tasks at a time', 'Development, design, video and marketing', 'The next task starts as soon as one ships', 'Monthly results report'],
     highlight: true,
   },
-  {
-    id: 'scale',
-    name: 'Scale',
-    cents: 249000,
-    price: '€2,490',
-    cadence: '/mo',
-    active: 3,
-    blurb: 'Three tasks at a time.',
-    features: ['3 tasks at a time', 'Development, design, video and marketing', 'A dedicated project lead and a weekly call', 'Priority replies'],
-    deliverables: ['3 tasks at a time', 'Development, design, video and marketing', 'A dedicated project lead and a weekly call', 'Monthly results report'],
-  },
 ];
 
 // What a task can be: one clear piece of work in one of the four things the team does, picked from what buyers ask for most

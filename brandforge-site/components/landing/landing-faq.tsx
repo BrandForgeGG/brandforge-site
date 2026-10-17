@@ -3,7 +3,7 @@ const FAQS = [
   {
     question: 'What do I get each month?',
     answer:
-      'Development, design, video and marketing, done by real people. Add as many tasks as you like in your chat. We work on 1, 2 or 3 at a time, by plan, and you approve each one.',
+      'Development, design, video and marketing, done by real people. Add as many tasks as you like in your chat. On a monthly plan we work on 1 or 2 at a time; a one-time task has its own budget. You approve each one.',
   },
   {
     question: 'How do I start and pay?',

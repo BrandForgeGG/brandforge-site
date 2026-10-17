@@ -29,12 +29,12 @@ import { ImageChatCard, SavedImageCard, clearSavedImage, imageKey, seedImageCard
 import type { ImageKind } from "@/lib/image-kinds.js";
 import { RoleBadge } from "@/components/role-badge";
 import { detectMakeIntent } from "@/lib/make-intent";
-import { PlanInvoiceBar } from "@/components/chat/plan-invoice-bar";
 import { PlanArrival } from "@/components/chat/plan-arrival";
+import { PlanInvoiceBar } from "@/components/chat/plan-invoice-bar";
+import { TaskComposer } from "@/components/chat/task-composer";
 import { ChatStarters } from "@/components/chat/chat-starters";
 import { MakerChatCard, OPEN_MAKER_EVENT, clearMakerSeed, isMakerKind, readMakerSeed, seedMakerCard, type MakerKind } from "@/components/chat/maker-chat-card";
 import { CreationChatContext } from "@/components/chat/creation-context";
-import { TicketBar } from "@/components/chat/ticket-bar";
 import { getRetainer } from "@/lib/plans.js";
 import { PeerContractForm } from "@/components/peer-contract-card";
 import { extractOutline } from "@/lib/deliverable-outline";
@@ -103,13 +103,15 @@ function parseCounterTerms(value?: string): {
 
 function toChatMessage(message: PersistedMessage): ChatMessage {
   const sender: ChatMessage["sender"] =
-    message.sender_type === "user"
-      ? "user"
-      : message.sender_type === "ai"
-        ? message.content_type === "system"
-          ? "system"
-          : "ai"
-        : "human";
+    // Product lines and cards (tasks, invoices, proposals, "Paid…", the project manager line) are system messages,
+    // whoever posted them: the AI, the team or a payment webhook.
+    message.content_type === "system" && message.sender_type !== "user"
+      ? "system"
+      : message.sender_type === "user"
+        ? "user"
+        : message.sender_type === "ai"
+          ? "ai"
+          : "human";
 
   return {
     id: message.id,
@@ -282,7 +284,11 @@ export function ChatWorkspace() {
   // A video or article maker working in this chat (opened by asking for one, from Create, or by Edit on a version).
   const [makerChat, setMakerChat] = useState<{ kind: MakerKind; state?: unknown; key: number; hidden?: boolean } | null>(null);
   // For the team: whether this person may talk in this chat (claimed chats: the claimer and the people they added).
-  const [staffCanTalk, setStaffCanTalk] = useState(true);
+  // Every teammate can answer; the first to answer leads the chat (server side).
+  const staffCanTalk = true;
+  // Opened from the + menu: add a task to this chat (or offer one, for the team), or send a monthly plan invoice.
+  const [showTaskComposer, setShowTaskComposer] = useState(false);
+  const [showPlanInvoice, setShowPlanInvoice] = useState(false);
   // What this chat is the main assistant for (a listing, something made here), if anything.
   const [goalLink, setGoalLink] = useState<{ conversationId: string; kind: string; title: string } | null>(null);
   const [carouselChat, setCarouselChat] = useState<{ topic: string; userText: string | null; key: number } | null>(null);
@@ -3226,10 +3232,21 @@ return (
             {conversationId && !aiEnabled && !railMeta.isStaff && !isStreaming && messages.length > 0 && messages[messages.length - 1].sender === "user" ? (
               <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-line bg-panel px-3 py-1.5 text-xs text-muted" role="status">
                 <span className="h-2 w-2 shrink-0 rounded-full bg-trust" aria-hidden="true" />
-                <span className="min-w-0 flex-1">The BrandForge team has your message and will answer here.</span>
-                <button type="button" onClick={() => void runTurn(conversationId, undefined, true)} className="rounded-lg border border-line px-2.5 py-1 text-xs text-foreground transition hover:border-ember">
-                  Ask the AI now
-                </button>
+                <span className="min-w-0 flex-1 text-foreground">The whole team has your message and will answer here.</span>
+              </div>
+            ) : null}
+            {showTaskComposer ? (
+              <TaskComposer
+                conversationId={conversationId || null}
+                offer={railMeta.isStaff && !isOwnConversation && Boolean(conversationId)}
+                onClose={() => setShowTaskComposer(false)}
+                onDone={() => { setShowTaskComposer(false); if (conversationId) void refreshMessages(conversationId); }}
+              />
+            ) : null}
+            {showPlanInvoice && conversationId ? (
+              <div className="mb-2 rounded-2xl border border-line bg-panel p-3">
+                <PlanInvoiceBar conversationId={conversationId} onSent={() => { setShowPlanInvoice(false); void refreshMessages(conversationId); }} />
+                <button type="button" onClick={() => setShowPlanInvoice(false)} className="text-xs font-medium text-foreground/70 hover:text-foreground">Close</button>
               </div>
             ) : null}
             {/* A guest who wrote to the team: the reply lands here, but they may close the tab. Signing in (email or Google)
@@ -3260,8 +3277,6 @@ return (
             {/* Staff send side of the proposal flow: brief is waiting, an operator
                 writes the offer here (POST /api/proposals). Admins see it in any chat;
                 operators see it while the brief waits, before their invite lands. */}
-            {railMeta.isStaff && !isOwnConversation && conversationId ? <TicketBar key={conversationId} conversationId={conversationId} onCanTalk={setStaffCanTalk} /> : null}
-            {railMeta.isStaff && !isOwnConversation && conversationId ? <PlanInvoiceBar conversationId={conversationId} onSent={() => void refreshMessages(conversationId)} /> : null}
             {railMeta.isStaff &&
             !isOwnConversation &&
             state?.status === "READY_FOR_REVIEW" ? (
@@ -3392,6 +3407,9 @@ return (
                     onContract={() => setShowContractForm(true)}
                     onCallTeam={isChatOwner && aiEnabled && conversationId ? () => void pauseAi(true) : null}
                     onCommand={pickCommand}
+                    onAddTask={() => { setShowPlanInvoice(false); setShowTaskComposer(true); }}
+                    onPlanInvoice={railMeta.isStaff && !isOwnConversation && conversationId ? () => { setShowTaskComposer(false); setShowPlanInvoice(true); } : null}
+                    team={railMeta.isStaff && !isOwnConversation && Boolean(conversationId)}
                   />
                 </div>
               {activeCommand ? (

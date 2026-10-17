@@ -157,7 +157,7 @@ export function ExploreHub() {
       </section>
       <section className="rounded-3xl border border-ember/40 bg-panel p-6">
         <p className="font-serif text-2xl text-foreground">Rather have it all done for you?</p>
-        <p className="mt-1 text-sm text-muted">Development, design, video and marketing by real people, 1 to 3 tasks at a time. From €690 a month. Full refund if month one isn&apos;t delivered.</p>
+        <p className="mt-1 text-sm text-muted">Development, design, video and marketing by real people. Monthly from €690, or one task at a time. Full refund if month one isn&apos;t delivered.</p>
         <div className="mt-4 flex flex-wrap items-center gap-4">
           <a href="/pricing" className="rounded-xl bg-ember px-5 py-2.5 text-sm font-semibold text-on-ember transition hover:opacity-90">See plans</a>
           <a href="/chat" className="text-sm font-semibold text-foreground underline-offset-4 hover:underline">Talk to the team</a>

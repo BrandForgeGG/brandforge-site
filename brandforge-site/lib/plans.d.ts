@@ -11,7 +11,7 @@ export type Plan = {
   soon?: boolean;
 };
 export type Retainer = {
-  id: 'launch' | 'growth' | 'scale';
+  id: 'launch' | 'growth';
   deliverables: string[];
   active: number;
   name: string;

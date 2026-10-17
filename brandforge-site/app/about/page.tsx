@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { SiteFooter } from '@/components/site-footer';
 
-const DESCRIPTION = 'BrandForge is AI and people: AI makes the first version in seconds, and a team of designers, editors, developers and marketers takes on your development, design, video and marketing, 1 to 3 tasks at a time.';
+const DESCRIPTION = 'BrandForge is AI and people: AI makes the first version in seconds, and a team of designers, editors, developers and marketers takes on your development, design, video and marketing, monthly or one task at a time.';
 export const metadata: Metadata = pageMeta({ path: '/about', title: 'About — BrandForge', description: DESCRIPTION });
 
 const BLOCKS: { title: string; lines: string[] }[] = [
@@ -15,7 +15,7 @@ const BLOCKS: { title: string; lines: string[] }[] = [
   },
   {
     title: 'How it works',
-    lines: ['You chat with the team.', 'You agree what you get, and the invoice arrives in that chat.', 'You add tasks in the chat. We work on 1 to 3 at a time, and you approve each one.'],
+    lines: ['You chat with the team.', 'You agree what you get, and the invoice arrives in that chat.', 'You add tasks in the chat. We work through them, and you approve each one.'],
   },
   {
     title: 'What protects you',

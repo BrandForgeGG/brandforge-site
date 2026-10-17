@@ -21,3 +21,15 @@ test('the buyer answers a counter; nobody answers a funded task', () => {
   assert.equal(answerTask({ status: 'funded', amount: 450 }, 'accept', null, 'team').status, 409);
   assert.equal(answerTask({ status: 'open', amount: 450 }, 'accept', null, 'other').status, 403);
 });
+
+test('after funding: the team sends it for review; the buyer approves or asks for changes', () => {
+  const funded = { status: 'funded', amount: 450 };
+  assert.equal(answerTask(funded, 'submit', { note: '' }, 'team').ok, false);
+  const review = answerTask(funded, 'submit', { link: 'example.com/landing', note: 'First version' }, 'team');
+  assert.deepEqual(review.state, { status: 'review', amount: 450, reviewNote: 'First version', reviewLink: 'https://example.com/landing' });
+  assert.deepEqual(answerTask(review.state, 'approve', null, 'buyer').state, { status: 'delivered', amount: 450 });
+  assert.deepEqual(answerTask(review.state, 'changes', { note: 'Bigger logo' }, 'buyer').state, { status: 'funded', amount: 450, changesNote: 'Bigger logo' });
+  assert.equal(answerTask(review.state, 'changes', { note: '' }, 'buyer').ok, false);
+  assert.equal(answerTask(funded, 'approve', null, 'buyer').status, 409);
+  assert.equal(answerTask({ status: 'delivered', amount: 450 }, 'approve', null, 'buyer').status, 409);
+});

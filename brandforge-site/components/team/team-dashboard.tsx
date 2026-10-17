@@ -35,7 +35,7 @@ const FLOW: { step: string; what: string; who: 'Team' | 'Auto' | 'Everyone' }[] 
   { step: 'Chat', what: '"Talk to us about Growth" opens a chat. All of us get pinged. First to claim it leads.', who: 'Team' },
   { step: 'Agree', what: 'Answer, shape what they get, then one click: Send the invoice.', who: 'Team' },
   { step: 'Pay', what: 'Card or crypto in the chat. The invoice turns Paid and month 1 starts.', who: 'Auto' },
-  { step: 'Work', what: 'The client adds tasks in the chat. We work 1, 2 or 3 at a time, by plan. A free slot shows red here.', who: 'Team' },
+  { step: 'Work', what: 'The client adds tasks in the chat. Monthly plans run 1 or 2 at a time; one-time tasks run as agreed. A free slot shows red here.', who: 'Team' },
   { step: 'Deliver', what: 'Move each item to review. The client approves in the chat.', who: 'Team' },
   { step: 'Retain', what: 'Renewal starts the next month by itself. A cancel pings all of us.', who: 'Auto' },
 ];

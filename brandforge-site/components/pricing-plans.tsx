@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PLANS, RETAINERS, TEAM_INCLUDES } from "@/lib/plans.js";
 import { TaskMenu } from "@/components/task-menu";
+import { CustomTaskCard } from "@/components/custom-task-card";
 import { PayNow } from "@/components/pay-now";
 import { trackEvent } from "@/lib/funnel-client";
 
@@ -88,9 +89,10 @@ export function PricingPlans({ bare = false, tasks = true }: { bare?: boolean; t
         </div>
         <div className="mt-8 grid gap-5 md:grid-cols-3">
           {plans.map((plan) => <PlanCard key={plan.id} plan={plan} team={tab === "teams"} />)}
+          {tab === "teams" ? <CustomTaskCard /> : null}
         </div>
         <p className="mt-6 text-center text-sm text-muted">
-          {tab === "teams" ? <>Chat first, pay when you agree. Every plan includes: {TEAM_INCLUDES.join(" · ")}</> : <>Prices in euros, before tax. No late fees.</>}
+          {tab === "teams" ? <>Monthly or one time: chat first, pay when you agree. Monthly plans include: {TEAM_INCLUDES.join(" · ")}</> : <>Prices in euros, before tax. No late fees.</>}
         </p>
         {tab === "teams" ? (
           <p className="mt-2 text-center text-sm">

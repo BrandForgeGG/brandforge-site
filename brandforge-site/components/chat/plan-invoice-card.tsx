@@ -10,15 +10,16 @@ export function PlanInvoiceCard({ planId, status, canPay, conversationId }: { pl
   if (!plan) return null;
   const paid = status === 'paid';
   return (
-    <div className="mx-auto my-4 w-full max-w-md rounded-3xl border border-ember/40 bg-panel p-5 shadow-[0_20px_60px_-40px_var(--ember)]">
+    <div className="mx-auto my-4 w-full max-w-md overflow-hidden rounded-3xl border border-line bg-panel shadow-[0_24px_60px_-40px_rgba(29,27,24,0.45)]">
+      <div className="p-5">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Invoice</p>
-        <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${paid ? 'bg-trust/15 text-success' : 'bg-ember/15 text-ember'}`}>{paid ? 'Paid' : 'Waiting for payment'}</span>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/60">Monthly plan</p>
+        <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${paid ? 'bg-trust/15 text-success' : 'bg-ember/15 text-ember'}`}>{paid ? 'Paid · active' : 'Ready to pay'}</span>
       </div>
       <p className="mt-2 font-serif text-2xl text-foreground">{plan.name}</p>
       <p className="mt-1 flex items-baseline gap-1 text-foreground">
         <span className="font-serif text-3xl">{plan.price}</span>
-        <span className="text-sm text-muted">{plan.cadence}</span>
+        <span className="text-sm text-foreground/70">{plan.cadence}</span>
       </p>
       <ul className="mt-4 space-y-1.5 text-sm text-foreground">
         {plan.deliverables.map((item) => (
@@ -29,15 +30,17 @@ export function PlanInvoiceCard({ planId, status, canPay, conversationId }: { pl
         ))}
       </ul>
       {paid ? (
-        <p className="mt-4 text-sm text-muted">Add your tasks in this chat. We start right away.</p>
+        <p className="mt-4 text-sm text-foreground/70">Add your tasks in this chat. We start right away.</p>
       ) : canPay ? (
         <div className="mt-5">
           <PayNow planId={plan.id} planName={plan.name} primary chatId={conversationId} label={`Pay ${plan.price} and start`} />
-          <p className="mt-2 text-center text-xs text-muted">Monthly, cancel any time. If month one isn&apos;t delivered, you get a full refund.</p>
+          
         </div>
       ) : (
-        <p className="mt-4 text-sm text-muted">Sent to the client.</p>
+        <p className="mt-4 text-sm text-foreground/80">Sent to the client.</p>
       )}
+      </div>
+      <p className="border-t border-line px-5 py-2.5 text-center text-xs text-foreground/70">Monthly, cancel any time. Full refund if month one isn&apos;t delivered.</p>
     </div>
   );
 }

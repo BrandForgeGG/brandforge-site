@@ -137,6 +137,18 @@ onMobileClose,
   const [isCollapsed, setIsCollapsed] = useState(() => typeof document !== "undefined" && document.documentElement.dataset.rail === "collapsed");
   const [account, setAccount] = useState<RailAccount | null>(() => railCache.account);
   const [accountId, setAccountId] = useState(() => railCache.accountId);
+  // "Seen x ago" for Trade and the team list: tell the server this person is active, at most every four minutes.
+  useEffect(() => {
+    if (!accountId) return;
+    try {
+      const last = Number(window.localStorage.getItem('bf:seen-at') || 0);
+      if (Date.now() - last < 4 * 60_000) return;
+      window.localStorage.setItem('bf:seen-at', String(Date.now()));
+    } catch {
+      /* storage blocked: ping anyway, the server skips repeats */
+    }
+    void fetchAuthed('/api/identity/seen', { method: 'POST' }).catch(() => undefined);
+  }, [accountId]);
   // The readable bf_guest cookie marks an anonymous browser (rail is client-only, no SSR mismatch).
   const isVisitor = useIsVisitor();
   const { openLogin } = useLogin();

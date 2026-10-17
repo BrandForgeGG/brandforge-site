@@ -12,6 +12,7 @@ import { getProfileRoles,
   listOpenTradeListings,
   announceReal,
   recordFunnelEvent,
+  getLastSeen,
 } from '@/lib/project-db';
 import { toListingView } from '@/lib/trade-view';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
@@ -54,16 +55,18 @@ export async function GET(request: NextRequest) {
     const rows = result.rows.filter((row) => matches(row, filter)).slice(0, 60);
     const ownerIds = [...new Set(rows.map((r) => r.owner_id))];
     // Everything about the owners is read at once, not one lookup after another.
-    const [names, faces, officialIds, roles, viewerRole] = await Promise.all([
+    const [names, faces, officialIds, roles, viewerRole, seen] = await Promise.all([
       getProfileDisplayNames(ownerIds),
       getAvatarUrls(ownerIds),
       // Listings owned by a BrandForge admin account are BrandForge's own pre-made services.
       getAdminIds(ownerIds),
       getProfileRoles(ownerIds),
       viewer ? getProfileRole(viewer.id) : Promise.resolve(null),
+      getLastSeen(ownerIds),
     ]);
     return NextResponse.json({
-      listings: rows.map((row) => toListingView(row, officialIds.has(row.owner_id) ? 'BrandForge' : (names.get(row.owner_id) ?? 'Member'), viewer?.id ?? null, officialIds.has(row.owner_id) ? null : (faces.get(row.owner_id) ?? null), officialIds.has(row.owner_id), roles.get(row.owner_id) ?? 'user')),
+      // When the person behind each listing was last active, instead of when it was posted.
+      listings: rows.map((row) => ({ ...toListingView(row, officialIds.has(row.owner_id) ? 'BrandForge' : (names.get(row.owner_id) ?? 'Member'), viewer?.id ?? null, officialIds.has(row.owner_id) ? null : (faces.get(row.owner_id) ?? null), officialIds.has(row.owner_id), roles.get(row.owner_id) ?? 'user'), ownerSeen: seen.get(row.owner_id) ?? null })),
       viewer: { signedIn: Boolean(viewer), isSpecialist: viewerRole === 'operator' || viewerRole === 'admin' },
     });
   } catch (error) {

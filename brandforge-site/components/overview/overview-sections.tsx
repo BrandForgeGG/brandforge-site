@@ -130,7 +130,7 @@ export function OverviewIdea() {
 export function OverviewPrice() {
   const rows = [
     ['Making and publishing', 'Free to make. Sign in to edit and download.'],
-    ['The BrandForge team', 'From €690 a month. Development, design, video and marketing, 1 to 3 tasks at a time.'],
+    ['The BrandForge team', 'From €690 a month, or one task at a time. Development, design, video and marketing.'],
     ['Teams', 'Invite anyone into a chat. Work on the same page.'],
     ['Listing in Trade', 'Free to post. Nothing is charged to list or to chat.'],
     ['Contracts between members', 'A flat 5% when a milestone is paid. Nothing else.'],

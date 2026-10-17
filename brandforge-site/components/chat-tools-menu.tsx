@@ -26,6 +26,9 @@ export function ToolsMenu({
   onContract,
   onCallTeam,
   onCommand,
+  onAddTask,
+  onPlanInvoice,
+  team = false,
 }: {
   signedIn: boolean;
   hasChat: boolean;
@@ -34,6 +37,11 @@ export function ToolsMenu({
   onContract: () => void;
   onCallTeam: (() => void) | null;
   onCommand: (id: 'carousel' | 'image' | 'plan' | 'trade') => void;
+  onAddTask: () => void;
+  /** Team only, in a client's chat: send the invoice for an agreed monthly plan. */
+  onPlanInvoice: (() => void) | null;
+  /** Viewer is BrandForge staff in someone else's chat. */
+  team?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -71,11 +79,12 @@ export function ToolsMenu({
   // Buyer first: getting the work done by people, then making it yourself, then files and people.
   const groups: Group[] = [
     {
-      title: 'Get it done',
+      title: team ? 'For this client' : 'Get it done',
       items: [
-        { key: 'plan', label: 'Talk to the team', hint: 'Say what you need. A person replies.', icon: 'M4 4.5h12v8H8l-4 3v-11zM7 8h6M7 10.5h4', run: () => onCommand('plan') },
-        { key: 'task', label: 'Set up a funded task', hint: 'Name it, set the funds, the team starts', icon: 'M3.5 6.5h13v9h-13zM7.5 6.5V4.5h5v2M3.5 10.5h13', run: () => router.push('/projects') },
-        { key: 'plans', label: 'See team plans', hint: '1 to 3 tasks at a time, from €690/mo', icon: 'M4 15.5V9M8 15.5V5M12 15.5v-4M16 15.5V7', run: () => router.push('/pricing') },
+        { key: 'task', label: team ? 'Offer a task with a price' : 'Add a task', hint: team ? 'The buyer accepts it, then funds it' : 'Name it and set a budget. The team answers here.', icon: 'M3.5 6.5h13v9h-13zM7.5 6.5V4.5h5v2M3.5 10.5h13', run: onAddTask },
+        { key: 'invoice', label: 'Send a monthly plan invoice', hint: 'For a plan you agreed with the client', icon: 'M6 3.5h8v13l-2-1.3-2 1.3-2-1.3-2 1.3zM8 7h4M8 10h4', run: onPlanInvoice ?? (() => undefined), hidden: !team || !onPlanInvoice },
+        { key: 'plan', label: 'Talk to the team', hint: 'Say what you need. A person replies.', icon: 'M4 4.5h12v8H8l-4 3v-11zM7 8h6M7 10.5h4', run: () => onCommand('plan'), hidden: team },
+        { key: 'plans', label: 'See team plans', hint: 'Monthly, or one task at a time', icon: 'M4 15.5V9M8 15.5V5M12 15.5v-4M16 15.5V7', run: () => router.push('/pricing'), hidden: team },
       ],
     },
     {

@@ -10,7 +10,7 @@ const DIRECTION = [
 
 // status: live (works today), building (being made or waiting on one step), next (not started, needed).
 const ROADMAP = [
-  { status: 'live', title: 'A growth team by the month', body: 'Development, design, video and marketing by real people, 1, 2 or 3 tasks at a time, from €690 a month. Chat first, pay when you agree.', since: '2026-10-16' },
+  { status: 'live', title: 'A growth team by the month', body: 'Development, design, video and marketing by real people: monthly from €690, or one task at a time. Chat first, pay when you agree.', since: '2026-10-16' },
   { status: 'live', title: 'Client work you can open', body: 'Real client sites and apps, live today, on the Work page.', since: '2026-10-09' },
   { status: 'live', title: 'One post, every network', body: 'Each network gets its own picture shape and a caption fitted to its limits.', since: '2026-10-16' },
   { status: 'live', title: 'A chat that does the work', body: 'Ideas, links and files become a researched plan, a fix list or a draft.' },

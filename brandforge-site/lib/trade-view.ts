@@ -13,6 +13,8 @@ export function toListingView(row: TradeListingRow, ownerName: string, viewerId:
     budgetMaxCents: row.budget_max_cents == null ? null : Number(row.budget_max_cents),
     ownerName,
     ownerAvatar,
+    /** When the owner was last active (filled in by the listings route). */
+    ownerSeen: null as string | null,
     ownerRole,
     official,
     mine: viewerId !== null && viewerId === row.owner_id,

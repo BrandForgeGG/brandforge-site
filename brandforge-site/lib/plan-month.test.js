@@ -15,5 +15,5 @@ test('a new month says what was paid and how many tasks run at a time', () => {
   assert.match(how, /2 tasks at a time/);
   assert.match(monthLines(getRetainer('launch'), 3, true)[0], /^Renewed: .*Month 3 starts today\.$/);
   assert.match(monthLines(getRetainer('launch'), 1, false)[1], /1 task at a time/);
-  assert.equal(currentMonth([monthLines(getRetainer('scale'), 4, true)[0]]), 4);
+  assert.equal(currentMonth([monthLines(getRetainer('growth'), 4, true)[0]]), 4);
 });

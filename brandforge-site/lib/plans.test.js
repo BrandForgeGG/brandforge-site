@@ -28,7 +28,7 @@ test('a lapsed paid plan quietly returns to Free with no penalty', () => {
 });
 
 test('the monthly team plans are priced, ordered and findable', () => {
-  assert.deepEqual(RETAINERS.map((plan) => plan.id), ['launch', 'growth', 'scale']);
+  assert.deepEqual(RETAINERS.map((plan) => plan.id), ['launch', 'growth']);
   for (const plan of RETAINERS) {
     assert.equal(plan.price.replace(/[^0-9]/g, ''), String(plan.cents / 100));
     assert.ok(plan.features.length >= 3);

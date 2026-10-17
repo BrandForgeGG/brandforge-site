@@ -10,6 +10,7 @@ import { CATEGORIES } from "@/lib/trade.js";
 import { budgetLabel } from "@/lib/trade.js";
 import { formatMoney } from "@/lib/peer-contract.js";
 import type { ListingView } from "@/lib/trade-view";
+import { seenLabel } from "@/lib/seen.js";
 import { avatarTone, initialsFor } from "@/lib/identity-display";
 import { RoleBadge } from "@/components/role-badge";
 
@@ -29,15 +30,6 @@ const STARTERS: [string, string][] = [
 type Research = { sources: { url: string; title: string; ok: boolean }[]; found: string[]; tips: string[] };
 
 type Draft = { kind: string; category: string; title: string; description: string; currency: string; budgetMin: string; budgetMax: string };
-
-function posted(iso: string | undefined) {
-  if (!iso) return "";
-  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
-  if (mins < 60) return "just now";
-  if (mins < 1440) return `${Math.round(mins / 60)}h ago`;
-  if (mins < 43200) return `${Math.round(mins / 1440)}d ago`;
-  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
 
 function Modal({ label, onClose, children }: { label: string; onClose: () => void; children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -403,7 +395,7 @@ function Card({ listing: l, onContact, onEdit, onAssistant, onClose, onReopen, o
       <div className="mt-3 flex items-center justify-between gap-2">
         <p className="min-w-0 truncate text-sm font-semibold tabular-nums text-foreground">
           {budgetLabel(l, formatMoney)}
-          {!l.official && l.createdAt ? <span className="ml-2 text-[11px] font-normal text-foreground/70">{posted(l.createdAt)}</span> : null}
+          {seenLabel(l.ownerSeen) ? <span className="ml-2 text-[11px] font-normal text-foreground/70">{seenLabel(l.ownerSeen)}</span> : null}
         </p>
         {l.mine ? (
           <button type="button" onClick={() => onAssistant(l)} className="rounded-lg bg-ember px-3 py-1.5 text-xs font-semibold text-on-ember">

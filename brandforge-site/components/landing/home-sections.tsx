@@ -289,7 +289,7 @@ export function HomePricing() {
   return (
     <section id="pricing" className="scroll-mt-16 px-5 py-20 sm:px-8 sm:py-24">
       <div className="mx-auto max-w-6xl">
-        <SectionHead eyebrow="Pricing" title="A full growth team for less than one hire" line="1, 2 or 3 tasks at a time, every month. Or one funded task." />
+        <SectionHead eyebrow="Pricing" title="A full growth team for less than one hire" line="Monthly, with 1 or 2 tasks always in progress. Or one task at a time, with your own budget." />
         <PricingPlans bare tasks={false} />
       </div>
     </section>

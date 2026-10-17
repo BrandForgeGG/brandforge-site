@@ -6890,6 +6890,11 @@ export type FundedProject = {
   done: number;
   total: number;
   isBuyer: boolean;
+  agreementId?: string | null;
+  taskTitle?: string | null;
+  summary?: string | null;
+  projectName?: string | null;
+  requirements?: number;
 };
 
 /**
@@ -6943,11 +6948,19 @@ export async function listFundedProjects(userId: string, seeAll: boolean): Promi
   const chatRows = (chats ?? []) as { id: string; title: string | null; user_id: string | null }[];
   const partRows = (parts ?? []) as { conversation_id: string; user_id: string | null; role: string }[];
   const taskRows = (tasks ?? []) as { conversation_id: string; status: string | null }[];
-  const pendingIds = funded.filter((item) => item.status === 'pending_funding' && item.agreementId).map((item) => item.agreementId as string);
+  const pendingIds = funded.filter((item) => item.agreementId).map((item) => item.agreementId as string);
   const { data: cards } = pendingIds.length
     ? await admin.from('messages').select('artifact_data').eq('content_type', 'system').eq('artifact_data->>type', 'task_fund').in('artifact_data->>id', pendingIds)
     : { data: [] };
-  const stageOf = new Map(((cards ?? []) as { artifact_data: { id?: string; status?: string; counterAmount?: number } }[]).map((row) => [String(row.artifact_data?.id), row.artifact_data]));
+  const stageOf = new Map(((cards ?? []) as { artifact_data: { id?: string; status?: string; counterAmount?: number; title?: string } }[]).map((row) => [String(row.artifact_data?.id), row.artifact_data]));
+  // What the AI understood from each chat (project_context), and how many requirements it captured.
+  const [{ data: contexts }, { data: reqs }] = await Promise.all([
+    admin.from('project_context').select('conversation_id, project_name, problem_statement').in('conversation_id', [...new Set(funded.map((item) => item.chatId))]),
+    admin.from('requirements').select('conversation_id').in('conversation_id', [...new Set(funded.map((item) => item.chatId))]),
+  ]);
+  const contextOf = new Map(((contexts ?? []) as { conversation_id: string; project_name: string | null; problem_statement: string | null }[]).map((row) => [row.conversation_id, row]));
+  const reqCount = new Map<string, number>();
+  for (const row of (reqs ?? []) as { conversation_id: string }[]) reqCount.set(row.conversation_id, (reqCount.get(row.conversation_id) ?? 0) + 1);
   const manager = await getProjectManager();
   const staff = await getProfileRoles([...new Set(partRows.map((row) => row.user_id).filter((id): id is string => Boolean(id)))]);
 
@@ -6967,9 +6980,14 @@ export async function listFundedProjects(userId: string, seeAll: boolean): Promi
     const mine = taskRows.filter((row) => row.conversation_id === item.chatId);
     const card = item.agreementId ? stageOf.get(item.agreementId) : undefined;
     const waiting = item.status === 'pending_funding';
+    const context = contextOf.get(item.chatId);
     return {
       ...item,
-      status: waiting ? String(card?.status ?? 'open') : item.status,
+      taskTitle: card?.title ?? null,
+      summary: context?.problem_statement ?? null,
+      projectName: context?.project_name ?? null,
+      requirements: reqCount.get(item.chatId) ?? 0,
+      status: waiting ? String(card?.status ?? 'open') : ['review', 'delivered'].includes(String(card?.status)) ? String(card?.status) : item.status,
       amount: waiting && card?.status === 'countered' && card.counterAmount ? card.counterAmount : item.amount,
       title: chat.title || 'Project',
       buyer: chat.user_id ? { id: chat.user_id, name: names.get(chat.user_id) ?? 'Buyer' } : null,
@@ -7015,4 +7033,37 @@ export async function setTaskAgreed(agreementId: string, amount: number): Promis
   const { error } = await admin.from('agreements').update({ total_amount: amount, team_accepted_at: new Date().toISOString() }).eq('id', agreementId).eq('status', 'pending_funding');
   if (error) console.error('setTaskAgreed:', error.message);
   return !error;
+}
+
+// ---- Last seen (profiles.last_seen_at, migration 0062) ----
+
+/** Marks this person as active now (skipped when it was marked in the last two minutes). */
+export async function touchLastSeen(userId: string): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return;
+  const recent = new Date(Date.now() - 2 * 60_000).toISOString();
+  const { error } = await admin.from('profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', userId).or(`last_seen_at.is.null,last_seen_at.lt.${recent}`);
+  if (error) console.error('touchLastSeen:', error.message);
+}
+
+export async function getLastSeen(userIds: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const admin = createSupabaseAdminClient();
+  if (!admin || userIds.length === 0) return out;
+  const { data } = await admin.from('profiles').select('id, last_seen_at').in('id', [...new Set(userIds)].slice(0, 500));
+  for (const row of (data ?? []) as { id: string; last_seen_at: string | null }[]) if (row.last_seen_at) out.set(row.id, row.last_seen_at);
+  return out;
+}
+
+/** The BrandForge team (admins and operators) with when each was last active, newest first. Names and times only. */
+export async function listTeamPresence(): Promise<{ name: string; role: string; avatarUrl: string | null; lastSeen: string | null }[]> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return [];
+  const { data } = await admin.from('profiles').select('username, display_name, role, avatar_url, last_seen_at').in('role', ['admin', 'operator']).order('last_seen_at', { ascending: false, nullsFirst: false }).limit(12);
+  return ((data ?? []) as { username: string | null; display_name: string | null; role: string; avatar_url: string | null; last_seen_at: string | null }[]).map((row) => ({
+    name: row.username || row.display_name || 'Team member',
+    role: row.role,
+    avatarUrl: row.avatar_url,
+    lastSeen: row.last_seen_at,
+  }));
 }
